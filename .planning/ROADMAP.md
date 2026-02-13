@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation & Authentication** - Supabase setup, auth flow, RLS, component library
 - [ ] **Phase 2: Grant Pipeline & Discovery** - Pipeline dashboard, grant CRUD, AI discovery integration
-- [ ] **Phase 3: Document Vault & Narrative Library** - File storage, document management, narrative CRUD
+- [x] **Phase 3: Document Vault & Narrative Library** - File storage, document management, narrative CRUD
 - [ ] **Phase 4: Eligibility Screening & Proposal Generation** - AI screening, proposal generation, quality review
 - [ ] **Phase 5: Budget Builder & Submission Tracking** - Budget management, submission checklists, tracking
 - [ ] **Phase 6: Awards, Reporting & Analytics** - Award management, report generation, analytics dashboard
@@ -135,11 +135,11 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 0/TBD | Not started | - |
 | 2. Grant Pipeline & Discovery | 0/TBD | Not started | - |
-| 3. Document Vault & Narrative Library | 0/3 | Planned | - |
+| 3. Document Vault & Narrative Library | 3/3 | ✓ Complete | 2026-02-13 |
 | 4. Eligibility Screening & Proposal Generation | 0/TBD | Not started | - |
 | 5. Budget Builder & Submission Tracking | 0/TBD | Not started | - |
 | 6. Awards, Reporting & Analytics | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-13*
-*Last updated: 2026-02-13*
+*Last updated: 2026-02-13 — Phase 3 complete*
