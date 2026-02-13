@@ -68,10 +68,12 @@ Plans:
   5. User can browse, create, and edit narrative blocks
   6. User can trigger AI customization of narratives for specific grants/funders
   7. User can search and filter narratives by category
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD
+- [ ] 03-01-PLAN.md — Dependencies, Storage bucket, and document server actions
+- [ ] 03-02-PLAN.md — Document Vault UI with data table, upload, and Realtime
+- [ ] 03-03-PLAN.md — Narrative Library with Tiptap editor and AI customization
 
 ### Phase 4: Eligibility Screening & Proposal Generation
 **Goal**: Users can generate AI-powered proposals and quality reviews (core value proposition)
@@ -133,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 0/TBD | Not started | - |
 | 2. Grant Pipeline & Discovery | 0/TBD | Not started | - |
-| 3. Document Vault & Narrative Library | 0/TBD | Not started | - |
+| 3. Document Vault & Narrative Library | 0/3 | Planned | - |
 | 4. Eligibility Screening & Proposal Generation | 0/TBD | Not started | - |
 | 5. Budget Builder & Submission Tracking | 0/TBD | Not started | - |
 | 6. Awards, Reporting & Analytics | 0/TBD | Not started | - |
