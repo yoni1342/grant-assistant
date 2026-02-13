@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   ColumnFiltersState,
   flexRender,
@@ -9,6 +9,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
+import { createClient } from "@/lib/supabase/client"
 import {
   Table,
   TableBody,
@@ -68,6 +69,39 @@ export function DocumentTable({ initialData }: DocumentTableProps) {
 
   const isEmpty = initialData.length === 0
   const isFiltered = table.getRowModel().rows.length === 0 && !isEmpty
+
+  // Realtime subscription for live updates
+  useEffect(() => {
+    const supabase = createClient()
+
+    const channel = supabase
+      .channel('document-changes')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'documents' },
+        (payload) => {
+          setDocuments(prev => [payload.new as Document, ...prev])
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'documents' },
+        (payload) => {
+          setDocuments(prev => prev.map(doc =>
+            doc.id === payload.new.id ? (payload.new as Document) : doc
+          ))
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'documents' },
+        (payload) => {
+          setDocuments(prev => prev.filter(doc => doc.id !== payload.old.id))
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   return (
     <div className="space-y-4">
