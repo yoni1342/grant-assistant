@@ -153,3 +153,22 @@ export async function getDocuments() {
 
   return { data: data || [], error: null }
 }
+
+export async function getDownloadUrl(filePath: string) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Not authenticated', url: null }
+  }
+
+  const { data, error } = await supabase.storage
+    .from('documents')
+    .createSignedUrl(filePath, 3600) // 1 hour expiry
+
+  if (error) {
+    return { error: error.message, url: null }
+  }
+
+  return { url: data.signedUrl, error: null }
+}
