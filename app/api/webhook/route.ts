@@ -68,6 +68,52 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "insert_proposal": {
+        const { data: proposal, error } = await supabase
+          .from("proposals")
+          .insert(data.proposal)
+          .select()
+          .single();
+        if (error) throw error;
+        break;
+      }
+
+      case "insert_proposal_sections": {
+        const { error } = await supabase
+          .from("proposal_sections")
+          .insert(data.sections);
+        if (error) throw error;
+        break;
+      }
+
+      case "update_proposal": {
+        const { id, ...updates } = data;
+        const { error } = await supabase
+          .from("proposals")
+          .update(updates)
+          .eq("id", id);
+        if (error) throw error;
+        break;
+      }
+
+      case "insert_funder": {
+        const { error } = await supabase
+          .from("funders")
+          .insert(data.funder);
+        if (error) throw error;
+        break;
+      }
+
+      case "update_funder": {
+        const { id, ...updates } = data;
+        const { error } = await supabase
+          .from("funders")
+          .update(updates)
+          .eq("id", id);
+        if (error) throw error;
+        break;
+      }
+
       default:
         return NextResponse.json(
           { error: `Unknown action: ${action}` },
