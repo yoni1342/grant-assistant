@@ -87,10 +87,12 @@ Plans:
   5. User can trigger AI quality review and see scores, issues, and rewrite suggestions
   6. User can trigger funder analysis and see strategy briefs with ProPublica 990 data
   7. User sees funder profile with giving patterns and submission preferences
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD
+- [ ] 04-01-PLAN.md — Dependencies, server actions, and webhook route extensions
+- [ ] 04-02-PLAN.md — Proposals list page and generation trigger on grant detail
+- [ ] 04-03-PLAN.md — Proposal detail with section editing, quality review, and funder analysis
 
 ### Phase 5: Budget Builder & Submission Tracking
 **Goal**: Users can create budgets and track submissions through completion
@@ -136,7 +138,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Foundation & Authentication | 0/TBD | Not started | - |
 | 2. Grant Pipeline & Discovery | 0/TBD | Not started | - |
 | 3. Document Vault & Narrative Library | 3/3 | ✓ Complete | 2026-02-13 |
-| 4. Eligibility Screening & Proposal Generation | 0/TBD | Not started | - |
+| 4. Eligibility Screening & Proposal Generation | 0/3 | Not started | - |
 | 5. Budget Builder & Submission Tracking | 0/TBD | Not started | - |
 | 6. Awards, Reporting & Analytics | 0/TBD | Not started | - |
 
