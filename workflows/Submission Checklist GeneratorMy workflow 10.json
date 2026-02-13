@@ -1,0 +1,239 @@
+{
+  "name": "Submission Checklist GeneratorMy workflow 10",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-checklist",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "8f127dff-cfe9-4f05-9b60-14cf6576ae15",
+      "name": "Checklist Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        832
+      ],
+      "webhookId": "generate-checklist",
+      "notes": "POST: { grantId, grantName, funderName, deadline, portalUrl, requiredDocs, requiredSections, budgetAmount, contactEmail }"
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $input.first().json.body;\nconst grantId = request.grantId || 'GRANT-001';\nconst grantName = request.grantName || 'Unknown Grant';\nconst funderName = request.funderName || 'Unknown Funder';\nconst deadline = request.deadline ? new Date(request.deadline) : new Date();\nconst portalUrl = request.portalUrl || '';\nconst budgetAmount = parseFloat(request.budgetAmount) || 0;\nconst contactEmail = request.contactEmail || '';\nconst requiredDocs = request.requiredDocs || ['501c3_letter','budget_operating','board_roster'];\nconst requiredSections = request.requiredSections || ['organization_description','program_description','budget_narrative'];\nconst now = new Date();\nconst hoursToDeadline = Math.floor((deadline - now) / (1000 * 60 * 60));\nconst daysToDeadline = Math.floor(hoursToDeadline / 24);\nlet urgency = 'normal'; let urgencyMessage = '';\nif (hoursToDeadline <= 0) { urgency = 'overdue'; urgencyMessage = '🚨 DEADLINE PASSED'; }\nelse if (hoursToDeadline <= 24) { urgency = 'critical'; urgencyMessage = '🔴 LESS THAN 24 HOURS'; }\nelse if (hoursToDeadline <= 48) { urgency = 'urgent'; urgencyMessage = '🟠 LESS THAN 48 HOURS'; }\nelse if (daysToDeadline <= 7) { urgency = 'soon'; urgencyMessage = '🟡 LESS THAN 1 WEEK'; }\nelse { urgencyMessage = '🟢 ON TRACK'; }\nconst checklist = {\n  documents: requiredDocs.map(doc => ({ id: `doc_${doc}`, category: 'Documents', item: doc.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase()), description: `Upload ${doc.replace(/_/g, ' ')} to application`, status: 'pending', required: true })),\n  narrative: requiredSections.map(section => ({ id: `section_${section}`, category: 'Narrative Sections', item: section.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase()), description: `Complete ${section.replace(/_/g, ' ')} section`, status: 'pending', required: true })),\n  budget: [{ id: 'budget_complete', category: 'Budget', item: 'Budget Spreadsheet', description: `Complete budget totaling ${budgetAmount.toLocaleString()}`, status: 'pending', required: true },{ id: 'budget_narrative', category: 'Budget', item: 'Budget Narrative', description: 'Justification for all budget line items', status: 'pending', required: true },{ id: 'budget_match', category: 'Budget', item: 'Budget Totals Match', description: 'Verify budget totals match requested amount', status: 'pending', required: true }],\n  signatures: [{ id: 'sig_ed', category: 'Signatures', item: 'Executive Director Signature', description: 'ED has reviewed and signed application', status: 'pending', required: true },{ id: 'sig_board', category: 'Signatures', item: 'Board Chair Signature', description: 'Board chair has signed (if required)', status: 'pending', required: false }],\n  portal: [{ id: 'portal_account', category: 'Portal Setup', item: 'Portal Account Created', description: portalUrl ? `Account created at ${portalUrl}` : 'Create funder portal account', status: 'pending', required: true },{ id: 'portal_login', category: 'Portal Setup', item: 'Portal Login Tested', description: 'Verify login credentials work', status: 'pending', required: true },{ id: 'portal_draft', category: 'Portal Setup', item: 'Draft Saved in Portal', description: 'Application draft saved (not submitted)', status: 'pending', required: false }],\n  review: [{ id: 'review_proofread', category: 'Final Review', item: 'Proofread All Sections', description: 'Check spelling, grammar, formatting', status: 'pending', required: true },{ id: 'review_critic', category: 'Final Review', item: 'AI Proposal Critic Review', description: 'Run through Workflow 8 for quality check', status: 'pending', required: false },{ id: 'review_human', category: 'Final Review', item: 'Human Review Complete', description: 'Staff member has reviewed entire application', status: 'pending', required: true }],\n  submission: [{ id: 'submit_ready', category: 'Submission', item: 'Ready to Submit', description: 'All items above completed', status: 'pending', required: true },{ id: 'submit_confirm', category: 'Submission', item: 'Submission Confirmed', description: 'Received confirmation from portal', status: 'pending', required: true },{ id: 'submit_screenshot', category: 'Submission', item: 'Confirmation Screenshot', description: 'Screenshot of submission confirmation saved', status: 'pending', required: false }]\n};\nconst allItems = [...checklist.documents,...checklist.narrative,...checklist.budget,...checklist.signatures,...checklist.portal,...checklist.review,...checklist.submission];\nreturn [{ json: { grantId, grantName, funderName, deadline: deadline.toISOString(), deadlineFormatted: deadline.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }), hoursToDeadline, daysToDeadline, urgency, urgencyMessage, budgetAmount, portalUrl, contactEmail, checklist, allItems, totalItems: allItems.length, requiredItems: allItems.filter(i => i.required).length, shouldSendReminder: hoursToDeadline <= 48 && hoursToDeadline > 0 } }];"
+      },
+      "id": "2ad27d22-05b7-4339-9f4e-beb440d449ea",
+      "name": "Generate Checklist",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        832
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "should-remind",
+              "leftValue": "={{ $json.shouldSendReminder }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "835491d2-bddb-4f7d-a0eb-168eea777f89",
+      "name": "Within 48 Hours?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        832
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{  'abiykibru@gmail.com' }}",
+        "subject": "=🚨 DEADLINE ALERT: {{ $json.grantName }} due in {{ $json.hoursToDeadline }} hours",
+        "message": "=<h2>⏰ Grant Deadline Approaching</h2>\n<p><strong>Grant:</strong> {{ $json.grantName }}<br>\n<strong>Funder:</strong> {{ $json.funderName }}<br>\n<strong>Deadline:</strong> {{ $json.deadlineFormatted }}<br>\n<strong>Time Remaining:</strong> {{ $json.hoursToDeadline }} hours</p>\n<h3>{{ $json.urgencyMessage }}</h3>\n<p>Please ensure all checklist items are completed before submission.</p>\n<p><strong>Checklist Summary:</strong><br>\n• {{ $json.totalItems }} total items<br>\n• {{ $json.requiredItems }} required items</p>\n{{ $json.portalUrl ? '<p><a href=\"' + $json.portalUrl + '\">Go to Submission Portal</a></p>' : '' }}\n<hr>\n<p><em>This is an automated reminder from the Grant Management System.</em></p>",
+        "options": {}
+      },
+      "id": "95a5491a-3834-4ecd-9467-f6b3c8092073",
+      "name": "Send Deadline Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        128,
+        720
+      ],
+      "webhookId": "5fb21696-284e-4b38-9578-343372fad774",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "pwyaqnD0vnBdVE9R",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Use input directly instead of referencing nodes by name\n  const data = $input.first().json;\n  const reminderSent = data.shouldSendReminder || false;\n\n  let markdown = `# Submission Checklist\\n\\n## ${data.grantName}\\n**Funder:** ${data.funderName}\\n**Deadline:**\n  ${data.deadlineFormatted}\\n**Status:** ${data.urgencyMessage}\\n**Budget:**\n  $${data.budgetAmount.toLocaleString()}\\n\\n`;\n\n  if (data.portalUrl) {\n    markdown += `**Portal:** [${data.portalUrl}](${data.portalUrl})\\n\\n`;\n  }\n\n  markdown += `---\\n\\n`;\n\n  const categories = [\n    { key: 'documents', title: '📄 Documents' },\n    { key: 'narrative', title: '📝 Narrative Sections' },\n    { key: 'budget', title: '💰 Budget' },\n    { key: 'signatures', title: '✍️ Signatures' },\n    { key: 'portal', title: '🌐 Portal Setup' },\n    { key: 'review', title: '🔍 Final Review' },\n    { key: 'submission', title: '🚀 Submission' }\n  ];\n\n  for (const cat of categories) {\n    const items = data.checklist[cat.key];\n    if (items && items.length > 0) {\n      markdown += `### ${cat.title}\\n\\n`;\n      for (const item of items) {\n        const required = item.required ? ' *(required)*' : '';\n        markdown += `- [ ] **${item.item}**${required}\\n  - ${item.description}\\n`;\n      }\n      markdown += `\\n`;\n    }\n  }\n\n  markdown += `---\\n\\n## Summary\\n\\n| Metric | Count |\\n|--------|-------|\\n| Total Items | ${data.totalItems} |\\n|\n  Required Items | ${data.requiredItems} |\\n| Days to Deadline | ${data.daysToDeadline} |\\n| Hours to Deadline |\n  ${data.hoursToDeadline} |\\n\\n`;\n\n  if (reminderSent) {\n    markdown += `⚠️ **Deadline reminder email sent to ${data.contactEmail}**\\n\\n`;\n  }\n\n  markdown += `---\\n*Generated: ${new Date().toISOString()}*`;\n\n  return [{\n    json: {\n      success: true,\n      grantId: data.grantId,\n      grantName: data.grantName,\n      funderName: data.funderName,\n      deadline: data.deadline,\n      deadlineFormatted: data.deadlineFormatted,\n      urgency: data.urgency,\n      urgencyMessage: data.urgencyMessage,\n      hoursToDeadline: data.hoursToDeadline,\n      daysToDeadline: data.daysToDeadline,\n      totalItems: data.totalItems,\n      requiredItems: data.requiredItems,\n      reminderSent: reminderSent,\n      checklist: data.allItems,\n      checklistByCategory: data.checklist,\n      checklistMarkdown: markdown\n    }\n  }];"
+      },
+      "id": "4f6a3ee6-7c7e-4b04-9c03-b116b311cbdf",
+      "name": "Format Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        832
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "5d399b05-9b78-4729-8511-2eb812d48142",
+      "name": "No Reminder Needed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        128,
+        928
+      ]
+    }
+  ],
+  "pinData": {
+    "Checklist Request": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.thebrownmine.com",
+            "user-agent": "axios/1.12.0",
+            "content-length": "415",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "100.29.112.47",
+            "x-forwarded-host": "n8n.thebrownmine.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "grantId": "GRANT-001",
+            "grantName": "Community Response Foundation Of Western Pennsylvania Grant",
+            "funderName": "Community Response Foundation Of Western Pennsylvania",
+            "deadline": "",
+            "portalUrl": "",
+            "budgetAmount": 0,
+            "contactEmail": "abiykibru@gmail.com",
+            "requiredDocs": [
+              "501c3_letter",
+              "budget_operating",
+              "board_roster"
+            ],
+            "requiredSections": [
+              "organization_description",
+              "program_description",
+              "budget_narrative",
+              "outcomes"
+            ]
+          },
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/generate-checklist",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Checklist Request": {
+      "main": [
+        [
+          {
+            "node": "Generate Checklist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Checklist": {
+      "main": [
+        [
+          {
+            "node": "Within 48 Hours?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Within 48 Hours?": {
+      "main": [
+        [
+          {
+            "node": "Send Deadline Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Reminder Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Deadline Reminder": {
+      "main": [
+        [
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Reminder Needed": {
+      "main": [
+        [
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "52ba5d8a-5987-4168-a5c3-f11ddd62b3d1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "7BpZP7SD7aRxKmOE",
+  "tags": []
+}

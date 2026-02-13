@@ -1,0 +1,377 @@
+{
+  "name": "Grant Report Auto-Drafter 14",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "draft-report",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "45a0f9a3-3540-4bed-9963-ebaa57de3783",
+      "name": "Report Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        672,
+        288
+      ],
+      "webhookId": "draft-report",
+      "notes": "POST: { grantId, grantName, reportType, reportingPeriodStart, reportingPeriodEnd, programMetrics, financialData, impactStories, planeIssueId }"
+    },
+    {
+      "parameters": {
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search={{ encodeURIComponent($json.body.grantName || '') }}&per_page=50",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1628c90-3805-4545-9051-29de438ed8b6",
+      "name": "Search Grant in Plane",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        896,
+        288
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Find grant sub-item in Plane"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find the eligibility sub-item and compile report data\nconst request = $('Report Request').first().json.body;\nconst searchResponse = $('Search Grant in Plane').first().json;\nconst results = searchResponse.results || searchResponse || [];\nconst issueList = Array.isArray(results) ? results : [];\nconst planeIssueId = request.planeIssueId || request.planeissueid || '';\nconst grantName = request.grantName || '';\n\n// Find the sub-item\nlet subItem = null;\nif (planeIssueId) {\n  subItem = issueList.find(i => i.id === planeIssueId);\n}\nif (!subItem) {\n  subItem = issueList.find(i => {\n    const name = i.name || '';\n    return name.includes('[Eligibility]') && name.toLowerCase().includes(grantName.toLowerCase());\n  });\n}\nif (!subItem) {\n  subItem = issueList.find(i => i.parent && (i.name || '').toLowerCase().includes(grantName.toLowerCase()));\n}\n\n// Extract grant info from sub-item description_html if available\nlet awardAmount = 50000;\nlet funderName = request.funderName || 'Funder';\nlet programDescription = 'Provide community-based support programs for foster youth and families';\nlet grantPeriodStart = request.reportingPeriodStart || '';\nlet grantPeriodEnd = request.reportingPeriodEnd || '';\n\nif (subItem) {\n  const desc = subItem.description_html || '';\n  const amountMatch = desc.match(/Award Amount:[^$]*\\$([\\d,]+)/);\n  if (amountMatch) awardAmount = parseFloat(amountMatch[1].replace(/,/g, ''));\n  const funderMatch = desc.match(/Funder:<\\/strong>\\s*([^<]+)/);\n  if (funderMatch) funderName = funderMatch[1].trim();\n}\n\n// Default metrics if not provided\nconst metrics = request.programMetrics || {\n  youthServed: 500,\n  seniorsServed: 200,\n  clothingDistributed: 2500,\n  hygieneKitsDistributed: 1500,\n  confidenceIncrease: 85,\n  volunteerHours: 1200\n};\n\n// Default financial data if not provided\nconst financials = request.financialData || {\n  totalBudget: awardAmount,\n  amountSpent: 0,\n  personnelCosts: 0,\n  programCosts: 0,\n  adminCosts: 0\n};\n\n// Default impact stories\nconst stories = request.impactStories || [\n  {\n    name: 'Marcus',\n    age: 19,\n    story: 'Marcus came to us anxious about his first job interview. After receiving professional attire and interview coaching, he landed a position at a local retail store and is now saving for his first apartment.'\n  }\n];\n\nreturn [{\n  json: {\n    grantId: request.grantId,\n    grantName: grantName || (subItem ? subItem.name : 'Grant Report'),\n    funderName: funderName,\n    reportType: request.reportType || 'interim',\n    reportingPeriod: {\n      start: grantPeriodStart,\n      end: grantPeriodEnd\n    },\n    awardAmount: awardAmount,\n    originalProposal: {\n      programDescription: programDescription,\n      goals: [\n        'Serve 500+ foster youth annually',\n        'Serve 200+ seniors annually',\n        'Achieve 85% confidence increase among participants',\n        'Distribute 2,500+ clothing items'\n      ]\n    },\n    metrics: metrics,\n    financials: financials,\n    impactStories: stories,\n    planeIssueId: subItem ? subItem.id : planeIssueId\n  }\n}];"
+      },
+      "id": "226d1c30-d944-4c46-bd38-804266ba35c3",
+      "name": "Compile Report Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Report Writer for The Virtuous House, a Pennsylvania 501(c)(3) serving foster youth and families through community-based support programs.\n\nWrite a professional grant report that:\n1. Thanks the funder for their support\n2. Summarizes activities and accomplishments during the reporting period\n3. Reports on progress toward stated goals with specific metrics\n4. Includes financial summary\n5. Shares 1-2 impact stories\n6. Discusses challenges and lessons learned\n7. Outlines plans for the remaining grant period (if interim) or sustainability (if final)\n\nTone: Professional, grateful, specific, honest about challenges while highlighting successes.\n\nFormat the report with clear sections:\n- Executive Summary\n- Program Activities\n- Progress Toward Goals\n- Financial Report\n- Impact Stories\n- Challenges & Lessons Learned\n- Looking Ahead\n- Conclusion\n\nUse the specific data provided - don't invent numbers.",
+              "role": "system"
+            },
+            {
+              "content": "=GRANT REPORT REQUEST:\n\nGrant: {{ $json.grantName }}\nFunder: {{ $json.funderName }}\nReport Type: {{ $json.reportType }}\nReporting Period: {{ $json.reportingPeriod.start }} to {{ $json.reportingPeriod.end }}\nAward Amount: ${{ $json.awardAmount.toLocaleString() }}\n\nORIGINAL PROPOSAL GOALS:\n{{ JSON.stringify($json.originalProposal.goals, null, 2) }}\n\nPROGRAM METRICS THIS PERIOD:\n- Youth Served: {{ $json.metrics.youthServed }}\n- Seniors Served: {{ $json.metrics.seniorsServed }}\n- Clothing Items Distributed: {{ $json.metrics.clothingDistributed }}\n- Hygiene Kits Distributed: {{ $json.metrics.hygieneKitsDistributed }}\n- Participants Reporting Increased Confidence: {{ $json.metrics.confidenceIncrease }}%\n- Volunteer Hours: {{ $json.metrics.volunteerHours }}\n\nFINANCIAL DATA:\n- Total Budget: ${{ $json.financials.totalBudget.toLocaleString() }}\n- Amount Spent: ${{ $json.financials.amountSpent.toLocaleString() }}\n- Personnel Costs: ${{ $json.financials.personnelCosts.toLocaleString() }}\n- Program Costs: ${{ $json.financials.programCosts.toLocaleString() }}\n- Admin Costs: ${{ $json.financials.adminCosts.toLocaleString() }}\n\nIMPACT STORIES:\n{{ JSON.stringify($json.impactStories, null, 2) }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "0dfcf830-3c7c-40df-9f77-e490567f2688",
+      "name": "AI Draft Report",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1344,
+        288
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the final report\nconst reportData = $('Compile Report Data').first().json;\nconst aiResponse = $input.first().json;\n\nconst reportContent = aiResponse.message?.content || aiResponse.text || '';\n\n// Build financial summary table\nconst financials = reportData.financials;\nlet financialTable = `\n| Category | Budgeted | Spent | Remaining |\n|----------|----------|-------|-----------|\\n`;\n\nconst totalSpent = financials.amountSpent || (financials.personnelCosts + financials.programCosts + financials.adminCosts);\nconst remaining = financials.totalBudget - totalSpent;\n\nfinancialTable += `| Personnel | - | ${(financials.personnelCosts || 0).toLocaleString()} | - |\\n`;\nfinancialTable += `| Program | - | ${(financials.programCosts || 0).toLocaleString()} | - |\\n`;\nfinancialTable += `| Admin | - | ${(financials.adminCosts || 0).toLocaleString()} | - |\\n`;\nfinancialTable += `| **TOTAL** | **${financials.totalBudget.toLocaleString()}** | **${totalSpent.toLocaleString()}** | **${remaining.toLocaleString()}** |\\n`;\n\n// Build metrics summary\nlet metricsTable = `\n| Metric | Goal | Achieved | % Complete |\n|--------|------|----------|------------|\\n`;\nmetricsTable += `| Youth Served | 500 | ${reportData.metrics.youthServed} | ${Math.round((reportData.metrics.youthServed / 500) * 100)}% |\\n`;\nmetricsTable += `| Seniors Served | 200 | ${reportData.metrics.seniorsServed} | ${Math.round((reportData.metrics.seniorsServed / 200) * 100)}% |\\n`;\nmetricsTable += `| Clothing Distributed | 2,500 | ${reportData.metrics.clothingDistributed.toLocaleString()} | ${Math.round((reportData.metrics.clothingDistributed / 2500) * 100)}% |\\n`;\nmetricsTable += `| Confidence Increase | 85% | ${reportData.metrics.confidenceIncrease}% | ${Math.round((reportData.metrics.confidenceIncrease / 85) * 100)}% |\\n`;\n\n// Full report with header\nlet fullReport = `# Grant Report: ${reportData.grantName}\\n\\n`;\nfullReport += `**Funder:** ${reportData.funderName}\\n`;\nfullReport += `**Report Type:** ${reportData.reportType === 'interim' ? 'Interim Progress Report' : 'Final Report'}\\n`;\nfullReport += `**Reporting Period:** ${reportData.reportingPeriod.start} to ${reportData.reportingPeriod.end}\\n`;\nfullReport += `**Award Amount:** ${reportData.awardAmount.toLocaleString()}\\n`;\nfullReport += `**Report Date:** ${new Date().toISOString().split('T')[0]}\\n\\n`;\nfullReport += `---\\n\\n`;\nfullReport += reportContent;\nfullReport += `\\n\\n---\\n\\n`;\nfullReport += `## Metrics Summary\\n`;\nfullReport += metricsTable;\nfullReport += `\\n## Financial Summary\\n`;\nfullReport += financialTable;\nfullReport += `\\n\\n---\\n*Draft generated by AI. Please review and customize before submission.*`;\n\nreturn [{\n  json: {\n    success: true,\n    grantId: reportData.grantId,\n    grantName: reportData.grantName,\n    funderName: reportData.funderName,\n    reportType: reportData.reportType,\n    reportingPeriod: reportData.reportingPeriod,\n    metrics: reportData.metrics,\n    financials: reportData.financials,\n    metricsTable: metricsTable,\n    financialTable: financialTable,\n    reportContent: reportContent,\n    fullReport: fullReport,\n    status: 'draft',\n    generatedAt: new Date().toISOString(),\n    planeIssueId: reportData.planeIssueId\n  }\n}];"
+      },
+      "id": "b20f2fb4-01f6-426b-9b0c-e3b169d3e9f2",
+      "name": "Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pass through the formatted report from Format Report node\nreturn [{ json: $('Format Report').first().json }];"
+      },
+      "id": "a47198ee-b0f3-47a6-82a0-40de52ca2746",
+      "name": "Return Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\n  // Convert markdown to basic HTML (or keep as-is if Plane supports markdown)\n  const reportHtml = data.fullReport\n    .replace(/\\n/g, '<br>')\n    .replace(/#{1,3}\\s/g, '<strong>')\n    .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\n\n  // Truncate if too long (Plane may have limits)\n  const maxLength = 10000;\n  const truncatedReport = reportHtml.length > maxLength\n    ? reportHtml.substring(0, maxLength) + '...<br><em>[Truncated - full report in webhook response]</em>'\n    : reportHtml;\n\n  return [{\n    json: {\n      ...data,\n      planeDescription: `<div>${truncatedReport}</div>`,\n      doneState: '850cddda-0827-4049-839f-439a9c91baf3'\n    }\n  }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1904,
+        288
+      ],
+      "id": "521a28e6-fb1e-43e0-9c96-c8be432f84c2",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/{{ $json.planeIssueId }}/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"state\": \"{{ $json.reportType === 'final' ? $json.doneState : '850cddda-0827-4049-839f-439a9c91baf3' }}\",\n    \"description_html\": \"{{ $json.planeDescription }}\"\n  }",
+        "options": {}
+      },
+      "id": "424ecbe7-67fb-46fb-9504-5c4c869989de",
+      "name": "Append report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2128,
+        288
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput",
+      "notes": "Interim → Reporting state, Final → Done state"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\n  const blocks = [\n    {\n      type: \"header\",\n      text: { type: \"plain_text\", text: \"📋 Grant Report Generated\", emoji: true }\n    },\n    {\n      type: \"section\",\n      fields: [\n        { type: \"mrkdwn\", text: `*Grant:*\\n${data.grantName}` },\n        { type: \"mrkdwn\", text: `*Funder:*\\n${data.funderName.replace('&amp;', '&')}` },\n        { type: \"mrkdwn\", text: `*Report Type:*\\n${data.reportType === 'interim' ? '📊 Interim' : '✅ Final'}`\n   },\n        { type: \"mrkdwn\", text: `*Period:*\\n${data.reportingPeriod.start} → ${data.reportingPeriod.end}` }\n      ]\n    },\n    { type: \"divider\" },\n    {\n      type: \"section\",\n      text: { type: \"mrkdwn\", text: `*💰 Financial Summary*\\nBudget:\n  $${data.financials.totalBudget.toLocaleString()} | Spent: $${data.financials.amountSpent.toLocaleString()} |\n   Remaining: $${(data.financials.totalBudget - data.financials.amountSpent).toLocaleString()}` }\n    },\n    {\n      type: \"section\",\n      text: { type: \"mrkdwn\", text: `*📈 Key Metrics*\\n• Youth Served: ${data.metrics.youthServed} / 500\\n•\n  Seniors Served: ${data.metrics.seniorsServed} / 200\\n• Clothing Distributed:\n  ${data.metrics.clothingDistributed.toLocaleString()} / 2,500` }\n    },\n    { type: \"divider\" },\n    {\n      type: \"section\",\n      text: { type: \"mrkdwn\", text: `*📝 Summary*\\n${data.reportContent.substring(0, 350)}...` }\n    },\n    {\n      type: \"context\",\n      elements: [\n        { type: \"mrkdwn\", text: `🤖 Generated ${data.generatedAt} | <https://plane.thebrownmine.com/grant-appl\n  ication-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/${data.planeIssueId}|View in Plane>` }\n      ]\n    }\n  ];\n\n  return [{\n    json: {\n      ...data,\n      slackBlocks: blocks\n    }\n  }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        288
+      ],
+      "id": "4f8e4e79-e667-46ee-bc59-9f9e6f593e23",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"channel\":\"U09NQ2JFP6X\",\n    \"blocks\": {{ JSON.stringify($json.slackBlocks) }}\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2768,
+        288
+      ],
+      "id": "2a34e665-c79b-4f54-b324-bb1cb5e7c6a5",
+      "name": "HTTP Request",
+      "credentials": {
+        "slackApi": {
+          "id": "gbGDKxGcbViYThPU",
+          "name": "Slack account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Report Request": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.thebrownmine.com",
+            "user-agent": "axios/1.12.0",
+            "content-length": "583",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "100.29.112.47",
+            "x-forwarded-host": "n8n.thebrownmine.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "grantId": "GRANT-001",
+            "grantName": "Community Response Foundation Of Western Pennsylvania Grant",
+            "funderName": "Community Response Foundation Of Western Pennsylvania",
+            "reportType": "interim",
+            "reportingPeriodStart": "2026-02-01",
+            "reportingPeriodEnd": "2026-02-01",
+            "programMetrics": {
+              "youthServed": 0,
+              "seniorsServed": 0,
+              "clothingDistributed": 0,
+              "hygieneKitsDistributed": 0,
+              "confidenceIncrease": 0,
+              "volunteerHours": 0
+            },
+            "financialData": {
+              "totalBudget": 50000,
+              "amountSpent": 0,
+              "personnelCosts": 0,
+              "programCosts": 0,
+              "adminCosts": 0
+            },
+            "impactStories": [],
+            "planeIssueId": "54357706-295a-4cee-8e89-476dfd3508ec"
+          },
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/draft-report",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Report Request": {
+      "main": [
+        [
+          {
+            "node": "Search Grant in Plane",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Grant in Plane": {
+      "main": [
+        [
+          {
+            "node": "Compile Report Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Report Data": {
+      "main": [
+        [
+          {
+            "node": "AI Draft Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Draft Report": {
+      "main": [
+        [
+          {
+            "node": "Format Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Report": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append report": {
+      "main": [
+        [
+          {
+            "node": "Return Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Report": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "1b79a4bb-ba8a-4df8-9771-efb94693d04d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "aja3zj3nRLu4aedL",
+  "tags": []
+}

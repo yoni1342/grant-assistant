@@ -1,0 +1,522 @@
+{
+  "name": "plane state router15",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "plane-state-change",
+        "options": {}
+      },
+      "id": "f5b33b8d-805c-435e-996c-80c57da0f296",
+      "name": "Plane Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        480
+      ],
+      "webhookId": "plane-state-change",
+      "notes": "Receives Plane webhook events on issue state changes. Secret: plane_wh_6f6c6707b6af4947acd7d78ff7456305"
+    },
+    {
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers || {};\n  const body = $input.first().json.body || {};\n\n  // Check if this is an issue update event\n  const event = body.event || '';\n  const action = (body.action || '').toLowerCase();\n\n  // Plane sends 'updated' not 'PATCH'\n  if (event !== 'issue' || (action !== 'updated' && action !== 'created')) {\n    return [{ json: { skip: true, reason: 'Not an issue update event: ' + event + '/' + action } }];\n  }\n\n  // CRITICAL: Only process STATE changes, not other field updates\n  const activity = body.activity || {};\n  if (action === 'updated' && activity.field !== 'state_id') {\n    return [{ json: { skip: true, reason: 'Not a state change. Field changed: ' + activity.field } }];\n  }\n\n  const data = body.data || {};\n  const issueName = data.name || '';\n\n  // Only process [Eligibility] issues\n  if (!issueName.includes('[Eligibility]')) {\n    return [{ json: { skip: true, reason: 'Not an Eligibility issue' } }];\n  }\n\n  // Extract state ID - state is an OBJECT with id, name, color, group\n  const stateObj = data.state || {};\n  const stateId = typeof stateObj === 'string' ? stateObj : (stateObj.id || '');\n  const stateIdShort = stateId.substring(0, 8);\n  const stateName = typeof stateObj === 'object' ? (stateObj.name || '') : '';\n\n  // Parse description_html to extract metadata\n  const desc = data.description_html || '';\n\n  const getField = (label) => {\n    const m = desc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)', 'i'));\n    return m ? m[1].trim() : '';\n  };\n\n  // Extract funder name from issue name: [Eligibility] YELLOW - FUNDER NAME - ...\n  const nameMatch = issueName.match(/\\[Eligibility\\]\\s*\\w+\\s*-\\s*([^-]+)/);\n  const funderName = nameMatch ? nameMatch[1].trim() : getField('Funder') || 'Unknown Funder';\n\n  // Extract award amount from the Amount field ONLY (not from summary text)\n   // Extract award amount from the Amount field ONLY (not from summary text)\n   // Extract award amount from the Amount field ONLY (not from summary text)\n  let awardAmount = 0;\n  let awardAmountMin = 0;\n  let awardAmountMax = 0;\n  let amountType = 'none';\n\n  // Match BOTH \"Amount:\" AND \"Award Amount:\"\n  const amountFieldMatch = desc.match(/<strong>(?:Award )?Amount:<\\/strong>\\s*([^<]+)/i);\n  if (amountFieldMatch) {\n    const amountText = amountFieldMatch[1].trim();\n\n    // Try range: $25,000 - $2,000,000\n    const rangeMatch = amountText.match(/\\$\\s*([\\d,]+)\\s*[^\\d$]+\\s*\\$\\s*([\\d,]+)/);\n    if (rangeMatch) {\n      awardAmountMin = parseInt(rangeMatch[1].replace(/,/g, ''));\n      awardAmountMax = parseInt(rangeMatch[2].replace(/,/g, ''));\n      amountType = 'range';\n    } else {\n      // Try exact: $50,000\n      const exactMatch = amountText.match(/\\$\\s*([\\d,]+)/);\n      if (exactMatch) {\n        awardAmount = parseInt(exactMatch[1].replace(/,/g, ''));\n        amountType = 'exact';\n      }\n    }\n  }\n  \n\n  const deadline = getField('Deadline') || '';\n  const grantPeriodStart = getField('Grant Period Start') || getField('Grant Period')?.split(' to ')?.[0] || '';\n  const grantPeriodEnd = getField('Grant Period End') || getField('Grant Period')?.split(' to ')?.[1] || '';\n\n  return [{\n    json: {\n      skip: false,\n      issueId: data.id,\n      issueName: issueName,\n      stateId: stateId,\n      stateIdShort: stateIdShort,\n      stateName: stateName,\n      oldStateId: activity.old_value || '',\n      parentId: data.parent || null,\n      funderName: funderName,\n      awardAmount: awardAmount,\n      awardAmountMin: awardAmountMin,\n      awardAmountMax: awardAmountMax,\n      amountType: amountType,\n      deadline: deadline,\n      grantPeriodStart: grantPeriodStart,\n      grantPeriodEnd: grantPeriodEnd,\n      description: desc,\n      deliveryId: headers['x-plane-delivery'] || ''\n    }\n  }];"
+      },
+      "id": "ee0064d9-7c87-4212-99ce-6634f716f0cc",
+      "name": "Validate and Extract",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.skip }}"
+            }
+          ]
+        }
+      },
+      "id": "653eb6cb-f491-4693-b2ae-11f905f42028",
+      "name": "Filter Skipped",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 1,
+      "position": [
+        240,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.stateIdShort }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "eac190a2",
+              "outputKey": "drafting"
+            },
+            {
+              "value2": "fd5d7c0d",
+              "outputKey": "submitted"
+            },
+            {
+              "value2": "2edaa34f",
+              "outputKey": "awarded"
+            },
+            {
+              "value2": "4a45ce08",
+              "outputKey": "reporting"
+            },
+            {
+              "value2": "b5e21610",
+              "outputKey": "Auto Submitting"
+            },
+            {}
+          ]
+        },
+        "fallbackOutput": 5
+      },
+      "id": "fd5fd05e-b562-4ab1-86b6-c5871cedf2a6",
+      "name": "Route by State",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        464,
+        432
+      ],
+      "notes": "Routes to different workflows based on new state: Drafting=eac190a2, Submitted=fd5d7c0d, Awarded=2edaa34f, Reporting=4a45ce08"
+    },
+    {
+      "parameters": {
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/{{ $json.issueId }}/comments/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "30662a25-ac9e-42dd-9f30-06cad51666e3",
+      "name": "Fetch Comments for RFP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        688,
+        96
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fetches issue comments to find RFP text"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prevData = $('Route by State').first().json;\n  const commentsResponse = $input.first().json;\n  const comments = commentsResponse.results || commentsResponse || [];\n\n  let rfpText = '';\n\n  for (const comment of comments) {\n    const text = comment.comment_html || comment.comment || '';\n    if (text.toLowerCase().includes('section') ||\n        text.toLowerCase().includes('word') ||\n        text.toLowerCase().includes('describe') ||\n        text.toLowerCase().includes('application') ||\n        text.length > 500) {\n      rfpText = text.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim();\n      break;\n    }\n  }\n\n  if (!rfpText) {\n    rfpText = 'No RFP found in comments. Please provide: Organization Overview, Program Description, DEI Statement,Outcomes and Evaluation, Budget and Sustainability sections.';\n  }\n\n  // Get description and strip HTML for cleaner matching\n  const descHtml = prevData.description || '';\n  const descClean = descHtml.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ');\n\n  // Extract award amount - handle range, exact, or none\n  let grantAmount = 0;\n  let grantAmountMin = 0;\n  let grantAmountMax = 0;\n  let amountType = 'none';\n\n  // First try: Amount: $X - $Y (range after Amount label)\n  const amountRangeMatch = descClean.match(/Amount:\\s*\\$\\s*([\\d,]+)\\s*[^\\d$]+\\s*\\$\\s*([\\d,]+)/i);\n  if (amountRangeMatch) {\n    grantAmountMin = parseInt(amountRangeMatch[1].replace(/,/g, ''));\n    grantAmountMax = parseInt(amountRangeMatch[2].replace(/,/g, ''));\n    amountType = 'range';\n  } else {\n    // Second try: Amount: $X (exact after Amount label)\n    const amountExactMatch = descClean.match(/Amount:\\s*\\$\\s*([\\d,]+)/i);\n    if (amountExactMatch) {\n      grantAmount = parseInt(amountExactMatch[1].replace(/,/g, ''));\n      amountType = 'exact';\n    }\n  }\n\n  // Determine program focus\n  let programFocus = 'balanced';\n  const descLower = descClean.toLowerCase();\n  if (descLower.includes('youth') || descLower.includes('foster') || descLower.includes('children')) {\n    programFocus = 'youth';\n  } else if (descLower.includes('senior') || descLower.includes('elder') || descLower.includes('aging')) {\n    programFocus = 'senior';\n  }\n\n  // Extract admin cap from RFP if mentioned\n  let adminCap = 15;\n  const adminMatch =\n  rfpText.match(/indirect\\s*(?:costs?|rate)?\\s*(?:capped?\\s*at|limited?\\s*to|max(?:imum)?)\\s*(\\d+)\\s*%/i);\n  if (adminMatch) {\n    adminCap = parseInt(adminMatch[1]);\n  }\n\n  return [{\n    json: {\n      grantId: prevData.issueName?.match(/PP-\\d+/)?.[0] || 'GRANT-' + Date.now(),\n      grantName: prevData.funderName + ' Grant',\n      funderName: prevData.funderName,\n      funderFocus: prevData.description,\n      deadline: prevData.deadline || '',\n      planeIssueId: prevData.issueId,\n      rfpText: rfpText,\n      grantAmount: grantAmount,\n      grantAmountMin: grantAmountMin,\n      grantAmountMax: grantAmountMax,\n      amountType: amountType,\n      hasGrantAmount: amountType !== 'none',\n      programFocus: programFocus,\n      adminCap: adminCap,\n      grantPurpose: prevData.funderName + ' - ' + programFocus + ' program support'\n    }\n  }];"
+      },
+      "id": "3cecd38d-3302-4623-84f7-7fd9f7443800",
+      "name": "Extract RFP from Comments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/generate-proposal",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "2ab70d7c-13a6-4baf-bebe-b767a2c765c6",
+      "name": "Call WF5 Proposal Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1136,
+        96
+      ],
+      "notes": "Triggers Proposal Generator with RFP from comments"
+    },
+    {
+      "parameters": {
+        "jsCode": " const data = $input.first().json;\n\n  // Extract grant ID from issue name\n  const grantIdMatch = data.issueName ? data.issueName.match(/PP-\\d+/) : null;\n  const grantId = grantIdMatch ? grantIdMatch[0] : 'GRANT-001';\n\n  return [{\n    json: {\n      // Grant identification\n      grantId: grantId,\n      grantName: (data.funderName || 'Unknown Funder') + ' Grant',\n      planeIssueId: data.issueId || '',\n\n      // Funder info for WF9 call (WF11 will call WF9 internally)\n      funderName: data.funderName || '',\n      funderEIN: data.funderEIN || '',\n      focusAreas: data.focusAreas || [],\n\n      // Portal info (if already known, otherwise WF9 will find it)\n      portalUrl: data.portalUrl || '',\n      portalType: data.portalType || '',\n\n      // Documents to attach\n      requiredDocs: data.requiredDocs || ['501c3_letter', 'budget_operating', 'board_roster'],\n\n      // Proposal content (if available)\n      proposalData: data.proposalData || {},\n      budgetData: data.budgetData || {},\n\n      // Metadata\n      submittedDate: new Date().toISOString().split('T')[0],\n      triggeredFrom: 'routing-node'\n    }\n  }];"
+      },
+      "id": "85d19ea6-4d81-41f7-afcb-84f470ceac96",
+      "name": "Prep Submission Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare payload for WF13 - Award Handler\n  const data = $input.first().json;\n\n  // Handle both exact and range amounts\n  let awardAmount = data.awardAmount || 0;\n\n  // If it's a range, use the minimum (or you can change to midpoint/max)\n  if (data.amountType === 'range' && data.awardAmountMin) {\n    awardAmount = data.awardAmountMin;\n    // Or use midpoint: awardAmount = Math.round((data.awardAmountMin + data.awardAmountMax) / 2);\n  }\n\n  return [{\n    json: {\n      grantId: data.issueName.match(/PP-\\d+/) ? data.issueName.match(/PP-\\d+/)[0] : 'GRANT-001',\n      grantName: data.funderName + ' Grant',\n      funderName: data.funderName,\n      awardAmount: awardAmount,\n      awardAmountMin: data.awardAmountMin || 0,\n      awardAmountMax: data.awardAmountMax || 0,\n      amountType: data.amountType || 'none',\n      awardDate: new Date().toISOString().split('T')[0],\n      grantPeriodStart: data.grantPeriodStart || new Date().toISOString().split('T')[0],\n      grantPeriodEnd: data.grantPeriodEnd || '',\n      reportingRequirements: [\n        {\"type\": \"interim_report\", \"dueDate\": \"\", \"description\": \"Interim Progress Report\"},\n        {\"type\": \"final_report\", \"dueDate\": \"\", \"description\": \"Final Grant Report\"}\n      ],\n      funderContact: 'TBD',\n      planeIssueId: data.issueId\n    }\n  }];"
+      },
+      "id": "d4bf246a-cbc2-41d1-a1a0-20d9ab9b1c01",
+      "name": "Prep Award Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/record-award",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "1c7eda64-4019-40d0-bbcd-250d5fe0a0df",
+      "name": "Call WF13 Award Handler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        672
+      ],
+      "notes": "Triggers Award Handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare payload for WF14 - Report Drafter\n  const data = $input.first().json;\n\n  // Handle both exact and range amounts (NO fallback to 50000)\n  let totalBudget = data.awardAmount || 0;\n\n  if (data.amountType === 'range' && data.awardAmountMin) {\n    totalBudget = data.awardAmountMin;\n  }\n\n  return [{\n    json: {\n      grantId: data.issueName.match(/PP-\\d+/) ? data.issueName.match(/PP-\\d+/)[0] : 'GRANT-001',\n      grantName: data.funderName + ' Grant',\n      funderName: data.funderName,\n      reportType: 'interim',\n      reportingPeriodStart: data.grantPeriodStart || '',\n      reportingPeriodEnd: new Date().toISOString().split('T')[0],\n      programMetrics: {\n        youthServed: 0,\n        seniorsServed: 0,\n        clothingDistributed: 0,\n        hygieneKitsDistributed: 0,\n        confidenceIncrease: 0,\n        volunteerHours: 0\n      },\n      financialData: {\n        totalBudget: totalBudget,\n        amountSpent: 0,\n        personnelCosts: 0,\n        programCosts: 0,\n        adminCosts: 0\n      },\n      impactStories: [],\n      planeIssueId: data.issueId\n    }\n  }];"
+      },
+      "id": "262f0c17-b193-45ad-bd9a-d2fe356f7581",
+      "name": "Prep Report Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/draft-report",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "4fb3481c-f446-48c1-9376-c6ad5c8d128f",
+      "name": "Call WF14 Report Drafter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        864
+      ],
+      "notes": "Triggers Report Drafter"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/prepare-submission",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"grantId\": \"{{ $json.issueName.match(/PP-\\\\d+/) ? $json.issueName.match(/PP-\\\\d+/)[0] : 'GRANT-001' }}\",\n    \"grantName\": \"{{ $json.issueName || 'Unknown Grant' }}\",\n    \"planeIssueId\": \"{{ $json.planeIssueId }}\",\n    \"funderName\": \"{{ $json.funderName || '' }}\",\n    \"funderEIN\": \"{{ $json.funderEIN || '' }}\",\n    \"focusAreas\": {{ JSON.stringify($json.focusAreas || []) }},\n    \"requiredDocs\": {{ JSON.stringify($json.requiredDocs || ['501c3_letter', 'budget_operating', 'board_roster']) }},\n    \"proposalData\": {{ JSON.stringify($json.proposalData || {}) }},\n    \"budgetData\": {{ JSON.stringify($json.budgetData || {}) }}\n  }",
+        "options": {}
+      },
+      "id": "ccd4a0ca-37be-4555-a058-227ae5b212dc",
+      "name": "Call WF11 Auto-Submission",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        288
+      ],
+      "notes": "Triggers Post-Submission Tracker"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare payload for WF12 - Post Submission Tracker\nconst data = $input.first().json;\n\nreturn [{\n  json: {\n    grantId: data.issueName.match(/PP-\\d+/) ? data.issueName.match(/PP-\\d+/)[0] : 'GRANT-001',\n    grantName: data.funderName + ' Grant',\n    funderName: data.funderName,\n    confirmationNumber: 'PENDING-' + Date.now(),\n    submittedDate: new Date().toISOString().split('T')[0],\n    contactPerson: 'TBD',\n    contactEmail: 'TBD',\n    expectedDecisionDate: '',\n    portalUrl: '',\n    planeIssueId: data.issueId\n  }\n}];"
+      },
+      "id": "c5b7db6c-c71c-4ca4-ac74-65f672fee8f9",
+      "name": "Prep Submission Data1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/log-submission",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "b306f24a-61c2-45a8-9608-cd764c6e003b",
+      "name": "Call WF12 post-Submission",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        480
+      ],
+      "notes": "Triggers Post-Submission Tracker"
+    }
+  ],
+  "pinData": {
+    "Plane Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.thebrownmine.com",
+            "user-agent": "Autopilot",
+            "content-length": "2088",
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "100.29.112.47",
+            "x-forwarded-host": "n8n.thebrownmine.com",
+            "x-forwarded-proto": "https",
+            "x-plane-delivery": "4cdc898f-ddf0-4af7-b713-8c7b93deebd0",
+            "x-plane-event": "issue",
+            "x-plane-signature": "ac69338936336da90e7dda4aa8f32b477cf0cb8f87e0dad9645b3664b3156278"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "issue",
+            "action": "updated",
+            "webhook_id": "0754da02-7d20-476a-9c96-d76b1fe52844",
+            "workspace_id": "3c6230e8-d66d-4853-a8bb-9349cace5f8e",
+            "data": {
+              "id": "462117a0-0155-400e-920e-8d759c470ea8",
+              "labels": [],
+              "assignees": [],
+              "state": {
+                "id": "4a45ce08-3cdd-4bb4-aa4c-90c1b44875ce",
+                "name": "Reporting",
+                "color": "#F97316",
+                "group": "started"
+              },
+              "created_at": "2026-01-29T10:23:00.884722Z",
+              "updated_at": "2026-02-01T17:18:34.760805Z",
+              "deleted_at": null,
+              "point": null,
+              "name": "[Eligibility] YELLOW - Yield Giving (MacKenzie Scott) - Unrestricted Funding",
+              "description": {},
+              "description_html": "<div><p><strong>Status:</strong> Awarded</p><p><strong>Award Amount:</strong> $100000</p><p><strong>Award Date:</strong> 2026-02-01</p><p><strong>Funder:</strong> Yield Giving (MacKenzie Scott)</p><p><strong>Grant Period:</strong> 2026-02-01 to TBD</p><p><strong>Funder Contact:</strong> TBD</p></div>",
+              "description_stripped": "Status: AwardedAward Amount: $100000Award Date: 2026-02-01Funder: Yield Giving (MacKenzie Scott)Grant Period: 2026-02-01 to TBDFunder Contact: TBD",
+              "description_binary": null,
+              "priority": "medium",
+              "start_date": null,
+              "target_date": null,
+              "sequence_id": 694,
+              "sort_order": 65535,
+              "completed_at": null,
+              "archived_at": null,
+              "is_draft": false,
+              "external_source": null,
+              "external_id": null,
+              "created_by": "8581628d-4c29-45f6-947e-b3cb3e0eba7c",
+              "updated_by": "8581628d-4c29-45f6-947e-b3cb3e0eba7c",
+              "project": "f65bffe2-ee6b-4647-9487-9b7dd73c0d19",
+              "workspace": "3c6230e8-d66d-4853-a8bb-9349cace5f8e",
+              "parent": "c250d522-16c3-49f6-b45b-9a417884b14d",
+              "estimate_point": null,
+              "type": null
+            },
+            "activity": {
+              "field": "state_id",
+              "new_value": "4a45ce08-3cdd-4bb4-aa4c-90c1b44875ce",
+              "old_value": "2edaa34f-e79c-45df-abce-d24ec71ee10d",
+              "actor": {
+                "id": "8581628d-4c29-45f6-947e-b3cb3e0eba7c",
+                "first_name": "Yonatan",
+                "last_name": "Tesfaye",
+                "email": "yonatantesfaye30@gmail.com",
+                "avatar": "",
+                "avatar_url": "/api/assets/v2/static/e75b4fbe-a0ac-4bdf-b9a9-6f771db6687c/",
+                "display_name": "yonatantesfaye30"
+              },
+              "old_identifier": null,
+              "new_identifier": null
+            }
+          },
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/plane-state-change",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Plane Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate and Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and Extract": {
+      "main": [
+        [
+          {
+            "node": "Filter Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Skipped": {
+      "main": [
+        [
+          {
+            "node": "Route by State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by State": {
+      "main": [
+        [
+          {
+            "node": "Fetch Comments for RFP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prep Submission Data1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prep Award Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prep Report Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prep Submission Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Comments for RFP": {
+      "main": [
+        [
+          {
+            "node": "Extract RFP from Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract RFP from Comments": {
+      "main": [
+        [
+          {
+            "node": "Call WF5 Proposal Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Submission Data": {
+      "main": [
+        [
+          {
+            "node": "Call WF11 Auto-Submission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Award Data": {
+      "main": [
+        [
+          {
+            "node": "Call WF13 Award Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Report Data": {
+      "main": [
+        [
+          {
+            "node": "Call WF14 Report Drafter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Submission Data1": {
+      "main": [
+        [
+          {
+            "node": "Call WF12 post-Submission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ebf829d1-6a4e-434b-906d-efea8fd2c4f8",
+  "meta": {
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "VuQbQanAeSxbS86A",
+  "tags": []
+}

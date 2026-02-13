@@ -1,0 +1,423 @@
+{
+  "name": "Budget Generator 7",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-budget",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "78629086-63cd-440c-afbc-3b8d8bc4b18f",
+      "name": "Budget Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        656
+      ],
+      "webhookId": "generate-budget",
+      "disabled": true,
+      "notes": "POST: { grantAmount: 50000, programFocus: 'youth', funderName: 'X Foundation', adminCap: 15, grantPurpose: 'clothing program' }"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc",
+          "mode": "list",
+          "cachedResultName": "Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1451427733,
+          "mode": "list",
+          "cachedResultName": "Budget_Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc/edit#gid=1451427733"
+        },
+        "options": {}
+      },
+      "id": "6326e9d0-8b3b-4ed3-a92f-bed58a00c72a",
+      "name": "Get Budget Template",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1360,
+        656
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "uPzrzFu4mU5jwnGv",
+          "name": "Google Sheets account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate budget allocations based on grant amount and program focus\nconst request = $('Budget Request').first().json.body;\nconst templateItems = $('Get Budget Template').all().map(i => i.json);\n\nconst grantAmount = parseFloat(request.grantAmount) || 0;\nconst programFocus = (request.programFocus || 'balanced').toLowerCase();\nconst adminCap = parseFloat(request.adminCap) || 100; // Default no cap\n\n// Adjust percentages based on program focus\nconst focusMultipliers = {\n  youth: { youth: 1.3, senior: 0.5, shared: 1.0, admin: 1.0 },\n  senior: { youth: 0.5, senior: 1.3, shared: 1.0, admin: 1.0 },\n  balanced: { youth: 1.0, senior: 1.0, shared: 1.0, admin: 1.0 }\n};\n\nconst multipliers = focusMultipliers[programFocus] || focusMultipliers.balanced;\n\n// Calculate raw allocations\nlet lineItems = templateItems.map(item => {\n  const basePercent = parseFloat(item.default_percent) || 0;\n  const programArea = (item.program_area || 'shared').toLowerCase();\n  const category = (item.category || 'direct').toLowerCase();\n  \n  // Apply focus multiplier\n  const multiplier = multipliers[programArea] || 1.0;\n  const adjustedPercent = basePercent * multiplier;\n  \n  return {\n    lineItem: item.line_item,\n    category: category,\n    programArea: programArea,\n    basePercent: basePercent,\n    adjustedPercent: adjustedPercent,\n    description: item.description || ''\n  };\n});\n\n// Normalize percentages to 100%\nconst totalPercent = lineItems.reduce((sum, item) => sum + item.adjustedPercent, 0);\nlineItems = lineItems.map(item => ({\n  ...item,\n  normalizedPercent: (item.adjustedPercent / totalPercent) * 100,\n  amount: Math.round((item.adjustedPercent / totalPercent) * grantAmount)\n}));\n\n// Calculate category totals\nconst categoryTotals = {\n  personnel: { amount: 0, percent: 0 },\n  direct: { amount: 0, percent: 0 },\n  indirect: { amount: 0, percent: 0 }\n};\n\nlet adminTotal = 0;\nlet adminPercent = 0;\n\nfor (const item of lineItems) {\n  const cat = item.category === 'personnel' ? 'personnel' : \n              item.category === 'indirect' ? 'indirect' : 'direct';\n  categoryTotals[cat].amount += item.amount;\n  categoryTotals[cat].percent += item.normalizedPercent;\n  \n  // Track admin costs (indirect + admin program area)\n  if (item.category === 'indirect' || item.programArea === 'admin') {\n    adminTotal += item.amount;\n    adminPercent += item.normalizedPercent;\n  }\n}\n\nreturn [{\n  json: {\n    grantAmount: grantAmount,\n    programFocus: programFocus,\n    funderName: request.funderName || 'Unknown Funder',\n    grantPurpose: request.grantPurpose || 'general program support',\n    adminCap: adminCap,\n    lineItems: lineItems,\n    categoryTotals: categoryTotals,\n    adminTotal: adminTotal,\n    adminPercent: Math.round(adminPercent * 10) / 10,\n    needsAdjustment: adminPercent > adminCap\n  }\n}];"
+      },
+      "id": "0a709d47-23a2-422a-ad19-f48d539e67c9",
+      "name": "Calculate Allocations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        656
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Apply funder restrictions (admin cost caps)\nconst data = $input.first().json;\nconst warnings = [];\n\nlet lineItems = [...data.lineItems];\nlet adminPercent = data.adminPercent;\nconst adminCap = data.adminCap;\n\n// If admin costs exceed cap, we need to reallocate\nif (data.needsAdjustment && adminCap < 100) {\n  const excessPercent = adminPercent - adminCap;\n  warnings.push(`Admin costs reduced from ${adminPercent.toFixed(1)}% to ${adminCap}% per funder requirements`);\n  \n  // Find admin/indirect items and reduce proportionally\n  const adminItems = lineItems.filter(i => \n    i.category === 'indirect' || i.programArea === 'admin'\n  );\n  const nonAdminItems = lineItems.filter(i => \n    i.category !== 'indirect' && i.programArea !== 'admin'\n  );\n  \n  // Calculate reduction factor for admin items\n  const reductionFactor = adminCap / adminPercent;\n  \n  // Reduce admin items\n  let totalReduced = 0;\n  adminItems.forEach(item => {\n    const oldAmount = item.amount;\n    item.amount = Math.round(item.amount * reductionFactor);\n    item.normalizedPercent = item.normalizedPercent * reductionFactor;\n    totalReduced += (oldAmount - item.amount);\n  });\n  \n  // Redistribute to direct program costs proportionally\n  const directItems = nonAdminItems.filter(i => i.category === 'direct' || i.category === 'personnel');\n  const directTotal = directItems.reduce((sum, i) => sum + i.amount, 0);\n  \n  directItems.forEach(item => {\n    const proportion = item.amount / directTotal;\n    const bonus = Math.round(totalReduced * proportion);\n    item.amount += bonus;\n    item.normalizedPercent = (item.amount / data.grantAmount) * 100;\n  });\n  \n  lineItems = [...adminItems, ...nonAdminItems];\n  adminPercent = adminCap;\n}\n\n// Recalculate category totals\nconst categoryTotals = {\n  personnel: { amount: 0, percent: 0 },\n  direct: { amount: 0, percent: 0 },\n  indirect: { amount: 0, percent: 0 }\n};\n\nfor (const item of lineItems) {\n  const cat = item.category === 'personnel' ? 'personnel' : \n              item.category === 'indirect' ? 'indirect' : 'direct';\n  categoryTotals[cat].amount += item.amount;\n  categoryTotals[cat].percent += item.normalizedPercent;\n}\n\n// Round percentages\nObject.keys(categoryTotals).forEach(key => {\n  categoryTotals[key].percent = Math.round(categoryTotals[key].percent * 10) / 10;\n});\n\nreturn [{\n  json: {\n    ...data,\n    lineItems: lineItems,\n    categoryTotals: categoryTotals,\n    adminPercent: Math.round(adminPercent * 10) / 10,\n    warnings: warnings\n  }\n}];"
+      },
+      "id": "8c8c49ae-99eb-47bd-8250-5c2fd99f0301",
+      "name": "Apply Funder Restrictions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        656
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Budget Specialist for Tabitha's Closet, a Georgia 501(c)(3) serving foster youth and seniors.\n\nWrite a budget narrative/justification for a grant budget. The narrative should:\n1. Explain how funds will be used\n2. Justify each major expense category\n3. Show connection between expenses and program outcomes\n4. Be professional and compelling\n5. Reference specific line items and amounts\n\nFormat:\n- Start with a brief overview paragraph\n- Then justify each category (Personnel, Direct Program Costs, Administrative)\n- End with a statement about cost-effectiveness\n\nKeep it concise but thorough (300-500 words total).",
+              "role": "system"
+            },
+            {
+              "content": "=GRANT DETAILS:\nFunder: {{ $json.funderName }}\nGrant Amount: ${{ $json.grantAmount.toLocaleString() }}\nPurpose: {{ $json.grantPurpose }}\nProgram Focus: {{ $json.programFocus }}\n\nBUDGET BREAKDOWN:\n{{ JSON.stringify($json.lineItems.map(i => ({ item: i.lineItem, amount: i.amount, description: i.description })), null, 2) }}\n\nCATEGORY TOTALS:\n- Personnel: ${{ $json.categoryTotals.personnel.amount.toLocaleString() }} ({{ $json.categoryTotals.personnel.percent }}%)\n- Direct Program: ${{ $json.categoryTotals.direct.amount.toLocaleString() }} ({{ $json.categoryTotals.direct.percent }}%)\n- Administrative: ${{ $json.categoryTotals.indirect.amount.toLocaleString() }} ({{ $json.categoryTotals.indirect.percent }}%)\n\nAdmin Cost Percentage: {{ $json.adminPercent }}%"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "81f84414-ae5b-4b32-9b8a-2cc11e064f6a",
+      "name": "AI Generate Narrative",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2032,
+        656
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final budget output\nconst budgetData = $('Apply Funder Restrictions').first().json;\nconst aiResponse = $input.first().json;\n\nconst narrative = aiResponse.message?.content || aiResponse.text || '';\n\n// Build formatted line items for display\nconst formattedLineItems = budgetData.lineItems.map(item => ({\n  lineItem: item.lineItem,\n  category: item.category,\n  programArea: item.programArea,\n  amount: item.amount,\n  amountFormatted: `$${item.amount.toLocaleString()}`,\n  percent: Math.round(item.normalizedPercent * 10) / 10,\n  description: item.description\n}));\n\n// Sort by category then amount\nformattedLineItems.sort((a, b) => {\n  const catOrder = { personnel: 1, direct: 2, indirect: 3 };\n  if (catOrder[a.category] !== catOrder[b.category]) {\n    return catOrder[a.category] - catOrder[b.category];\n  }\n  return b.amount - a.amount;\n});\n\n// Build summary table as markdown\nlet markdownTable = `## Budget Summary: ${budgetData.funderName}\\n\\n`;\nmarkdownTable += `**Grant Amount:** $${budgetData.grantAmount.toLocaleString()}\\n`;\nmarkdownTable += `**Program Focus:** ${budgetData.programFocus}\\n`;\nmarkdownTable += `**Purpose:** ${budgetData.grantPurpose}\\n\\n`;\n\nmarkdownTable += `### Category Totals\\n`;\nmarkdownTable += `| Category | Amount | Percent |\\n`;\nmarkdownTable += `|----------|--------|---------|\\n`;\nmarkdownTable += `| Personnel | $${budgetData.categoryTotals.personnel.amount.toLocaleString()} | ${budgetData.categoryTotals.personnel.percent}% |\\n`;\nmarkdownTable += `| Direct Program | $${budgetData.categoryTotals.direct.amount.toLocaleString()} | ${budgetData.categoryTotals.direct.percent}% |\\n`;\nmarkdownTable += `| Administrative | $${budgetData.categoryTotals.indirect.amount.toLocaleString()} | ${budgetData.categoryTotals.indirect.percent}% |\\n`;\nmarkdownTable += `| **TOTAL** | **$${budgetData.grantAmount.toLocaleString()}** | **100%** |\\n\\n`;\n\nmarkdownTable += `### Line Item Detail\\n`;\nmarkdownTable += `| Line Item | Category | Amount | % | Description |\\n`;\nmarkdownTable += `|-----------|----------|--------|---|-------------|\\n`;\nfor (const item of formattedLineItems) {\n  markdownTable += `| ${item.lineItem} | ${item.category} | ${item.amountFormatted} | ${item.percent}% | ${item.description} |\\n`;\n}\n\nmarkdownTable += `\\n### Budget Narrative\\n\\n${narrative}\\n`;\n\nif (budgetData.warnings && budgetData.warnings.length > 0) {\n  markdownTable += `\\n### ⚠️ Adjustments Made\\n`;\n  for (const warning of budgetData.warnings) {\n    markdownTable += `- ${warning}\\n`;\n  }\n}\n\nmarkdownTable += `\\n---\\n*Generated: ${new Date().toISOString()}*`;\n\nreturn [{\n  json: {\n    success: true,\n    grantAmount: budgetData.grantAmount,\n    funderName: budgetData.funderName,\n    programFocus: budgetData.programFocus,\n    categoryTotals: budgetData.categoryTotals,\n    adminPercent: budgetData.adminPercent,\n    lineItems: formattedLineItems,\n    narrative: narrative,\n    warnings: budgetData.warnings || [],\n    markdownBudget: markdownTable\n  }\n}];"
+      },
+      "id": "cb145609-7cb9-4566-831b-914952cc247b",
+      "name": "Format Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2384,
+        656
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-budget",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "7990c62e-60ca-439f-933e-548a7f42fdb7",
+      "name": "Budget Request1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1024
+      ],
+      "webhookId": "generate-budget",
+      "notes": "POST: { grantAmount: 50000, programFocus: 'youth', funderName: 'X Foundation', adminCap: 15, grantPurpose: 'clothing program' }"
+    },
+    {
+      "parameters": {
+        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search=%5BBudget%5D&per_page=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "120245ea-f537-4679-a90b-43a10f0e4a44",
+      "name": "Get Budget Template1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        1024
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fetch budget template items from Plane [Budget] issues"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate budget allocations based on grant amount and program focus\n  const request = $('Budget Request1').first().json.body;\n\n  // Parse Plane [Budget] issues into template items\n  const response = $('Get Budget Template1').first().json;\n  const allIssues = response.results || response || [];\n  const issueList = Array.isArray(allIssues) ? allIssues : [];\n\n  const templateItems = [];\n  for (const issue of issueList) {\n    const name = issue.name || '';\n    const match = name.match(/\\[Budget\\]\\s*\\S+\\s*-\\s*(.+)/);\n    if (!match) continue;\n\n    const desc = issue.description_html || '';\n    const getField = (label) => {\n      const m = desc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)'));\n      return m ? m[1].trim() : '';\n    };\n\n    templateItems.push({\n      line_item: match[1].trim(),\n      category: getField('Category'),\n      program_area: getField('Program Area'),\n      default_percent: parseFloat(getField('Default Percent')) || 0,\n      description: getField('Description')\n    });\n  }\n\n  // Handle different amount types: range, exact, or none\n  const amountType = request.amountType || 'none';\n  const grantAmountExact = parseFloat(request.grantAmount) || 0;\n  const grantAmountMin = parseFloat(request.grantAmountMin) || 0;\n  const grantAmountMax = parseFloat(request.grantAmountMax) || 0;\n\n  let grantAmount = 0;\n  let amountNote = '';\n\n  if (amountType === 'exact') {\n    grantAmount = grantAmountExact;\n    amountNote = `Exact amount: $${grantAmount.toLocaleString()}`;\n  } else if (amountType === 'range') {\n    // Use minimum as conservative budget target\n    grantAmount = grantAmountMin;\n    amountNote = `Range: $${grantAmountMin.toLocaleString()} - $${grantAmountMax.toLocaleString()} (using minimum)`;\n  } else {\n    // No amount specified - can't generate real budget\n    grantAmount = 0;\n    amountNote = 'No grant amount specified - budget percentages only';\n  }\n\n  const programFocus = (request.programFocus || 'balanced').toLowerCase();\n  const adminCap = parseFloat(request.adminCap) || 100;\n\n  // Adjust percentages based on program focus\n  const focusMultipliers = {\n    youth: { youth: 1.3, senior: 0.5, shared: 1.0, admin: 1.0 },\n    senior: { youth: 0.5, senior: 1.3, shared: 1.0, admin: 1.0 },\n    balanced: { youth: 1.0, senior: 1.0, shared: 1.0, admin: 1.0 }\n  };\n\n  const multipliers = focusMultipliers[programFocus] || focusMultipliers.balanced;\n\n  // Calculate raw allocations\n  let lineItems = templateItems.map(item => {\n    const basePercent = parseFloat(item.default_percent) || 0;\n    const programArea = (item.program_area || 'shared').toLowerCase();\n    const category = (item.category || 'direct').toLowerCase();\n\n    const multiplier = multipliers[programArea] || 1.0;\n    const adjustedPercent = basePercent * multiplier;\n\n    return {\n      lineItem: item.line_item,\n      category: category,\n      programArea: programArea,\n      basePercent: basePercent,\n      adjustedPercent: adjustedPercent,\n      description: item.description || ''\n    };\n  });\n\n  // Normalize percentages to 100%\n  const totalPercent = lineItems.reduce((sum, item) => sum + item.adjustedPercent, 0);\n  lineItems = lineItems.map(item => ({\n    ...item,\n    normalizedPercent: totalPercent > 0 ? (item.adjustedPercent / totalPercent) * 100 : 0,\n    amount: totalPercent > 0 ? Math.round((item.adjustedPercent / totalPercent) * grantAmount) : 0\n  }));\n\n  // Calculate category totals\n  const categoryTotals = {\n    personnel: { amount: 0, percent: 0 },\n    direct: { amount: 0, percent: 0 },\n    indirect: { amount: 0, percent: 0 }\n  };\n\n  let adminTotal = 0;\n  let adminPercent = 0;\n\n  for (const item of lineItems) {\n    const cat = item.category === 'personnel' ? 'personnel' :\n                item.category === 'indirect' ? 'indirect' : 'direct';\n    categoryTotals[cat].amount += item.amount;\n    categoryTotals[cat].percent += item.normalizedPercent;\n\n    if (item.category === 'indirect' || item.programArea === 'admin') {\n      adminTotal += item.amount;\n      adminPercent += item.normalizedPercent;\n    }\n  }\n\n  return [{\n    json: {\n      // Amount info\n      grantAmount: grantAmount,\n      amountType: amountType,\n      grantAmountMin: grantAmountMin,\n      grantAmountMax: grantAmountMax,\n      amountNote: amountNote,\n      hasAmount: grantAmount > 0,\n\n      // Other fields\n      programFocus: programFocus,\n      funderName: request.funderName || 'Unknown Funder',\n      grantPurpose: request.grantPurpose || 'general program support',\n      adminCap: adminCap,\n      lineItems: lineItems,\n      categoryTotals: categoryTotals,\n      adminTotal: adminTotal,\n      adminPercent: Math.round(adminPercent * 10) / 10,\n      needsAdjustment: adminPercent > adminCap\n    }\n  }];"
+      },
+      "id": "2554c61c-167f-475d-9a28-5f9a6250d538",
+      "name": "Calculate Allocations1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        1024
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Apply funder restrictions (admin cost caps)\nconst data = $input.first().json;\nconst warnings = [];\n\nlet lineItems = [...data.lineItems];\nlet adminPercent = data.adminPercent;\nconst adminCap = data.adminCap;\n\n// If admin costs exceed cap, we need to reallocate\nif (data.needsAdjustment && adminCap < 100) {\n  const excessPercent = adminPercent - adminCap;\n  warnings.push(`Admin costs reduced from ${adminPercent.toFixed(1)}% to ${adminCap}% per funder requirements`);\n  \n  const adminItems = lineItems.filter(i => \n    i.category === 'indirect' || i.programArea === 'admin'\n  );\n  const nonAdminItems = lineItems.filter(i => \n    i.category !== 'indirect' && i.programArea !== 'admin'\n  );\n  \n  const reductionFactor = adminCap / adminPercent;\n  \n  let totalReduced = 0;\n  adminItems.forEach(item => {\n    const oldAmount = item.amount;\n    item.amount = Math.round(item.amount * reductionFactor);\n    item.normalizedPercent = item.normalizedPercent * reductionFactor;\n    totalReduced += (oldAmount - item.amount);\n  });\n  \n  const directItems = nonAdminItems.filter(i => i.category === 'direct' || i.category === 'personnel');\n  const directTotal = directItems.reduce((sum, i) => sum + i.amount, 0);\n  \n  directItems.forEach(item => {\n    const proportion = item.amount / directTotal;\n    const bonus = Math.round(totalReduced * proportion);\n    item.amount += bonus;\n    item.normalizedPercent = (item.amount / data.grantAmount) * 100;\n  });\n  \n  lineItems = [...adminItems, ...nonAdminItems];\n  adminPercent = adminCap;\n}\n\n// Recalculate category totals\nconst categoryTotals = {\n  personnel: { amount: 0, percent: 0 },\n  direct: { amount: 0, percent: 0 },\n  indirect: { amount: 0, percent: 0 }\n};\n\nfor (const item of lineItems) {\n  const cat = item.category === 'personnel' ? 'personnel' : \n              item.category === 'indirect' ? 'indirect' : 'direct';\n  categoryTotals[cat].amount += item.amount;\n  categoryTotals[cat].percent += item.normalizedPercent;\n}\n\nObject.keys(categoryTotals).forEach(key => {\n  categoryTotals[key].percent = Math.round(categoryTotals[key].percent * 10) / 10;\n});\n\nreturn [{\n  json: {\n    ...data,\n    lineItems: lineItems,\n    categoryTotals: categoryTotals,\n    adminPercent: Math.round(adminPercent * 10) / 10,\n    warnings: warnings\n  }\n}];"
+      },
+      "id": "b53a05ba-f5ee-4e0f-8177-db9c7f529258",
+      "name": "Apply Funder Restrictions1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        1024
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": " You are a Grant Budget Specialist for The Virtuous House, a Pennsylvania 501(c)(3) supporting African American youth aging out of the foster\n  care system and seniors in long-term care facilities\n\nWrite a budget narrative/justification for a grant budget. The narrative should:\n1. Explain how funds will be used\n2. Justify each major expense category\n3. Show connection between expenses and program outcomes\n4. Be professional and compelling\n5. Reference specific line items and amounts\n\nFormat:\n- Start with a brief overview paragraph\n- Then justify each category (Personnel, Direct Program Costs, Administrative)\n- End with a statement about cost-effectiveness\n\nKeep it concise but thorough (300-500 words total).",
+              "role": "system"
+            },
+            {
+              "content": "=GRANT DETAILS:\nFunder: {{ $json.funderName }}\nGrant Amount: ${{ $json.grantAmount.toLocaleString() }}\nPurpose: {{ $json.grantPurpose }}\nProgram Focus: {{ $json.programFocus }}\n\nBUDGET BREAKDOWN:\n{{ JSON.stringify($json.lineItems.map(i => ({ item: i.lineItem, amount: i.amount, description: i.description })), null, 2) }}\n\nCATEGORY TOTALS:\n- Personnel: ${{ $json.categoryTotals.personnel.amount.toLocaleString() }} ({{ $json.categoryTotals.personnel.percent }}%)\n- Direct Program: ${{ $json.categoryTotals.direct.amount.toLocaleString() }} ({{ $json.categoryTotals.direct.percent }}%)\n- Administrative: ${{ $json.categoryTotals.indirect.amount.toLocaleString() }} ({{ $json.categoryTotals.indirect.percent }}%)\n\nAdmin Cost Percentage: {{ $json.adminPercent }}%"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "932056cb-5636-41be-ad3f-61929fc4130c",
+      "name": "AI Generate Narrative1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2016,
+        1024
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final budget output\n  const budgetData = $('Apply Funder Restrictions1').first().json;\n  const aiResponse = $input.first().json;\n\n  const narrative = aiResponse.message?.content || aiResponse.text || '';\n\n  const formattedLineItems = budgetData.lineItems.map(item => ({\n    lineItem: item.lineItem,\n    category: item.category,\n    programArea: item.programArea,\n    amount: item.amount,\n    amountFormatted: `${item.amount.toLocaleString()}`,\n    percent: Math.round(item.normalizedPercent * 10) / 10,\n    description: item.description\n  }));\n\n  formattedLineItems.sort((a, b) => {\n    const catOrder = { personnel: 1, direct: 2, indirect: 3 };\n    if (catOrder[a.category] !== catOrder[b.category]) {\n      return catOrder[a.category] - catOrder[b.category];\n    }\n    return b.amount - a.amount;\n  });\n\n  let markdownTable = `## Budget Summary: ${budgetData.funderName}\\n\\n`;\n  markdownTable += `**Grant Amount:** $${budgetData.grantAmount.toLocaleString()}\\n`;\n  markdownTable += `**Amount Note:** ${budgetData.amountNote || 'Exact amount specified'}\\n`;\n  markdownTable += `**Program Focus:** ${budgetData.programFocus}\\n`;\n  markdownTable += `**Purpose:** ${budgetData.grantPurpose}\\n\\n`;\n\n  // Show range if applicable\n  if (budgetData.amountType === 'range') {\n    markdownTable += `> 💡 *Funder accepts $${budgetData.grantAmountMin.toLocaleString()} -\n  $${budgetData.grantAmountMax.toLocaleString()}. Budget based on minimum. Adjust line items if requesting higher\n  amount.*\\n\\n`;\n  } else if (budgetData.amountType === 'none') {\n    markdownTable += `> ⚠️ *No grant amount specified. Showing percentage allocations only.*\\n\\n`;\n  }\n\n  markdownTable += `### Category Totals\\n`;\n  markdownTable += `| Category | Amount | Percent |\\n`;\n  markdownTable += `|----------|--------|--------|\\n`;\n  markdownTable += `| Personnel | $${budgetData.categoryTotals.personnel.amount.toLocaleString()} |\n  ${budgetData.categoryTotals.personnel.percent.toFixed(1)}% |\\n`;\n  markdownTable += `| Direct Program | $${budgetData.categoryTotals.direct.amount.toLocaleString()} |\n  ${budgetData.categoryTotals.direct.percent.toFixed(1)}% |\\n`;\n  markdownTable += `| Administrative | $${budgetData.categoryTotals.indirect.amount.toLocaleString()} |\n  ${budgetData.categoryTotals.indirect.percent.toFixed(1)}% |\\n`;\n  markdownTable += `| **TOTAL** | **$${budgetData.grantAmount.toLocaleString()}** | **100%** |\\n\\n`;\n\n  markdownTable += `### Line Item Detail\\n`;\n  markdownTable += `| Line Item | Category | Amount | % | Description |\\n`;\n  markdownTable += `|-----------|----------|--------|---|-------------|\\n`;\n  for (const item of formattedLineItems) {\n    markdownTable += `| ${item.lineItem} | ${item.category} | $${item.amountFormatted} | ${item.percent}% |\n  ${item.description} |\\n`;\n  }\n\n  markdownTable += `\\n### Budget Narrative\\n\\n${narrative}\\n`;\n\n  if (budgetData.warnings && budgetData.warnings.length > 0) {\n    markdownTable += `\\n### Adjustments Made\\n`;\n    for (const warning of budgetData.warnings) {\n      markdownTable += `- ${warning}\\n`;\n    }\n  }\n\n  markdownTable += `\\n---\\n*Generated: ${new Date().toISOString()}*`;\n\n  return [{\n    json: {\n      success: true,\n      grantAmount: budgetData.grantAmount,\n      amountType: budgetData.amountType,\n      grantAmountMin: budgetData.grantAmountMin,\n      grantAmountMax: budgetData.grantAmountMax,\n      amountNote: budgetData.amountNote,\n      hasAmount: budgetData.hasAmount,\n      funderName: budgetData.funderName,\n      programFocus: budgetData.programFocus,\n      categoryTotals: budgetData.categoryTotals,\n      adminPercent: budgetData.adminPercent,\n      lineItems: formattedLineItems,\n      narrative: narrative,\n      warnings: budgetData.warnings || [],\n      markdownBudget: markdownTable\n    }\n  }];\n"
+      },
+      "id": "f0a686d2-c659-462b-84fe-7ae2fff0db89",
+      "name": "Format Output1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        1024
+      ]
+    }
+  ],
+  "pinData": {
+    "Budget Request1": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.thebrownmine.com",
+            "user-agent": "axios/1.12.0",
+            "content-length": "225",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "100.29.112.47",
+            "x-forwarded-host": "n8n.thebrownmine.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "grantAmount": 0,
+            "grantAmountMin": 10000,
+            "grantAmountMax": 1000000,
+            "amountType": "range",
+            "programFocus": "youth",
+            "funderName": "Rockefeller Foundation",
+            "adminCap": 15,
+            "grantPurpose": "Rockefeller Foundation - youth program support"
+          },
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/generate-budget",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Budget Request": {
+      "main": [
+        [
+          {
+            "node": "Get Budget Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Budget Template": {
+      "main": [
+        [
+          {
+            "node": "Calculate Allocations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Allocations": {
+      "main": [
+        [
+          {
+            "node": "Apply Funder Restrictions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Funder Restrictions": {
+      "main": [
+        [
+          {
+            "node": "AI Generate Narrative",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate Narrative": {
+      "main": [
+        [
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget Request1": {
+      "main": [
+        [
+          {
+            "node": "Get Budget Template1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Budget Template1": {
+      "main": [
+        [
+          {
+            "node": "Calculate Allocations1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Allocations1": {
+      "main": [
+        [
+          {
+            "node": "Apply Funder Restrictions1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Funder Restrictions1": {
+      "main": [
+        [
+          {
+            "node": "AI Generate Narrative1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate Narrative1": {
+      "main": [
+        [
+          {
+            "node": "Format Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "42164309-6012-44a0-9b7f-846147bec330",
+  "meta": {
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "6O6InsPFwIbE4cXF",
+  "tags": []
+}

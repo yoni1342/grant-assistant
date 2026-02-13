@@ -1,0 +1,706 @@
+{
+  "name": "6. Grant Proposal Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-proposal",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "00092c5b-4dcb-4ae6-b134-0a8ff6e6d30a",
+      "name": "Proposal Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        -2816
+      ],
+      "webhookId": "generate-proposal",
+      "notes": "POST: { grantId, rfpText, funderName, funderFocus, deadline, planeIssueId }"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant RFP Analyzer. Extract all application requirements from the RFP text.\n\nFor each question/section the applicant must complete, identify:\n1. question_id (sequential number)\n2. question_text (the actual question or section title)\n3. word_limit (number or null if not specified)\n4. section_type: one of [mission, history, program_description, budget, outcomes, dei, methodology, timeline, sustainability, other]\n5. narrative_match: map to one of [mission_short, mission_medium, mission_long, org_history, program_youth, program_senior, trauma_informed, dignity_model, dei, eval_methods, null]\n6. required_docs: array of document types needed [501c3_letter, budget_operating, budget_program, financial_statement, board_roster, none]\n\n\n\n#critical\navoid anything jargor,qoates,special character that might break the json\n\nReturn ONLY valid JSON array, no explanation:\n[\n  {\n    \"question_id\": 1,\n    \"question_text\": \"Describe your organization\",\n    \"word_limit\": 500,\n    \"section_type\": \"mission\",\n    \"narrative_match\": \"mission_long\",\n    \"required_docs\": [\"501c3_letter\"]\n  }\n]",
+              "role": "system"
+            },
+            {
+              "content": "=RFP TEXT:\n{{ $('Merge Budget Data').first().json.body.rfpText }}\n\nFUNDER: {{ $json.body.funderName }}\nFOCUS AREAS: {{ $json.body.funderFocus }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "4b12b448-7543-4d69-9e9b-952f3bce984b",
+      "name": "Step 1: Analyze RFP",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -64,
+        -2816
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse RFP analysis and prepare for processing\n  const request = $('Merge Budget Data').first().json.body;\n  const aiResponse = $input.first().json;\n\n  let questions = [];\n  try {\n    const responseText = aiResponse.message?.content || aiResponse.text || '';\n    const jsonMatch = responseText.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n    if (jsonMatch) {\n      questions = JSON.parse(jsonMatch[0]);\n    }\n  } catch (e) {\n    questions = [{\n      question_id: 1,\n      question_text: 'Describe your organization and program',\n      word_limit: 500,\n      section_type: 'mission',\n      narrative_match: 'mission_long',\n      required_docs: ['501c3_letter']\n    }];\n  }\n\n  const narrativesNeeded = [...new Set(questions.map(q => q.narrative_match).filter(n => n))];\n  const docsNeeded = [...new Set(questions.flatMap(q => q.required_docs || []).filter(d => d !== 'none'))];\n\n  return [{\n    json: {\n      grantId: request.grantId,\n      funderName: request.funderName,\n      funderFocus: request.funderFocus,\n      deadline: request.deadline,\n      rfpText: request.rfpText,\n      planeIssueId: request.planeIssueId || '',\n      questions: questions,\n      narrativesNeeded: narrativesNeeded,\n      docsNeeded: docsNeeded,\n      totalQuestions: questions.length,\n      // Pass through budget data\n      budget: {\n        generated: request.budgetGenerated || false,\n        amount: request.budgetAmount || 0,\n        markdown: request.budgetMarkdown || '',\n        narrative: request.budgetNarrative || '',\n        lineItems: request.budgetLineItems || [],\n        categoryTotals: request.budgetCategoryTotals || {},\n        adminPercent: request.budgetAdminPercent || 0,\n        warnings: request.budgetWarnings || []\n      }\n    }\n  }];"
+      },
+      "id": "0a407032-cfad-4af3-887d-caf891d9bce3",
+      "name": "Step 2: Parse Requirements",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        -2816
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/customize-narrative",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ sections: $('Step 2: Parse Requirements').first().json.narrativesNeeded.filter(n => n && n !=='null'), grantContext: { focus: ($('Step 2: Parse Requirements').first().json.funderFocus || '').replace(/<[^>]*>/g, '').replace(/\\s+/g, ' ').substring(0, 500).trim(), funderName: $('Step 2: Parse Requirements').first().json.funderName\n   || '' } }) }}",
+        "options": {}
+      },
+      "id": "af7a7867-770d-4544-9c81-2c125d787761",
+      "name": "Step 3: Get Narratives",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        -2816
+      ],
+      "notes": "Calls Workflow 5 - Narrative Library"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/get-documents",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"requiredDocs\": {{ JSON.stringify($('Step 2: Parse Requirements').first().json.docsNeeded) }}\n}",
+        "options": {}
+      },
+      "id": "c35715bb-8a70-45cd-b071-219fa7a81beb",
+      "name": "Step 4: Get Documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        736,
+        -2816
+      ],
+      "notes": "Calls Workflow 4 - Document Vault"
+    },
+    {
+      "parameters": {
+        "jsCode": "const requirements = $('Step 2: Parse Requirements').first().json;\n  const narratives = $('Step 3: Get Narratives').first().json;\n  const documents = $input.first().json;\n\n  const questionsWithContent = requirements.questions.map(q => {\n    let narrativeContent = '';\n    if (q.narrative_match && narratives.narratives && narratives.narratives[q.narrative_match]) {\n      narrativeContent = narratives.narratives[q.narrative_match].content || '';\n    }\n\n    const docLinks = [];\n    if (q.required_docs && documents.documents) {\n      for (const docType of q.required_docs) {\n        if (documents.documents[docType] && documents.documents[docType].found) {\n          docLinks.push({\n            type: docType,\n            fileName: documents.documents[docType].fileName,\n            link: documents.documents[docType].driveLink\n          });\n        }\n      }\n    }\n\n    return {\n      ...q,\n      narrativeContent: narrativeContent,\n      documentLinks: docLinks\n    };\n  });\n\n  return [{\n    json: {\n      grantId: requirements.grantId,\n      funderName: requirements.funderName,\n      funderFocus: requirements.funderFocus,\n      deadline: requirements.deadline,\n      rfpText: requirements.rfpText,\n      planeIssueId: requirements.planeIssueId,\n      questions: questionsWithContent,\n      missingNarratives: narratives.missingSections || [],\n      missingDocs: documents.missingDocs || [],\n      // ✅ ADD THIS LINE - Pass through budget data\n      budget: requirements.budget || {}\n    }\n  }];"
+      },
+      "id": "07839018-b259-4fbe-a288-78b29c9cc953",
+      "name": "Step 5: Combine Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -2816
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Proposal Writer for The Virtuous House, a community-based nonprofit serving African American youth aging out of foster care and seniors in long-term care facilities.\n\nWrite complete, polished responses to each grant question using the provided narrative content.\n\nRULES:\n1. Stay within word limits\n2. Use the narrative content as your base - don't invent new facts\n3. Tailor tone to match funder's focus areas\n4. Be specific and compelling\n5. Reference programs: The Virtuous Closet, Senior Dignity Initiative, Rural Youth Camp Initiative (PA)\n6. Emphasize dignity-centered, trauma-informed, culturally responsive approach\n\nFor each question, output:\n- question_id\n- response (the written answer)\n- word_count\n- attachments_referenced (list document names to attach)\n#critical\navoid things like jargon,qotes special characters that might break a json when outputing\n\nReturn as JSON array.",
+              "role": "system"
+            },
+            {
+              "content": "=FUNDER: {{ $json.funderName }}\nFOCUS: {{ $json.funderFocus }}\n\nQUESTIONS TO ANSWER:\n{{ JSON.stringify($json.questions, null, 2) }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "1b500068-ba41-4d9b-b7ee-93164e2ecf02",
+      "name": "Step 6: Write Responses",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1184,
+        -2816
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Capture draft responses and prepare WF9 call\nconst aiResponse = $input.first().json;\nconst draftText = aiResponse.message?.content || aiResponse.text || JSON.stringify(aiResponse);\nconst context = $('Step 5: Combine Content').first().json;\n\nreturn [{\n  json: {\n    draftResponses: draftText,\n    funderName: context.funderName,\n    funderFocus: context.funderFocus,\n    rfpText: context.rfpText,\n    planeIssueId: context.planeIssueId\n  }\n}];"
+      },
+      "id": "f01a3dd1-ab03-46e7-a6a4-7bf59963661f",
+      "name": "Capture Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        -2816
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/analyze-funder",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"funderName\": \"{{ $json.funderName }}\",\n  \"focusAreas\": {{ JSON.stringify(($json.funderFocus || '').split(',').map(s => s.trim()).filter(Boolean)) }}\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "bcbaad30-b86d-4f46-8d4a-99414813cbaa",
+      "name": "Step 7a: Call WF9 Funder Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        -2816
+      ],
+      "notesInFlow": true,
+      "continueOnFail": true,
+      "notes": "Calls WF9 - Peer Grant Analyzer for funder intelligence"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Funder Alignment Specialist. Your job is to review a draft grant proposal and improve it to better align with the funder's priorities, language, and values.\n\nYou will receive:\n- The original RFP text\n- The funder's name and focus areas\n- A WINNING STRATEGY BRIEF from funder research (990 data, grant patterns, recommended language)\n- The draft responses\n\nUsing the strategy brief's intelligence, for EACH response you must:\n1. Adopt the specific terminology and phrases recommended in the strategy brief\n2. Mirror language the funder uses in their RFP\n3. Highlight where The Virtuous House's mission overlaps with the funder's stated priorities\n4. Adjust emphasis to match what the funder cares about most\n5. Position The Virtuous House using the angles recommended in the strategy brief\n6. Ensure the tone matches the funder's style (formal foundation vs community-focused vs corporate)\n7. Stay within word limits\n\nReturn a JSON object with:\n{\n  \"alignedResponses\": [\n    {\n      \"question_id\": 1,\n      \"original_response\": \"...\",\n      \"aligned_response\": \"...\",\n      \"word_count\": 150,\n      \"alignment_notes\": \"Adopted funder's terminology: 'workforce readiness', positioned dignity model as equity strategy\",\n      \"mission_overlap\": \"Both prioritize equipping foster youth for independent living\"\n    }\n  ],\n  \"overall_alignment_score\": 85,\n  \"funder_language_adopted\": [\"workforce readiness\", \"systemic barriers\", \"racial equity\"],\n  \"mission_overlap_summary\": \"Strong alignment on youth empowerment and racial equity\"\n}",
+              "role": "system"
+            },
+            {
+              "content": "=FUNDER: {{ $('Capture Draft').first().json.funderName }}\nFOCUS AREAS: {{ $('Capture Draft').first().json.funderFocus }}\n\nORIGINAL RFP TEXT:\n{{ $('Capture Draft').first().json.rfpText }}\n\nWINNING STRATEGY BRIEF FROM FUNDER RESEARCH (WF9):\n{{ $json.strategyBrief || $json.fullReport || 'No funder research available - use RFP text and focus areas only.' }}\n\nDRAFT RESPONSES TO ALIGN:\n{{ $('Capture Draft').first().json.draftResponses }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "bdfee934-e750-4cdd-90cc-c5217c39bf63",
+      "name": "Step 7b: Funder Alignment Check",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1984,
+        -2816
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced Compliance Review (includes budget)\n  const context = $('Step 5: Combine Content').first().json;\n  const alignmentResponse = $input.first().json;\n\n  let alignment = {};\n  try {\n    const text = alignmentResponse.message?.content || alignmentResponse.text || '';\n    const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) alignment = JSON.parse(jsonMatch[0]);\n  } catch (e) {\n    alignment = { alignedResponses: [], overall_alignment_score: 0 };\n  }\n\n  const alignedResponses = alignment.alignedResponses || [];\n\n  // Initialize warnings and sections as explicit string/object arrays\n  const warnings = [];\n  const sections = [];\n\n  let totalChecks = 0;\n  let passedChecks = 0;\n\n  for (const q of context.questions) {\n    const aligned = alignedResponses.find(a => a.question_id === q.question_id);\n    const response = aligned ? aligned.aligned_response : '';\n    const wordCount = aligned ? aligned.word_count : (response ? response.split(/\\s+/).length : 0);\n    const alignmentNotes = aligned ? aligned.alignment_notes : '';\n    const missionOverlap = aligned ? aligned.mission_overlap : '';\n\n    // Initialize issues as explicit array\n    const issues = [];\n\n    // Check response exists\n    totalChecks++;\n    if (response && response.length > 50) {\n      passedChecks++;\n    } else {\n      issues.push('Response missing or too short');\n      warnings.push('Section ' + q.question_id + ': Response missing or too short');\n    }\n\n    // Check word limit\n    if (q.word_limit) {\n      totalChecks++;\n      if (wordCount <= q.word_limit) {\n        passedChecks++;\n      } else {\n        issues.push('Over word limit: ' + wordCount + '/' + q.word_limit);\n        warnings.push('Section ' + q.question_id + ': ' + wordCount + ' words exceeds limit of ' + q.word_limit);\n      }\n    }\n\n    // Check required docs available\n    if (q.required_docs) {\n      for (const doc of q.required_docs) {\n        if (doc === 'none') continue;\n        totalChecks++;\n        const found = (q.documentLinks && q.documentLinks.some(d => d.type === doc));\n        if (found) {\n          passedChecks++;\n        } else {\n          issues.push('Missing attachment: ' + doc);\n        }\n      }\n    }\n\n    // Check for weak language\n    totalChecks++;\n    const weakPhrases = ['we hope to', 'we might', 'possibly', 'we think', 'maybe'];\n    const hasWeak = weakPhrases.some(p => (response || '').toLowerCase().includes(p));\n    if (!hasWeak) {\n      passedChecks++;\n    } else {\n      issues.push('Contains weak/uncertain language');\n      warnings.push('Section ' + q.question_id + ': Contains weak language - strengthen assertions');\n    }\n\n    sections.push({\n      questionId: q.question_id,\n      question: q.question_text,\n      response: response,\n      wordCount: wordCount,\n      wordLimit: q.word_limit || null,\n      sectionType: q.section_type,\n      attachments: q.required_docs || [],\n      alignmentNotes: alignmentNotes,\n      missionOverlap: missionOverlap,\n      issues: issues\n    });\n  }\n\n  if (context.missingNarratives && context.missingNarratives.length > 0) {\n    warnings.push('Missing narratives: ' + context.missingNarratives.join(', '));\n  }\n  if (context.missingDocs && context.missingDocs.length > 0) {\n    warnings.push('Missing documents: ' + context.missingDocs.join(', '));\n  }\n\n  // Check budget\n  if (context.budget && context.budget.generated) {\n    totalChecks++;\n    passedChecks++; // Budget was generated\n\n    if (context.budget.warnings && context.budget.warnings.length > 0) {\n      for (const warning of context.budget.warnings) {\n        warnings.push('Budget: ' + warning);\n      }\n    }\n  } else {\n    totalChecks++;\n    warnings.push('Budget not generated - run budget generator first');\n  }\n\n  totalChecks++;\n  const answeredCount = sections.filter(s => s.response && s.response.length > 50).length;\n  if (answeredCount === context.questions.length) {\n    passedChecks++;\n  } else {\n    warnings.push('Only ' + answeredCount + '/' + context.questions.length + ' questions fully answered');\n  }\n\n  const complianceScore = totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : 0;\n\n  const proposal = {\n    title: 'Grant Proposal - ' + context.funderName,\n    deadline: context.deadline,\n    funder: context.funderName,\n    focus: context.funderFocus,\n    planeIssueId: context.planeIssueId,\n    alignmentScore: alignment.overall_alignment_score || 0,\n    funderLanguageAdopted: alignment.funder_language_adopted || [],\n    missionOverlap: alignment.mission_overlap_summary || '',\n    sections: sections,\n    warnings: warnings,\n    complianceScore: complianceScore,\n    budget: context.budget || {}\n  };\n\n  return [{ json: proposal }];"
+      },
+      "id": "df0d70bf-d266-4325-88c3-b4431fad226e",
+      "name": "Step 8: Compliance Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2336,
+        -2816
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final output (includes budget)\n  const proposal = $input.first().json;\n\n  let markdown = `# ${proposal.title}\\n\\n`;\n  markdown += `**Funder:** ${proposal.funder}\\n`;\n  markdown += `**Focus Areas:** ${proposal.focus}\\n`;\n  markdown += `**Deadline:** ${proposal.deadline}\\n`;\n  markdown += `**Alignment Score:** ${proposal.alignmentScore}/100\\n`;\n  markdown += `**Compliance Score:** ${proposal.complianceScore}/100\\n`;\n  markdown += `**Mission Overlap:** ${proposal.missionOverlap}\\n`;\n  markdown += `**Funder Language Adopted:** ${(proposal.funderLanguageAdopted || []).join(', ')}\\n\\n`;\n\n  // Add budget summary if available\n  if (proposal.budget && proposal.budget.generated) {\n    markdown += `---\\n\\n`;\n    markdown += `## Budget Summary\\n\\n`;\n    markdown += `**Total Amount:** ${proposal.budget.amount.toLocaleString()}\\n`;\n    markdown += `**Admin Percentage:** ${proposal.budget.adminPercent}%\\n\\n`;\n    markdown += `| Category | Amount | Percent |\\n`;\n    markdown += `|----------|--------|--------|\\n`;\n    if (proposal.budget.categoryTotals.personnel) {\n      markdown += `| Personnel | ${proposal.budget.categoryTotals.personnel.amount.toLocaleString()} |\n  ${proposal.budget.categoryTotals.personnel.percent}% |\\n`;\n    }\n    if (proposal.budget.categoryTotals.direct) {\n      markdown += `| Direct Program | ${proposal.budget.categoryTotals.direct.amount.toLocaleString()} |\n  ${proposal.budget.categoryTotals.direct.percent}% |\\n`;\n    }\n    if (proposal.budget.categoryTotals.indirect) {\n      markdown += `| Administrative | ${proposal.budget.categoryTotals.indirect.amount.toLocaleString()} |\n  ${proposal.budget.categoryTotals.indirect.percent}% |\\n`;\n    }\n    markdown += `\\n`;\n\n    if (proposal.budget.warnings && proposal.budget.warnings.length > 0) {\n      markdown += `**Budget Warnings:**\\n`;\n      proposal.budget.warnings.forEach(w => markdown += `- ${w}\\n`);\n      markdown += `\\n`;\n    }\n  }\n\n  markdown += `---\\n\\n`;\n\n  for (const section of proposal.sections) {\n    markdown += `## Question ${section.questionId}: ${section.question}\\n`;\n    if (section.wordLimit) {\n      markdown += `*Word Limit: ${section.wordLimit} | Actual: ${section.wordCount}*\\n`;\n    }\n    markdown += `\\n${section.response}\\n\\n`;\n    if (section.alignmentNotes) {\n      markdown += `> **Alignment Notes:** ${section.alignmentNotes}\\n\\n`;\n    }\n    if (section.missionOverlap) {\n      markdown += `> **Mission Overlap:** ${section.missionOverlap}\\n\\n`;\n    }\n    if (section.attachments?.length > 0) {\n      markdown += `**Required Attachments:** ${section.attachments.join(', ')}\\n\\n`;\n    }\n    if (section.issues?.length > 0) {\n      markdown += `**Issues:**\\n`;\n      section.issues.forEach(i => markdown += `- ${i}\\n`);\n      markdown += `\\n`;\n    }\n    markdown += `---\\n\\n`;\n  }\n\n  if (proposal.warnings?.length > 0) {\n    markdown += `## Compliance Warnings\\n`;\n    for (const warning of proposal.warnings) {\n      markdown += `- ${warning}\\n`;\n    }\n  }\n\n  markdown += `\\n*Generated: ${new Date().toISOString()} | AI-drafted — review and personalize before submission*`;\n\n  // ============================================\n  // CLEAN PROPOSAL WITH PROFESSIONAL FORMATTING\n  // ============================================\n\n  const orgName = proposal.organizationName || 'The Virtuous House';\n\n  // Section title mapping with numbers\n  const sectionTitleMap = {\n    'executive summary': { num: 1, title: 'Executive Summary' },\n    'organizational': { num: 2, title: 'Organizational Overview' },\n    'organization': { num: 2, title: 'Organizational Overview' },\n    'background': { num: 2, title: 'Organizational Overview' },\n    'statement of need': { num: 3, title: 'Statement of Need' },\n    'need': { num: 3, title: 'Statement of Need' },\n    'project description': { num: 4, title: 'Program Description' },\n    'program description': { num: 4, title: 'Program Description' },\n    'project': { num: 4, title: 'Program Description' },\n    'target population': { num: 5, title: 'Target Population & Equity Approach' },\n    'population': { num: 5, title: 'Target Population & Equity Approach' },\n    'equity': { num: 5, title: 'Equity & Trauma-Informed Approach' },\n    'goals': { num: 6, title: 'Outcomes & Impact' },\n    'evaluation': { num: 6, title: 'Outcomes & Impact' },\n    'outcomes': { num: 6, title: 'Outcomes & Impact' },\n    'budget': { num: 7, title: 'Budget Narrative' },\n    'sustainability': { num: 8, title: 'Sustainability' },\n    'capacity': { num: 9, title: 'Organizational Capacity' },\n    'partnerships': { num: 10, title: 'Partnerships & Collaborations' }\n  };\n\n  // Function to get clean section title\n  function getSectionInfo(question) {\n    const q = question.toLowerCase();\n    for (const [key, info] of Object.entries(sectionTitleMap)) {\n      if (q.includes(key)) {\n        return info;\n      }\n    }\n    // Fallback: use question text cleaned up\n    return { num: null, title: question.replace(/[?:]/g, '').trim() };\n  }\n\n  // Function to format response text nicely\n  function formatResponseText(text) {\n    if (!text) return '';\n\n    let formatted = text;\n\n    // Clean up any double spaces or weird characters\n    formatted = formatted.replace(/\\s+/g, ' ').trim();\n\n    // Convert markdown-style bullets to clean bullets\n    formatted = formatted.replace(/^[\\-\\*]\\s+/gm, '• ');\n    formatted = formatted.replace(/\\n[\\-\\*]\\s+/g, '\\n• ');\n\n    // Add line breaks before bullet points for readability\n    formatted = formatted.replace(/([.!?])\\s+(•)/g, '$1\\n\\n$2');\n\n    // Format bold text (convert **text** to just the text for cleaner look, or keep as needed)\n    // Keep **text** as is since Google Docs will render it\n\n    // Add paragraph breaks for long text (after sentences that end a thought)\n    formatted = formatted.replace(/([.!?])\\s+([A-Z])/g, '$1\\n\\n$2');\n\n    // Clean up excessive line breaks\n    formatted = formatted.replace(/\\n{3,}/g, '\\n\\n');\n\n    return formatted.trim();\n  }\n\n  // Function to detect and format lists in content\n  function formatWithLists(text) {\n    if (!text) return '';\n\n    const lines = text.split('\\n');\n    let result = [];\n    let inList = false;\n\n    for (let line of lines) {\n      line = line.trim();\n      if (!line) {\n        if (inList) {\n          inList = false;\n        }\n        result.push('');\n        continue;\n      }\n\n      // Check if line starts with bullet or could be a list item\n      if (line.match(/^[•\\-\\*]\\s/) || line.match(/^[a-z]\\)\\s/i) || line.match(/^\\d+[\\.\\)]\\s/)) {\n        // It's a list item\n        line = line.replace(/^[•\\-\\*]\\s*/, '• ');\n        line = '   ' + line; // Indent list items\n        inList = true;\n      }\n\n      result.push(line);\n    }\n\n    return result.join('\\n');\n  }\n\n  // Build the clean proposal\n  let cleanProposal = '';\n\n  // Header\n  cleanProposal += `════════════════════════════════════════════════════════════════\\n`;\n  cleanProposal += `                      GRANT PROPOSAL\\n`;\n  cleanProposal += `                      ${orgName}\\n`;\n  cleanProposal += `════════════════════════════════════════════════════════════════\\n\\n`;\n\n  // Funder info\n  cleanProposal += `Funder: ${proposal.funder}\\n`;\n  if (proposal.deadline && proposal.deadline !== 'Not specified') {\n    cleanProposal += `Deadline: ${proposal.deadline}\\n`;\n  }\n  cleanProposal += `\\n`;\n  cleanProposal += `────────────────────────────────────────────────────────────────\\n\\n`;\n\n  // Track used section numbers to avoid duplicates\n  const usedNumbers = new Set();\n  let fallbackNum = 20;\n\n  // Process each section\n  for (const section of proposal.sections) {\n    const sectionInfo = getSectionInfo(section.question);\n\n    // Determine section number\n    let sectionNum;\n    if (sectionInfo.num && !usedNumbers.has(sectionInfo.num)) {\n      sectionNum = sectionInfo.num;\n      usedNumbers.add(sectionNum);\n    } else if (sectionInfo.num) {\n      // Already used this number, skip numbering\n      sectionNum = null;\n    } else {\n      sectionNum = fallbackNum++;\n    }\n\n    // Section header\n    if (sectionNum) {\n      cleanProposal += `${sectionNum}. ${sectionInfo.title.toUpperCase()}\\n`;\n    } else {\n      cleanProposal += `${sectionInfo.title.toUpperCase()}\\n`;\n    }\n    cleanProposal += `────────────────────────────────────────\\n\\n`;\n\n    // Format and add the response content\n    let responseText = section.response || '';\n    responseText = formatWithLists(responseText);\n    cleanProposal += `${responseText}\\n\\n`;\n\n    // Attachments if any\n    if (section.attachments?.length > 0 && section.attachments[0] !== 'none') {\n      cleanProposal += `   📎 Attachments: ${section.attachments.join(', ')}\\n\\n`;\n    }\n\n    cleanProposal += `\\n`;\n  }\n\n  // Footer\n  cleanProposal += `════════════════════════════════════════════════════════════════\\n`;\n  cleanProposal += `Generated: ${new Date().toISOString().split('T')[0]}\\n`;\n  cleanProposal += `This proposal was drafted with AI assistance.\\n`;\n  cleanProposal += `Please review and personalize before submission.\\n`;\n  cleanProposal += `════════════════════════════════════════════════════════════════\\n`;\n\n  return [{\n    json: {\n      success: true,\n      proposalTitle: proposal.title,\n      funder: proposal.funder,\n      deadline: proposal.deadline,\n      totalSections: proposal.sections.length,\n      alignmentScore: proposal.alignmentScore,\n      complianceScore: proposal.complianceScore,\n      missionOverlap: proposal.missionOverlap,\n      warningsCount: proposal.warnings?.length || 0,\n      warnings: proposal.warnings,\n      proposalMarkdown: markdown,\n      proposal: proposal,\n      proposalClean: cleanProposal,\n      planeIssueId: proposal.planeIssueId,\n      // Include budget in output\n      budget: proposal.budget || {},\n      budgetAmount: proposal.budget?.amount || 0\n    }\n  }];"
+      },
+      "id": "ef472f9b-ea80-4832-8b3c-5a15d664d321",
+      "name": "Step 9: Format Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        -2816
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Plane PATCH body with proposal content and Google Doc link\n  const data = $input.first().json;\n  const docUrl = data.googleDocUrl || '';\n  const md = data.proposalMarkdown || '';\n\n  // Convert markdown to basic HTML for Plane description_html\n  let html = '<div>';\n\n  // Add Google Doc link at top if available\n  if (docUrl) {\n    html += `<p><strong>📄 Google Doc:</strong> <a href=\"${docUrl}\" target=\"_blank\">Open Proposal Document</a></p><hr/>`;\n  }\n\n  const lines = md.split('\\n');\n  for (const line of lines) {\n    if (line.startsWith('## ')) {\n      html += `<h2>${line.slice(3)}</h2>`;\n    } else if (line.startsWith('# ')) {\n      html += `<h1>${line.slice(2)}</h1>`;\n    } else if (line.startsWith('> ')) {\n      html += `<blockquote><p>${line.slice(2)}</p></blockquote>`;\n    } else if (line.startsWith('- ')) {\n      html += `<ul><li>${line.slice(2)}</li></ul>`;\n    } else if (line === '---') {\n      html += '<hr />';\n    } else if (line.trim() === '') {\n      // skip empty lines\n    } else {\n      const processed = line.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>').replace(/\\*([^*]+)\\*/g, '<em>$1</em>');\n      html += `<p>${processed}</p>`;\n    }\n  }\n  html += '</div>';\n\n  return [{\n    json: {\n      planeIssueId: data.planeIssueId,\n      googleDocUrl: docUrl,\n      googleDocId: data.googleDocId,\n      patchBody: {\n        state: 'e20a108a-01cb-40eb-b806-03d0bb038f80',\n        description_html: html,\n        google_doc_url: data.googleDocUrl || ''\n      }\n    }\n  }];"
+      },
+      "id": "a69ecf7b-0b44-46fe-b255-86ac8184891f",
+      "name": "Prepare Review Card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3408,
+        -2800
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/{{ $json.planeIssueId }}/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.patchBody) }}",
+        "options": {}
+      },
+      "id": "37571176-3b03-412f-9de6-49de5d4b5918",
+      "name": "Set State: Review Ready",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3632,
+        -2816
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "Move from Drafting to Review Ready"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return final response (includes budget and Google Doc link)\n  const data = $('Build Doc Link').first().json;\n  const reviewCard = $('Prepare Review Card').first().json;\n\n  return [{\n    json: {\n      success: data.success,\n      proposalTitle: data.proposalTitle,\n      funder: data.funder,\n      deadline: data.deadline,\n      totalSections: data.totalSections,\n      alignmentScore: data.alignmentScore,\n      complianceScore: data.complianceScore,\n      missionOverlap: data.missionOverlap,\n      warningsCount: data.warningsCount,\n      warnings: data.warnings,\n      proposalMarkdown: data.proposalMarkdown,\n      budget: data.budget || {},\n      budgetAmount: data.budgetAmount || 0,\n      googleDocUrl: reviewCard.googleDocUrl || '',\n      googleDocId: reviewCard.googleDocId || '',\n      message: `Proposal drafted with ${data.alignmentScore}% funder alignment and ${data.complianceScore}% compliance. Google Doc created.\n  State moved to Review Ready.`\n    }\n  }];"
+      },
+      "id": "15ee073f-d419-4a3e-b52e-6faae8534db7",
+      "name": "Return Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3856,
+        -2816
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/review-proposal ",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n      \"proposalText\": {{ JSON.stringify($json.proposalMarkdown) }},\n      \"funderName\": {{ JSON.stringify($json.funder) }},\n      \"grantPurpose\": {{ JSON.stringify($json.proposalTitle) }},\n      \"deadline\": {{ JSON.stringify($json.deadline) }},\n      \"alignmentScore\": {{ $json.alignmentScore }},\n      \"complianceScore\": {{ $json.complianceScore }},\n      \"warningsCount\": {{ $json.warningsCount }},\n      \"warnings\": {{ JSON.stringify($json.warnings) }},\n      \"totalSections\": {{ $json.totalSections }},\n      \"budget\": {{ JSON.stringify($json.budget || {}) }},\n      \"budgetAmount\": {{ $json.budgetAmount || 0 }},\n      \"googleDocUrl\": {{ JSON.stringify($json.googleDocUrl || '') }}\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4080,
+        -2816
+      ],
+      "id": "7067c972-c9ce-4545-88b3-b8b62475fcf8",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": " const originalRequest = $('Proposal Request').first().json.body;\n  const budgetResponse = $input.first().json;\n\n  return [{\n    json: {\n      body: {\n        // Preserve all original request fields\n        grantId: originalRequest.grantId || '',\n        rfpText: originalRequest.rfpText || '',\n        funderName: originalRequest.funderName || '',\n        funderFocus: originalRequest.funderFocus || '',\n        deadline: originalRequest.deadline || '',\n        planeIssueId: originalRequest.planeIssueId || originalRequest.planeissueid || '',\n        programFocus: originalRequest.programFocus || 'balanced',\n        grantPurpose: originalRequest.grantPurpose || '',\n\n        // Add budget data from generator\n        budgetGenerated: budgetResponse.success || false,\n        budgetAmount: budgetResponse.grantAmount || 0,\n        grantAmount: originalRequest.grantAmount || 0,\n        grantAmountMin: originalRequest.grantAmountMin || 0,\n        grantAmountMax: originalRequest.grantAmountMax || 0,\n        amountType: originalRequest.amountType || 'none',\n        budgetMarkdown: budgetResponse.markdownBudget || '',\n        budgetNarrative: budgetResponse.narrative || '',\n        budgetLineItems: budgetResponse.lineItems || [],\n        budgetCategoryTotals: budgetResponse.categoryTotals || {},\n        budgetAdminPercent: budgetResponse.adminPercent || 0,\n        budgetWarnings: budgetResponse.warnings || []\n      }\n    }\n  }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        -2816
+      ],
+      "id": "0db7ca0e-15dd-4cdd-9188-c7a3378992af",
+      "name": "Merge Budget Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/generate-budget",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"grantAmount\": {{ $json.body.grantAmount || 0 }},\n    \"grantAmountMin\": {{ $json.body.grantAmountMin || 0 }},\n    \"grantAmountMax\": {{ $json.body.grantAmountMax || 0 }},\n    \"amountType\": \"{{ $json.body.amountType || 'none' }}\",\n    \"programFocus\": \"{{ $json.body.programFocus || 'balanced' }}\",\n    \"funderName\": \"{{ $json.body.funderName || '' }}\",\n    \"adminCap\": {{ $json.body.adminCap || 15 }},\n    \"grantPurpose\": \"{{ $json.body.grantPurpose || $json.body.grantName || 'program support' }}\"\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -512,
+        -2816
+      ],
+      "id": "cf0ef830-b6d2-459f-89fc-ae38a2014308",
+      "name": "Call Budget Generator"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Step 9: Format Output').first().json.proposalClean }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2976,
+        -2816
+      ],
+      "id": "ff4d3681-d217-43c3-a8fe-40858517a16d",
+      "name": "Write Proposal Content",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "DEUc7AcAc2ilS8L0",
+          "name": "Google Docs account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const proposalData = $('Step 9: Format Output').first().json;\n  const docId =$('Create Google Doc').first().json.id;\n  const docUrl =`https://docs.google.com/document/d/${docId}/edit`;\n\n  return [{\n    json: {\n      ...proposalData,\n      googleDocId: docId,\n      googleDocUrl: docUrl\n    }\n  }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3184,
+        -2816
+      ],
+      "id": "79c1b1ba-580a-4ab3-a884-91644cb20137",
+      "name": "Build Doc Link"
+    },
+    {
+      "parameters": {
+        "folderId": "1UEk8NED2pOmD9qprxO7p45mnCwBERYIX",
+        "title": "={{ $json.proposalTitle }} - {{ new Date().toISOString().split('T')[0] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2768,
+        -2816
+      ],
+      "id": "3fed05d8-57c6-47e7-a236-b8e29468dcad",
+      "name": "Create Google Doc",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "DEUc7AcAc2ilS8L0",
+          "name": "Google Docs account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Proposal Request": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.thebrownmine.com",
+            "user-agent": "axios/1.12.0",
+            "content-length": "4006",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "100.29.112.47",
+            "x-forwarded-host": "n8n.thebrownmine.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "grantId": "GRANT-1770142300632",
+            "grantName": "Pennsylvania: Commonwealth Financing Authority (CFA) Grant",
+            "funderName": "Pennsylvania: Commonwealth Financing Authority (CFA)",
+            "funderFocus": "<div><h3>Eligibility Screening Result</h3><p><strong>Score:</strong> 🟡 YELLOW (40% confidence)</p><p><strong>Summary:</strong> The grant is offered by a Pennsylvania state agency, which meets the geographic eligibility for Pennsylvania-based nonprofits. However, there is no description, award range, or program focus provided to confirm alignment with the core program or foster youth transition categories.</p><hr><p><strong>Grant:</strong> Pennsylvania: Commonwealth Financing Authority (CFA)</p><p><strong>Funder:</strong> PA Dept of Community &amp; Economic Development</p><p><strong>Amount:</strong> Not specified</p><p><strong>Deadline:</strong> Not specified</p><p><strong>Prep Start:</strong> TBD</p><p><strong>Days Until Deadline:</strong> TBD</p><hr><p><strong>Required Docs:</strong> 501(c)(3) status; Application via state portal</p><p><strong>Notes:</strong> The grant is offered by a Pennsylvania state agency, which meets the geographic eligibility for Pennsylvania-based nonprofits. However, there is no description, award range, or program focus provided to confirm alignment with the core program or foster youth transition categories.</p><p><a href=\"https://dced.pa.gov/programs-funding/commonwealth-financing-authority-cfa/\" rel=\"noopener noreferrer\">View Source</a></p></div>",
+            "deadline": "Not specified",
+            "planeIssueId": "79f46830-02c6-4f7b-91b4-c7b6cbe083d0",
+            "rfpText": "Community Resilience Initiative 2026 ELIGIBILITY: 501(c)(3) nonprofit organizations Demonstrated track record of community impact (3+ years) Programs addressing equity and opportunity gaps Focus on underserved populations PRIORITY AREAS: Economic mobility and workforce development Health equity and access Food security and nutrition Climate resilience in vulnerable communities Youth empowerment and education REQUIRED DOCUMENTS: IRS 501(c)(3) determination letter Current year operating budget Audited financial statements (last 2 years) Board of Directors roster with affiliations Organizational chart Annual report (if available) APPLICATION QUESTIONS: Executive Summary (300 words max) Provide a concise overview of your organization and the proposed project. Organizational Background (500 words max) Describe your organization's history, mission, leadership, and governance. What qualifies your organization to carry out this work? Statement of Need (600 words max) What problem are you addressing? Provide data demonstrating the scope and urgency of the need in your target community. Project Description (800 words max) Describe the program or initiative for which you seek funding. Include specific activities, timeline, staffing, and geographic focus. Target Population (400 words max) Who will benefit from this program? How will you ensure equitable access for underserved groups? Goals and Evaluation (500 words max) What are your measurable objectives? How will you track progress and evaluate success? Budget Narrative (400 words max) Explain how grant funds will be allocated. Justify personnel costs, program expenses, and indirect costs. Sustainability Plan (300 words max) How will this work continue beyond the grant period? What is your long-term funding strategy? Partnerships (250 words max) Describe any collaborative relationships that strengthen this project. REPORTING REQUIREMENTS: Interim narrative and financial report at 6 months Final comprehensive report within 60 days of grant conclusion BUDGET GUIDELINES: Indirect costs capped at 15% Personnel costs should not exceed 60% of total SUBMIT TO: grants@foundation.org PORTAL: https://foundation.org/apply",
+            "grantAmount": 0,
+            "grantAmountMin": 0,
+            "grantAmountMax": 0,
+            "amountType": "none",
+            "hasGrantAmount": false,
+            "programFocus": "youth",
+            "adminCap": 15,
+            "grantPurpose": "Pennsylvania: Commonwealth Financing Authority (CFA) - youth program support"
+          },
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/generate-proposal",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Proposal Request": {
+      "main": [
+        [
+          {
+            "node": "Call Budget Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 1: Analyze RFP": {
+      "main": [
+        [
+          {
+            "node": "Step 2: Parse Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 2: Parse Requirements": {
+      "main": [
+        [
+          {
+            "node": "Step 3: Get Narratives",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3: Get Narratives": {
+      "main": [
+        [
+          {
+            "node": "Step 4: Get Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4: Get Documents": {
+      "main": [
+        [
+          {
+            "node": "Step 5: Combine Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5: Combine Content": {
+      "main": [
+        [
+          {
+            "node": "Step 6: Write Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 6: Write Responses": {
+      "main": [
+        [
+          {
+            "node": "Capture Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capture Draft": {
+      "main": [
+        [
+          {
+            "node": "Step 7a: Call WF9 Funder Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7a: Call WF9 Funder Analysis": {
+      "main": [
+        [
+          {
+            "node": "Step 7b: Funder Alignment Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 7b: Funder Alignment Check": {
+      "main": [
+        [
+          {
+            "node": "Step 8: Compliance Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 8: Compliance Review": {
+      "main": [
+        [
+          {
+            "node": "Step 9: Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 9: Format Output": {
+      "main": [
+        [
+          {
+            "node": "Create Google Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Review Card": {
+      "main": [
+        [
+          {
+            "node": "Set State: Review Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set State: Review Ready": {
+      "main": [
+        [
+          {
+            "node": "Return Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Response": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Budget Data": {
+      "main": [
+        [
+          {
+            "node": "Step 1: Analyze RFP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Budget Generator": {
+      "main": [
+        [
+          {
+            "node": "Merge Budget Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Proposal Content": {
+      "main": [
+        [
+          {
+            "node": "Build Doc Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Doc Link": {
+      "main": [
+        [
+          {
+            "node": "Prepare Review Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Google Doc": {
+      "main": [
+        [
+          {
+            "node": "Write Proposal Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "24aa34b0-26a9-4866-a3f0-6d6aeef949de",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "wmcTwIa7u0UGKrgZ",
+  "tags": []
+}

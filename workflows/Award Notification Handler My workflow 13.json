@@ -1,0 +1,821 @@
+{
+  "name": "Award Notification Handler My workflow 13",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "record-award",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "0c2f408e-8902-4cb8-be36-6686d00799b1",
+      "name": "Award Notification",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        -544
+      ],
+      "webhookId": "record-award",
+      "disabled": true,
+      "notes": "POST: { grantId, grantName, funderName, awardAmount, awardDate, grantPeriodStart, grantPeriodEnd, reportingRequirements, funderContact }"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc",
+          "mode": "list",
+          "cachedResultName": "Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "4b2483be-30ea-4337-b707-c844509d7bcc",
+      "name": "Get Grant Record",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -720,
+        -544
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "uPzrzFu4mU5jwnGv",
+          "name": "Google Sheets account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc",
+          "mode": "list",
+          "cachedResultName": "Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Grant Name": "={{ $('Award Notification').first().json.body.grantName }}",
+            "Status": "Awarded",
+            "Notes": "={{ 'AWARDED $' + ($('Award Notification').first().json.body.awardAmount || 0).toLocaleString() + ' on ' + ($('Award Notification').first().json.body.awardDate || new Date().toISOString().split('T')[0]) + ' | Grant Period: ' + ($('Award Notification').first().json.body.grantPeriodStart || 'TBD') + ' to ' + ($('Award Notification').first().json.body.grantPeriodEnd || 'TBD') }}"
+          },
+          "matchingColumns": [
+            "Grant Name"
+          ],
+          "schema": [
+            {
+              "id": "Grant Name",
+              "displayName": "Grant Name",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c7f1dd01-1b61-44c8-8335-5e0c45d990fd",
+      "name": "Update to Awarded",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -496,
+        -544
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "uPzrzFu4mU5jwnGv",
+          "name": "Google Sheets account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create reporting calendar and celebration message\nconst request = $('Award Notification').first().json.body;\n\nconst awardDate = request.awardDate ? new Date(request.awardDate) : new Date();\nconst grantEnd = request.grantPeriodEnd ? new Date(request.grantPeriodEnd) : new Date(awardDate.getTime() + 365 * 24 * 60 * 60 * 1000);\n\n// Parse reporting requirements\nconst reportingReqs = request.reportingRequirements || [];\nconst reportingCalendar = [];\n\n// Common report types if not specified\nif (reportingReqs.length === 0) {\n  // Default: interim report at 6 months, final report at end\n  const interimDate = new Date(awardDate.getTime() + 180 * 24 * 60 * 60 * 1000);\n  const finalDate = new Date(grantEnd.getTime() + 30 * 24 * 60 * 60 * 1000);\n  \n  reportingCalendar.push({\n    type: 'interim_report',\n    dueDate: interimDate.toISOString().split('T')[0],\n    reminderDate: new Date(interimDate.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],\n    description: 'Interim Progress Report'\n  });\n  \n  reportingCalendar.push({\n    type: 'final_report',\n    dueDate: finalDate.toISOString().split('T')[0],\n    reminderDate: new Date(finalDate.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],\n    description: 'Final Grant Report'\n  });\n} else {\n  for (const req of reportingReqs) {\n    const dueDate = new Date(req.dueDate);\n    reportingCalendar.push({\n      type: req.type || 'report',\n      dueDate: dueDate.toISOString().split('T')[0],\n      reminderDate: new Date(dueDate.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],\n      description: req.description || 'Grant Report'\n    });\n  }\n}\n\n// Build celebration message\nconst celebrationMessage = `\n🎉 GRANT AWARDED! 🎉\n\nWonderful news! We've received a grant award:\n\nGrant: ${request.grantName}\nFunder: ${request.funderName}\nAmount: $${(request.awardAmount || 0).toLocaleString()}\nGrant Period: ${request.grantPeriodStart || 'TBD'} to ${request.grantPeriodEnd || 'TBD'}\n\nNext Steps:\n1. Send thank you letter to funder\n2. Set up grant accounting codes\n3. Schedule kickoff meeting\n4. Mark reporting deadlines on calendar\n\nReporting Schedule:\n${reportingCalendar.map(r => `• ${r.description}: ${r.dueDate}`).join('\\n')}\n\nCongratulations to the team!\n`;\n\n// Build funder record for CRM\nconst funderRecord = {\n  name: request.funderName,\n  type: 'Foundation',\n  tags: ['Foundation', 'Grant Funder', 'Active'],\n  firstAwardDate: awardDate.toISOString().split('T')[0],\n  totalAwarded: request.awardAmount,\n  contactPerson: request.funderContact || '',\n  notes: `First grant: ${request.grantName} - $${(request.awardAmount || 0).toLocaleString()}`\n};\n\nreturn [{\n  json: {\n    success: true,\n    grantId: request.grantId,\n    grantName: request.grantName,\n    funderName: request.funderName,\n    awardAmount: request.awardAmount,\n    awardDate: awardDate.toISOString().split('T')[0],\n    grantPeriod: {\n      start: request.grantPeriodStart,\n      end: request.grantPeriodEnd\n    },\n    status: 'Awarded',\n    reportingCalendar: reportingCalendar,\n    funderRecord: funderRecord,\n    celebrationMessage: celebrationMessage,\n    nextActions: [\n      'Send thank you letter within 48 hours',\n      'Set up grant accounting codes',\n      'Add reporting dates to calendar',\n      'Schedule internal kickoff meeting',\n      'Add funder to CRM with Foundation tag'\n    ]\n  }\n}];"
+      },
+      "id": "920e50f6-f27d-490f-b402-8efcca77ebaa",
+      "name": "Create Reporting Calendar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -272,
+        -544
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc",
+          "mode": "list",
+          "cachedResultName": "Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1690579696,
+          "mode": "list",
+          "cachedResultName": "Reporting_Calendar",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc/edit#gid=1690579696"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "grant_id": "={{ $('Award Notification').first().json.body.grantId }}",
+            "grant_name": "={{ $('Award Notification').first().json.body.grantName }}",
+            "funder_name": "={{ $('Award Notification').first().json.body.funderName }}",
+            "report_type": "={{ $json.reportingCalendar[0].type }}",
+            "due_date": "={{ $json.reportingCalendar[0].dueDate }}",
+            "reminder_date": "={{ $json.reportingCalendar[0].reminderDate }}",
+            "description": "={{ $json.reportingCalendar[0].description }}",
+            "status": "Pending"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "grant_id",
+              "displayName": "grant_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "grant_name",
+              "displayName": "grant_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "funder_name",
+              "displayName": "funder_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "report_type",
+              "displayName": "report_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reminder_date",
+              "displayName": "reminder_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2c002735-2d75-4eb9-97fb-ae8e0ed1c15f",
+      "name": "Add to Reporting Calendar",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -48,
+        -544
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "uPzrzFu4mU5jwnGv",
+          "name": "Google Sheets account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "sendTo": "=team@tabithas-closet.org",
+        "subject": "=🎉 GRANT AWARDED: {{ $('Award Notification').first().json.body.grantName }} - ${{ $('Award Notification').first().json.body.awardAmount.toLocaleString() }}",
+        "message": "=<h2>🎉 Congratulations! Grant Awarded!</h2>\n\n<p><strong>Grant:</strong> {{ $('Award Notification').first().json.body.grantName }}<br>\n<strong>Funder:</strong> {{ $('Award Notification').first().json.body.funderName }}<br>\n<strong>Amount:</strong> ${{ $('Award Notification').first().json.body.awardAmount.toLocaleString() }}<br>\n<strong>Grant Period:</strong> {{ $('Award Notification').first().json.body.grantPeriodStart }} to {{ $('Award Notification').first().json.body.grantPeriodEnd }}</p>\n\n<h3>Next Steps:</h3>\n<ul>\n<li>Send thank you letter within 48 hours</li>\n<li>Set up grant accounting codes</li>\n<li>Add reporting dates to calendar</li>\n<li>Schedule internal kickoff meeting</li>\n</ul>\n\n<h3>Reporting Schedule:</h3>\n<p>{{ $('Create Reporting Calendar').first().json.reportingCalendar.map(r => r.description + ': ' + r.dueDate).join('<br>') }}</p>\n\n<hr>\n<p><em>This is an automated notification from the Grant Management System.</em></p>",
+        "options": {}
+      },
+      "id": "b8d9e9e2-36c6-4331-a1df-9c45e7478ca7",
+      "name": "Send Celebration Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        176,
+        -640
+      ],
+      "webhookId": "354f2580-be93-40ff-9a9a-1c5a3b3aae63",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "pwyaqnD0vnBdVE9R",
+          "name": "Gmail account 2"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final output\nconst data = $('Create Reporting Calendar').first().json;\n\nreturn [{\n  json: {\n    ...data,\n    emailSent: true,\n    calendarUpdated: true\n  }\n}];"
+      },
+      "id": "c1863a82-ce02-4070-b35a-dfdc1217f0fa",
+      "name": "Format Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -448
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Award Notification1').first().json.body;\n\n  // If planeIssueId is provided, use it directly\n  // Otherwise search by funderName (NOT grantName - which has \"Grant\" appended)\n  const searchTerm = request.planeIssueId || request.funderName || request.grantName || '';\n\n  return [{\n    json: {\n      grantName: request.grantName || '',\n      funderName: request.funderName || '',\n      planeIssueId: request.planeIssueId || request.planeissueid || '',\n      searchTerm: searchTerm\n    }\n  }];"
+      },
+      "id": "4a9b5588-fd50-485a-80d2-38576f1ccfda",
+      "name": "Prepare Search",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -784,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/{{ $json.planeIssueId ? $json.planeIssueId + '/' : '?search=' + encodeURIComponent($json.funderName || $json.grantName) + '&per_page=100' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "3d3b7d66-242c-4375-a646-523927a4db99",
+      "name": "Search Grant in Plane",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -320,
+        -16
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Find grant sub-item to update to Awarded"
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Award Notification1').first().json.body;\n  const prepData = $('Prepare Search').first().json;\n  const searchResponse = $input.first().json;\n\n  // Handle both: direct fetch (single object) vs search (results array)\n  let issueList;\n  if (searchResponse.results) {\n    // Search response: {results: [...]}\n    issueList = searchResponse.results;\n  } else if (searchResponse.id) {\n    // Direct fetch: single issue object\n    issueList = [searchResponse];\n  } else if (Array.isArray(searchResponse)) {\n    issueList = searchResponse;\n  } else {\n    issueList = [];\n  }\n\n  let subItem = null;\n\n  // Method 1: Direct planeIssueId lookup\n  if (prepData.planeIssueId) {\n    subItem = issueList.find(i => i.id === prepData.planeIssueId);\n  }\n\n  // Method 2: Find [Eligibility] issue with EXACT funder name match\n  if (!subItem && request.funderName) {\n    const funderName = request.funderName.toLowerCase().trim();\n    subItem = issueList.find(i => {\n      const name = (i.name || '').toLowerCase();\n      return name.includes('[eligibility]') && name.includes(funderName);\n    });\n  }\n\n  // Method 3: Partial match with at least 3 words\n  if (!subItem && request.funderName) {\n    const funderWords = request.funderName.toLowerCase().split(/\\s+/).filter(w => w.length > 3);\n    subItem = issueList.find(i => {\n      const name = (i.name || '').toLowerCase();\n      if (!name.includes('[eligibility]')) return false;\n      const matchCount = funderWords.filter(word => name.includes(word)).length;\n      return matchCount >= 3;\n    });\n  }\n\n  // STRICT: Fail if no match\n  if (!subItem) {\n    const searchedFor = prepData.grantName || request.funderName || 'unknown';\n    throw new Error(`AWARD WORKFLOW STOPPED - No match for \"${searchedFor}\"`);\n  }\n\n  return [{\n    json: {\n      issueId: subItem.id,\n      parentId: subItem.parent || '',\n      grantName: request.grantName,\n      funderName: request.funderName,\n      awardAmount: request.awardAmount || 0,\n      awardDate: request.awardDate || new Date().toISOString().split('T')[0],\n      grantPeriodStart: request.grantPeriodStart || 'TBD',\n      grantPeriodEnd: request.grantPeriodEnd || 'TBD',\n      funderContact: request.funderContact || '',\n      reportingRequirements: request.reportingRequirements || []\n    }\n  }];"
+      },
+      "id": "96ba47d3-1b64-45db-8c48-7f764d1f02cb",
+      "name": "Find Sub-Item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/{{ $json.issueId }}/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"priority\": \"medium\",\n  \"state\": \"2edaa34f-e79c-45df-abce-d24ec71ee10d\",\n  \"description_html\": \"<div><p><strong>Status:</strong> Awarded</p><p><strong>Award Amount:</strong> ${{ $json.awardAmount }}</p><p><strong>Award Date:</strong> {{ $json.awardDate }}</p><p><strong>Funder:</strong> {{ $json.funderName }}</p><p><strong>Grant Period:</strong> {{ $json.grantPeriodStart }} to {{ $json.grantPeriodEnd }}</p><p><strong>Funder Contact:</strong> {{ $json.funderContact }}</p></div>\"\n}",
+        "options": {}
+      },
+      "id": "3ef63bc9-d164-4f85-9a2c-c06452410454",
+      "name": "Update Sub-Item to Awarded",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        96,
+        112
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Update eligibility sub-item status to Awarded"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Create Reporting Calendar1').first().json;\n  const calendar = data.reportingCalendar || [];\n\n  // Output one item per report so we can loop and create sub-items\n  return calendar.map(report => ({\n    json: {\n      parentId: data.parentId,\n      grantName: data.grantName,\n      funderName: data.funderName,\n      reportType: report.type,\n      dueDate: report.dueDate,\n      reminderDate: report.reminderDate,\n      description: report.description,\n      fullData: data\n    }\n  }));"
+      },
+      "id": "91540e58-c59b-4606-b5b9-ddae478f12d6",
+      "name": "Split Reports",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"[Report] {{ $json.grantName }} - {{ $json.description }}\",\n  \"priority\": \"medium\",\n  \"parent\": \"{{ $json.parentId }}\",\n  \"target_date\": \"{{ $json.dueDate }}\",\n  \"description_html\": \"<div><p><strong>Report Type:</strong> {{ $json.reportType }}</p><p><strong>Grant:</strong> {{ $json.grantName }}</p><p><strong>Funder:</strong> {{ $json.funderName }}</p><p><strong>Due Date:</strong> {{ $json.dueDate }}</p><p><strong>Reminder Date:</strong> {{ $json.reminderDate }}</p><p><strong>Status:</strong> Pending</p></div>\"\n}",
+        "options": {}
+      },
+      "id": "11eafd46-b5a2-4ac6-885c-0730d35a2c16",
+      "name": "Create Report Sub-Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1456,
+        48
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Create [Report] sub-items under parent grant for each reporting deadline"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "record-award",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "12f23dcd-72fe-4eb5-a3a7-7b31de7090d9",
+      "name": "Award Notification1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1008,
+        112
+      ],
+      "webhookId": "record-award",
+      "notes": "POST: { grantId, grantName, funderName, awardAmount, awardDate, grantPeriodStart, grantPeriodEnd, reportingRequirements, funderContact, planeIssueId }"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create reporting calendar - INTERIM ONLY (Final handled by report workflow)\n  const data = $('Find Sub-Item').first().json;\n\n  // Safe date parsing helper\n  function safeParseDate(dateStr, fallback) {\n    if (!dateStr || dateStr === 'TBD' || dateStr === 'undefined' || dateStr === 'null') {\n      return fallback;\n    }\n    try {\n      const d = new Date(dateStr);\n      return isNaN(d.getTime()) ? fallback : d;\n    } catch (e) {\n      return fallback;\n    }\n  }\n\n  const today = new Date();\n  const awardDate = safeParseDate(data.awardDate, today);\n  const defaultEnd = new Date(awardDate.getTime() + 365 * 24 * 60 * 60 * 1000);\n  const grantEnd = safeParseDate(data.grantPeriodEnd, defaultEnd);\n\n  const reportingCalendar = [];\n\n  // Only create INTERIM report - Final report handled by draft-report workflow\n  const interimDate = new Date(awardDate.getTime() + 180 * 24 * 60 * 60 * 1000);\n\n  reportingCalendar.push({\n    type: 'interim_report',\n    dueDate: interimDate.toISOString().split('T')[0],\n    reminderDate: new Date(interimDate.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],\n    description: 'Interim Progress Report'\n  });\n\n  const grantPeriodStartStr = data.grantPeriodStart || awardDate.toISOString().split('T')[0];\n  const grantPeriodEndStr = data.grantPeriodEnd && data.grantPeriodEnd !== 'TBD'\n    ? data.grantPeriodEnd\n    : grantEnd.toISOString().split('T')[0];\n\n  // Calculate final report due date for display (but don't create sub-item)\n  const finalReportDate = new Date(grantEnd.getTime() + 30 * 24 * 60 * 60 * 1000);\n\n  const celebrationMessage = `GRANT AWARDED!\\n\\nGrant: ${data.grantName}\\nFunder: ${data.funderName}\\nAmount:\n  $${(data.awardAmount || 0).toLocaleString()}\\nGrant Period: ${grantPeriodStartStr} to\n  ${grantPeriodEndStr}\\n\\nReporting Schedule:\\n- Interim Report: ${interimDate.toISOString().split('T')[0]}\\n- Final\n  Report: ${finalReportDate.toISOString().split('T')[0]} (via draft-report workflow)`;\n\n  return [{\n    json: {\n      success: true,\n      grantName: data.grantName,\n      funderName: data.funderName,\n      awardAmount: data.awardAmount,\n      awardDate: awardDate.toISOString().split('T')[0],\n      grantPeriod: { start: grantPeriodStartStr, end: grantPeriodEndStr },\n      status: 'Awarded',\n      parentId: data.parentId,\n      reportingCalendar: reportingCalendar,\n      finalReportDate: finalReportDate.toISOString().split('T')[0],\n      celebrationMessage: celebrationMessage,\n      nextActions: [\n        'Send thank you letter within 48 hours',\n        'Set up grant accounting codes',\n        'Add reporting dates to calendar',\n        'Schedule internal kickoff meeting',\n        'Add funder to CRM with Foundation tag'\n      ]\n    }\n  }];"
+      },
+      "id": "4d2aa66c-95e8-488e-abf5-3dda1368707a",
+      "name": "Create Reporting Calendar1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final output\nconst data = $('Create Reporting Calendar1').first().json;\n\nreturn [{\n  json: {\n    ...data,\n    emailSent: true,\n    reportSubItemsCreated: true\n  }\n}];"
+      },
+      "id": "c37d3d58-d836-476d-b411-7912f21c1649",
+      "name": "Format Output1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "76a49e76-1c57-493d-a15e-7b2885034891",
+              "leftValue": "={{ $json.planeIssueId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -576,
+        112
+      ],
+      "id": "5c1a2263-58d9-4d89-abcb-20e7592c590e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search={{ encodeURIComponent($json.funderName || $json.grantName) }}&per_page=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "5ff6c6d5-b549-4a79-b426-3333607919bc",
+      "name": "Search Grant in Plane1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -336,
+        272
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Find grant sub-item to update to Awarded"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ABUATDHG9",
+          "mode": "list",
+          "cachedResultName": "grant-assistant"
+        },
+        "text": "=🎉 *Congratulations! Grant Awarded!*\n\n  *Grant:* {{ $('Award Notification1').first().json.body.grantName }}\n  *Funder:* {{ $('Award Notification1').first().json.body.funderName }}\n  *Amount:* ${{ $('Award Notification1').first().json.body.awardAmount.toLocaleString() }}\n  *Grant Period:* {{ $('Award Notification1').first().json.body.grantPeriodStart }} to \n{{ $('Award Notification1').first().json.body.grantPeriodEnd }}\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n\n  *📋 Next Steps:*\n  • Send thank you letter within 48 hours\n  • Set up grant accounting codes\n  • Add reporting dates to calendar\n  • Schedule internal kickoff meeting\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n\n  *📅 Reporting Schedule:*\n  {{ $('Create Reporting Calendar1').first().json.reportingCalendar.map(r => '• ' + r.description + ': ' +\n  r.dueDate).join('\\n') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        704,
+        112
+      ],
+      "id": "c13f6b0f-544b-4cd2-98ec-8e91f909273a",
+      "name": "Send a message",
+      "webhookId": "72767cf4-777b-4cfb-b968-58f769a6cd0a",
+      "credentials": {
+        "slackApi": {
+          "id": "rFSQaYpz4DWprrfA",
+          "name": "Grant Assistant"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Award Notification1": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.thebrownmine.com",
+            "user-agent": "axios/1.12.0",
+            "content-length": "456",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "100.29.112.47",
+            "x-forwarded-host": "n8n.thebrownmine.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "grantId": "GRANT-001",
+            "grantName": "W.K. Kellogg Foundation Grant",
+            "funderName": "W.K. Kellogg Foundation",
+            "awardAmount": 50000,
+            "awardDate": "2026-02-01",
+            "grantPeriodStart": "2026-02-01",
+            "grantPeriodEnd": "",
+            "reportingRequirements": [
+              {
+                "type": "interim_report",
+                "dueDate": "",
+                "description": "Interim Progress Report"
+              },
+              {
+                "type": "final_report",
+                "dueDate": "",
+                "description": "Final Grant Report"
+              }
+            ],
+            "funderContact": "TBD",
+            "planeIssueId": "4a9e8529-4d99-4ca7-b5bc-f939034dfa5c"
+          },
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/record-award",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Award Notification": {
+      "main": [
+        [
+          {
+            "node": "Get Grant Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Grant Record": {
+      "main": [
+        [
+          {
+            "node": "Update to Awarded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update to Awarded": {
+      "main": [
+        [
+          {
+            "node": "Create Reporting Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Reporting Calendar": {
+      "main": [
+        [
+          {
+            "node": "Add to Reporting Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to Reporting Calendar": {
+      "main": [
+        [
+          {
+            "node": "Send Celebration Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Search": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Grant in Plane": {
+      "main": [
+        [
+          {
+            "node": "Find Sub-Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Sub-Item": {
+      "main": [
+        [
+          {
+            "node": "Update Sub-Item to Awarded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sub-Item to Awarded": {
+      "main": [
+        [
+          {
+            "node": "Create Reporting Calendar1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Reports": {
+      "main": [
+        [
+          {
+            "node": "Create Report Sub-Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Report Sub-Items": {
+      "main": [
+        [
+          {
+            "node": "Format Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Award Notification1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Reporting Calendar1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Search Grant in Plane",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Grant in Plane1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Grant in Plane1": {
+      "main": [
+        [
+          {
+            "node": "Find Sub-Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Split Reports",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "a815fd9a-e0f8-4f53-a613-0ac2d03d2fc6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "w7mog3ZJt3RlM9CK",
+  "tags": []
+}

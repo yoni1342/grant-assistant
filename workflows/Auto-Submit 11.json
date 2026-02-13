@@ -1,0 +1,756 @@
+{
+  "name": "Auto-Submit 11",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prepare-submission",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "8a5a58ce-52ae-413b-8af9-b921c0a8bf95",
+      "name": "Submission Request1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        -208
+      ],
+      "webhookId": "prepare-submission",
+      "disabled": true,
+      "notes": "POST: { grantId, portalUrl, portalType, proposalData, budgetData }"
+    },
+    {
+      "parameters": {
+        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search=%5BOrgInfo%5D&per_page=10",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "b5734ce4-0be9-4de8-af8d-a967a3873211",
+      "name": "Get Org Info1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -192,
+        -320
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "disabled": true,
+      "notes": "Fetch org info from Plane [OrgInfo] issue"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/get-documents",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"requiredDocs\": {{ JSON.stringify($('Submission Request1').first().json.body.requiredDocs || ['501c3_letter', 'budget_operating', 'board_roster']) }}\n}",
+        "options": {}
+      },
+      "id": "1dcfc8aa-9a72-4413-8ae1-22db5766fc8a",
+      "name": "Get Documents1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -192,
+        -112
+      ],
+      "disabled": true,
+      "notes": "Calls Workflow 4 to get document links"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compile all submission data into a structured package\nconst request = $('Submission Request1').first().json.body;\n\n// Parse org info from Plane [OrgInfo] issue\nlet orgInfo = {};\ntry {\n  const response = $('Get Org Info1').first().json;\n  const allIssues = response.results || response || [];\n  const issueList = Array.isArray(allIssues) ? allIssues : [];\n  const orgIssue = issueList.find(i => (i.name || '').includes('[OrgInfo]'));\n  \n  if (orgIssue) {\n    const desc = orgIssue.description_html || '';\n    const getField = (label) => {\n      const m = desc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)'));\n      return m ? m[1].trim() : '';\n    };\n    \n    orgInfo = {\n      legalName: getField('legal_name') || \"The Virtuous House Inc\",\n      dba: getField('dba') || \"The Virtuous House\",\n      ein: getField('ein') || 'XX-XXXXXXX',\n      address: getField('address') || '104 Bennett Ave',\n      city: getField('city') || 'Milford',\n      state: getField('state') || 'PA',\n      zip: getField('zip') || '18337',\n      phone: getField('phone') || '201-400-3165',\n      website: getField('website') || 'www.thevirtuoushouse.org',\n      yearFounded: getField('year_founded') || '2015',\n      missionStatement: getField('mission') || \"We are dedicated to uplifting our community through various outreach programs, empoweringindividuals and fostering a sense of belonging.\",\n  executiveDirector: getField('ed_name') || '',\n  edEmail: getField('ed_email') || '',\n  edPhone: getField('ed_phone') || '',\n  boardChair: getField('board_chair') || '',\n  numEmployees: getField('num_employees') || '',\n  numVolunteers: getField('num_volunteers') || '',\n  annualBudget: getField('annual_budget') || ''\n    };\n  }\n} catch (e) {\n  orgInfo = {\n    legalName: \"The Virtuous House Inc\",\n    dba: \"The Virtuous House\",\n    ein: 'XX-XXXXXXX',\n    address: '104 Bennett Ave',\n    city: 'Milford',\n    state: 'PA',\n    zip: '18337',\n    phone: '201-400-3165',\n    website: 'www.thevirtuoushouse.org',\n    yearFounded: '2015',\n    missionStatement: \"We are dedicated to uplifting our community through various outreach programs. Our mission is to empower individuals and foster a sense of belonging, ensuring everyone has access to essential resources.\"\n  };\n}\n\n// Get documents\nlet documents = {};\ntry {\n  const docsResponse = $('Get Documents1').first().json;\n  documents = docsResponse.documents || {};\n} catch (e) {\n  documents = {};\n}\n\n// Build common form fields mapping\nconst commonFields = {\n  'organization_name': orgInfo.legalName,\n  'org_name': orgInfo.legalName,\n  'legal_name': orgInfo.legalName,\n  'dba': orgInfo.dba,\n  'doing_business_as': orgInfo.dba,\n  'ein': orgInfo.ein,\n  'tax_id': orgInfo.ein,\n  'federal_tax_id': orgInfo.ein,\n  'employer_id': orgInfo.ein,\n  'address': orgInfo.address,\n  'street_address': orgInfo.address,\n  'address_line_1': orgInfo.address,\n  'city': orgInfo.city,\n  'state': orgInfo.state,\n  'zip': orgInfo.zip,\n  'zip_code': orgInfo.zip,\n  'postal_code': orgInfo.zip,\n  'phone': orgInfo.phone,\n  'telephone': orgInfo.phone,\n  'phone_number': orgInfo.phone,\n  'website': orgInfo.website,\n  'url': orgInfo.website,\n  'web_address': orgInfo.website,\n  'year_founded': orgInfo.yearFounded,\n  'founded': orgInfo.yearFounded,\n  'mission': orgInfo.missionStatement,\n  'mission_statement': orgInfo.missionStatement,\n  'executive_director': orgInfo.executiveDirector,\n  'ed_name': orgInfo.executiveDirector,\n  'ceo': orgInfo.executiveDirector,\n  'ed_email': orgInfo.edEmail,\n  'board_chair': orgInfo.boardChair,\n  'num_employees': orgInfo.numEmployees,\n  'staff_size': orgInfo.numEmployees,\n  'num_volunteers': orgInfo.numVolunteers,\n  'annual_budget': orgInfo.annualBudget,\n  'operating_budget': orgInfo.annualBudget\n};\n\n// Build document upload mapping\nconst documentUploads = {};\nfor (const [docType, docInfo] of Object.entries(documents)) {\n  if (docInfo.found) {\n    documentUploads[docType] = {\n      fileName: docInfo.fileName,\n      driveLink: docInfo.driveLink,\n      fileId: docInfo.fileId,\n      downloadUrl: `https://drive.google.com/uc?export=download&id=${docInfo.fileId}`\n    };\n  }\n}\n\nreturn [{\n  json: {\n    grantId: request.grantId || 'GRANT-001',\n    portalUrl: request.portalUrl || '',\n    portalType: request.portalType || 'generic',\n    orgInfo: orgInfo,\n    commonFields: commonFields,\n    documents: documentUploads,\n    proposalSections: request.proposalData || {},\n    budgetData: request.budgetData || {}\n  }\n}];"
+      },
+      "id": "399cf0cc-8f32-4313-8dd5-36bc93ff1808",
+      "name": "Compile Submission Data1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        -208
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate Puppeteer script for browser automation\nconst data = $input.first().json;\n\nconst puppeteerScript = `\n// Auto-Submit Script for: ${data.portalUrl}\n// Generated: ${new Date().toISOString()}\n// NOTE: Review and customize selectors for specific portal\n\nconst puppeteer = require('puppeteer');\n\nconst submissionData = ${JSON.stringify(data, null, 2)};\n\nasync function fillGrantApplication() {\n  const browser = await puppeteer.launch({ \n    headless: false,\n    slowMo: 100\n  });\n  \n  const page = await browser.newPage();\n  \n  try {\n    await page.goto('${data.portalUrl}', { waitUntil: 'networkidle2' });\n    \n    // ORGANIZATION INFO SECTION\n    const orgFields = [\n      { selector: '[name=\"organization_name\"], [name=\"org_name\"], #organization_name', value: submissionData.orgInfo.legalName },\n      { selector: '[name=\"ein\"], [name=\"tax_id\"], #ein', value: submissionData.orgInfo.ein },\n      { selector: '[name=\"address\"], [name=\"street_address\"], #address', value: submissionData.orgInfo.address },\n      { selector: '[name=\"city\"], #city', value: submissionData.orgInfo.city },\n      { selector: '[name=\"state\"], #state', value: submissionData.orgInfo.state },\n      { selector: '[name=\"zip\"], [name=\"zip_code\"], #zip', value: submissionData.orgInfo.zip },\n      { selector: '[name=\"phone\"], [name=\"telephone\"], #phone', value: submissionData.orgInfo.phone },\n      { selector: '[name=\"website\"], [name=\"url\"], #website', value: submissionData.orgInfo.website },\n      { selector: '[name=\"executive_director\"], [name=\"ed_name\"], #executive_director', value: submissionData.orgInfo.executiveDirector },\n    ];\n    \n    for (const field of orgFields) {\n      try {\n        const element = await page.$(field.selector);\n        if (element && field.value) {\n          await element.click({ clickCount: 3 });\n          await element.type(field.value);\n          console.log('Filled:', field.selector);\n        }\n      } catch (e) {\n        console.log('Field not found:', field.selector);\n      }\n    }\n    \n    console.log('\\\\n=== FORM PRE-FILL COMPLETE ===');\n    console.log('Review the form and click Submit manually.');\n    console.log('Press Ctrl+C to close browser when done.');\n    \n    await new Promise(() => {});\n    \n  } catch (error) {\n    console.error('Error:', error);\n    await browser.close();\n  }\n}\n\nfillGrantApplication();\n`;\n\nlet copyPasteSheet = '# Quick Copy-Paste Data\\n\\n';\ncopyPasteSheet += '## Organization Info\\n';\ncopyPasteSheet += '| Field | Value |\\n|-------|-------|\\n';\ncopyPasteSheet += `| Legal Name | ${data.orgInfo.legalName} |\\n`;\ncopyPasteSheet += `| DBA | ${data.orgInfo.dba} |\\n`;\ncopyPasteSheet += `| EIN | ${data.orgInfo.ein} |\\n`;\ncopyPasteSheet += `| Address | ${data.orgInfo.address} |\\n`;\ncopyPasteSheet += `| City | ${data.orgInfo.city} |\\n`;\ncopyPasteSheet += `| State | ${data.orgInfo.state} |\\n`;\ncopyPasteSheet += `| ZIP | ${data.orgInfo.zip} |\\n`;\ncopyPasteSheet += `| Phone | ${data.orgInfo.phone} |\\n`;\ncopyPasteSheet += `| Website | ${data.orgInfo.website} |\\n`;\ncopyPasteSheet += `| Year Founded | ${data.orgInfo.yearFounded} |\\n`;\ncopyPasteSheet += `| Executive Director | ${data.orgInfo.executiveDirector || 'N/A'} |\\n`;\ncopyPasteSheet += `| ED Email | ${data.orgInfo.edEmail || 'N/A'} |\\n`;\ncopyPasteSheet += `| ED Phone | ${data.orgInfo.edPhone || 'N/A'} |\\n`;\ncopyPasteSheet += `| Board Chair | ${data.orgInfo.boardChair || 'N/A'} |\\n`;\ncopyPasteSheet += `| Employees | ${data.orgInfo.numEmployees || 'N/A'} |\\n`;\ncopyPasteSheet += `| Volunteers | ${data.orgInfo.numVolunteers || 'N/A'} |\\n`;\ncopyPasteSheet += `| Annual Budget | ${data.orgInfo.annualBudget || 'N/A'} |\\n`;\n\ncopyPasteSheet += '\\n## Mission Statement\\n';\ncopyPasteSheet += `${data.orgInfo.missionStatement}\\n`;\n\ncopyPasteSheet += '\\n## Documents Ready for Upload\\n';\nfor (const [docType, docInfo] of Object.entries(data.documents)) {\n  copyPasteSheet += `- **${docType}**: [${docInfo.fileName}](${docInfo.driveLink})\\n`;\n  copyPasteSheet += `  - Direct download: ${docInfo.downloadUrl}\\n`;\n}\n\nif (Object.keys(data.documents).length === 0) {\n  copyPasteSheet += '- No documents loaded. Run Workflow 4 first.\\n';\n}\n\nreturn [{\n  json: {\n    success: true,\n    grantId: data.grantId,\n    portalUrl: data.portalUrl,\n    orgInfo: data.orgInfo,\n    commonFields: data.commonFields,\n    documents: data.documents,\n    puppeteerScript: puppeteerScript,\n    copyPasteSheet: copyPasteSheet,\n    instructions: [\n      '1. Review the copy-paste sheet for quick manual entry',\n      '2. OR save the Puppeteer script and customize selectors for your portal',\n      '3. Run: node submission-script.js',\n      '4. Review filled form in browser',\n      '5. Click Submit manually after verification'\n    ]\n  }\n}];"
+      },
+      "id": "e7dfee16-f53f-40b3-8a52-f8352cf4e954",
+      "name": "Generate Automation Script1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        -208
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final output\nconst data = $input.first().json;\n\nlet markdown = `# Grant Submission Package\\n\\n`;\nmarkdown += `**Grant ID:** ${data.grantId}\\n`;\nmarkdown += `**Portal:** ${data.portalUrl || 'Not specified'}\\n`;\nmarkdown += `**Generated:** ${new Date().toISOString()}\\n\\n`;\n\nmarkdown += `---\\n\\n`;\nmarkdown += data.copyPasteSheet;\n\nmarkdown += `\\n---\\n\\n`;\nmarkdown += `## Instructions\\n\\n`;\nfor (const instruction of data.instructions) {\n  markdown += `${instruction}\\n`;\n}\n\nmarkdown += `\\n---\\n\\n`;\nmarkdown += `## Puppeteer Script\\n\\n`;\nmarkdown += `Save as \\`submission-script.js\\` and run with \\`node submission-script.js\\`\\n\\n`;\nmarkdown += '```javascript\\n';\nmarkdown += data.puppeteerScript;\nmarkdown += '\\n```\\n';\n\nreturn [{\n  json: {\n    success: true,\n    grantId: data.grantId,\n    portalUrl: data.portalUrl,\n    orgInfo: data.orgInfo,\n    commonFields: data.commonFields,\n    documents: data.documents,\n    puppeteerScript: data.puppeteerScript,\n    copyPasteSheet: data.copyPasteSheet,\n    instructions: data.instructions,\n    fullPackage: markdown\n  }\n}];"
+      },
+      "id": "78ea2e46-c91b-4f38-81d1-e73c77151f4a",
+      "name": "Format Output1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -208
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/analyze-funder",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"funderName\": {{ JSON.stringify($json.body.funderName || '') }},\n  \"focusAreas\": {{ JSON.stringify($json.body.focusAreas || []) }},\n  \"funderEIN\": {{ JSON.stringify($json.body.funderEIN || '') }}\n}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "25fc415c-6e97-47e7-9adf-0c8be0710115",
+      "name": "Call WF9 Funder Analyzer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        416,
+        320
+      ],
+      "notes": "Get portalUrl, portalType, submissionMethod from WF9"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prepare-submission",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "6d28fbbf-9005-41cc-96c6-ac7a67f3f2d9",
+      "name": "Submission Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        192,
+        544
+      ],
+      "webhookId": "prepare-submission",
+      "notes": "POST: { grantId, funderName, focusAreas, requiredDocs, proposalData, budgetData, planeIssueId }"
+    },
+    {
+      "parameters": {
+        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search=%5BOrgInfo%5D&per_page=10",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "59fadfb0-f878-4184-b442-79611fb5927a",
+      "name": "Get Org Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        416,
+        544
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fetch org info from Plane [OrgInfo] issue"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/get-documents",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"requiredDocs\": {{ JSON.stringify($('Submission Request').first().json.body.requiredDocs || ['501c3_letter', 'budget_operating', 'board_roster']) }}\n}",
+        "options": {}
+      },
+      "id": "6a44c3e4-e934-4bf5-85db-95d01093db47",
+      "name": "Get Documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        416,
+        768
+      ],
+      "notes": "Calls Workflow 4 to get document links"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compile all submission data into a structured package\nconst request = $('Submission Request').first().json.body;\n\n// Get funder data from WF9\nlet funderData = {};\ntry {\n  const wf9Response = $('Call WF9 Funder Analyzer').first().json;\n  funderData = {\n    funderName: wf9Response.funderName || request.funderName || '',\n    funderWebsite: wf9Response.funderWebsite || '',\n    portalUrl: wf9Response.portalUrl || request.portalUrl || '',\n    portalType: wf9Response.portalType || request.portalType || 'unknown',\n    submissionMethod: wf9Response.submissionMethod || 'unknown',\n    strategyBrief: wf9Response.strategyBrief || ''\n  };\n} catch (e) {\n  funderData = {\n    funderName: request.funderName || '',\n    funderWebsite: '',\n    portalUrl: request.portalUrl || '',\n    portalType: request.portalType || 'unknown',\n    submissionMethod: 'unknown',\n    strategyBrief: '',\n    error: 'Could not get funder data from WF9: ' + e.message\n  };\n}\n\n// Determine if auto-submit is possible\nlet canAutoSubmit = false;\nlet autoSubmitReason = '';\n\nif (funderData.portalUrl && funderData.portalUrl.startsWith('http')) {\n  canAutoSubmit = true;\n  autoSubmitReason = 'Portal URL available';\n} else if (funderData.portalType === 'none' || funderData.submissionMethod === 'email') {\n  canAutoSubmit = false;\n  autoSubmitReason = 'Email submission required - use copy-paste sheet';\n} else if (funderData.submissionMethod === 'contact') {\n  canAutoSubmit = false;\n  autoSubmitReason = 'Must contact funder directly before applying';\n} else if (funderData.submissionMethod === 'mail') {\n  canAutoSubmit = false;\n  autoSubmitReason = 'Physical mail submission required';\n} else if (funderData.funderWebsite) {\n  canAutoSubmit = false;\n  autoSubmitReason = 'No portal URL - check funder website: ' + funderData.funderWebsite;\n} else {\n  canAutoSubmit = false;\n  autoSubmitReason = 'No submission info available - manual research needed';\n}\n\n// Parse org info from Plane [OrgInfo] issue\nlet orgInfo = {};\ntry {\n  const response = $('Get Org Info').first().json;\n  const allIssues = response.results || response || [];\n  const issueList = Array.isArray(allIssues) ? allIssues : [];\n  const orgIssue = issueList.find(i => (i.name || '').includes('[OrgInfo]'));\n  \n  if (orgIssue) {\n    const desc = orgIssue.description_html || '';\n    const getField = (label) => {\n      const m = desc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)'));\n      return m ? m[1].trim() : '';\n    };\n    \n    orgInfo = {\n      legalName: getField('legal_name') || \"The Virtuous House Inc\",\n      dba: getField('dba') || \"The Virtuous House\",\n      ein: getField('ein') || 'XX-XXXXXXX',\n      address: getField('address') || '104 Bennett Ave',\n      city: getField('city') || 'Milford',\n      state: getField('state') || 'PA',\n      zip: getField('zip') || '18337',\n      phone: getField('phone') || '201-400-3165',\n      website: getField('website') || 'www.thevirtuoushouse.org',\n      yearFounded: getField('year_founded') || '2015',\n      missionStatement: getField('mission') || \"We are dedicated to uplifting our community through various outreach programs, empowering individuals and fostering a sense of belonging.\",\n      executiveDirector: getField('ed_name') || '',\n      edEmail: getField('ed_email') || '',\n      edPhone: getField('ed_phone') || '',\n      boardChair: getField('board_chair') || '',\n      numEmployees: getField('num_employees') || '',\n      numVolunteers: getField('num_volunteers') || '',\n      annualBudget: getField('annual_budget') || ''\n    };\n  }\n} catch (e) {\n  orgInfo = {\n    legalName: \"The Virtuous House Inc\",\n    dba: \"The Virtuous House\",\n    ein: 'XX-XXXXXXX',\n    address: '104 Bennett Ave',\n    city: 'Milford',\n    state: 'PA',\n    zip: '18337',\n    phone: '201-400-3165',\n    website: 'www.thevirtuoushouse.org',\n    yearFounded: '2015',\n    missionStatement: \"We are dedicated to uplifting our community through various outreach programs. Our mission is to empower individuals and foster a sense of belonging, ensuring everyone has access to essential resources.\"\n  };\n}\n\n// Get documents\nlet documents = {};\ntry {\n  const docsResponse = $('Get Documents').first().json;\n  documents = docsResponse.documents || {};\n} catch (e) {\n  documents = {};\n}\n\n// Build common form fields mapping\nconst commonFields = {\n  'organization_name': orgInfo.legalName,\n  'org_name': orgInfo.legalName,\n  'legal_name': orgInfo.legalName,\n  'dba': orgInfo.dba,\n  'doing_business_as': orgInfo.dba,\n  'ein': orgInfo.ein,\n  'tax_id': orgInfo.ein,\n  'federal_tax_id': orgInfo.ein,\n  'employer_id': orgInfo.ein,\n  'address': orgInfo.address,\n  'street_address': orgInfo.address,\n  'address_line_1': orgInfo.address,\n  'city': orgInfo.city,\n  'state': orgInfo.state,\n  'zip': orgInfo.zip,\n  'zip_code': orgInfo.zip,\n  'postal_code': orgInfo.zip,\n  'phone': orgInfo.phone,\n  'telephone': orgInfo.phone,\n  'phone_number': orgInfo.phone,\n  'website': orgInfo.website,\n  'url': orgInfo.website,\n  'web_address': orgInfo.website,\n  'year_founded': orgInfo.yearFounded,\n  'founded': orgInfo.yearFounded,\n  'mission': orgInfo.missionStatement,\n  'mission_statement': orgInfo.missionStatement,\n  'executive_director': orgInfo.executiveDirector,\n  'ed_name': orgInfo.executiveDirector,\n  'ceo': orgInfo.executiveDirector,\n  'ed_email': orgInfo.edEmail,\n  'board_chair': orgInfo.boardChair,\n  'num_employees': orgInfo.numEmployees,\n  'staff_size': orgInfo.numEmployees,\n  'num_volunteers': orgInfo.numVolunteers,\n  'annual_budget': orgInfo.annualBudget,\n  'operating_budget': orgInfo.annualBudget\n};\n\n// Build document upload mapping\nconst documentUploads = {};\nfor (const [docType, docInfo] of Object.entries(documents)) {\n  if (docInfo.found) {\n    documentUploads[docType] = {\n      fileName: docInfo.fileName,\n      driveLink: docInfo.driveLink,\n      fileId: docInfo.fileId,\n      downloadUrl: `https://drive.google.com/uc?export=download&id=${docInfo.fileId}`\n    };\n  }\n}\n\nreturn [{\n  json: {\n    grantId: request.grantId || 'GRANT-001',\n    planeIssueId: request.planeIssueId || '',\n    funderData: funderData,\n    canAutoSubmit: canAutoSubmit,\n    autoSubmitReason: autoSubmitReason,\n    portalUrl: funderData.portalUrl,\n    portalType: funderData.portalType,\n    submissionMethod: funderData.submissionMethod,\n    orgInfo: orgInfo,\n    commonFields: commonFields,\n    documents: documentUploads,\n    proposalSections: request.proposalData || {},\n    budgetData: request.budgetData || {}\n  }\n}];"
+      },
+      "id": "dfba5928-3d24-498b-8be4-27b41bb663c3",
+      "name": "Compile Submission Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate Puppeteer script for browser automation\nconst data = $input.first().json;\n\n// Handle case where auto-submit is not possible\nlet puppeteerScript = '';\nlet submissionNotes = [];\n\nif (data.canAutoSubmit && data.portalUrl) {\n  puppeteerScript = `\n// Auto-Submit Script for: ${data.portalUrl}\n// Generated: ${new Date().toISOString()}\n// NOTE: Review and customize selectors for specific portal\n\nconst puppeteer = require('puppeteer');\n\nconst submissionData = ${JSON.stringify(data, null, 2)};\n\nasync function fillGrantApplication() {\n  const browser = await puppeteer.launch({ \n    headless: false,\n    slowMo: 100\n  });\n  \n  const page = await browser.newPage();\n  \n  try {\n    await page.goto('${data.portalUrl}', { waitUntil: 'networkidle2' });\n    \n    // ORGANIZATION INFO SECTION\n    const orgFields = [\n      { selector: '[name=\"organization_name\"], [name=\"org_name\"], #organization_name', value: submissionData.orgInfo.legalName },\n      { selector: '[name=\"ein\"], [name=\"tax_id\"], #ein', value: submissionData.orgInfo.ein },\n      { selector: '[name=\"address\"], [name=\"street_address\"], #address', value: submissionData.orgInfo.address },\n      { selector: '[name=\"city\"], #city', value: submissionData.orgInfo.city },\n      { selector: '[name=\"state\"], #state', value: submissionData.orgInfo.state },\n      { selector: '[name=\"zip\"], [name=\"zip_code\"], #zip', value: submissionData.orgInfo.zip },\n      { selector: '[name=\"phone\"], [name=\"telephone\"], #phone', value: submissionData.orgInfo.phone },\n      { selector: '[name=\"website\"], [name=\"url\"], #website', value: submissionData.orgInfo.website },\n      { selector: '[name=\"executive_director\"], [name=\"ed_name\"], #executive_director', value: submissionData.orgInfo.executiveDirector },\n    ];\n    \n    for (const field of orgFields) {\n      try {\n        const element = await page.$(field.selector);\n        if (element && field.value) {\n          await element.click({ clickCount: 3 });\n          await element.type(field.value);\n          console.log('Filled:', field.selector);\n        }\n      } catch (e) {\n        console.log('Field not found:', field.selector);\n      }\n    }\n    \n    console.log('\\\\n=== FORM PRE-FILL COMPLETE ===');\n    console.log('Review the form and click Submit manually.');\n    console.log('Press Ctrl+C to close browser when done.');\n    \n    await new Promise(() => {});\n    \n  } catch (error) {\n    console.error('Error:', error);\n    await browser.close();\n  }\n}\n\nfillGrantApplication();\n`;\n  submissionNotes = [\n    '1. Save the Puppeteer script and customize selectors for your portal',\n    '2. Run: node submission-script.js',\n    '3. Review filled form in browser',\n    '4. Click Submit manually after verification'\n  ];\n} else {\n  // No auto-submit possible\n  puppeteerScript = `// AUTO-SUBMIT NOT AVAILABLE\\n// Reason: ${data.autoSubmitReason}\\n// Use the copy-paste sheet below for manual submission.`;\n  \n  if (data.submissionMethod === 'email') {\n    submissionNotes = [\n      '1. This funder accepts EMAIL submissions',\n      '2. Use the copy-paste sheet to prepare your application',\n      '3. Find submission email on funder website: ' + (data.funderData.funderWebsite || 'N/A'),\n      '4. Attach required documents and send'\n    ];\n  } else if (data.submissionMethod === 'contact') {\n    submissionNotes = [\n      '1. This funder requires DIRECT CONTACT before applying',\n      '2. Visit: ' + (data.funderData.funderWebsite || 'funder website'),\n      '3. Find program officer contact info',\n      '4. Send Letter of Inquiry or schedule call first'\n    ];\n  } else if (data.submissionMethod === 'mail') {\n    submissionNotes = [\n      '1. This funder requires PHYSICAL MAIL submission',\n      '2. Print the copy-paste sheet data',\n      '3. Print and sign required documents',\n      '4. Mail to funder address (check website)'\n    ];\n  } else {\n    submissionNotes = [\n      '1. Submission method could not be determined',\n      '2. Visit funder website: ' + (data.funderData.funderWebsite || 'search online'),\n      '3. Look for \"Apply\" or \"Grants\" section',\n      '4. Use copy-paste sheet for manual entry'\n    ];\n  }\n}\n\n// Build copy-paste sheet (always generated)\nlet copyPasteSheet = '# Quick Copy-Paste Data\\n\\n';\n\n// Add submission status banner\ncopyPasteSheet += '## Submission Status\\n';\nif (data.canAutoSubmit) {\n  copyPasteSheet += '**Status:** AUTO-SUBMIT READY\\n';\n  copyPasteSheet += `**Portal:** ${data.portalUrl}\\n`;\n  copyPasteSheet += `**Type:** ${data.portalType}\\n\\n`;\n} else {\n  copyPasteSheet += '**Status:** MANUAL SUBMISSION REQUIRED\\n';\n  copyPasteSheet += `**Reason:** ${data.autoSubmitReason}\\n`;\n  copyPasteSheet += `**Method:** ${data.submissionMethod}\\n`;\n  if (data.funderData.funderWebsite) {\n    copyPasteSheet += `**Funder Website:** ${data.funderData.funderWebsite}\\n`;\n  }\n  copyPasteSheet += '\\n';\n}\n\ncopyPasteSheet += '## Organization Info\\n';\ncopyPasteSheet += '| Field | Value |\\n|-------|-------|\\n';\ncopyPasteSheet += `| Legal Name | ${data.orgInfo.legalName} |\\n`;\ncopyPasteSheet += `| DBA | ${data.orgInfo.dba} |\\n`;\ncopyPasteSheet += `| EIN | ${data.orgInfo.ein} |\\n`;\ncopyPasteSheet += `| Address | ${data.orgInfo.address} |\\n`;\ncopyPasteSheet += `| City | ${data.orgInfo.city} |\\n`;\ncopyPasteSheet += `| State | ${data.orgInfo.state} |\\n`;\ncopyPasteSheet += `| ZIP | ${data.orgInfo.zip} |\\n`;\ncopyPasteSheet += `| Phone | ${data.orgInfo.phone} |\\n`;\ncopyPasteSheet += `| Website | ${data.orgInfo.website} |\\n`;\ncopyPasteSheet += `| Year Founded | ${data.orgInfo.yearFounded} |\\n`;\ncopyPasteSheet += `| Executive Director | ${data.orgInfo.executiveDirector || 'N/A'} |\\n`;\ncopyPasteSheet += `| ED Email | ${data.orgInfo.edEmail || 'N/A'} |\\n`;\ncopyPasteSheet += `| ED Phone | ${data.orgInfo.edPhone || 'N/A'} |\\n`;\ncopyPasteSheet += `| Board Chair | ${data.orgInfo.boardChair || 'N/A'} |\\n`;\ncopyPasteSheet += `| Employees | ${data.orgInfo.numEmployees || 'N/A'} |\\n`;\ncopyPasteSheet += `| Volunteers | ${data.orgInfo.numVolunteers || 'N/A'} |\\n`;\ncopyPasteSheet += `| Annual Budget | ${data.orgInfo.annualBudget || 'N/A'} |\\n`;\n\ncopyPasteSheet += '\\n## Mission Statement\\n';\ncopyPasteSheet += `${data.orgInfo.missionStatement}\\n`;\n\ncopyPasteSheet += '\\n## Documents Ready for Upload\\n';\nfor (const [docType, docInfo] of Object.entries(data.documents)) {\n  copyPasteSheet += `- **${docType}**: [${docInfo.fileName}](${docInfo.driveLink})\\n`;\n  copyPasteSheet += `  - Direct download: ${docInfo.downloadUrl}\\n`;\n}\n\nif (Object.keys(data.documents).length === 0) {\n  copyPasteSheet += '- No documents loaded. Run Workflow 4 first.\\n';\n}\n\nreturn [{\n  json: {\n    success: true,\n    grantId: data.grantId,\n    planeIssueId: data.planeIssueId,\n    funderName: data.funderData.funderName,\n    canAutoSubmit: data.canAutoSubmit,\n    autoSubmitReason: data.autoSubmitReason,\n    portalUrl: data.portalUrl,\n    portalType: data.portalType,\n    submissionMethod: data.submissionMethod,\n    funderWebsite: data.funderData.funderWebsite,\n    orgInfo: data.orgInfo,\n    commonFields: data.commonFields,\n    documents: data.documents,\n    puppeteerScript: puppeteerScript,\n    copyPasteSheet: copyPasteSheet,\n    instructions: submissionNotes\n  }\n}];"
+      },
+      "id": "422a70e8-7667-46d4-a460-dfd8b413c03f",
+      "name": "Generate Automation Script",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/{{ $json.planeIssueId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"state\": \"b5e21610-d5e3-419a-bd8e-5d5af7528303\"\n}",
+        "options": {}
+      },
+      "id": "eac04aa4-5272-4446-b80d-6a4fafa48649",
+      "name": "Set State Auto Submitting",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1296,
+        544
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Change Plane issue state to 'Auto Submitting'"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "approval-check",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "Approved",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a77821cb-d21e-4029-8f10-a3eea963da50",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/log-submission",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"grantId\": \"{{ $('Merge Checklist Data').first().json.grantId }}\",\n    \"grantName\": \"{{ $('Merge Checklist Data').first().json.funderName }} Grant\",\n    \"funderName\": \"{{ $('Merge Checklist Data').first().json.funderName }}\",\n    \"confirmationNumber\": \"{{ $('Merge Checklist Data').first().json.canAutoSubmit ? 'AUTO-' : 'MANUAL-' }}{{ Date.now()\n   }}\",\n    \"submittedDate\": \"{{ new Date().toISOString().split('T')[0] }}\",\n    \"status\": \"Submitted\",\n    \"contactPerson\": \"TBD\",\n    \"contactEmail\": \"TBD\",\n    \"expectedDecisionDate\": \"\",\n    \"portalUrl\": \"{{ $('Merge Checklist Data').first().json.portalUrl || '' }}\",\n    \"portalType\": \"{{ $('Merge Checklist Data').first().json.portalType || '' }}\",\n    \"submissionMethod\": \"{{ $('Merge Checklist Data').first().json.submissionMethod || 'unknown' }}\",\n    \"funderWebsite\": \"{{ $('Merge Checklist Data').first().json.funderWebsite || '' }}\",\n    \"wasAutoSubmit\": {{ $('Merge Checklist Data').first().json.canAutoSubmit }},\n    \"planeIssueId\": \"{{ $('Merge Checklist Data').first().json.planeIssueId || '' }}\",\n    \"deadline\": \"{{ $('Merge Checklist Data').first().json.deadline || '' }}\",\n    \"checklistItemsTotal\": {{ $('Merge Checklist Data').first().json.checklistTotalItems || 0 }},\n    \"checklistItemsRequired\": {{ $('Merge Checklist Data').first().json.checklistRequiredItems || 0 }},\n    \"hoursBeforeDeadline\": {{ $('Merge Checklist Data').first().json.checklistHoursToDeadline || 0 }}\n  }",
+        "options": {}
+      },
+      "id": "b135aa1c-0303-4eb9-8adf-667adc2c2cd0",
+      "name": "Call WF12 Log Submission",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        432
+      ],
+      "notes": "Log submission to WF12"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ABUATDHG9",
+          "mode": "list",
+          "cachedResultName": "grant-assistant"
+        },
+        "text": "==✅ *Submission Complete*\n\n  *{{ $('Merge Checklist Data').first().json.funderName }}*\n  Grant ID: `{{ $('Merge Checklist Data').first().json.grantId }}`\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n\n  *📋 FINAL CHECKLIST STATUS*\n  {{ $('Merge Checklist Data').first().json.checklistUrgencyMessage }}\n\n  {{ $('Merge Checklist Data').first().json.checklistSummary }}\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n\n  *🚀 SUBMISSION DETAILS*\n  Method: {{ $('Merge Checklist Data').first().json.submissionMethod }}\n  {{ $('Merge Checklist Data').first().json.canAutoSubmit ? 'Portal: ' + $('Merge Checklist Data').first().json.portalUrl : 'Manual: ' + $('Merge Checklist Data').first().json.autoSubmitReason }}\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n\n  ✅ Status updated to *Submitted*\n  📝 Logged to submission tracker\n\n  _Submitted: {{ new Date().toISOString().split('T')[0] }}_\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n  *⏰ DEADLINE STATUS*\n  {{ $('Merge Checklist Data').first().json.checklistUrgencyMessage }}\n  {{ $('Merge Checklist Data').first().json.deadlineFormatted }}\n  Hours remaining: {{ $('Merge Checklist Data').first().json.checklistHoursToDeadline }}\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n  \n\n\n",
+        "otherOptions": {}
+      },
+      "id": "533e455f-0a51-4109-8bb7-74c7756b8e10",
+      "name": "Slack Success",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        3040,
+        432
+      ],
+      "webhookId": "f2fc48ca-7650-49f8-988c-a8d9f61524f2",
+      "credentials": {
+        "slackApi": {
+          "id": "rFSQaYpz4DWprrfA",
+          "name": "Grant Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ABUATDHG9",
+          "mode": "list",
+          "cachedResultName": "grant-assistant"
+        },
+        "text": "=\n⏸️ *Submission Paused*\n\n  *{{ $('Merge Checklist Data').first().json.funderName }}*\n  Grant ID: `{{ $('Merge Checklist Data').first().json.grantId }}`\nUpdate status in Plane when ready",
+        "otherOptions": {}
+      },
+      "id": "a3638a56-89da-4ba6-99f4-b50efa11524f",
+      "name": "Slack Declined",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2592,
+        656
+      ],
+      "webhookId": "d56aef78-9139-4a38-903f-7e520a041353",
+      "credentials": {
+        "slackApi": {
+          "id": "rFSQaYpz4DWprrfA",
+          "name": "Grant Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final output (updated to use checklist data)\n  const data = $('Merge Checklist Data').first().json;\n\n  let markdown = `# Grant Submission Package\\n\\n`;\n  markdown += `**Grant ID:** ${data.grantId}\\n`;\n  markdown += `**Funder:** ${data.funderName || 'Not specified'}\\n`;\n  markdown += `**Portal:** ${data.portalUrl || 'Not available'}\\n`;\n  markdown += `**Auto-Submit:** ${data.canAutoSubmit ? 'YES' : 'NO - ' + data.autoSubmitReason}\\n`;\n  markdown += `**Generated:** ${new Date().toISOString()}\\n\\n`;\n\n  // Add deadline info\n  markdown += `## Deadline Status\\n\\n`;\n  markdown += `**Status:** ${data.checklistUrgencyMessage}\\n`;\n  markdown += `**Deadline:** ${data.deadlineFormatted}\\n`;\n  markdown += `**Hours Remaining:** ${data.checklistHoursToDeadline}\\n`;\n  markdown += `**Days Remaining:** ${data.checklistDaysToDeadline}\\n\\n`;\n\n  // Add checklist summary\n  markdown += `## Checklist Summary\\n\\n`;\n  markdown += `**Total Items:** ${data.checklistTotalItems}\\n`;\n  markdown += `**Required Items:** ${data.checklistRequiredItems}\\n\\n`;\n  markdown += `${data.checklistSummary}\\n\\n`;\n\n  // Add warnings if any\n  if (data.blockReasons && data.blockReasons.length > 0) {\n    markdown += `## ⚠️ Warnings\\n\\n`;\n    for (const reason of data.blockReasons) {\n      markdown += `- ${reason}\\n`;\n    }\n    markdown += `\\n`;\n  }\n\n  markdown += `---\\n\\n`;\n  markdown += data.copyPasteSheet;\n\n  markdown += `\\n---\\n\\n`;\n  markdown += `## Instructions\\n\\n`;\n  for (const instruction of data.instructions) {\n    markdown += `${instruction}\\n`;\n  }\n\n  if (data.canAutoSubmit) {\n    markdown += `\\n---\\n\\n`;\n    markdown += `## Puppeteer Script\\n\\n`;\n    markdown += `Save as \\`submission-script.js\\` and run with \\`node submission-script.js\\`\\n\\n`;\n    markdown += '```javascript\\n';\n    markdown += data.puppeteerScript;\n    markdown += '\\n```\\n';\n  }\n\n  // Add full checklist markdown\n  markdown += `\\n---\\n\\n`;\n  markdown += `## Full Checklist\\n\\n`;\n  markdown += data.checklistMarkdown || 'No checklist data available.';\n\n  return [{\n    json: {\n      success: true,\n      grantId: data.grantId,\n      funderName: data.funderName,\n      canAutoSubmit: data.canAutoSubmit,\n      autoSubmitReason: data.autoSubmitReason,\n      portalUrl: data.portalUrl,\n      portalType: data.portalType,\n      submissionMethod: data.submissionMethod,\n      funderWebsite: data.funderWebsite,\n      orgInfo: data.orgInfo,\n      commonFields: data.commonFields,\n      documents: data.documents,\n      puppeteerScript: data.puppeteerScript,\n      copyPasteSheet: data.copyPasteSheet,\n      instructions: data.instructions,\n      // Checklist data in output\n      checklistUrgency: data.checklistUrgency,\n      checklistUrgencyMessage: data.checklistUrgencyMessage,\n      checklistTotalItems: data.checklistTotalItems,\n      checklistRequiredItems: data.checklistRequiredItems,\n      checklistHoursToDeadline: data.checklistHoursToDeadline,\n      checklistSummary: data.checklistSummary,\n      deadline: data.deadline,\n      deadlineFormatted: data.deadlineFormatted,\n      blockReasons: data.blockReasons,\n      fullPackage: markdown\n    }\n  }];"
+      },
+      "id": "df78e257-9ca0-43f4-9b34-3c9d7d588b9f",
+      "name": "Format Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3264,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        688,
+        592
+      ],
+      "id": "eaef4d6b-0d0e-48ce-9d1c-df5bc22ae3d1",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ABUATDHG9",
+          "mode": "list",
+          "cachedResultName": "grant-assistant"
+        },
+        "message": "==📋 *Grant Submission Ready for Review*\n\n  *{{ $json.funderName }}*\n  Grant ID: `{{ $json.grantId }}`\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n\n  *⏰ DEADLINE STATUS*\n  {{ $json.checklistUrgencyMessage }}\n  {{ $json.deadlineFormatted }}\n  Hours remaining: {{ $json.checklistHoursToDeadline }}\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n\n  *📋 CHECKLIST STATUS*\n  Total Items: {{ $json.checklistTotalItems }} | Required: {{ $json.checklistRequiredItems }}\n\n  {{ $json.checklistSummary }}\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n\n  *🚀 SUBMISSION INFO*\n  Auto-Submit: {{ $json.canAutoSubmit ? '✅ Ready' : '❌ Not Available' }}\n  Method: {{ $json.submissionMethod }}\n  {{ $json.canAutoSubmit ? 'Portal: ' + $json.portalUrl : 'Reason: ' + $json.autoSubmitReason }}\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n\n  *📝 INSTRUCTIONS*\n  {{ $json.instructions.join('\\n') }}\n\n  {{ $json.funderWebsite ? '*Funder Website:* <' + $json.funderWebsite + '|Visit Site>' : '' }}\n\n  ━━━━━━━━━━━━━━━━━━━━━━\n\n  {{ $json.blockReasons.length > 0 ? '*⚠️ WARNINGS:*\\n' + $json.blockReasons.join('\\n') : '' }}\n\n  _Approve to proceed with submission and set status to Submitted, or Decline to handle manually._",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2128,
+        544
+      ],
+      "id": "ba63d6a1-f668-49d1-b98b-3eeefba9cf62",
+      "name": "Send message and wait for response",
+      "webhookId": "9ce55cf5-723c-4c0e-9388-b3e277f1dc01",
+      "credentials": {
+        "slackApi": {
+          "id": "rFSQaYpz4DWprrfA",
+          "name": "Grant Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/generate-checklist",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"grantId\": \"{{ $('Generate Automation Script').first().json.grantId }}\",\n    \"grantName\": \"{{ $('Generate Automation Script').first().json.funderName }} Grant\",\n    \"funderName\": \"{{ $('Generate Automation Script').first().json.funderName }}\",\n    \"deadline\": \"{{ $('Submission Request').first().json.body.deadline || '' }}\",\n    \"portalUrl\": \"{{ $('Generate Automation Script').first().json.portalUrl || '' }}\",\n    \"budgetAmount\": {{ $('Submission Request').first().json.body.budgetAmount || 0 }},\n    \"contactEmail\": \"abiykibru@gmail.com\",\n    \"requiredDocs\": {{ JSON.stringify($('Submission Request').first().json.body.requiredDocs || ['501c3_letter',\n  'budget_operating', 'board_roster']) }},\n    \"requiredSections\": [\"organization_description\", \"program_description\", \"budget_narrative\", \"outcomes\"]\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1504,
+        544
+      ],
+      "id": "4ae367d7-b5d6-4317-985d-33522f2c1cab",
+      "name": "Call Checklist Generator"
+    },
+    {
+      "parameters": {
+        "jsCode": "const scriptData = $('Generate Automation Script').first().json;\n  const checklistData = $input.first().json;\n\n  // Build checklist summary for Slack\n  let checklistSummary = '';\n  let checklistItems = [];\n\n  if (checklistData.checklistByCategory) {\n    const categories = [\n      { key: 'documents', emoji: '📄', name: 'Documents' },\n      { key: 'narrative', emoji: '📝', name: 'Narratives' },\n      { key: 'budget', emoji: '💰', name: 'Budget' },\n      { key: 'signatures', emoji: '✍️', name: 'Signatures' },\n      { key: 'portal', emoji: '🌐', name: 'Portal' },\n      { key: 'review', emoji: '🔍', name: 'Review' },\n      { key: 'submission', emoji: '🚀', name: 'Submission' }\n    ];\n\n    for (const cat of categories) {\n      const items = checklistData.checklistByCategory[cat.key] || [];\n      const requiredItems = items.filter(i => i.required);\n      const pendingItems = requiredItems.filter(i => i.status === 'pending');\n\n      if (requiredItems.length > 0) {\n        const status = pendingItems.length === 0 ? '✅' : `⏳ ${pendingItems.length}/${requiredItems.length}`;\n        checklistSummary += `${cat.emoji} ${cat.name}: ${status}\\n`;\n\n        // Track individual items\n        for (const item of requiredItems) {\n          checklistItems.push({\n            category: cat.name,\n            item: item.item,\n            status: item.status,\n            required: item.required\n          });\n        }\n      }\n    }\n  }\n\n  // Determine overall readiness\n  const totalRequired = checklistData.requiredItems || 0;\n  const isUrgent = checklistData.urgency === 'critical' || checklistData.urgency === 'urgent';\n  const isOverdue = checklistData.urgency === 'overdue';\n\n  // Combine all data\n  return [{\n    json: {\n      // Original script data\n      success: scriptData.success,\n      grantId: scriptData.grantId,\n      planeIssueId: scriptData.planeIssueId,\n      funderName: scriptData.funderName,\n      canAutoSubmit: scriptData.canAutoSubmit,\n      autoSubmitReason: scriptData.autoSubmitReason,\n      portalUrl: scriptData.portalUrl,\n      portalType: scriptData.portalType,\n      submissionMethod: scriptData.submissionMethod,\n      funderWebsite: scriptData.funderWebsite,\n      orgInfo: scriptData.orgInfo,\n      commonFields: scriptData.commonFields,\n      documents: scriptData.documents,\n      puppeteerScript: scriptData.puppeteerScript,\n      copyPasteSheet: scriptData.copyPasteSheet,\n      instructions: scriptData.instructions,\n\n      // Checklist data\n      checklistUrgency: checklistData.urgency || 'normal',\n      checklistUrgencyMessage: checklistData.urgencyMessage || '🟢 ON TRACK',\n      checklistTotalItems: checklistData.totalItems || 0,\n      checklistRequiredItems: totalRequired,\n      checklistHoursToDeadline: checklistData.hoursToDeadline || 0,\n      checklistDaysToDeadline: checklistData.daysToDeadline || 0,\n      checklistSummary: checklistSummary,\n      checklistItems: checklistItems,\n      checklistMarkdown: checklistData.checklistMarkdown || '',\n      checklistReminderSent: checklistData.reminderSent || false,\n\n      // Deadline info\n      deadline: checklistData.deadline || '',\n      deadlineFormatted: checklistData.deadlineFormatted || 'Not specified',\n\n      // Status flags\n      isUrgent: isUrgent,\n      isOverdue: isOverdue,\n\n      // Block reasons\n      blockReasons: [\n        ...(isOverdue ? ['🚨 DEADLINE HAS PASSED'] : []),\n        ...(isUrgent ? ['⚠️ Less than 48 hours remaining'] : []),\n        ...(!scriptData.canAutoSubmit ? [`Manual submission required: ${scriptData.autoSubmitReason}`] : [])\n      ]\n    }\n  }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        544
+      ],
+      "id": "bf4dd318-21dd-4d22-83d7-ba2c306bf121",
+      "name": "Merge Checklist Data"
+    }
+  ],
+  "pinData": {
+    "Submission Request": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.thebrownmine.com",
+            "user-agent": "axios/1.12.0",
+            "content-length": "273",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "100.29.112.47",
+            "x-forwarded-host": "n8n.thebrownmine.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "grantId": "",
+            "grantName": "Unknown Grant",
+            "planeIssueId": "462117a0-0155-400e-920e-8d759c470ea8",
+            "funderName": "Yield Giving (MacKenzie Scott)",
+            "funderEIN": "",
+            "focusAreas": [],
+            "requiredDocs": [
+              "501c3_letter",
+              "budget_operating",
+              "board_roster"
+            ],
+            "proposalData": {},
+            "budgetData": {}
+          },
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/prepare-submission",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Submission Request1": {
+      "main": [
+        [
+          {
+            "node": "Get Org Info1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Documents1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Org Info1": {
+      "main": [
+        [
+          {
+            "node": "Compile Submission Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Documents1": {
+      "main": [
+        [
+          {
+            "node": "Compile Submission Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Submission Data1": {
+      "main": [
+        [
+          {
+            "node": "Generate Automation Script1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Automation Script1": {
+      "main": [
+        [
+          {
+            "node": "Format Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call WF9 Funder Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Submission Request": {
+      "main": [
+        [
+          {
+            "node": "Call WF9 Funder Analyzer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Org Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Org Info": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Documents": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Submission Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Automation Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Automation Script": {
+      "main": [
+        [
+          {
+            "node": "Set State Auto Submitting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set State Auto Submitting": {
+      "main": [
+        [
+          {
+            "node": "Call Checklist Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Call WF12 Log Submission",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Declined",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call WF12 Log Submission": {
+      "main": [
+        [
+          {
+            "node": "Slack Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Success": {
+      "main": [
+        [
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Declined": {
+      "main": [
+        [
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Compile Submission Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Checklist Generator": {
+      "main": [
+        [
+          {
+            "node": "Merge Checklist Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Checklist Data": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "1c833e35-1d42-4330-aba9-b73bb7d1a594",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "6qfxVqQYyM8ojBzm",
+  "tags": []
+}

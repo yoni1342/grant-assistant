@@ -1,0 +1,380 @@
+{
+  "name": "AI Proposal Critic 8",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "review-proposal",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "73e984e5-a3f8-4656-8530-00e16bb5c18b",
+      "name": "Critic Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        272
+      ],
+      "webhookId": "review-proposal",
+      "notes": "POST: { proposalText, funderName, grantPurpose }"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Proposal Critic and Editor. Evaluate the proposal using this rubric:\n\n## SCORING (1-10 for each):\n\n1. **CLARITY** - Is the writing clear and easy to understand?\n2. **PERSUASIVENESS** - Does it compel the reader to fund?\n3. **SPECIFICITY** - Are claims backed with concrete details?\n4. **EMOTIONAL_APPEAL** - Balance between heart and head?\n5. **FUNDER_ALIGNMENT** - Does it speak to this funder's priorities?\n\n## ISSUES TO FLAG:\n- **JARGON**: Nonprofit/technical terms funders may not know\n- **PASSIVE_VOICE**: Weak constructions\n- **REPETITION**: Same words/phrases used too often\n- **VAGUE_CLAIMS**: Statements without evidence\n- **WEAK_VERBS**: Overuse of is/are/was/were/have/has\n\nReturn ONLY valid JSON:\n{\n  \"scores\": { \"clarity\": 7, \"persuasiveness\": 6, \"specificity\": 8, \"emotional_appeal\": 5, \"funder_alignment\": 7, \"overall\": 6.6 },\n  \"issues\": [{ \"type\": \"JARGON\", \"text\": \"...\", \"location\": \"paragraph 2\", \"suggestion\": \"...\" }],\n  \"strengths\": [\"...\"],\n  \"weaknesses\": [\"...\"]\n}",
+              "role": "system"
+            },
+            {
+              "content": "=FUNDER: {{ $json.body.funderName }}\nGRANT PURPOSE: {{ $json.body.grantPurpose }}\n\nPROPOSAL TO REVIEW:\n{{ $json.body.proposalText }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "5ad55597-bf2e-4f62-b755-52689e64e9cc",
+      "name": "AI Evaluate Proposal",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1984,
+        272
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Critic Request').first().json.body;\nconst aiResponse = $input.first().json;\nlet evaluation = { scores: { clarity: 5, persuasiveness: 5, specificity: 5, emotional_appeal: 5, funder_alignment: 5, overall: 5 }, issues: [], strengths: [], weaknesses: [] };\ntry {\n  const responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) evaluation = JSON.parse(jsonMatch[0]);\n} catch (e) { evaluation.parseError = e.message; }\nif (!evaluation.scores.overall) {\n  const s = evaluation.scores;\n  evaluation.scores.overall = Math.round(((s.clarity + s.persuasiveness + s.specificity + s.emotional_appeal + s.funder_alignment) / 5) * 10) / 10;\n}\nconst issuesByType = {};\nfor (const issue of evaluation.issues || []) { const t = issue.type || 'OTHER'; if (!issuesByType[t]) issuesByType[t] = []; issuesByType[t].push(issue); }\nconst priorityIssues = (evaluation.issues || []).filter(i => ['PASSIVE_VOICE','JARGON','VAGUE_CLAIMS'].includes(i.type)).slice(0, 5);\nreturn [{ json: { funderName: request.funderName, grantPurpose: request.grantPurpose, proposalText: request.proposalText, scores: evaluation.scores, issuesByType, issueCount: (evaluation.issues || []).length, strengths: evaluation.strengths || [], weaknesses: evaluation.weaknesses || [], priorityIssues, needsRewrite: evaluation.scores.overall < 7 } }];"
+      },
+      "id": "6fd046e8-b594-4a66-ba84-e7b21a81cda4",
+      "name": "Parse Evaluation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2336,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Writing Coach. Based on the evaluation, provide specific rewrite suggestions.\n\nFor each weakness or low-scoring area, provide:\n1. The problem\n2. A specific rewritten version\n3. Why the rewrite is better\n\nAlso provide:\n- An improved opening paragraph (if clarity < 8)\n- A stronger closing paragraph (if persuasiveness < 8)\n- One compelling story/example to add (if emotional_appeal < 7)\n\nFormat as JSON:\n{\n  \"rewrites\": [{ \"original\": \"...\", \"improved\": \"...\", \"reason\": \"...\" }],\n  \"improved_opening\": \"string or null\",\n  \"improved_closing\": \"string or null\",\n  \"story_suggestion\": \"string or null\",\n  \"quick_wins\": [\"...\"]\n}",
+              "role": "system"
+            },
+            {
+              "content": "=EVALUATION RESULTS:\nScores: {{ JSON.stringify($json.scores) }}\n\nWeaknesses identified:\n{{ JSON.stringify($json.weaknesses) }}\n\nPriority issues to fix:\n{{ JSON.stringify($json.priorityIssues) }}\n\nORIGINAL PROPOSAL:\n{{ $json.proposalText }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "7ab9e259-fcc8-4c28-830c-eca6171daba4",
+      "name": "AI Generate Rewrites",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2560,
+        272
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const evalData = $('Parse Evaluation').first().json;\nconst aiResponse = $input.first().json;\nlet rewrites = { rewrites: [], improved_opening: null, improved_closing: null, story_suggestion: null, quick_wins: [] };\ntry {\n  const responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) rewrites = JSON.parse(jsonMatch[0]);\n} catch (e) { rewrites.parseError = e.message; }\nconst scoreEmoji = (score) => { if (score >= 8) return '✅'; if (score >= 6) return '⚠️'; return '❌'; };\nlet report = `# Proposal Review Report\\n\\n**Funder:** ${evalData.funderName}\\n**Purpose:** ${evalData.grantPurpose}\\n**Review Date:** ${new Date().toISOString().split('T')[0]}\\n\\n---\\n\\n## Overall Score: ${evalData.scores.overall}/10\\n\\n### Score Breakdown\\n\\n| Dimension | Score | Status |\\n|-----------|-------|--------|\\n| Clarity | ${evalData.scores.clarity}/10 | ${scoreEmoji(evalData.scores.clarity)} |\\n| Persuasiveness | ${evalData.scores.persuasiveness}/10 | ${scoreEmoji(evalData.scores.persuasiveness)} |\\n| Specificity | ${evalData.scores.specificity}/10 | ${scoreEmoji(evalData.scores.specificity)} |\\n| Emotional Appeal | ${evalData.scores.emotional_appeal}/10 | ${scoreEmoji(evalData.scores.emotional_appeal)} |\\n| Funder Alignment | ${evalData.scores.funder_alignment}/10 | ${scoreEmoji(evalData.scores.funder_alignment)} |\\n\\n`;\nif (evalData.strengths.length > 0) { report += `### ✅ Strengths\\n`; for (const s of evalData.strengths) report += `- ${s}\\n`; report += `\\n`; }\nif (evalData.weaknesses.length > 0) { report += `### ❌ Areas for Improvement\\n`; for (const w of evalData.weaknesses) report += `- ${w}\\n`; report += `\\n`; }\nreport += `### 🔍 Issues Found (${evalData.issueCount} total)\\n\\n`;\nfor (const [type, issues] of Object.entries(evalData.issuesByType)) { report += `**${type}** (${issues.length})\\n`; for (const issue of issues.slice(0, 3)) report += `- \"${issue.text}\" → *${issue.suggestion}*\\n`; report += `\\n`; }\nif (rewrites.rewrites && rewrites.rewrites.length > 0) { report += `---\\n\\n## 📝 Suggested Rewrites\\n\\n`; for (const r of rewrites.rewrites) { report += `**Before:** \"${r.original}\"\\n**After:** \"${r.improved}\"\\n*Why:* ${r.reason}\\n\\n`; } }\nif (rewrites.improved_opening) report += `### Improved Opening Paragraph\\n${rewrites.improved_opening}\\n\\n`;\nif (rewrites.improved_closing) report += `### Improved Closing Paragraph\\n${rewrites.improved_closing}\\n\\n`;\nif (rewrites.story_suggestion) report += `### 💡 Story to Add\\n${rewrites.story_suggestion}\\n\\n`;\nif (rewrites.quick_wins && rewrites.quick_wins.length > 0) { report += `### ⚡ Quick Wins\\n`; for (const qw of rewrites.quick_wins) report += `- [ ] ${qw}\\n`; report += `\\n`; }\nreport += `---\\n*Generated by AI Proposal Critic*`;\nlet recommendation = 'READY TO SUBMIT';\nif (evalData.scores.overall < 5) recommendation = 'MAJOR REVISION NEEDED';\nelse if (evalData.scores.overall < 7) recommendation = 'REVISION RECOMMENDED';\nelse if (evalData.scores.overall < 8) recommendation = 'MINOR TWEAKS SUGGESTED';\nreturn [{ json: { success: true, recommendation, overallScore: evalData.scores.overall, scores: evalData.scores, issueCount: evalData.issueCount, strengthCount: evalData.strengths.length, weaknessCount: evalData.weaknesses.length, rewriteCount: (rewrites.rewrites || []).length, quickWins: rewrites.quick_wins || [], strengths: evalData.strengths, weaknesses: evalData.weaknesses, issuesByType: evalData.issuesByType, rewrites: rewrites.rewrites || [], improvedOpening: rewrites.improved_opening, improvedClosing: rewrites.improved_closing, storySuggestion: rewrites.story_suggestion, reportMarkdown: report } }];"
+      },
+      "id": "12f3a9d7-c56f-43c3-a8e9-16c1afe0473b",
+      "name": "Compile Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const critic = $json;\n  const proposal = $('Critic Request').first().json.body;\n\n  const overallScore = critic.overallScore || 0;\n  const alignmentScore = proposal.alignmentScore || 0;\n  const complianceScore = proposal.complianceScore || 0;\n\n  // Budget data\n  const budget = proposal.budget || {};\n  const budgetAmount = proposal.budgetAmount || budget.amount || 0;\n  const hasBudget = budget.generated === true;\n\n  // Determine color\n  let color = '#e01e5a';\n  if (overallScore >= 8) color = '#36a64f';\n  else if (overallScore >= 6) color = '#f2c744';\n\n  // Build lists\n  const strengthsList = (critic.strengths || []).slice(0, 3).map(s => '• ' + s).join('\\n') || 'None listed';\n  const weaknessesList = (critic.weaknesses || []).slice(0, 3).map(w => '• ' + w).join('\\n') || 'None listed';\n  const quickWinsList = (critic.quickWins || []).slice(0, 3).map(q => '• ' + q).join('\\n') || 'None listed';\n\n  // Ready status\n  const isReady = overallScore >= 7 && complianceScore >= 90;\n  const readyText = isReady ? '✅ *Ready to submit!*' : '📝 *Review recommended before submitting*';\n\n  // Build blocks array - use explicit any type to avoid TS issues\n  const blocks = [];\n\n  blocks.push({\n    type: \"header\",\n    text: {\n      type: \"plain_text\",\n      text: \"📝 Proposal Generated & Reviewed\",\n      emoji: true\n    }\n  });\n\n  blocks.push({\n    type: \"section\",\n    fields: [\n      { type: \"mrkdwn\", text: \"*Funder:*\\n\" + (proposal.funderName || 'Unknown') },\n      { type: \"mrkdwn\", text: \"*Deadline:*\\n\" + (proposal.deadline || 'Not specified') }\n    ]\n  });\n\n  blocks.push({\n    type: \"section\",\n    fields: [\n      { type: \"mrkdwn\", text: \"*Alignment:*\\n\" + (alignmentScore >= 80 ? '🟢' : '🟡') + \" \" + alignmentScore + \"%\" },\n      { type: \"mrkdwn\", text: \"*Compliance:*\\n\" + (complianceScore >= 90 ? '🟢' : '🟡') + \" \" + complianceScore + \"%\" }\n    ]\n  });\n\n  // ADD BUDGET SECTION\n  blocks.push({ type: \"divider\" });\n\n  if (hasBudget) {\n    const personnelAmt = (budget.categoryTotals && budget.categoryTotals.personnel) ?\n  budget.categoryTotals.personnel.amount : 0;\n    const personnelPct = (budget.categoryTotals && budget.categoryTotals.personnel) ?\n  budget.categoryTotals.personnel.percent : 0;\n    const directAmt = (budget.categoryTotals && budget.categoryTotals.direct) ? budget.categoryTotals.direct.amount : 0;\n    const directPct = (budget.categoryTotals && budget.categoryTotals.direct) ? budget.categoryTotals.direct.percent :\n  0;\n    const indirectAmt = (budget.categoryTotals && budget.categoryTotals.indirect) ?\n  budget.categoryTotals.indirect.amount : 0;\n    const adminPct = budget.adminPercent || 0;\n\n    const budgetText = \"*💰 Budget Summary*\\n\" +\n      \"• *Amount:* $\" + budgetAmount.toLocaleString() + \"\\n\" +\n      \"• *Personnel:* $\" + personnelAmt.toLocaleString() + \" (\" + personnelPct + \"%)\\n\" +\n      \"• *Direct Program:* $\" + directAmt.toLocaleString() + \" (\" + directPct + \"%)\\n\" +\n      \"• *Admin:* $\" + indirectAmt.toLocaleString() + \" (\" + adminPct + \"%)\";\n\n    blocks.push({\n      type: \"section\",\n      text: { type: \"mrkdwn\", text: budgetText }\n    });\n  } else {\n    blocks.push({\n      type: \"section\",\n      text: { type: \"mrkdwn\", text: \"*💰 Budget:* ⚠️ Not generated\" }\n    });\n  }\n\n  blocks.push({ type: \"divider\" });\n\n  blocks.push({\n    type: \"section\",\n    text: { type: \"mrkdwn\", text: \"*🔍 Critic Score:* \" + overallScore + \"/10 — \" + (critic.recommendation || 'N/A') }\n  });\n\n  blocks.push({\n    type: \"section\",\n    fields: [\n      { type: \"mrkdwn\", text: \"*Clarity:* \" + (critic.scores && critic.scores.clarity ? critic.scores.clarity : 0) +\n  \"/10\" },\n      { type: \"mrkdwn\", text: \"*Persuasiveness:* \" + (critic.scores && critic.scores.persuasiveness ?\n  critic.scores.persuasiveness : 0) + \"/10\" },\n      { type: \"mrkdwn\", text: \"*Specificity:* \" + (critic.scores && critic.scores.specificity ?\n  critic.scores.specificity : 0) + \"/10\" },\n      { type: \"mrkdwn\", text: \"*Funder Fit:* \" + (critic.scores && critic.scores.funder_alignment ?\n  critic.scores.funder_alignment : 0) + \"/10\" }\n    ]\n  });\n\n  blocks.push({ type: \"divider\" });\n\n  blocks.push({\n    type: \"section\",\n    text: { type: \"mrkdwn\", text: \"*✅ Strengths (\" + (critic.strengthCount || 0) + \"):*\\n\" + strengthsList }\n  });\n\n  blocks.push({\n    type: \"section\",\n    text: { type: \"mrkdwn\", text: \"*⚠️ To Improve (\" + (critic.weaknessCount || 0) + \"):*\\n\" + weaknessesList }\n  });\n\n  blocks.push({ type: \"divider\" });\n\n  blocks.push({\n    type: \"section\",\n    text: { type: \"mrkdwn\", text: \"*⚡ Quick Wins:*\\n\" + quickWinsList }\n  });\n\n  // Only add story suggestion if it exists\n  if (critic.storySuggestion && critic.storySuggestion.trim()) {\n    blocks.push({\n      type: \"section\",\n      text: { type: \"mrkdwn\", text: \"*💡 Story to Add:*\\n\" + critic.storySuggestion.substring(0, 200) + \"...\" }\n    });\n  }\n\n  // Add final blocks\n  blocks.push({ type: \"divider\" });\n\n  blocks.push({\n    type: \"section\",\n    text: { type: \"mrkdwn\", text: readyText }\n  });\n\n  const contextText = (critic.rewriteCount || 0) + \" rewrites | \" +\n    (critic.issueCount || 0) + \" issues | \" +\n    (proposal.warningsCount || 0) + \" compliance warnings | Budget: \" +\n    (hasBudget ? \"$\" + budgetAmount.toLocaleString() : \"Not generated\");\n\n  blocks.push({\n    type: \"context\",\n    elements: [\n      { type: \"mrkdwn\", text: contextText }\n    ]\n  });\n\n  const slackMessage = {\n    text: \"Proposal Ready: \" + (proposal.grantPurpose || 'Grant Proposal'),\n    attachments: [\n      {\n        color: color,\n        blocks: blocks\n      }\n    ]\n  };\n const googleDocUrl = proposal.googleDocUrl || '';\n  if (googleDocUrl) {\n    blocks.push({\n      type: \"section\",\n      text: { type: \"mrkdwn\", text: \"*📄 Full Proposal:*\" },\n      accessory: {\n        type: \"button\",\n        text: {\n          type: \"plain_text\",\n          text: \"Open Google Doc\",\n          emoji: true\n        },\n        url: googleDocUrl,\n        action_id: \"open_google_doc\"\n      }\n    });\n  }\n\n  return [{ json: slackMessage }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        272
+      ],
+      "id": "ed54b19c-7470-46e7-8b57-b7d31441ed2a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"channel\": \"#grant-assistant\",\n    \"text\": {{ JSON.stringify($json.text) }},\n    \"attachments\": {{ JSON.stringify($json.attachments) }}\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3344,
+        256
+      ],
+      "id": "8b24f6c9-e284-4350-b258-e7d528e05a71",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "FrzG2WNatn29Ah4n",
+          "name": "yordi-heygen"
+        },
+        "slackApi": {
+          "id": "rFSQaYpz4DWprrfA",
+          "name": "Grant Assistant"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Critic Request": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.thebrownmine.com",
+            "user-agent": "axios/1.12.0",
+            "content-length": "25558",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "100.29.112.47",
+            "x-forwarded-host": "n8n.thebrownmine.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "proposalText": "# Grant Proposal - Yield Giving (MacKenzie Scott)\n\n**Funder:** Yield Giving (MacKenzie Scott)\n**Focus Areas:** <div><h3>Eligibility Screening Result</h3><p><strong>Score:</strong> 🟡 YELLOW (60% confidence)</p><p><strong>Summary:</strong> The grant offers unrestricted funding with a very large award range ($100,000 to $10,000,000) and no specific program focus or geographic restrictions stated, which makes it partially compatible with the nonprofit's mission but outside the preferred award range. Lack of detailed description and unclear alignment with direct services for foster youth or seniors requires further clarification.</p><hr><p><strong>Grant:</strong> Yield Giving (MacKenzie Scott) - Unrestricted Funding</p><p><strong>Funder:</strong> Yield Giving / MacKenzie Scott</p><p><strong>Amount:</strong> $100,000 - $10,000,000</p><p><strong>Deadline:</strong> Not specified</p><p><strong>Prep Start:</strong> TBD</p><p><strong>Days Until Deadline:</strong> TBD</p><hr><p><strong>Required Docs:</strong> 501c3 letter; budget; application (if open)</p><p><strong>Notes:</strong> The grant offers unrestricted funding with a very large award range ($100,000 to $10,000,000) and no specific program focus or geographic restrictions stated, which makes it partially compatible with the nonprofit's mission but outside the preferred award range. Lack of detailed description and unclear alignment with direct services for foster youth or seniors requires further clarification.</p><p><a href=\"https://yieldgiving.com/\" rel=\"noopener noreferrer\">View Source</a></p></div>\n**Deadline:** Not specified\n**Alignment Score:** 90/100\n**Compliance Score:** 88/100\n**Mission Overlap:** Strong alignment with Yield Giving’s priorities through The Virtuous House’s trauma-informed, culturally responsive programs that address systemic inequities, promote racial equity, foster empowerment and resilience, and serve underserved youth and seniors. Both emphasize community resilience, equity, and sustainable impact.\n**Funder Language Adopted:** equity, resilience, systemic barriers, underserved populations, economic mobility, health equity, community resilience, trauma-informed, culturally responsive, dignity-centered, opportunity gaps, measurable objectives, accountability, strategic partnerships, unrestricted funding\n\n---\n\n## Budget Summary\n\n**Total Amount:** $100,000\n**Admin Percentage:** 15%\n\n| Category | Amount | Percent |\n|----------|--------|--------|\n| Personnel | $51,000 |\n  51% |\n| Direct Program | $34,000 |\n  34% |\n| Administrative | $15,000 |\n  15% |\n\n**Budget Warnings:**\n- Admin costs reduced from 50.0% to 15% per funder requirements\n\n---\n\n## Question 1: Executive Summary\n*Word Limit: 300 | Actual: 139*\n\nThe Virtuous House is a 501(c)(3) nonprofit advancing equity and resilience for African American youth aging out of foster care and seniors in long-term care. Through dignity-centered, trauma-informed, and culturally responsive programs—including The Virtuous Closet, the Senior Dignity Initiative, and the Rural Youth Camp in Pennsylvania—we address systemic barriers and opportunity gaps faced by underserved communities. Our integrated approach fosters empowerment, healing, and community resilience. Unrestricted funding from Yield Giving would provide critical flexibility to scale these initiatives, deepen impact, and adapt responsively to evolving community needs, ensuring sustained support for vulnerable populations aligned with the Community Resilience Initiative’s priorities.\n\n> **Alignment Notes:** Adopted funder's terminology such as 'equity', 'resilience', 'systemic barriers', and 'underserved communities'; mirrored RFP focus on community resilience and opportunity gaps; emphasized flexibility of unrestricted funding to deepen impact.\n\n> **Mission Overlap:** Both prioritize addressing systemic inequities and fostering empowerment and resilience among underserved youth and seniors.\n\n**Required Attachments:** none\n\n---\n\n## Question 2: Organizational Background\n*Word Limit: 500 | Actual: 144*\n\nSince our founding, The Virtuous House has been dedicated to advancing equity and opportunity for African American youth aging out of foster care and seniors in long-term care. Our trauma-informed, culturally responsive services center dignity and empowerment, directly addressing systemic barriers that perpetuate disparities. Signature programs like The Virtuous Closet provide essential resources in a respectful, boutique-style environment fostering self-worth, while the Senior Dignity Initiative enhances seniors’ quality of life through compassionate engagement. The Rural Youth Camp Initiative extends our reach to underserved rural youth with restorative, nature-based experiences. Governed by a committed board of community leaders, we maintain transparent, accountable practices aligned with best nonprofit standards and hold 501(c)(3) status.\n\n> **Alignment Notes:** Incorporated funder language emphasizing 'equity', 'opportunity', 'systemic barriers', and 'underserved'; highlighted governance and accountability per RFP requirements; framed programs as addressing equity and resilience.\n\n> **Mission Overlap:** Shared commitment to serving underserved populations through trauma-informed, culturally responsive programming.\n\n**Required Attachments:** 501c3_letter, board_roster\n\n**Issues:**\n- Missing attachment: 501c3_letter\n- Missing attachment: board_roster\n\n---\n\n## Question 3: Statement of Need\n*Word Limit: 600 | Actual: 146*\n\nAfrican American youth transitioning from foster care confront systemic racial inequities, trauma, and critical resource gaps that hinder economic mobility and health equity, often leading to homelessness, unemployment, and adverse health outcomes. Concurrently, seniors in long-term care face social isolation, diminished dignity, and unmet emotional and physical needs, exacerbating health disparities. The Virtuous House employs a trauma-informed, culturally responsive framework to address these intersecting challenges, filling vital service gaps with dignity-centered programs that foster self-worth and healing. Our work advances equity and resilience, directly responding to urgent community needs and aligning with the Community Resilience Initiative’s focus on underserved populations.\n\n> **Alignment Notes:** Adopted funder’s priority language: 'economic mobility', 'health equity', 'underserved populations', 'resilience'; emphasized systemic barriers and urgency; aligned problem statement with funder’s focus areas.\n\n> **Mission Overlap:** Mutual focus on addressing systemic inequities and urgent needs of underserved youth and seniors.\n\n**Required Attachments:** none\n\n---\n\n## Question 4: Project Description\n*Word Limit: 800 | Actual: 159*\n\nThe Virtuous House implements integrated, culturally responsive programs that empower African American youth aging out of foster care and seniors in long-term care through trauma-informed, dignity-centered services. The Virtuous Closet provides a boutique-style setting where youth select essential clothing, fostering confidence vital for economic mobility and independent living. The Senior Dignity Initiative combats social isolation and promotes respect by offering compassionate engagement and essential resources. Our Rural Youth Camp in Pennsylvania delivers nature-based experiential learning and mentorship within a trauma-sensitive framework, reaching underserved rural youth. With unrestricted funding, we will expand program capacity, enhance trauma-informed staff training, and broaden outreach to increase equitable access and deepen community impact.\n\n> **Alignment Notes:** Used funder’s terms like 'economic mobility', 'equitable access', 'underserved'; emphasized trauma-informed, culturally responsive care; highlighted program scalability and capacity building aligned with funder priorities.\n\n> **Mission Overlap:** Aligned focus on empowering underserved youth and seniors through culturally responsive, trauma-informed programs.\n\n**Required Attachments:** none\n\n---\n\n## Question 5: Target Population\n*Word Limit: 400 | Actual: 298*\n\nThe Virtuous House’s trauma-informed, culturally responsive framework centers dignity, choice, and empowerment, directly addressing systemic barriers and advancing racial equity for African American youth aging out of foster care and seniors in long-term care. Our boutique-style Virtuous Closet fosters self-worth by enabling youth to select essentials in a respectful environment, supporting successful transitions to independence. Restorative practices acknowledge complex trauma, promoting mental health and resilience. The Senior Dignity Initiative enhances seniors’ quality of life through compassionate engagement and resource provision. Our Rural Youth Camp in Pennsylvania fills a critical gap by offering nature-based experiential learning and mentorship in a trauma-sensitive setting for underserved youth. These integrated programs embody a holistic model that advances equity, healing, and sustained well-being. Unrestricted funding will empower us to expand and deepen these culturally responsive services, aligning with Yield Giving’s commitment to community resilience and opportunity.\n\n> **Alignment Notes:** Incorporated funder’s emphasis on 'racial equity', 'systemic barriers', 'healing', 'community resilience'; framed programs as holistic and culturally responsive; emphasized alignment with funder values and unrestricted funding flexibility.\n\n> **Mission Overlap:** Shared dedication to trauma-informed, culturally responsive care that promotes equity and empowerment for underserved populations.\n\n**Required Attachments:** none\n\n---\n\n## Question 6: Goals and Evaluation\n*Word Limit: 500 | Actual: 146*\n\nThe Virtuous House utilizes a rigorous, trauma-informed evaluation framework aligned with community resilience principles to measure program effectiveness. We establish measurable objectives including enhanced self-esteem and independent living outcomes for youth in The Virtuous Closet, increased social engagement and dignity for seniors in the Senior Dignity Initiative, and strengthened resilience and mentorship connections through the Rural Youth Camp. Data collection combines quantitative metrics—such as attendance and resource distribution—with qualitative feedback via participant surveys and focus groups, ensuring culturally responsive and sensitive assessment. Continuous analysis informs program refinement and strategic planning, demonstrating accountability and impact to our community and funders.\n\n> **Alignment Notes:** Adopted funder’s language on 'rigorous evaluation', 'community resilience', and 'accountability'; emphasized trauma-informed, culturally responsive data collection; aligned evaluation with funder’s focus on measurable impact.\n\n> **Mission Overlap:** Both prioritize measurable outcomes and culturally responsive evaluation to ensure impact for underserved populations.\n\n**Required Attachments:** none\n\n---\n\n## Question 7: Budget Narrative\n*Word Limit: 400 | Actual: 143*\n\nThe Virtuous House’s budget allocates funds strategically to sustain and grow trauma-informed, culturally responsive programs. Personnel costs support skilled program coordinators trained in trauma-informed care, reflecting the funder’s personnel cap guidelines. Operating expenses cover welcoming spaces like The Virtuous Closet, while program costs include essential items for youth, engagement materials for seniors, and logistical support for the Rural Youth Camp, including transportation and mentorship stipends. Unrestricted funding ensures flexibility to respond to emerging community needs, invest in staff development, and expand outreach to underserved populations. This budget narrative demonstrates prudent financial stewardship aligned with funder guidelines and mission-driven impact.\n\n> **Alignment Notes:** Incorporated funder budget guidelines (personnel cap, indirect costs); emphasized strategic allocation supporting trauma-informed care; highlighted flexibility and stewardship aligned with unrestricted funding.\n\n> **Mission Overlap:** Shared focus on prudent resource use to maximize impact for underserved communities.\n\n**Required Attachments:** budget_operating, budget_program\n\n**Issues:**\n- Missing attachment: budget_operating\n- Missing attachment: budget_program\n\n---\n\n## Question 8: Sustainability Plan\n*Word Limit: 300 | Actual: 140*\n\nThe Virtuous House ensures long-term sustainability through diversified revenue streams, including grants, individual contributions, and community partnerships aligned with our trauma-informed, culturally responsive mission. Our strategic plan incorporates expanding social enterprise linked to The Virtuous Closet and cultivating volunteer networks to enhance program delivery. Ongoing impact evaluation supports funder confidence and community trust. Unrestricted funding from Yield Giving will bolster infrastructure investment and staff retention, securing continuity and growth of services for foster youth and seniors. This comprehensive sustainability strategy aligns with the Community Resilience Initiative’s emphasis on lasting community impact.\n\n> **Alignment Notes:** Adopted funder’s language on sustainability, community impact, and diversified funding; emphasized alignment with trauma-informed mission and unrestricted funding benefits.\n\n> **Mission Overlap:** Mutual commitment to sustainable, mission-aligned growth supporting underserved populations.\n\n**Required Attachments:** none\n\n---\n\n## Question 9: Partnerships\n*Word Limit: 250 | Actual: 124*\n\nThe Virtuous House partners strategically with local foster care agencies, long-term care facilities, and rural community organizations in Pennsylvania to identify and engage underserved participants. Collaborations with mental health providers and cultural organizations reinforce our trauma-informed, culturally responsive approach, enabling coordinated care and resource sharing. These partnerships enhance our capacity to address systemic barriers and promote empowerment, directly supporting the Community Resilience Initiative’s focus on equity and opportunity gaps within vulnerable populations.\n\n> **Alignment Notes:** Used funder language emphasizing 'strategic partnerships', 'coordinated care', 'equity', and 'opportunity gaps'; highlighted community collaboration as a strength aligned with funder priorities.\n\n> **Mission Overlap:** Shared emphasis on collaborative, community-based approaches to serve underserved populations.\n\n**Required Attachments:** none\n\n---\n\n## Compliance Warnings\n- Missing documents: 501c3_letter, board_roster, budget_operating, budget_program\n- Budget: Admin costs reduced from 50.0% to 15% per funder requirements\n\n*Generated: 2026-02-01T16:15:04.650Z | AI-drafted — review and personalize before submission*",
+            "funderName": "Yield Giving (MacKenzie Scott)",
+            "grantPurpose": "Grant Proposal - Yield Giving (MacKenzie Scott)",
+            "deadline": "Not specified",
+            "alignmentScore": 90,
+            "complianceScore": 88,
+            "warningsCount": 2,
+            "warnings": [
+              "Missing documents: 501c3_letter, board_roster, budget_operating, budget_program",
+              "Budget: Admin costs reduced from 50.0% to 15% per funder requirements"
+            ],
+            "totalSections": 9,
+            "budget": {
+              "generated": true,
+              "amount": 100000,
+              "markdown": "## Budget Summary: Yield Giving (MacKenzie Scott)\n\n**Grant Amount:** $100,000\n**Amount Note:** Range: $100,000 - $10,000,000 (using minimum)\n**Program Focus:** youth\n**Purpose:** Yield Giving (MacKenzie Scott) - youth program support\n\n> 💡 *Funder accepts $100,000 -\n  $10,000,000. Budget based on minimum. Adjust line items if requesting higher\n  amount.*\n\n### Category Totals\n| Category | Amount | Percent |\n|----------|--------|--------|\n| Personnel | $51,000 |\n  51.0% |\n| Direct Program | $34,000 |\n  34.0% |\n| Administrative | $15,000 |\n  15.0% |\n| **TOTAL** | **$100,000** | **100%** |\n\n### Line Item Detail\n| Line Item | Category | Amount | % | Description |\n|-----------|----------|--------|---|-------------|\n| Camp Program Coordinator | personnel | $51,000 | 51% |\n  Coordinates Rural Youth Camp Initiative including outdoor programming, mentorship activities, and youth development retreats in Pennsylvania |\n| Camp Supplies & Equipment | direct | $34,000 | 34% |\n  Outdoor equipment, camping gear, gardening supplies, team-building materials, and nature-based activity resources for youth camp programming |\n| Outreach & Community Engagement | direct | $0 | 0% |\n   |\n| Office & Admin | indirect | $7,500 | 7.5% |\n  Office space, utilities, insurance, supplies, and administrative support for The Virtuous House operations |\n| Overhead | indirect | $5,250 | 5.3% |\n  General organizational overhead including accounting, compliance, and operational support |\n| Staff Training & Development | indirect | $2,250 | 2.3% |\n  Trauma-informed care training, cultural responsiveness development, and professional certifications for staff |\n| Camp Facility Development | capital | $0 | 0% |\n  Land acquisition planning, site development, and facility improvements for Pennsylvania rural youth camp (phased initiative) |\n\n### Budget Narrative\n\nThe Virtuous House respectfully requests $100,000 from Yield Giving (MacKenzie Scott) to support our transformative youth program focused on African American youth aging out of foster care. These funds will be strategically allocated to enhance our Rural Youth Camp Initiative, which fosters resilience, leadership, and community among vulnerable youth through immersive outdoor experiences and mentorship. Our budget balances robust program delivery with essential organizational support to ensure sustainable impact and compliance.\n\n**Personnel ($51,000, 51%)**  \nThe largest portion of the budget is dedicated to the Camp Program Coordinator position, at $51,000. This role is critical for the successful implementation of the Rural Youth Camp Initiative. The coordinator will develop and lead outdoor programming, facilitate mentorship activities, and organize youth development retreats. Investing in a dedicated, skilled coordinator ensures consistent, high-quality engagement that directly advances our program outcomes of improved social skills, self-confidence, and emotional well-being among participants.\n\n**Direct Program Costs ($34,000, 34%)**  \nA significant $34,000 is allocated for Camp Supplies & Equipment, including outdoor gear, camping materials, gardening tools, and team-building resources. These tangible assets are essential for creating a safe, enriching environment that promotes experiential learning and connection with nature—key components shown to benefit youth aging out of foster care. This investment directly supports program objectives by enabling hands-on activities that foster teamwork, resilience, and leadership development.\n\n**Administrative Costs ($15,000, 15%)**  \nAdministrative expenses total $15,000, comprising $7,500 for Office & Admin costs (office space, utilities, insurance, supplies, and administrative support) and $2,250 for Staff Training & Development focused on trauma-informed care and cultural responsiveness. Additionally, $5,250 covers organizational overhead including accounting and compliance. These administrative functions are vital to maintaining operational integrity, ensuring regulatory compliance, and equipping staff with the skills necessary to serve our youth population effectively. This allocation aligns with best practices, capping administrative costs at 15% to maximize program funding.\n\n**Cost-Effectiveness Statement**  \nThis budget reflects a prudent and intentional use of funds, prioritizing direct service delivery while maintaining essential organizational infrastructure. By investing in a dedicated program coordinator and quality equipment, alongside targeted staff development and sound administration, The Virtuous House ensures that every dollar advances measurable youth outcomes. We are committed to transparency and maximizing the impact of Yield Giving’s generous support to empower vulnerable youth toward thriving futures.\n\n### Adjustments Made\n- Admin costs reduced from 50.0% to 15% per funder requirements\n\n---\n*Generated: 2026-02-01T16:13:23.584Z*",
+              "narrative": "The Virtuous House respectfully requests $100,000 from Yield Giving (MacKenzie Scott) to support our transformative youth program focused on African American youth aging out of foster care. These funds will be strategically allocated to enhance our Rural Youth Camp Initiative, which fosters resilience, leadership, and community among vulnerable youth through immersive outdoor experiences and mentorship. Our budget balances robust program delivery with essential organizational support to ensure sustainable impact and compliance.\n\n**Personnel ($51,000, 51%)**  \nThe largest portion of the budget is dedicated to the Camp Program Coordinator position, at $51,000. This role is critical for the successful implementation of the Rural Youth Camp Initiative. The coordinator will develop and lead outdoor programming, facilitate mentorship activities, and organize youth development retreats. Investing in a dedicated, skilled coordinator ensures consistent, high-quality engagement that directly advances our program outcomes of improved social skills, self-confidence, and emotional well-being among participants.\n\n**Direct Program Costs ($34,000, 34%)**  \nA significant $34,000 is allocated for Camp Supplies & Equipment, including outdoor gear, camping materials, gardening tools, and team-building resources. These tangible assets are essential for creating a safe, enriching environment that promotes experiential learning and connection with nature—key components shown to benefit youth aging out of foster care. This investment directly supports program objectives by enabling hands-on activities that foster teamwork, resilience, and leadership development.\n\n**Administrative Costs ($15,000, 15%)**  \nAdministrative expenses total $15,000, comprising $7,500 for Office & Admin costs (office space, utilities, insurance, supplies, and administrative support) and $2,250 for Staff Training & Development focused on trauma-informed care and cultural responsiveness. Additionally, $5,250 covers organizational overhead including accounting and compliance. These administrative functions are vital to maintaining operational integrity, ensuring regulatory compliance, and equipping staff with the skills necessary to serve our youth population effectively. This allocation aligns with best practices, capping administrative costs at 15% to maximize program funding.\n\n**Cost-Effectiveness Statement**  \nThis budget reflects a prudent and intentional use of funds, prioritizing direct service delivery while maintaining essential organizational infrastructure. By investing in a dedicated program coordinator and quality equipment, alongside targeted staff development and sound administration, The Virtuous House ensures that every dollar advances measurable youth outcomes. We are committed to transparency and maximizing the impact of Yield Giving’s generous support to empower vulnerable youth toward thriving futures.",
+              "lineItems": [
+                {
+                  "lineItem": "Camp Program Coordinator",
+                  "category": "personnel",
+                  "programArea": "camp",
+                  "amount": 51000,
+                  "amountFormatted": "51,000",
+                  "percent": 51,
+                  "description": "Coordinates Rural Youth Camp Initiative including outdoor programming, mentorship activities, and youth development retreats in Pennsylvania"
+                },
+                {
+                  "lineItem": "Camp Supplies & Equipment",
+                  "category": "direct",
+                  "programArea": "camp",
+                  "amount": 34000,
+                  "amountFormatted": "34,000",
+                  "percent": 34,
+                  "description": "Outdoor equipment, camping gear, gardening supplies, team-building materials, and nature-based activity resources for youth camp programming"
+                },
+                {
+                  "lineItem": "Outreach & Community Engagement",
+                  "category": "direct",
+                  "programArea": "shared",
+                  "amount": 0,
+                  "amountFormatted": "0",
+                  "percent": 0,
+                  "description": ""
+                },
+                {
+                  "lineItem": "Office & Admin",
+                  "category": "indirect",
+                  "programArea": "admin",
+                  "amount": 7500,
+                  "amountFormatted": "7,500",
+                  "percent": 7.5,
+                  "description": "Office space, utilities, insurance, supplies, and administrative support for The Virtuous House operations"
+                },
+                {
+                  "lineItem": "Overhead",
+                  "category": "indirect",
+                  "programArea": "admin",
+                  "amount": 5250,
+                  "amountFormatted": "5,250",
+                  "percent": 5.3,
+                  "description": "General organizational overhead including accounting, compliance, and operational support"
+                },
+                {
+                  "lineItem": "Staff Training & Development",
+                  "category": "indirect",
+                  "programArea": "shared",
+                  "amount": 2250,
+                  "amountFormatted": "2,250",
+                  "percent": 2.3,
+                  "description": "Trauma-informed care training, cultural responsiveness development, and professional certifications for staff"
+                },
+                {
+                  "lineItem": "Camp Facility Development",
+                  "category": "capital",
+                  "programArea": "camp",
+                  "amount": 0,
+                  "amountFormatted": "0",
+                  "percent": 0,
+                  "description": "Land acquisition planning, site development, and facility improvements for Pennsylvania rural youth camp (phased initiative)"
+                }
+              ],
+              "categoryTotals": {
+                "personnel": {
+                  "amount": 51000,
+                  "percent": 51
+                },
+                "direct": {
+                  "amount": 34000,
+                  "percent": 34
+                },
+                "indirect": {
+                  "amount": 15000,
+                  "percent": 15
+                }
+              },
+              "adminPercent": 15,
+              "warnings": [
+                "Admin costs reduced from 50.0% to 15% per funder requirements"
+              ]
+            },
+            "budgetAmount": 100000,
+            "googleDocUrl": "https://docs.google.com/document/d/1Sou-mk-s7BuUeuQ-5GzmhOziWw45ZVZCnI7NYWe24UU/edit"
+          },
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/review-proposal",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Critic Request": {
+      "main": [
+        [
+          {
+            "node": "AI Evaluate Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Evaluate Proposal": {
+      "main": [
+        [
+          {
+            "node": "Parse Evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Evaluation": {
+      "main": [
+        [
+          {
+            "node": "AI Generate Rewrites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate Rewrites": {
+      "main": [
+        [
+          {
+            "node": "Compile Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Report": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "55a5645b-b30b-4a50-b7f0-d8e0bef66b0f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "vhkMvjs7afzHE8OT",
+  "tags": []
+}

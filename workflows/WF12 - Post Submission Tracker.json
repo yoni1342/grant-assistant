@@ -1,0 +1,345 @@
+{
+  "name": "WF12 - Post Submission Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "log-submission",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "e500cd34-9487-4b9d-90c3-dc9c3aa6be64",
+      "name": "Log Submission",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        2624,
+        512
+      ],
+      "webhookId": "log-submission",
+      "notes": "POST: { grantId, grantName, funderName, confirmationNumber, submittedDate, contactPerson, contactEmail, expectedDecisionDate, portalUrl, planeIssueId }"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare update data\nconst request = $('Log Submission').first().json.body;\nconst planeIssueId = request.planeIssueId || request.planeissueid || '';\nconst submittedDate = request.submittedDate || new Date().toISOString().split('T')[0];\nconst confirmationNumber = request.confirmationNumber || 'N/A';\nconst contactPerson = request.contactPerson || '';\nconst contactEmail = request.contactEmail || '';\nconst expectedDecision = request.expectedDecisionDate || 'TBD';\nconst followUp = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];\nconst notes = request.notes || '';\n\nreturn [{\n  json: {\n    planeIssueId: planeIssueId,\n    grantName: request.grantName || '',\n    funderName: request.funderName || '',\n    submittedDate: submittedDate,\n    confirmationNumber: confirmationNumber,\n    contactPerson: contactPerson,\n    contactEmail: contactEmail,\n    expectedDecision: expectedDecision,\n    followUp: followUp,\n    notes: notes,\n    hasIssueId: !!planeIssueId\n  }\n}];"
+      },
+      "id": "2a8e2f38-e943-492a-bfb0-d1ecddd7a081",
+      "name": "Prepare Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2848,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-issue-id",
+              "leftValue": "={{ $json.hasIssueId }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "845652c7-b173-4187-9a3a-2377b984efb0",
+      "name": "Has Issue ID?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/{{ $json.planeIssueId }}/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "ab15d3da-b2bd-4ef1-8a58-62fb4de400b5",
+      "name": "Fetch Issue by ID",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3296,
+        384
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Direct fetch when planeIssueId is provided"
+    },
+    {
+      "parameters": {
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search={{ encodeURIComponent($json.grantName) }}&per_page=50",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "a0987d9b-0048-43d5-951d-1c66dbc7d2d6",
+      "name": "Search by Grant Name",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3296,
+        624
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fallback search when no planeIssueId"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepData = $('Prepare Update').first().json;\n  const issue = $('Fetch Issue by ID').first().json;\n\n  if (!issue || !issue.id) {\n    throw new Error(`Issue not found with ID: ${prepData.planeIssueId}`);\n  }\n\n  // Extract existing fields from current description to preserve them\n  const currentDesc = issue.description_html || '';\n\n  const getExistingField = (label) => {\n    const m = currentDesc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)', 'i'));\n    return m ? m[1].trim() : '';\n  };\n\n  // Preserve fields\n  const existingAmount = getExistingField('Amount');\n  const existingDeadline = getExistingField('Deadline');\n  const existingGrantPeriod = getExistingField('Grant Period');\n\n  // Build description HTML\n  let descHtml = '<div>';\n  descHtml += `<p><strong>Status:</strong> Submitted</p>`;\n  descHtml += `<p><strong>Submitted Date:</strong> ${prepData.submittedDate}</p>`;\n  descHtml += `<p><strong>Confirmation:</strong> ${prepData.confirmationNumber}</p>`;\n  descHtml += `<p><strong>Funder:</strong> ${prepData.funderName}</p>`;\n\n  if (existingAmount) {\n    descHtml += `<p><strong>Amount:</strong> ${existingAmount}</p>`;\n  }\n  if (existingDeadline) {\n    descHtml += `<p><strong>Deadline:</strong> ${existingDeadline}</p>`;\n  }\n  if (existingGrantPeriod) {\n    descHtml += `<p><strong>Grant Period:</strong> ${existingGrantPeriod}</p>`;\n  }\n\n  descHtml += `<p><strong>Contact:</strong> ${prepData.contactPerson} (${prepData.contactEmail})</p>`;\n  descHtml += `<p><strong>Expected Decision:</strong> ${prepData.expectedDecision}</p>`;\n  descHtml += `<p><strong>Follow-up Date:</strong> ${prepData.followUp}</p>`;\n  descHtml += `<p><strong>Notes:</strong> ${prepData.notes}</p>`;\n  descHtml += '</div>';\n\n  return [{\n    json: {\n      issueId: issue.id,\n      currentName: issue.name,\n      descriptionHtml: descHtml\n    }\n  }];"
+      },
+      "id": "6d28f4d6-15be-46c7-a980-1f6e066654e1",
+      "name": "Process Direct Fetch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find issue from search results\n  const prepData = $('Prepare Update').first().json;\n  const searchResponse = $('Search by Grant Name').first().json;\n  const results = searchResponse.results || searchResponse || [];\n  const issueList = Array.isArray(results) ? results : [];\n\n  let subItem = null;\n\n  subItem = issueList.find(i => (i.name || '').includes('[Eligibility]'));\n\n  if (!subItem) {\n    subItem = issueList.find(i => {\n      const name = (i.name || '').toLowerCase();\n      const funder = (prepData.funderName || '').toLowerCase();\n      return funder && name.includes(funder);\n    });\n  }\n\n  if (!subItem && issueList.length > 0) {\n    subItem = issueList[0];\n  }\n\n  if (!subItem) {\n    throw new Error(`Could not find issue for grant: ${prepData.grantName}`);\n  }\n\n  // Extract existing fields\n  const currentDesc = subItem.description_html || '';\n\n  const getExistingField = (label) => {\n    const m = currentDesc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)', 'i'));\n    return m ? m[1].trim() : '';\n  };\n\n  const existingAmount = getExistingField('Amount');\n  const existingDeadline = getExistingField('Deadline');\n  const existingGrantPeriod = getExistingField('Grant Period');\n\n  // Build description HTML\n  let descHtml = '<div>';\n  descHtml += `<p><strong>Status:</strong> Submitted</p>`;\n  descHtml += `<p><strong>Submitted Date:</strong> ${prepData.submittedDate}</p>`;\n  descHtml += `<p><strong>Confirmation:</strong> ${prepData.confirmationNumber}</p>`;\n  descHtml += `<p><strong>Funder:</strong> ${prepData.funderName}</p>`;\n\n  if (existingAmount) {\n    descHtml += `<p><strong>Amount:</strong> ${existingAmount}</p>`;\n  }\n  if (existingDeadline) {\n    descHtml += `<p><strong>Deadline:</strong> ${existingDeadline}</p>`;\n  }\n  if (existingGrantPeriod) {\n    descHtml += `<p><strong>Grant Period:</strong> ${existingGrantPeriod}</p>`;\n  }\n\n  descHtml += `<p><strong>Contact:</strong> ${prepData.contactPerson} (${prepData.contactEmail})</p>`;\n  descHtml += `<p><strong>Expected Decision:</strong> ${prepData.expectedDecision}</p>`;\n  descHtml += `<p><strong>Follow-up Date:</strong> ${prepData.followUp}</p>`;\n  descHtml += `<p><strong>Notes:</strong> ${prepData.notes}</p>`;\n  descHtml += '</div>';\n\n  return [{\n    json: {\n      issueId: subItem.id,\n      currentName: subItem.name,\n      descriptionHtml: descHtml\n    }\n  }];"
+      },
+      "id": "d9116c34-7917-49f3-bfd1-1c186975a127",
+      "name": "Process Search Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/{{ $json.issueId }}/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"priority\": \"medium\",\n    \"state\": \"fd5d7c0d-a186-4c37-a006-b6c09a6e1c28\",\n    \"description_html\": \"{{ $json.descriptionHtml }}\"\n  }",
+        "options": {}
+      },
+      "id": "fee3efd3-a99f-48c7-b6b2-1fb7fa4b3efb",
+      "name": "Update Issue in Plane",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3744,
+        512
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Update issue with submission tracking info"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate all reminder dates and format response\nconst request = $('Log Submission').first().json.body;\nconst today = new Date();\n\nconst submittedDate = request.submittedDate ? new Date(request.submittedDate) : today;\nconst expectedDecision = request.expectedDecisionDate ? new Date(request.expectedDecisionDate) : null;\n\nconst followUpDate = new Date(submittedDate.getTime() + 14 * 24 * 60 * 60 * 1000);\nconst decisionReminder = expectedDecision ? new Date(expectedDecision.getTime() - 7 * 24 * 60 * 60 * 1000) : null;\n\nconst reminders = [\n  {\n    type: 'follow_up',\n    date: followUpDate.toISOString().split('T')[0],\n    description: `Follow up with ${request.funderName} about ${request.grantName}`,\n    action: `Email ${request.contactPerson || 'funder contact'} to confirm receipt`\n  }\n];\n\nif (decisionReminder) {\n  reminders.push({\n    type: 'decision_expected',\n    date: decisionReminder.toISOString().split('T')[0],\n    description: `Decision expected soon for ${request.grantName}`,\n    action: 'Check portal or contact funder for status update'\n  });\n}\n\nreturn [{\n  json: {\n    success: true,\n    grantId: request.grantId,\n    grantName: request.grantName,\n    funderName: request.funderName,\n    confirmationNumber: request.confirmationNumber,\n    submittedDate: submittedDate.toISOString().split('T')[0],\n    status: 'Submitted',\n    amountRequested: request.amountRequested,\n    contactPerson: request.contactPerson,\n    expectedDecisionDate: expectedDecision ? expectedDecision.toISOString().split('T')[0] : 'Not specified',\n    reminders: reminders,\n    message: `Grant submission logged successfully. Follow-up reminder set for ${followUpDate.toISOString().split('T')[0]}.`\n  }\n}];"
+      },
+      "id": "edeba08c-b9f8-4fde-b449-319a9a072b6d",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3968,
+        512
+      ]
+    }
+  ],
+  "pinData": {
+    "Log Submission": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.thebrownmine.com",
+            "user-agent": "axios/1.12.0",
+            "content-length": "556",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "100.29.112.47",
+            "x-forwarded-host": "n8n.thebrownmine.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "grantId": "GRANT-001",
+            "grantName": "Yield Giving (MacKenzie Scott) Grant",
+            "funderName": "Yield Giving (MacKenzie Scott)",
+            "confirmationNumber": "MANUAL-1769964202662",
+            "submittedDate": "2026-02-01",
+            "status": "Submitted",
+            "contactPerson": "TBD",
+            "contactEmail": "TBD",
+            "expectedDecisionDate": "",
+            "portalUrl": "",
+            "portalType": "none",
+            "submissionMethod": "online",
+            "funderWebsite": "",
+            "wasAutoSubmit": false,
+            "planeIssueId": "462117a0-0155-400e-920e-8d759c470ea8",
+            "deadline": "2026-02-01T16:42:37.642Z",
+            "checklistItemsTotal": 21,
+            "checklistItemsRequired": 17,
+            "hoursBeforeDeadline": 0
+          },
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/log-submission",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Log Submission": {
+      "main": [
+        [
+          {
+            "node": "Prepare Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Update": {
+      "main": [
+        [
+          {
+            "node": "Has Issue ID?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Issue ID?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Issue by ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search by Grant Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Issue by ID": {
+      "main": [
+        [
+          {
+            "node": "Process Direct Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search by Grant Name": {
+      "main": [
+        [
+          {
+            "node": "Process Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Direct Fetch": {
+      "main": [
+        [
+          {
+            "node": "Update Issue in Plane",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Search Results": {
+      "main": [
+        [
+          {
+            "node": "Update Issue in Plane",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Issue in Plane": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "79a0cebc-cd29-435b-b600-abd1fd6a7f0b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "3rAOosngww7lDOLv",
+  "tags": []
+}

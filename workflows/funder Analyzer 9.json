@@ -1,0 +1,323 @@
+{
+  "name": "funder Analyzer 9",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analyze-funder",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "dd698f29-3b23-4e22-9f93-0fa29107a5f7",
+      "name": "Funder Analysis Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        400,
+        128
+      ],
+      "webhookId": "analyze-funder",
+      "notes": "POST: { funderName: 'Community Foundation of Atlanta', funderEIN: '12-3456789', focusAreas: ['youth', 'education'] }"
+    },
+    {
+      "parameters": {
+        "url": "=https://projects.propublica.org/nonprofits/api/v2/search.json?q={{ $json.cleanedFunderName }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "03843d2a-ae34-49f8-bb39-4f18f7690814",
+      "name": "Search ProPublica",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        832,
+        128
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Search ProPublica Nonprofit Explorer for funder's 990 data"
+    },
+    {
+      "parameters": {
+        "url": "=https://projects.propublica.org/nonprofits/api/v2/organizations/{{ $json.organizations[0].ein }}.json",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "3f402de4-179c-42db-bfcd-4bf313f6d64d",
+      "name": "Get 990 Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        32
+      ],
+      "notes": "Get detailed 990 filing data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract grant data from 990 filings\n  const request = $('Funder Analysis Request').first().json.body;\n  const inputData = $input.first().json;\n\n  // Check if this came from error/fallback path\n  const noResults = inputData._noResults === true;\n\n  let funderInfo = {\n    name: request.funderName,\n    ein: request.funderEIN || '',\n    focusAreas: request.focusAreas || [],\n    found: false,\n    city: 'Unknown',\n    state: '',\n    nteeCode: '',\n    totalRevenue: null,\n    totalAssets: null\n  };\n\n  let grantData = {\n    totalGrantsAwarded: 0,\n    averageGrantSize: 0,\n    grantsByYear: {}\n  };\n\n  if (noResults) {\n    // Fallback path - use basic info if available\n    if (inputData._basicInfo) {\n      funderInfo.ein = inputData._basicInfo.ein || funderInfo.ein;\n      funderInfo.city = inputData._basicInfo.city || 'Unknown';\n      funderInfo.state = inputData._basicInfo.state || '';\n      funderInfo.nteeCode = inputData._basicInfo.nteeCode || '';\n    }\n    funderInfo.note = 'Limited data - 990 details not available in ProPublica';\n  } else {\n    // Normal path - extract full details\n    try {\n      if (inputData.organization) {\n        funderInfo.found = true;\n        funderInfo.totalRevenue = inputData.organization.total_revenue;\n        funderInfo.totalAssets = inputData.organization.total_assets;\n      }\n\n      if (inputData.filings_with_data && inputData.filings_with_data.length > 0) {\n        for (const filing of inputData.filings_with_data.slice(0, 3)) {\n          const year = filing.tax_prd_yr;\n          grantData.grantsByYear[year] = {\n            totalGrants: filing.totgftgrntspd || 0,\n            programExpenses: filing.totfuncexpns || 0\n          };\n        }\n      }\n    } catch (e) {\n      funderInfo.error = e.message;\n    }\n  }\n\n  return [{\n    json: {\n      funderInfo: funderInfo,\n      grantData: grantData,\n      searchQuery: request.funderName\n    }\n  }];"
+      },
+      "id": "311a07ea-6f87-473a-bd91-3a95be47a145",
+      "name": "Extract Grant Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Strategy Consultant researching a funder to help a nonprofit win funding.\n\nBased on the funder information provided, create a comprehensive \"Winning Strategy Brief\" that includes:\n\n## 1. FUNDER PROFILE\n- Organization overview\n- Geographic focus\n- Typical grant sizes (estimate if not available)\n- Funding priorities\n\n## 2. GRANT PATTERNS ANALYSIS\n- Types of organizations they typically fund\n- Common project types\n- Preferred program areas\n- Red flags to avoid\n\n## 3. LANGUAGE & FRAMING RECOMMENDATIONS\n- Key phrases and terminology they likely respond to\n- Values to emphasize (equity, innovation, sustainability, etc.)\n- Tone recommendations (formal, storytelling, data-driven)\n\n## 4. APPLICATION STRATEGY\n-  How to position The Virtuous House (African American youth aging out of foster care, seniors in long-term care, dignity-centered\n  programming)\n- Specific angles that would resonate\n- What to emphasize vs. downplay\n- Recommended ask amount range\n\n## 5. COMPETITIVE INTELLIGENCE\n- What types of orgs are you competing against?\n- How to differentiate\n- Unique value propositions to highlight\n\n## 6. ACTION ITEMS\n- Specific steps to take before applying\n- People to research or connect with\n- Timeline recommendations\n## 7. APPLICATION LOGISTICS\n  - Funder website URL\n  - Grant portal URL (if online applications)\n  - Submission method (online portal, email, mail)\n  - Portal type if known (Submittable, Fluxx, custom, etc.)\n  - Application deadline patterns (rolling, annual, quarterly)\nBe specific and actionable. If data is limited, make reasonable inferences based on the funder type and location.",
+              "role": "system"
+            },
+            {
+              "content": "=FUNDER TO ANALYZE: {{ $json.funderInfo.name }}\n\nLOCATION: {{ $json.funderInfo.city }}, {{ $json.funderInfo.state }}\nEIN: {{ $json.funderInfo.ein }}\nNTEE CODE: {{ $json.funderInfo.nteeCode }}\n\nFINANCIAL DATA:\n- Total Revenue: ${{ $json.funderInfo.totalRevenue ? $json.funderInfo.totalRevenue.toLocaleString() : 'Unknown' }}\n- Total Assets: ${{ $json.funderInfo.totalAssets ? $json.funderInfo.totalAssets.toLocaleString() : 'Unknown' }}\n\nGRANT DATA BY YEAR:\n{{ JSON.stringify($json.grantData.grantsByYear, null, 2) }}\n\nFOCUS AREAS MENTIONED: {{ $json.funderInfo.focusAreas.join(', ') || 'Not specified' }}\n\nAPPLYING ORGANIZATION: The Virtuous House\n- Pennsylvania 501(c)(3) nonprofit\n- Supports African American youth aging out of foster care and seniors in long-term care facilities\n- Programs: The Virtuous Closet (clothing/essentials), Senior Dignity Initiative, future rural youth camp in PA\n- Trauma-informed, culturally responsive, dignity-centered approach\n- Serves youth and seniors across Pennsylvania and Northern New Jersey"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "id": "9b090af7-d468-4763-9065-e635ebf68bdd",
+      "name": "AI Generate Strategy",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1712,
+        128
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": " const funderData = $('Extract Grant Data').first().json;\n  const aiResponse = $input.first().json;\n\n  // Handle array response from OpenAI\n  const strategyContent = Array.isArray(aiResponse)\n    ? aiResponse[0]?.message?.content\n    : (aiResponse.message?.content || aiResponse.text || '');\n\n  // Initialize\n  let portalUrl = '';\n  let portalType = 'unknown';\n  let submissionMethod = 'unknown';\n  let funderWebsite = '';\n\n  // FIXED: Handle markdown **bold**: format - match anything until newline, then capture URL\n  const websiteMatch = strategyContent.match(/Funder Website URL[^\\n]*\\n\\s*(https?:\\/\\/[^\\s\\n]+)/i);\n  if (websiteMatch) funderWebsite = websiteMatch[1];\n\n  const portalMatch = strategyContent.match(/Grant Portal URL[^\\n]*\\n\\s*(https?:\\/\\/[^\\s\\n]+)/i);\n  if (portalMatch) portalUrl = portalMatch[1];\n\n  // FIXED: For text fields, skip past markdown and grab content on next line\n  const submissionMatch = strategyContent.match(/Submission Method[^\\n]*\\n\\s*([A-Za-z][^\\n]+)/i);\n  if (submissionMatch) {\n    const method = submissionMatch[1].toLowerCase();\n    if (method.includes('online') || method.includes('portal')) submissionMethod = 'online';\n    else if (method.includes('email') && method.includes('mail')) submissionMethod = 'email';\n    else if (method.includes('direct contact')) submissionMethod = 'contact';\n    else if (method.includes('email')) submissionMethod = 'email';\n    else if (method.includes('mail')) submissionMethod = 'mail';\n    else submissionMethod = submissionMatch[1].substring(0, 50).trim();\n  }\n\n  // FIXED: Portal type extraction\n  const portalTypeMatch = strategyContent.match(/Portal Type[^\\n]*\\n\\s*([A-Za-z][^\\n]+)/i);\n  if (portalTypeMatch) {\n    const typeText = portalTypeMatch[1].toLowerCase();\n    if (typeText.includes('no known') || typeText.includes('no online') || typeText.includes('not')) {\n      portalType = 'none';\n    } else if (typeText.includes('submittable')) portalType = 'submittable';\n    else if (typeText.includes('fluxx')) portalType = 'fluxx';\n    else if (typeText.includes('surveymonkey')) portalType = 'surveymonkey';\n    else if (typeText.includes('custom')) portalType = 'custom';\n    else portalType = 'other';\n  }\n\n  // Build markdown report\n  let markdown = `# Winning Strategy Brief\\n\\n`;\n  markdown += `## Funder: ${funderData.funderInfo.name}\\n\\n`;\n  markdown += `**Location:** ${funderData.funderInfo.city || 'Unknown'}, ${funderData.funderInfo.state || ''}\\n`;\n  markdown += `**EIN:** ${funderData.funderInfo.ein || 'Not found'}\\n`;\n\n  if (funderData.funderInfo.totalAssets) {\n    markdown += `**Total Assets:** $${funderData.funderInfo.totalAssets.toLocaleString()}\\n`;\n  }\n\n  markdown += `\\n---\\n\\n`;\n  markdown += strategyContent;\n  markdown += `\\n\\n---\\n`;\n  markdown += `*Generated: ${new Date().toISOString()}*\\n`;\n  markdown += `*Data Source: ProPublica Nonprofit Explorer*`;\n\n  return [{\n    json: {\n      success: true,\n      funderName: funderData.funderInfo.name,\n      funderEIN: funderData.funderInfo.ein,\n      funderLocation: `${funderData.funderInfo.city || ''}, ${funderData.funderInfo.state || ''}`,\n      funderFound: funderData.funderInfo.found,\n      totalAssets: funderData.funderInfo.totalAssets,\n      grantDataByYear: funderData.grantData.grantsByYear,\n\n      // Application logistics\n      funderWebsite: funderWebsite,\n      portalUrl: portalUrl,\n      portalType: portalType,\n      submissionMethod: submissionMethod,\n\n      strategyBrief: strategyContent,\n      fullReport: markdown\n    }\n  }];"
+      },
+      "id": "36d62c39-777d-4517-b020-40f5acdf89d5",
+      "name": "Format Strategy Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": " // Clean funder name - replace special characters with spaces\n  const body = $input.first().json.body;\n  let funderName = body.funderName || '';\n\n  // Replace periods and special characters with spaces\n  const cleanName = funderName\n    // Replace periods with spaces\n    .replace(/\\./g, ' ')\n    // Replace other special characters with spaces\n    .replace(/[^\\w\\s]/g, ' ')\n    // Collapse multiple spaces into one\n    .replace(/\\s+/g, ' ')\n    .trim();\n\n  return [{\n    json: {\n      ...body,\n      originalFunderName: funderName,\n      cleanedFunderName: cleanName\n    }\n  }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        128
+      ],
+      "id": "8a648e99-106e-40c9-bf0e-7706e36482f4",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3b15f0b7-0b36-4a5d-b1f5-4499e7d508c5",
+              "leftValue": "= {{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1040,
+        128
+      ],
+      "id": "f1724244-723a-4353-95f8-1ec9af3bc9c2",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle case where 990 details not found (error from API)\n  const request = $('Funder Analysis Request').first().json.body;\n  const searchResult = $('Search ProPublica').first().json;\n\n  // Try to get basic info from search if available\n  let basicInfo = {};\n  if (searchResult.organizations && searchResult.organizations.length > 0) {\n    const org = searchResult.organizations[0];\n    basicInfo = {\n      ein: org.ein,\n      city: org.city,\n      state: org.state,\n      nteeCode: org.ntee_code\n    };\n  }\n\n  return [{\n    json: {\n      organization: null,\n      filings_with_data: [],\n      _noResults: true,\n      _basicInfo: basicInfo,\n      _originalRequest: {\n        funderName: request.funderName,\n        funderEIN: request.funderEIN || '',\n        focusAreas: request.focusAreas || []\n      }\n    }\n  }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        224
+      ],
+      "id": "9d1d9881-ae20-4117-aaae-7cd5ea339ae0",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {
+    "Funder Analysis Request": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.thebrownmine.com",
+            "user-agent": "axios/1.12.0",
+            "content-length": "78",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "100.29.112.47",
+            "x-forwarded-host": "n8n.thebrownmine.com",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "funderName": "Yield Giving (MacKenzie Scott)",
+            "focusAreas": [],
+            "funderEIN": ""
+          },
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/analyze-funder",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Funder Analysis Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search ProPublica": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get 990 Details": {
+      "main": [
+        [
+          {
+            "node": "Extract Grant Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Grant Data": {
+      "main": [
+        [
+          {
+            "node": "AI Generate Strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate Strategy": {
+      "main": [
+        [
+          {
+            "node": "Format Strategy Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Search ProPublica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get 990 Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Extract Grant Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "bd4aeaa2-e74e-4092-b7eb-49b0295cb141",
+  "meta": {
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "LRuCiXmpks1qeoTQ",
+  "tags": []
+}

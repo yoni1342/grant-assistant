@@ -1,0 +1,359 @@
+{
+  "name": "5. Narrative Library with AI Customization",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc",
+          "mode": "list",
+          "cachedResultName": "Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 624441547,
+          "mode": "list",
+          "cachedResultName": "Narrative_Library",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc/edit#gid=624441547"
+        },
+        "options": {}
+      },
+      "id": "76fe6572-5ba9-4625-a3e5-20eddcb52f5e",
+      "name": "Get Narrative Library",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        816,
+        -32
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "uPzrzFu4mU5jwnGv",
+          "name": "Google Sheets account"
+        }
+      },
+      "disabled": true,
+      "notes": "CONFIGURE: Create 'Narrative_Library' sheet with columns: section_id, section_name, base_content, word_limit"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Match requested sections to library entries\nconst request = $('Narrative Request').first().json.body;\nconst requestedSections = request.sections || [];\nconst grantContext = request.grantContext || {};\n\nconst allNarratives = $('Get Narrative Library').all().map(i => i.json);\n\n// Find matching narratives for each requested section\nconst matched = [];\nconst missing = [];\n\nfor (const sectionId of requestedSections) {\n  const found = allNarratives.find(n => n.section_id === sectionId);\n  if (found) {\n    matched.push({\n      section_id: found.section_id,\n      section_name: found.section_name,\n      base_content: found.base_content,\n      word_limit: parseInt(found.word_limit) || 200,\n      grantContext: grantContext\n    });\n  } else {\n    missing.push(sectionId);\n  }\n}\n\n// If no sections requested, return all\nif (requestedSections.length === 0) {\n  for (const n of allNarratives) {\n    matched.push({\n      section_id: n.section_id,\n      section_name: n.section_name,\n      base_content: n.base_content,\n      word_limit: parseInt(n.word_limit) || 200,\n      grantContext: grantContext\n    });\n  }\n}\n\n// Return as items for processing\nreturn matched.map(m => ({ json: m }));"
+      },
+      "id": "7fa2e4c0-2ae5-4c86-a4a5-caa4f11b2422",
+      "name": "Match Sections",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        -32
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Writer for Tabitha's Closet, a Georgia 501(c)(3) nonprofit serving:\n- Youth aging out of foster care (16-24): clothing, essentials, transition support\n- Seniors in need: dignity through clothing and engagement\n\nKEY FACTS (use these, don't invent):\n- 70% of foster youth served are African American\n- Serves 500+ youth and 200+ seniors annually\n- Provides interview clothing, hygiene kits, school supplies\n- Uses trauma-informed, dignity-centered approach\n- 85% of youth report increased confidence after receiving services\n\nCUSTOMIZATION RULES:\n- 'racial equity' focus → emphasize African American youth stats, systemic barriers\n- 'workforce' focus → emphasize interview clothing, professional attire, job readiness\n- 'mental health' focus → emphasize trauma-informed care, dignity, emotional support\n- 'seniors/aging' focus → emphasize senior program, intergenerational connections\n- 'community' focus → emphasize volunteers, local partnerships, community impact\n\nOUTPUT: Only the rewritten narrative text. No explanations. Stay within word limit.",
+              "role": "system"
+            },
+            {
+              "content": "=SECTION: {{ $json.section_name }}\n\nBASE NARRATIVE:\n{{ $json.base_content }}\n\nGRANT CONTEXT:\n- Funder: {{ $json.grantContext.funderName || 'Not specified' }}\n- Focus: {{ $json.grantContext.focus || 'general nonprofit support' }}\n- Tone: {{ $json.grantContext.tone || 'professional and impact-oriented' }}\n\nWORD LIMIT: {{ $json.word_limit }} words\n\nRewrite the base narrative to align with this grant's focus."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "a9b52ef2-53aa-4860-aad0-2903e5f8c1dc",
+      "name": "AI Customize",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1264,
+        -32
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format each customized section\nconst sectionInfo = $('Match Sections').item.json;\nconst aiResponse = $input.first().json;\n\nconst customizedText = aiResponse.message?.content || aiResponse.text || '';\n\nreturn [{\n  json: {\n    section_id: sectionInfo.section_id,\n    section_name: sectionInfo.section_name,\n    customized_content: customizedText.trim(),\n    word_count: customizedText.trim().split(/\\s+/).length,\n    word_limit: sectionInfo.word_limit,\n    grant_focus: sectionInfo.grantContext.focus || 'general'\n  }\n}];"
+      },
+      "id": "0dc35aeb-db52-433f-bd83-eaadd9591325",
+      "name": "Format Section",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        -32
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all customized sections into final response\nconst allSections = $input.all();\nconst request = $('Narrative Request').first().json.body;\n\nconst narratives = {};\nfor (const item of allSections) {\n  const s = item.json;\n  narratives[s.section_id] = {\n    section_name: s.section_name,\n    content: s.customized_content,\n    word_count: s.word_count,\n    word_limit: s.word_limit\n  };\n}\n\nreturn [{\n  json: {\n    success: true,\n    sectionsReturned: Object.keys(narratives).length,\n    grantContext: request.grantContext || {},\n    narratives: narratives,\n    generatedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "d5b0e39f-2d91-477b-81c4-e7432bfb2c60",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        -32
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customize-narrative",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "7d9698b3-8bf0-4c39-8436-ebc653fe412e",
+      "name": "Narrative Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        352
+      ],
+      "webhookId": "customize-narrative",
+      "notes": "POST: { sections: ['mission_short', 'program_youth'], grantContext: { focus: 'racial equity', funderName: 'XYZ Foundation', tone: 'data-driven' } }"
+    },
+    {
+      "parameters": {
+        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search=%5BNarrative%5D&per_page=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "3e8a2534-702c-49b1-bd4e-67143516eb1b",
+      "name": "Get Narrative Library1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        352
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fetch narrative sections from Plane [Narrative] issues"
+    },
+    {
+      "parameters": {
+        "jsCode": "const planeResponse = $('Get Narrative Library1').first().json;\n  const requestedSections = $('Narrative Request').first().json.body.sections;\n  const grantContext = $('Narrative Request').first().json.body.grantContext;\n\n  // Parse all [Narrative] issues from Plane\n  const allNarratives = [];\n  const issues = planeResponse.results || [];\n\n  for (const issue of issues) {\n    const name = issue.name || '';\n    const match = name.match(/^\\[Narrative\\]\\s*(\\w+)\\s*-\\s*(.+)$/i);\n\n    if (match) {\n      const sectionId = match[1].toLowerCase();\n      const sectionName = match[2].trim();\n\n      const desc = issue.description_html || '';\n      let baseContent = '';\n      let wordLimit = 250;\n\n      const contentMatch = desc.match(/<p><strong>Base Content:<\\/strong><\\/p>([\\s\\S]*?)(?:<p><strong>Word Limit:|$)/i);\n      if (contentMatch) {\n        baseContent = contentMatch[1].replace(/<[^>]+>/g,'').replace(/\\s+/g,'').trim();\n      }\n\n      const limitMatch = desc.match(/Word Limit:<\\/strong>\\s*(\\d+)/i);\n      if (limitMatch) {\n        wordLimit = parseInt(limitMatch[1], 10);\n      }\n\n      allNarratives.push({\n        section_id: sectionId,\n        section_name: sectionName,\n        base_content: baseContent,\n        word_limit: wordLimit\n      });\n    }\n  }\n\n  // Match requested sections\n  const matched = [];\n  const missing = [];\n\n  for (const sectionId of requestedSections) {\n    const found = allNarratives.find(n => n.section_id === sectionId.toLowerCase());\n    if (found) {\n      matched.push({\n        section_id: found.section_id,\n        section_name: found.section_name,\n        base_content: found.base_content,\n        word_limit: found.word_limit,\n        grantContext: grantContext,\n        is_fallback: false\n      });\n    } else {\n      missing.push(sectionId);\n    }\n  }\n\n  // GRACEFUL FALLBACK: Return valid items the workflow can process\n  if (matched.length === 0) {\n    // Return a fallback item with the same structure so workflow continues\n    const availableIds = allNarratives.map(n => n.section_id).sort();\n\n    return [{\n      json: {\n        section_id: 'error_no_match',\n        section_name: 'Section Not Found',\n        base_content: `The requested sections (${requestedSections.join(', ')}) were not found in the\n  narrative library. Available sections: ${availableIds.join(', ')}`,\n        word_limit: 500,\n        grantContext: grantContext,\n        is_fallback: true,\n        missing_sections: requestedSections,\n        available_sections: availableIds\n      }\n    }];\n  }\n\n  // Return matched sections with any missing ones noted\n  return matched.map(m => ({\n    json: {\n      ...m,\n      missing_sections: missing.length > 0 ? missing : undefined\n    }\n  }));"
+      },
+      "id": "3ddaaebe-9758-441d-af39-f73463afe820",
+      "name": "Match Sections1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Writer for The Virtuous House, a community-based nonprofit serving:\n- African American youth aging out of foster care: clothing, essentials, workforce readiness, transition support\n- Seniors in long-term care facilities: dignity through engagement and essentials\n\nKEY FACTS (use these, don't invent):\n- Majority of foster youth served are African American\n- Serves youth aging out of foster care and seniors in long-term care\n- Programs: The Virtuous Closet (clothing/essentials), Senior Dignity Initiative, Rural Youth Camp (PA - future)\n- Uses trauma-informed, dignity-centered, culturally responsive approach\n- Boutique-style experience where clients choose their own items\n- Provides interview clothing, hygiene kits, school supplies, emergency placement kits\n- Long-term vision: Rural youth development camp in Pennsylvania\n\nCUSTOMIZATION RULES:\n- 'racial equity' focus → emphasize African American youth, systemic barriers, culturally responsive practices\n- 'workforce' focus → emphasize interview clothing, professional attire, job readiness, workforce-ready capsules\n- 'mental health' focus → emphasize trauma-informed care, dignity, healing, restorative environments\n- 'seniors/aging' focus → emphasize Senior Dignity Initiative, long-term care partnerships, quality of life\n- 'youth development' focus → emphasize rural camp initiative, nature-based healing, mentorship\n- 'community' focus → emphasize volunteers, local partnerships, community impact\n\nOUTPUT: Only the rewritten narrative text. No explanations. Stay within word limit.",
+              "role": "system"
+            },
+            {
+              "content": "=SECTION: {{ $json.section_name }}\n\nBASE NARRATIVE:\n{{ $json.base_content }}\n\nGRANT CONTEXT:\n- Funder: {{ $json.grantContext.funderName || 'Not specified' }}\n- Focus: {{ $json.grantContext.focus || 'general nonprofit support' }}\n- Tone: {{ $json.grantContext.tone || 'professional and impact-oriented' }}\n\nWORD LIMIT: {{ $json.word_limit }} words\n\nRewrite the base narrative to align with this grant's focus."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "67b9d052-d525-4730-9421-57680f1c0202",
+      "name": "AI Customize1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2096,
+        352
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format each customized section\nconst sectionInfo = $('Match Sections1').item.json;\nconst aiResponse = $input.first().json;\n\nconst customizedText = aiResponse.message?.content || aiResponse.text || '';\n\nreturn [{\n  json: {\n    section_id: sectionInfo.section_id,\n    section_name: sectionInfo.section_name,\n    customized_content: customizedText.trim(),\n    word_count: customizedText.trim().split(/\\s+/).length,\n    word_limit: sectionInfo.word_limit,\n    grant_focus: sectionInfo.grantContext.focus || 'general'\n  }\n}];"
+      },
+      "id": "1d870d0c-1337-4de1-9c94-3de9ae06ef5e",
+      "name": "Format Section1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2448,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all customized sections into final response\nconst allSections = $input.all();\nconst request = $('Narrative Request').first().json.body;\n\nconst narratives = {};\nfor (const item of allSections) {\n  const s = item.json;\n  narratives[s.section_id] = {\n    section_name: s.section_name,\n    content: s.customized_content,\n    word_count: s.word_count,\n    word_limit: s.word_limit\n  };\n}\n\nreturn [{\n  json: {\n    success: true,\n    sectionsReturned: Object.keys(narratives).length,\n    grantContext: request.grantContext || {},\n    narratives: narratives,\n    generatedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "bb9fa1a7-b9ea-4c39-a53d-beed3ba09a6b",
+      "name": "Build Response1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2672,
+        352
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Narrative Library": {
+      "main": [
+        [
+          {
+            "node": "Match Sections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Sections": {
+      "main": [
+        [
+          {
+            "node": "AI Customize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Customize": {
+      "main": [
+        [
+          {
+            "node": "Format Section",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Section": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Narrative Request": {
+      "main": [
+        [
+          {
+            "node": "Get Narrative Library1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Narrative Library1": {
+      "main": [
+        [
+          {
+            "node": "Match Sections1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Sections1": {
+      "main": [
+        [
+          {
+            "node": "AI Customize1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Customize1": {
+      "main": [
+        [
+          {
+            "node": "Format Section1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Section1": {
+      "main": [
+        [
+          {
+            "node": "Build Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "4e1998e1-750c-47d0-8ede-ff0821ac2543",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "35PPs5ip03mMNgEE",
+  "tags": []
+}
