@@ -163,13 +163,80 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | — |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| AUTH-06 | Phase 1 | Pending |
+| AUTH-07 | Phase 1 | Pending |
+| INFR-01 | Phase 1 | Pending |
+| INFR-02 | Phase 1 | Pending |
+| INFR-03 | Phase 1 | Pending |
+| INFR-04 | Phase 1 | Pending |
+| INFR-05 | Phase 1 | Pending |
+| INFR-06 | Phase 1 | Pending |
+| INFR-07 | Phase 1 | Pending |
+| DASH-01 | Phase 2 | Pending |
+| DASH-02 | Phase 2 | Pending |
+| DASH-03 | Phase 2 | Pending |
+| DASH-04 | Phase 2 | Pending |
+| PIPE-01 | Phase 2 | Pending |
+| PIPE-02 | Phase 2 | Pending |
+| PIPE-03 | Phase 2 | Pending |
+| PIPE-04 | Phase 2 | Pending |
+| PIPE-05 | Phase 2 | Pending |
+| PIPE-06 | Phase 2 | Pending |
+| PIPE-07 | Phase 2 | Pending |
+| PIPE-08 | Phase 2 | Pending |
+| PIPE-09 | Phase 2 | Pending |
+| DISC-01 | Phase 2 | Pending |
+| DISC-02 | Phase 2 | Pending |
+| DISC-03 | Phase 2 | Pending |
+| DISC-04 | Phase 2 | Pending |
+| DOCS-01 | Phase 3 | Pending |
+| DOCS-02 | Phase 3 | Pending |
+| DOCS-03 | Phase 3 | Pending |
+| DOCS-04 | Phase 3 | Pending |
+| DOCS-05 | Phase 3 | Pending |
+| NARR-01 | Phase 3 | Pending |
+| NARR-02 | Phase 3 | Pending |
+| NARR-03 | Phase 3 | Pending |
+| NARR-04 | Phase 3 | Pending |
+| NARR-05 | Phase 3 | Pending |
+| PROP-01 | Phase 4 | Pending |
+| PROP-02 | Phase 4 | Pending |
+| PROP-03 | Phase 4 | Pending |
+| PROP-04 | Phase 4 | Pending |
+| PROP-05 | Phase 4 | Pending |
+| PROP-06 | Phase 4 | Pending |
+| FUND-01 | Phase 4 | Pending |
+| FUND-02 | Phase 4 | Pending |
+| FUND-03 | Phase 4 | Pending |
+| BUDG-01 | Phase 5 | Pending |
+| BUDG-02 | Phase 5 | Pending |
+| BUDG-03 | Phase 5 | Pending |
+| BUDG-04 | Phase 5 | Pending |
+| SUBM-01 | Phase 5 | Pending |
+| SUBM-02 | Phase 5 | Pending |
+| SUBM-03 | Phase 5 | Pending |
+| SUBM-04 | Phase 5 | Pending |
+| SUBM-05 | Phase 5 | Pending |
+| SUBM-06 | Phase 5 | Pending |
+| AWRD-01 | Phase 6 | Pending |
+| AWRD-02 | Phase 6 | Pending |
+| AWRD-03 | Phase 6 | Pending |
+| AWRD-04 | Phase 6 | Pending |
+| ANLZ-01 | Phase 6 | Pending |
+| ANLZ-02 | Phase 6 | Pending |
+| ANLZ-03 | Phase 6 | Pending |
+| ANLZ-04 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 55 total
-- Mapped to phases: 0
-- Unmapped: 55
+- v1 requirements: 68 total
+- Mapped to phases: 68
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-13*
-*Last updated: 2026-02-13 after initial definition*
+*Last updated: 2026-02-13 after roadmap creation*
