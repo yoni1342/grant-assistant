@@ -125,10 +125,12 @@ Plans:
   3. User can trigger AI report generation for awarded grants
   4. User can view and edit AI-generated reports before submission
   5. User sees analytics dashboard with win rate, pipeline value, time-to-submission, and success rate by funder
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD
+- [ ] 06-01-PLAN.md — Dependencies, award/report/analytics server actions, webhook extensions
+- [ ] 06-02-PLAN.md — Award UI with list, create form, detail page, reporting calendar, report editor
+- [ ] 06-03-PLAN.md — Analytics dashboard with metrics cards and success rate chart
 
 ## Progress
 
@@ -142,8 +144,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Document Vault & Narrative Library | 3/3 | Complete | 2026-02-13 |
 | 4. Eligibility Screening & Proposal Generation | 3/3 | Complete | 2026-02-13 |
 | 5. Budget Builder & Submission Tracking | 3/3 | ✓ Complete | 2026-02-16 |
-| 6. Awards, Reporting & Analytics | 0/TBD | Not started | - |
+| 6. Awards, Reporting & Analytics | 0/3 | Planned | - |
 
 ---
 *Roadmap created: 2026-02-13*
-*Last updated: 2026-02-16 — Phase 5 complete*
+*Last updated: 2026-02-16 — Phase 6 planned (3 plans in 2 waves)*
