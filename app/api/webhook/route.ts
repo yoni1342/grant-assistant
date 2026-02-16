@@ -68,6 +68,47 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+       /**
+       * WF4: Document Vault Manager - Insert New Document
+       * 
+       * Creates a new document record when Google Drive files are added to the vault.
+       * This replaces the old Plane issue creation for document tracking.
+       * 
+       * Used by: WF4 (Document Vault Manager) - Node 8
+       * Triggered when: A new file is detected in Google Drive that doesn't exist in Supabase
+       */
+      case "insert_document": {
+        const { error } = await supabase
+          .from("documents")
+          .insert(data);
+        if (error) throw error;
+        break;
+      }
+
+      /**
+       * WF4: Document Vault Manager - Update Document by Google Drive File ID
+       * 
+       * Updates existing document records using Google Drive file ID as the lookup key.
+       * This handles the transition period where workflows still reference files by their
+       * Google Drive ID instead of Supabase UUID.
+       * 
+       * Why we need this: During migration from Plane to Supabase, workflows don't yet
+       * know the Supabase document ID. Using source_file_id (Google Drive ID) allows
+       * workflows to update documents without requiring a separate lookup step.
+       * 
+       * Used by: WF4 (Document Vault Manager) - Node 7
+       * Triggered when: An existing Google Drive file is updated and needs to sync to Supabase
+       */
+      case "update_document_by_file_id": {
+        const { source_file_id, ...updates } = data;
+        const { error } = await supabase
+          .from("documents")
+          .update(updates)
+          .eq("source_file_id", source_file_id);
+        if (error) throw error;
+        break;
+      }
+
       case "insert_proposal": {
         const { data: proposal, error } = await supabase
           .from("proposals")
