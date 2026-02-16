@@ -1,10 +1,9 @@
-export default function BudgetsPage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold">Budgets</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Budget management coming in Phase 5.
-      </p>
-    </div>
-  );
+import { createClient } from '@/lib/supabase/server'
+import { getBudgets } from './actions'
+import { BudgetPageClient } from './components/budget-page-client'
+
+export default async function BudgetsPage() {
+  const { data: budgets } = await getBudgets()
+
+  return <BudgetPageClient initialBudgets={budgets} />
 }
