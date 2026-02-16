@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-13)
 
 **Core value:** Grant writers can see their entire pipeline at a glance, trigger any automation with one click, and never miss a deadline — all from a single, purpose-built interface instead of juggling Plane issues and n8n dashboards.
-**Current focus:** Phase 4 - Eligibility Screening & Proposal Generation
+**Current focus:** Phase 5 - Budget Builder & Submission Tracking
 
 ## Current Position
 
-Phase: 4 of 6 (Eligibility Screening & Proposal Generation)
-Plan: 3 of 3 in current phase (completed: 04-01-PLAN.md, 04-02-PLAN.md, 04-03-PLAN.md)
-Status: Complete
-Last activity: 2026-02-13 — Completed 04-02: Proposal Builder UI (proposals list with TanStack table, generate proposal button, funder analysis button, workflow progress tracking)
+Phase: 5 of 6 (Budget Builder & Submission Tracking)
+Plan: 1 of 3 in current phase (completed: 05-01-PLAN.md)
+Status: In Progress
+Last activity: 2026-02-16 — Completed 05-01: Budget & Submission Infrastructure (server actions, form dependencies, webhooks, urgency calculation)
 
-Progress: [██████████] 100% (6 of 6 plans across all phases)
+Progress: [███████████░░] 78% (7 of 9 plans across all phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: 4 min
-- Total execution time: 0.45 hours
+- Total execution time: 0.50 hours
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [██████████] 100% (6 of 6 plans across all phases)
 |-------|-------|-------|----------|
 | 03 | 3 | 18 min | 6 min |
 | 04 | 3 | 11 min | 4 min |
+| 05 | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-03 (7min), 04-01 (3min), 04-02 (5min), 04-03 (3min)
-- Trend: Phase 4 complete at 4min avg, slightly faster than overall 4min avg
+- Last 5 plans: 04-01 (3min), 04-02 (5min), 04-03 (3min), 05-01 (3min)
+- Trend: Phase 5 starting strong at 3min, matching recent efficiency
 
 *Updated after each plan completion*
 
@@ -53,6 +54,7 @@ Recent decisions affecting current work:
 - **04-01 (Proposal Server Actions):** Fire-and-forget pattern for all 3 workflows (generate-proposal, review-proposal, analyze-funder); updateProposalSection skips revalidatePath for autosave; getFunder returns null (not error) when missing; batch section reordering uses loop for v1 simplicity
 - **04-02 (Proposal Builder UI):** TanStack Table for proposals list following document-table pattern; Realtime postgres_changes subscription on proposals table for live updates; WorkflowProgress component subscribes to workflow_executions by workflow_id and auto-refreshes page on completion; Generate/Regenerate UX shows View + Regenerate when proposal exists; funder analysis button disabled with tooltip if no funder name; parallel execution overlap with 04-03 created identical Task 2 files (documented as planning issue, no functional impact)
 - **04-03 (Proposal Detail View & Editor):** All sections expanded by default for immediate visibility; section editor matches narrative editor patterns exactly (immediatelyRender: false); 2-second debounced autosave balances responsiveness and efficiency; Realtime subscriptions on both proposals and proposal_sections tables for live updates; quality review with color-coded scores and severity borders; ProPublica 990 data in separate card for easy reference
+- **05-01 (Budget & Submission Infrastructure):** is_template boolean flag on budgets table for templates (not separate table); checklist items stored as JSONB array (not separate rows); delete/recreate line items on update (simpler than diff for v1); date-fns for urgency calculations (overdue/critical/urgent/soon/normal); fire-and-forget pattern for budget narrative and submission workflows; 9 budget server actions + 6 submission server actions + 3 new webhook handlers
 
 ### Pending Todos
 
@@ -70,7 +72,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: Completed Phase 4 - All plans complete (04-01: Server Actions, 04-02: Proposal Builder UI, 04-03: Proposal Detail View & Editor)
+Last session: 2026-02-16
+Stopped at: Completed 05-01: Budget & Submission Infrastructure (server actions, form dependencies, webhooks, urgency utilities)
 Resume file: None
-Next up: Phase 5 or Phase 6 (Budget Management & Submission, or Award Management & Analytics)
+Next up: 05-02: Budget Builder UI or 05-03: Submission Checklist & History UI
