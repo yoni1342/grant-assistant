@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { UrgencyBadge } from './urgency-badge'
+import { SubmissionChecklist } from './submission-checklist'
+import { AutoSubmitButton } from './auto-submit-button'
+import { ManualSubmitForm } from './manual-submit-form'
+import { SubmissionHistory } from './submission-history'
 import { Button } from '@/components/ui/button'
 import { WorkflowProgress } from '@/app/(dashboard)/pipeline/[id]/components/workflow-progress'
 import { generateChecklist } from '@/app/(dashboard)/submissions/actions'
@@ -116,10 +120,7 @@ export function SubmissionPageClient({ grant, checklist, submissions }: Submissi
             <h2 className="text-lg font-semibold mb-4">Submission Checklist</h2>
 
             {checklist ? (
-              <div>
-                {/* Checklist component will go here in Task 2 */}
-                <p className="text-sm text-muted-foreground">Checklist component placeholder</p>
-              </div>
+              <SubmissionChecklist checklist={checklist} />
             ) : (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground mb-4">
@@ -145,11 +146,8 @@ export function SubmissionPageClient({ grant, checklist, submissions }: Submissi
           <div className="border rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-4">Submit Grant</h2>
             <div className="space-y-4">
-              {/* Auto-submit button component will go here in Task 2 */}
-              <p className="text-sm text-muted-foreground">Auto-submit button placeholder</p>
-
-              {/* Manual submission form component will go here in Task 2 */}
-              <p className="text-sm text-muted-foreground">Manual submission form placeholder</p>
+              <AutoSubmitButton grantId={grant.id} portalUrl={grant.source_url} />
+              <ManualSubmitForm grantId={grant.id} />
             </div>
           </div>
         </div>
@@ -158,8 +156,7 @@ export function SubmissionPageClient({ grant, checklist, submissions }: Submissi
         <div className="lg:col-span-1">
           <div className="border rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-4">Submission History</h2>
-            {/* Submission history component will go here in Task 2 */}
-            <p className="text-sm text-muted-foreground">Submission history placeholder</p>
+            <SubmissionHistory submissions={submissions} />
           </div>
         </div>
       </div>
