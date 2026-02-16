@@ -159,6 +159,61 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "insert_award": {
+        const { grant_id, org_id, amount, award_date, start_date, end_date, requirements } = data;
+        const { error } = await supabase
+          .from("awards")
+          .insert({
+            grant_id,
+            org_id,
+            amount,
+            award_date,
+            start_date,
+            end_date,
+            requirements,
+          });
+        if (error) throw error;
+        break;
+      }
+
+      case "update_award": {
+        const { id, ...updates } = data;
+        const { error } = await supabase
+          .from("awards")
+          .update(updates)
+          .eq("id", id);
+        if (error) throw error;
+        break;
+      }
+
+      case "insert_report": {
+        const { award_id, grant_id, org_id, report_type, title, content, due_date, status } = data;
+        const { error } = await supabase
+          .from("reports")
+          .insert({
+            award_id,
+            grant_id,
+            org_id,
+            report_type,
+            title,
+            content,
+            due_date,
+            status,
+          });
+        if (error) throw error;
+        break;
+      }
+
+      case "update_report": {
+        const { id, ...updates } = data;
+        const { error } = await supabase
+          .from("reports")
+          .update(updates)
+          .eq("id", id);
+        if (error) throw error;
+        break;
+      }
+
       default:
         return NextResponse.json(
           { error: `Unknown action: ${action}` },
