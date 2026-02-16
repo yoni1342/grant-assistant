@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Grant Pipeline & Discovery** - Pipeline dashboard, grant CRUD, AI discovery integration
 - [x] **Phase 3: Document Vault & Narrative Library** - File storage, document management, narrative CRUD
 - [ ] **Phase 4: Eligibility Screening & Proposal Generation** - AI screening, proposal generation, quality review
-- [ ] **Phase 5: Budget Builder & Submission Tracking** - Budget management, submission checklists, tracking
+- [x] **Phase 5: Budget Builder & Submission Tracking** - Budget management, submission checklists, tracking
 - [ ] **Phase 6: Awards, Reporting & Analytics** - Award management, report generation, analytics dashboard
 
 ## Phase Details
@@ -111,9 +111,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Dependencies, budget/submission server actions, webhook extensions, urgency utility
-- [ ] 05-02-PLAN.md — Budget Builder UI with dynamic line items, templates, and AI narrative
-- [ ] 05-03-PLAN.md — Submission Tracking UI with checklist, urgency badges, dual-mode submit, and history
+- [x] 05-01-PLAN.md — Dependencies, budget/submission server actions, webhook extensions, urgency utility
+- [x] 05-02-PLAN.md — Budget Builder UI with dynamic line items, templates, and AI narrative
+- [x] 05-03-PLAN.md — Submission Tracking UI with checklist, urgency badges, dual-mode submit, and history
 
 ### Phase 6: Awards, Reporting & Analytics
 **Goal**: Users can manage awarded grants, generate reports, and track performance metrics
@@ -141,9 +141,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Grant Pipeline & Discovery | 0/TBD | Not started | - |
 | 3. Document Vault & Narrative Library | 3/3 | Complete | 2026-02-13 |
 | 4. Eligibility Screening & Proposal Generation | 3/3 | Complete | 2026-02-13 |
-| 5. Budget Builder & Submission Tracking | 0/3 | Not started | - |
+| 5. Budget Builder & Submission Tracking | 3/3 | ✓ Complete | 2026-02-16 |
 | 6. Awards, Reporting & Analytics | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-13*
-*Last updated: 2026-02-16 — Phase 5 planned (3 plans)*
+*Last updated: 2026-02-16 — Phase 5 complete*
