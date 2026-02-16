@@ -108,10 +108,12 @@ Plans:
   7. User can trigger auto-submission to grant portals via n8n Puppeteer
   8. User can log manual submissions with confirmation details
   9. User sees submission status and history for each grant
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD
+- [ ] 05-01-PLAN.md — Dependencies, budget/submission server actions, webhook extensions, urgency utility
+- [ ] 05-02-PLAN.md — Budget Builder UI with dynamic line items, templates, and AI narrative
+- [ ] 05-03-PLAN.md — Submission Tracking UI with checklist, urgency badges, dual-mode submit, and history
 
 ### Phase 6: Awards, Reporting & Analytics
 **Goal**: Users can manage awarded grants, generate reports, and track performance metrics
@@ -131,17 +133,17 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 0/TBD | Not started | - |
 | 2. Grant Pipeline & Discovery | 0/TBD | Not started | - |
-| 3. Document Vault & Narrative Library | 3/3 | ✓ Complete | 2026-02-13 |
-| 4. Eligibility Screening & Proposal Generation | 0/3 | Not started | - |
-| 5. Budget Builder & Submission Tracking | 0/TBD | Not started | - |
+| 3. Document Vault & Narrative Library | 3/3 | Complete | 2026-02-13 |
+| 4. Eligibility Screening & Proposal Generation | 3/3 | Complete | 2026-02-13 |
+| 5. Budget Builder & Submission Tracking | 0/3 | Not started | - |
 | 6. Awards, Reporting & Analytics | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-13*
-*Last updated: 2026-02-13 — Phase 3 complete*
+*Last updated: 2026-02-16 — Phase 5 planned (3 plans)*
