@@ -114,6 +114,51 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "insert_budget_narrative": {
+        const { budget_id, narrative } = data;
+        const { error } = await supabase
+          .from("budgets")
+          .update({ narrative, updated_at: new Date().toISOString() })
+          .eq("id", budget_id);
+        if (error) throw error;
+        break;
+      }
+
+      case "submission_complete": {
+        const { grant_id, org_id, confirmation_number, portal_url, method, notes } = data;
+        const { error } = await supabase
+          .from("submissions")
+          .insert({
+            grant_id,
+            org_id,
+            confirmation_number,
+            portal_url,
+            method: method || "auto",
+            status: "completed",
+            submitted_at: new Date().toISOString(),
+            notes,
+          });
+        if (error) throw error;
+        break;
+      }
+
+      case "insert_checklist": {
+        const { grant_id, org_id, items } = data;
+        const totalItems = items.length;
+        const completedItems = items.filter((i: any) => i.completed).length;
+        const completion_percentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+        const { error } = await supabase
+          .from("submission_checklists")
+          .upsert({
+            grant_id,
+            org_id,
+            items,
+            completion_percentage,
+          }, { onConflict: "grant_id" });
+        if (error) throw error;
+        break;
+      }
+
       default:
         return NextResponse.json(
           { error: `Unknown action: ${action}` },
