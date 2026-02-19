@@ -31,13 +31,19 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case "update_grant": {
-        const { id, ...updates } = data;
-        const { error } = await supabase
+        const { grantid, ...updates } = data;
+
+        const { data: grants, error } = await supabase
           .from("grants")
           .update(updates)
-          .eq("id", id);
+          .eq("id", grantid)
+          .select();
         if (error) throw error;
-        break;
+
+        return NextResponse.json({
+          success: true,
+          grants: grants,
+        });
       }
 
       case "insert_grants": {
@@ -65,7 +71,10 @@ export async function POST(request: NextRequest) {
       case "log_activity": {
         const { error } = await supabase.from("activity_log").insert(data);
         if (error) throw error;
-        break;
+        return NextResponse.json({
+          success: true,
+          grants: data,
+        });
       }
 
       case "update_document": {
