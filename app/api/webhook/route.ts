@@ -180,6 +180,45 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "create_proposal": {
+        const { sections, ...proposalData } = data;
+
+        // Insert proposal
+        const { data: proposal, error: proposalError } = await supabase
+          .from("proposals")
+          .insert(proposalData)
+          .select("id")
+          .single();
+
+        if (proposalError) throw proposalError;
+
+        // Insert sections with proposal_id
+        if (sections && sections.length > 0) {
+          const sectionsWithProposalId = sections.map(
+            (section: {
+              title: string;
+              content: string;
+              sort_order: number;
+            }) => ({
+              ...section,
+              proposal_id: proposal.id,
+            }),
+          );
+
+          const { error: sectionsError } = await supabase
+            .from("proposal_sections")
+            .insert(sectionsWithProposalId);
+
+          if (sectionsError) throw sectionsError;
+        }
+
+        return NextResponse.json({
+          success: true,
+          proposal_id: proposal.id,
+          sections_created: sections?.length || 0,
+        });
+      }
+
       case "submission_complete": {
         const {
           grant_id,
