@@ -14,8 +14,8 @@ const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovery",
   screening: "Screening",
   drafting: "Drafting",
-  submission: "Submission",
-  awarded: "Awarded",
+  // submission: "Submission",
+  // awarded: "Awarded",
   reporting: "Reporting",
   closed: "Closed",
 };
