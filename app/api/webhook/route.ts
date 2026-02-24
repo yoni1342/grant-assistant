@@ -21,7 +21,11 @@ export async function POST(request: NextRequest) {
 
   try {
     console.log("another hit");
-    const body = await request.json();
+    let body = await request.json();
+    // 👇 handle stringified JSON from n8n
+    if (typeof body === "string") {
+      body = JSON.parse(body);
+    }
     console.log("body received:", JSON.stringify(body)); // ← ADD THIS
     const { action, data } = body;
     console.log("action:", action); // ← ADD THIS
