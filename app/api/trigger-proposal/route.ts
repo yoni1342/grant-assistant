@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   });
 
   const response = await fetch(
-    "https://n8n.thebrownmine.com/webhook-test/generate-proposal",
+    "https://n8n.thebrownmine.com/webhook/generate-proposal",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
