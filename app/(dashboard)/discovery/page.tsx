@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { triggerGrantDiscovery, triggerEligibilityScreening } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Loader2, Zap, ExternalLink } from "lucide-react";
-
-const N8N_BASE = process.env.NEXT_PUBLIC_N8N_BASE_URL || "";
 
 export default function DiscoveryPage() {
   const [query, setQuery] = useState("");
@@ -22,27 +20,14 @@ export default function DiscoveryPage() {
     setResults(null);
 
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("org_id")
-        .eq("id", user!.id)
-        .single();
-
-      // Log the workflow execution
-      await supabase.from("workflow_executions").insert({
-        org_id: profile!.org_id!,
-        workflow_name: "grant-discovery",
-        status: "running",
-        webhook_url: "/webhook/discover-grants",
-      });
-
-      setResults(
-        "Discovery workflow triggered. Grants will appear in your pipeline as they're found. This typically takes 1-3 minutes."
-      );
+      const result = await triggerGrantDiscovery(query);
+      if (result.error) {
+        setResults(`Failed to trigger discovery: ${result.error}`);
+      } else {
+        setResults(
+          "Discovery workflow triggered. Grants will appear in your pipeline as they're found. This typically takes 1-3 minutes."
+        );
+      }
     } catch {
       setResults("Failed to trigger discovery. Check your n8n connection.");
     } finally {
@@ -54,23 +39,10 @@ export default function DiscoveryPage() {
     setScreeningLoading(grantId);
 
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("org_id")
-        .eq("id", user!.id)
-        .single();
-
-      await supabase.from("workflow_executions").insert({
-        org_id: profile!.org_id!,
-        grant_id: grantId,
-        workflow_name: "eligibility-screening",
-        status: "running",
-        webhook_url: "/webhook/screen-grant",
-      });
+      const result = await triggerEligibilityScreening(grantId);
+      if (result.error) {
+        console.error("Screening failed:", result.error);
+      }
     } catch {
       // handle error
     } finally {

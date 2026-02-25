@@ -25,9 +25,9 @@ const STAGES = [
   "discovery",
   "screening",
   "drafting",
-  "submission",
-  "awarded",
-  "reporting",
+  // "submission",
+  // "awarded",
+  // "reporting",
   "closed",
 ] as const;
 

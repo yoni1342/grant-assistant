@@ -28,8 +28,8 @@ const navItems = [
   { href: "/narratives", label: "Narratives", icon: BookOpen },
   { href: "/proposals", label: "Proposals", icon: PenTool },
   { href: "/budgets", label: "Budgets", icon: DollarSign },
-  { href: "/submissions", label: "Submissions", icon: Send },
-  { href: "/awards", label: "Awards", icon: Trophy },
+  // { href: "/submissions", label: "Submissions", icon: Send },
+  // { href: "/awards", label: "Awards", icon: Trophy },
 ];
 
 export function Sidebar({ user }: { user: User }) {

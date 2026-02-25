@@ -222,7 +222,7 @@ export function FunderAnalysis({ grantId, funderName, funder }: FunderAnalysisPr
             </>
           )}
 
-          {/* Submission Preferences */}
+        {/* Submission Preferences */}
           {funder.submission_preferences && (
             <>
               <Separator />

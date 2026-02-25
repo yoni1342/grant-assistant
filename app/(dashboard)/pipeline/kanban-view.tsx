@@ -12,9 +12,9 @@ const STAGES = [
   { key: "discovery", label: "Discovery", color: "bg-blue-500" },
   { key: "screening", label: "Screening", color: "bg-yellow-500" },
   { key: "drafting", label: "Drafting", color: "bg-purple-500" },
-  { key: "submission", label: "Submission", color: "bg-orange-500" },
-  { key: "awarded", label: "Awarded", color: "bg-green-500" },
-  { key: "reporting", label: "Reporting", color: "bg-teal-500" },
+  // { key: "submission", label: "Submission", color: "bg-orange-500" },
+  // { key: "awarded", label: "Awarded", color: "bg-green-500" },
+  // { key: "reporting", label: "Reporting", color: "bg-teal-500" },
   { key: "closed", label: "Closed", color: "bg-zinc-400" },
 ] as const;
 

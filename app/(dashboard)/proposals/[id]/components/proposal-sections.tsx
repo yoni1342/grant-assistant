@@ -1,70 +1,124 @@
 'use client'
 
-import { useState } from "react"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import { Button } from "@/components/ui/button"
-import { ChevronUp, ChevronDown } from "lucide-react"
-import { SectionEditor } from "./section-editor"
-import { reorderSections } from "../../actions"
+import { useMemo } from 'react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableCell } from '@tiptap/extension-table-cell'
+import { TableHeader } from '@tiptap/extension-table-header'
+
+interface ChapterItem {
+  chapter: string
+  sort_order: number
+}
 
 interface Section {
   id: string
   title: string
-  content: string | null
-  sort_order: number | null
+  sort_order?: number
+  content: ChapterItem[] | null
+  header1: ChapterItem[] | null
+  header2: ChapterItem[] | null
+  tabulation: ChapterItem[] | null
 }
 
 interface ProposalSectionsProps {
   sections: Section[]
-  onSectionsChange?: (sections: Section[]) => void
 }
 
-export function ProposalSections({ sections, onSectionsChange }: ProposalSectionsProps) {
-  const [reordering, setReordering] = useState(false)
+function parseTabulation(text: string): string {
+  const lines = text.split('\n').filter((l) => l.trim())
+  if (lines.length === 0) return ''
 
-  // Sort sections by sort_order
-  const sortedSections = [...sections].sort((a, b) => {
-    const orderA = a.sort_order ?? 0
-    const orderB = b.sort_order ?? 0
-    return orderA - orderB
-  })
+  const rows = lines.map((line) =>
+    line.split('|').map((cell) => cell.trim())
+  )
 
-  const handleReorder = async (index: number, direction: 'up' | 'down') => {
-    if (reordering) return
+  const headerCells = rows[0]
+    .map((cell) => `<th>${cell}</th>`)
+    .join('')
+  const headerRow = `<tr>${headerCells}</tr>`
 
-    const newIndex = direction === 'up' ? index - 1 : index + 1
-    if (newIndex < 0 || newIndex >= sortedSections.length) return
+  const bodyRows = rows
+    .slice(1)
+    .map((row) => {
+      const cells = row.map((cell) => `<td>${cell}</td>`).join('')
+      return `<tr>${cells}</tr>`
+    })
+    .join('')
 
-    setReordering(true)
+  return `<table><thead>${headerRow}</thead><tbody>${bodyRows}</tbody></table>`
+}
 
-    // Swap sort_order values
-    const newSections = [...sortedSections]
-    const temp = newSections[index].sort_order
-    newSections[index].sort_order = newSections[newIndex].sort_order
-    newSections[newIndex].sort_order = temp
+function buildSectionHtml(section: Section): string {
+  type TaggedItem = ChapterItem & { type: 'header1' | 'header2' | 'content' | 'tabulation' }
 
-    // Update local state immediately
-    if (onSectionsChange) {
-      onSectionsChange(newSections)
-    }
+  const items: TaggedItem[] = []
 
-    // Call server action
-    await reorderSections(
-      newSections.map((s) => ({
-        id: s.id,
-        sort_order: s.sort_order ?? 0,
-      }))
-    )
-
-    setReordering(false)
+  const addItems = (arr: ChapterItem[] | null, type: TaggedItem['type']) => {
+    if (!Array.isArray(arr)) return
+    arr.forEach((item) => items.push({ ...item, type }))
   }
 
-  if (sortedSections.length === 0) {
+  addItems(section.header1, 'header1')
+  addItems(section.header2, 'header2')
+  addItems(section.content, 'content')
+  addItems(section.tabulation, 'tabulation')
+
+  items.sort((a, b) => a.sort_order - b.sort_order)
+
+  const body = items
+    .map((item) => {
+      switch (item.type) {
+        case 'header1':
+          return `<h2>${item.chapter}</h2>`
+        case 'header2':
+          return `<h3>${item.chapter}</h3>`
+        case 'content':
+          return `<p>${item.chapter}</p>`
+        case 'tabulation':
+          return parseTabulation(item.chapter)
+        default:
+          return `<p>${item.chapter}</p>`
+      }
+    })
+    .join('')
+
+  return `<h1>${section.title}</h1>${body}`
+}
+
+function buildDocumentHtml(sections: Section[]): string {
+  const sorted = [...sections].sort(
+    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  )
+  return sorted.map(buildSectionHtml).join('<hr />')
+}
+
+export function ProposalSections({ sections }: ProposalSectionsProps) {
+  const html = useMemo(() => buildDocumentHtml(sections), [sections])
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: [
+      StarterKit,
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableCell,
+      TableHeader,
+    ],
+    content: html,
+    editable: false,
+  })
+
+  // Update editor content when sections change
+  useMemo(() => {
+    if (editor && !editor.isDestroyed) {
+      editor.commands.setContent(html)
+    }
+  }, [editor, html])
+
+  if (sections.length === 0) {
     return (
       <div className="border rounded-md p-8 text-center text-muted-foreground">
         No sections yet. Proposal sections will appear here after generation completes.
@@ -72,56 +126,108 @@ export function ProposalSections({ sections, onSectionsChange }: ProposalSection
     )
   }
 
-  // Get all section IDs for defaultValue (expand all by default)
-  const allSectionIds = sortedSections.map((s) => `section-${s.id}`)
+  if (!editor) {
+    return null
+  }
 
   return (
-    <Accordion type="multiple" defaultValue={allSectionIds} className="space-y-4">
-      {sortedSections.map((section, index) => (
-        <AccordionItem
-          key={section.id}
-          value={`section-${section.id}`}
-          className="border rounded-md px-4"
-        >
-          <AccordionTrigger className="hover:no-underline">
-            <div className="flex items-center justify-between w-full pr-4">
-              <span className="font-medium">{section.title}</span>
-              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={index === 0 || reordering}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleReorder(index, 'up')
-                  }}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronUp className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={index === sortedSections.length - 1 || reordering}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleReorder(index, 'down')
-                  }}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <SectionEditor
-              sectionId={section.id}
-              initialContent={section.content || ''}
-            />
-          </AccordionContent>
-        </AccordionItem>
-      ))}
-    </Accordion>
+    <div className="proposal-document-preview">
+      <div className="proposal-document-page">
+        <EditorContent
+          editor={editor}
+          className="prose prose-sm dark:prose-invert max-w-none"
+        />
+      </div>
+
+      <style jsx global>{`
+        .proposal-document-preview {
+          display: flex;
+          justify-content: center;
+        }
+
+        .proposal-document-page {
+          background: hsl(var(--background));
+          max-width: 816px;
+          width: 100%;
+          padding: 2.5rem 2.5rem;
+          box-shadow:
+            0 1px 3px rgba(0, 0, 0, 0.08),
+            0 4px 12px rgba(0, 0, 0, 0.06);
+          border: 1px solid hsl(var(--border));
+          border-radius: 4px;
+        }
+
+        .proposal-document-page .ProseMirror {
+          outline: none;
+        }
+
+        .proposal-document-page .ProseMirror h1 {
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin-top: 2rem;
+          margin-bottom: 0.75rem;
+          color: hsl(var(--foreground));
+          border-bottom: 2px solid hsl(var(--primary) / 0.2);
+          padding-bottom: 0.35rem;
+        }
+
+        .proposal-document-page .ProseMirror h1:first-child {
+          margin-top: 0;
+        }
+
+        .proposal-document-page .ProseMirror h2 {
+          font-size: 1.2rem;
+          font-weight: 700;
+          margin-top: 1.5rem;
+          margin-bottom: 0.5rem;
+          color: hsl(var(--foreground));
+        }
+
+        .proposal-document-page .ProseMirror h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          margin-top: 1rem;
+          margin-bottom: 0.25rem;
+          color: hsl(var(--muted-foreground));
+        }
+
+        .proposal-document-page .ProseMirror p {
+          margin-top: 0.4rem;
+          margin-bottom: 0.4rem;
+          line-height: 1.75;
+          color: hsl(var(--foreground));
+        }
+
+        .proposal-document-page .ProseMirror hr {
+          border: none;
+          border-top: 1px solid hsl(var(--border));
+          margin: 2rem 0;
+        }
+
+        .proposal-document-page .ProseMirror table {
+          border-collapse: collapse;
+          width: 100%;
+          margin: 1rem 0;
+          font-size: 0.875rem;
+        }
+
+        .proposal-document-page .ProseMirror table th {
+          background-color: hsl(var(--muted));
+          font-weight: 600;
+          text-align: left;
+          padding: 0.5rem 0.75rem;
+          border: 1px solid hsl(var(--border));
+        }
+
+        .proposal-document-page .ProseMirror table td {
+          padding: 0.5rem 0.75rem;
+          border: 1px solid hsl(var(--border));
+        }
+
+        .proposal-document-page .ProseMirror table tr:nth-child(even) td {
+          background-color: hsl(var(--muted) / 0.3);
+        }
+      `}</style>
+    </div>
   )
 }
