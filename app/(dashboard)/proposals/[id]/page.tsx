@@ -36,8 +36,7 @@ export default async function ProposalDetailPage({
   const { data: sections } = await supabase
     .from("proposal_sections")
     .select("*")
-    .eq("proposal_id", id)
-    .order("sort_order", { ascending: true });
+    .eq("proposal_id", id);
 
   // Fetch funder data if grant has a funder_name
   let funder = null;
