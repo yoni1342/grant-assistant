@@ -47,9 +47,10 @@ interface FunderAnalysisProps {
   grantId: string
   funderName: string | null
   funder: FunderData | null
+  embedded?: boolean
 }
 
-export function FunderAnalysis({ grantId, funderName, funder }: FunderAnalysisProps) {
+export function FunderAnalysis({ grantId, funderName, funder, embedded }: FunderAnalysisProps) {
   const [analyzing, setAnalyzing] = useState(false)
 
   const handleAnalyzeFunder = async () => {
@@ -71,206 +72,206 @@ export function FunderAnalysis({ grantId, funderName, funder }: FunderAnalysisPr
 
   // No funder name at all
   if (!funderName) {
+    const noFunderContent = (
+      <p className="text-sm text-muted-foreground text-center py-8">
+        No funder information available for this grant.
+      </p>
+    )
+
+    if (embedded) return <div>{noFunderContent}</div>
+
     return (
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Funder Analysis</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No funder information available for this grant.
-          </p>
-        </CardContent>
+        <CardContent>{noFunderContent}</CardContent>
       </Card>
     )
   }
 
   // Have funder name but no analysis data yet
   if (!funder) {
+    const noDataContent = (
+      <div className="text-center py-4 space-y-4">
+        <div className="flex items-center justify-center gap-2">
+          <Building2 className="h-5 w-5 text-muted-foreground" />
+          <p className="font-medium">{funderName}</p>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          No funder analysis yet.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAnalyzeFunder}
+          disabled={analyzing}
+        >
+          {analyzing ? 'Analyzing...' : 'Analyze Funder'}
+        </Button>
+      </div>
+    )
+
+    if (embedded) return <div>{noDataContent}</div>
+
     return (
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Funder Analysis</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-center py-4 space-y-4">
-            <div className="flex items-center justify-center gap-2">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
-              <p className="font-medium">{funderName}</p>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              No funder analysis yet.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAnalyzeFunder}
-              disabled={analyzing}
-            >
-              {analyzing ? 'Analyzing...' : 'Analyze Funder'}
-            </Button>
-          </div>
-        </CardContent>
+        <CardContent className="space-y-4">{noDataContent}</CardContent>
       </Card>
     )
   }
 
-  // Have funder data - display it
-  return (
+  // Have funder data - display the details
+  const funderDetails = (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Funder Analysis</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Funder Header */}
-          <div className="space-y-1">
-            <h3 className="font-semibold text-lg">{funder.name}</h3>
-            {funder.ein && (
-              <p className="text-sm text-muted-foreground">EIN: {funder.ein}</p>
+      {/* Funder Header */}
+      <div className="space-y-1">
+        <h3 className="font-semibold text-lg">{funder.name}</h3>
+        {funder.ein && (
+          <p className="text-sm text-muted-foreground">EIN: {funder.ein}</p>
+        )}
+      </div>
+
+      {/* Strategy Brief */}
+      {funder.strategy_brief && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">Strategy Brief</h4>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {funder.strategy_brief}
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Giving Patterns */}
+      {funder.giving_patterns && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">Giving Patterns</h4>
+            <div className="space-y-2">
+              {funder.giving_patterns.focus_areas && funder.giving_patterns.focus_areas.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Focus Areas</p>
+                  <div className="flex flex-wrap gap-1">
+                    {funder.giving_patterns.focus_areas.map((area, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs">
+                        {area}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {funder.giving_patterns.avg_grant_size && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Avg Grant Size:</span>{' '}
+                  <span className="font-medium">{formatCurrency(funder.giving_patterns.avg_grant_size)}</span>
+                </div>
+              )}
+              {funder.giving_patterns.total_giving && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Total Giving:</span>{' '}
+                  <span className="font-medium">{formatCurrency(funder.giving_patterns.total_giving)}</span>
+                </div>
+              )}
+              {funder.giving_patterns.geographic_focus && funder.giving_patterns.geographic_focus.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Geographic Focus</p>
+                  <div className="flex flex-wrap gap-1">
+                    {funder.giving_patterns.geographic_focus.map((geo, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {geo}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Priorities */}
+      {funder.priorities && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">Priorities</h4>
+            {funder.priorities.current && funder.priorities.current.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Current</p>
+                <ul className="list-disc list-inside text-sm space-y-0.5">
+                  {funder.priorities.current.map((priority, idx) => (
+                    <li key={idx}>{priority}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {funder.priorities.emerging && funder.priorities.emerging.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Emerging</p>
+                <ul className="list-disc list-inside text-sm space-y-0.5">
+                  {funder.priorities.emerging.map((priority, idx) => (
+                    <li key={idx}>{priority}</li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
+        </>
+      )}
 
-          {/* Strategy Brief */}
-          {funder.strategy_brief && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Strategy Brief</h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {funder.strategy_brief}
-                </p>
-              </div>
-            </>
-          )}
-
-          {/* Giving Patterns */}
-          {funder.giving_patterns && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Giving Patterns</h4>
-                <div className="space-y-2">
-                  {funder.giving_patterns.focus_areas && funder.giving_patterns.focus_areas.length > 0 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Focus Areas</p>
-                      <div className="flex flex-wrap gap-1">
-                        {funder.giving_patterns.focus_areas.map((area, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
-                            {area}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {funder.giving_patterns.avg_grant_size && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Avg Grant Size:</span>{' '}
-                      <span className="font-medium">{formatCurrency(funder.giving_patterns.avg_grant_size)}</span>
-                    </div>
-                  )}
-                  {funder.giving_patterns.total_giving && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Total Giving:</span>{' '}
-                      <span className="font-medium">{formatCurrency(funder.giving_patterns.total_giving)}</span>
-                    </div>
-                  )}
-                  {funder.giving_patterns.geographic_focus && funder.giving_patterns.geographic_focus.length > 0 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Geographic Focus</p>
-                      <div className="flex flex-wrap gap-1">
-                        {funder.giving_patterns.geographic_focus.map((geo, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {geo}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+      {/* Submission Preferences */}
+      {funder.submission_preferences && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">Submission Preferences</h4>
+            <div className="space-y-2 text-sm">
+              {funder.submission_preferences.format && (
+                <div>
+                  <span className="text-muted-foreground">Format:</span>{' '}
+                  {funder.submission_preferences.format}
                 </div>
-              </div>
-            </>
-          )}
-
-          {/* Priorities */}
-          {funder.priorities && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Priorities</h4>
-                {funder.priorities.current && funder.priorities.current.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Current</p>
-                    <ul className="list-disc list-inside text-sm space-y-0.5">
-                      {funder.priorities.current.map((priority, idx) => (
-                        <li key={idx}>{priority}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {funder.priorities.emerging && funder.priorities.emerging.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Emerging</p>
-                    <ul className="list-disc list-inside text-sm space-y-0.5">
-                      {funder.priorities.emerging.map((priority, idx) => (
-                        <li key={idx}>{priority}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-        {/* Submission Preferences */}
-          {funder.submission_preferences && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Submission Preferences</h4>
-                <div className="space-y-2 text-sm">
-                  {funder.submission_preferences.format && (
-                    <div>
-                      <span className="text-muted-foreground">Format:</span>{' '}
-                      {funder.submission_preferences.format}
-                    </div>
-                  )}
-                  {funder.submission_preferences.timeline && (
-                    <div>
-                      <span className="text-muted-foreground">Timeline:</span>{' '}
-                      {funder.submission_preferences.timeline}
-                    </div>
-                  )}
-                  {funder.submission_preferences.contact && (
-                    <div>
-                      <span className="text-muted-foreground">Contact:</span>{' '}
-                      {funder.submission_preferences.contact}
-                    </div>
-                  )}
-                  {funder.submission_preferences.tips && funder.submission_preferences.tips.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-muted-foreground">Tips:</p>
-                      <ul className="list-disc list-inside space-y-0.5">
-                        {funder.submission_preferences.tips.map((tip, idx) => (
-                          <li key={idx}>{tip}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+              )}
+              {funder.submission_preferences.timeline && (
+                <div>
+                  <span className="text-muted-foreground">Timeline:</span>{' '}
+                  {funder.submission_preferences.timeline}
                 </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+              )}
+              {funder.submission_preferences.contact && (
+                <div>
+                  <span className="text-muted-foreground">Contact:</span>{' '}
+                  {funder.submission_preferences.contact}
+                </div>
+              )}
+              {funder.submission_preferences.tips && funder.submission_preferences.tips.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">Tips:</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {funder.submission_preferences.tips.map((tip, idx) => (
+                      <li key={idx}>{tip}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ProPublica 990 Data */}
       {funder.propublica_data && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">ProPublica 990 Data</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">ProPublica 990 Data</h4>
             {funder.propublica_data.name && (
               <div className="text-sm">
                 <span className="text-muted-foreground">Organization:</span>{' '}
@@ -320,9 +321,20 @@ export function FunderAnalysis({ grantId, funderName, funder }: FunderAnalysisPr
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </>
       )}
     </div>
+  )
+
+  if (embedded) return funderDetails
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Funder Analysis</CardTitle>
+      </CardHeader>
+      <CardContent>{funderDetails}</CardContent>
+    </Card>
   )
 }

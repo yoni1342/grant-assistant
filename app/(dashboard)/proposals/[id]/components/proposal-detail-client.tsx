@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ArrowLeft, ClipboardCheck, Building2 } from "lucide-react"
 import Link from "next/link"
 import { ProposalSections } from "./proposal-sections"
 import { QualityReview } from "./quality-review"
@@ -104,40 +105,76 @@ export function ProposalDetailClient({
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column: Proposal content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Header */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold">{proposal.title || 'Untitled Proposal'}</h1>
-              <Badge variant={getStatusColor(proposal.status)}>
-                {proposal.status || 'draft'}
-              </Badge>
-            </div>
-            <p className="text-muted-foreground">
-              For: {grant?.title || 'Unknown Grant'}
-            </p>
-          </div>
-
-          {/* Sections */}
-          <ProposalSections sections={sections} />
+      {/* Header */}
+      <div className="space-y-2 mb-6">
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold">{proposal.title || 'Untitled Proposal'}</h1>
+          <Badge variant={getStatusColor(proposal.status)}>
+            {proposal.status || 'draft'}
+          </Badge>
         </div>
+        <div className="flex items-center gap-3">
+          <p className="text-muted-foreground">
+            For: {grant?.title || 'Unknown Grant'}
+          </p>
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Quality Review Dialog */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <ClipboardCheck className="h-4 w-4" />
+                  Quality Review
+                  {proposal.quality_score != null && (
+                    <Badge variant={proposal.quality_score >= 80 ? 'default' : proposal.quality_score >= 60 ? 'secondary' : 'destructive'} className="ml-1 text-xs">
+                      {proposal.quality_score}
+                    </Badge>
+                  )}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Quality Review</DialogTitle>
+                </DialogHeader>
+                <QualityReview
+                  proposalId={proposal.id}
+                  qualityScore={proposal.quality_score}
+                  qualityReview={proposal.quality_review}
+                  embedded
+                />
+              </DialogContent>
+            </Dialog>
 
-        {/* Right column: Quality review and funder analysis */}
-        <div className="space-y-6">
-          <QualityReview
-            proposalId={proposal.id}
-            qualityScore={proposal.quality_score}
-            qualityReview={proposal.quality_review}
-          />
-          <FunderAnalysis
-            grantId={grant?.id}
-            funderName={grant?.funder_name}
-            funder={funder}
-          />
+            {/* Funder Analysis Dialog */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Funder Analysis
+                  {funder && (
+                    <Badge variant="secondary" className="ml-1 text-xs">
+                      Available
+                    </Badge>
+                  )}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Funder Analysis</DialogTitle>
+                </DialogHeader>
+                <FunderAnalysis
+                  grantId={grant?.id}
+                  funderName={grant?.funder_name}
+                  funder={funder}
+                  embedded
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
+
+      {/* Sections */}
+      <ProposalSections sections={sections} />
     </div>
   )
 }
