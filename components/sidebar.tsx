@@ -14,6 +14,7 @@ import {
   DollarSign,
   Send,
   Trophy,
+  Settings,
   LogOut,
   ChevronLeft,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/budgets", label: "Budgets", icon: DollarSign },
   // { href: "/submissions", label: "Submissions", icon: Send },
   // { href: "/awards", label: "Awards", icon: Trophy },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Sidebar({ user }: { user: User }) {
