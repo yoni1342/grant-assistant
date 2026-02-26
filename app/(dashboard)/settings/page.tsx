@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { SettingsClient } from "./components/settings-client"
+import type { Tables } from "@/lib/supabase/database.types"
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -7,18 +9,46 @@ export default async function SettingsPage() {
 
   if (!user) redirect("/login")
 
-  return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="space-y-2 mb-8">
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account and application preferences.
-        </p>
-      </div>
+  // Fetch profile with joined organization
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*, organization:organizations(*)")
+    .eq("id", user.id)
+    .single()
 
-      <div className="rounded-lg border p-8 text-center text-muted-foreground">
-        <p>Settings page coming soon.</p>
-      </div>
-    </div>
+  if (!profile) redirect("/login")
+
+  // Fetch team members for same org
+  let members: typeof profile[] = []
+  if (profile.org_id) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*, organization:organizations(*)")
+      .eq("org_id", profile.org_id)
+      .order("created_at", { ascending: true })
+    members = data || []
+  }
+
+  // Fetch recent workflow executions
+  let workflows: Tables<"workflow_executions">[] = []
+  if (profile.org_id) {
+    const { data } = await supabase
+      .from("workflow_executions")
+      .select("*")
+      .eq("org_id", profile.org_id)
+      .order("created_at", { ascending: false })
+      .limit(50)
+    workflows = data || []
+  }
+
+  return (
+    <SettingsClient
+      data={{
+        user,
+        profile: profile as any,
+        members: members as any,
+        workflows,
+      }}
+    />
   )
 }

@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
   public: {
     Tables: {
       activity_log: {
@@ -214,43 +219,73 @@ export type Database = {
           ai_category: string | null
           category: string | null
           created_at: string | null
-          file_path: string
+          description: string | null
+          embedding: string | null
+          extracted_text: string | null
+          extraction_status: string | null
+          file_path: string | null
           file_size: number | null
           file_type: string | null
           grant_id: string | null
           id: string
           metadata: Json | null
-          name: string
+          mime_type: string | null
+          name: string | null
           org_id: string
+          source_file_id: string | null
+          source_url: string | null
+          status: string | null
+          title: string | null
           updated_at: string | null
+          version: number | null
         }
         Insert: {
           ai_category?: string | null
           category?: string | null
           created_at?: string | null
-          file_path: string
+          description?: string | null
+          embedding?: string | null
+          extracted_text?: string | null
+          extraction_status?: string | null
+          file_path?: string | null
           file_size?: number | null
           file_type?: string | null
           grant_id?: string | null
           id?: string
           metadata?: Json | null
-          name: string
+          mime_type?: string | null
+          name?: string | null
           org_id: string
+          source_file_id?: string | null
+          source_url?: string | null
+          status?: string | null
+          title?: string | null
           updated_at?: string | null
+          version?: number | null
         }
         Update: {
           ai_category?: string | null
           category?: string | null
           created_at?: string | null
-          file_path?: string
+          description?: string | null
+          embedding?: string | null
+          extracted_text?: string | null
+          extraction_status?: string | null
+          file_path?: string | null
           file_size?: number | null
           file_type?: string | null
           grant_id?: string | null
           id?: string
           metadata?: Json | null
-          name?: string
+          mime_type?: string | null
+          name?: string | null
           org_id?: string
+          source_file_id?: string | null
+          source_url?: string | null
+          status?: string | null
+          title?: string | null
           updated_at?: string | null
+          version?: number | null
         }
         Relationships: [
           {
@@ -324,18 +359,21 @@ export type Database = {
       }
       grants: {
         Row: {
-          amount: number | null
+          amount: string | null
+          categories: Json | null
+          concerns: string[] | null
           created_at: string | null
           deadline: string | null
           description: string | null
+          eligibility: Json | null
           funder_name: string | null
           id: string
           metadata: Json | null
           org_id: string
+          organization: string | null
+          recommendations: Json | null
           screening_notes: string | null
-          screening_result:
-            | Database["public"]["Enums"]["screening_result"]
-            | null
+          screening_score: number | null
           source: string | null
           source_id: string | null
           source_url: string | null
@@ -344,18 +382,21 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          amount?: number | null
+          amount?: string | null
+          categories?: Json | null
+          concerns?: string[] | null
           created_at?: string | null
           deadline?: string | null
           description?: string | null
+          eligibility?: Json | null
           funder_name?: string | null
           id?: string
           metadata?: Json | null
           org_id: string
+          organization?: string | null
+          recommendations?: Json | null
           screening_notes?: string | null
-          screening_result?:
-            | Database["public"]["Enums"]["screening_result"]
-            | null
+          screening_score?: number | null
           source?: string | null
           source_id?: string | null
           source_url?: string | null
@@ -364,18 +405,21 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          amount?: number | null
+          amount?: string | null
+          categories?: Json | null
+          concerns?: string[] | null
           created_at?: string | null
           deadline?: string | null
           description?: string | null
+          eligibility?: Json | null
           funder_name?: string | null
           id?: string
           metadata?: Json | null
           org_id?: string
+          organization?: string | null
+          recommendations?: Json | null
           screening_notes?: string | null
-          screening_result?:
-            | Database["public"]["Enums"]["screening_result"]
-            | null
+          screening_score?: number | null
           source?: string | null
           source_id?: string | null
           source_url?: string | null
@@ -398,6 +442,7 @@ export type Database = {
           category: Database["public"]["Enums"]["narrative_category"] | null
           content: string
           created_at: string | null
+          embedding: string | null
           id: string
           metadata: Json | null
           org_id: string
@@ -409,6 +454,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["narrative_category"] | null
           content: string
           created_at?: string | null
+          embedding?: string | null
           id?: string
           metadata?: Json | null
           org_id: string
@@ -420,6 +466,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["narrative_category"] | null
           content?: string
           created_at?: string | null
+          embedding?: string | null
           id?: string
           metadata?: Json | null
           org_id?: string
@@ -439,22 +486,49 @@ export type Database = {
       }
       organizations: {
         Row: {
+          address: string | null
           created_at: string | null
+          description: string | null
+          ein: string | null
+          email: string | null
+          founding_year: number | null
           id: string
+          mission: string | null
           name: string
+          phone: string | null
+          sector: string | null
           updated_at: string | null
+          website: string | null
         }
         Insert: {
+          address?: string | null
           created_at?: string | null
+          description?: string | null
+          ein?: string | null
+          email?: string | null
+          founding_year?: number | null
           id?: string
+          mission?: string | null
           name: string
+          phone?: string | null
+          sector?: string | null
           updated_at?: string | null
+          website?: string | null
         }
         Update: {
+          address?: string | null
           created_at?: string | null
+          description?: string | null
+          ein?: string | null
+          email?: string | null
+          founding_year?: number | null
           id?: string
+          mission?: string | null
           name?: string
+          phone?: string | null
+          sector?: string | null
           updated_at?: string | null
+          website?: string | null
         }
         Relationships: []
       }
@@ -466,6 +540,7 @@ export type Database = {
           full_name: string | null
           id: string
           org_id: string | null
+          preferences: Json | null
           role: string | null
           updated_at: string | null
         }
@@ -476,6 +551,7 @@ export type Database = {
           full_name?: string | null
           id: string
           org_id?: string | null
+          preferences?: Json | null
           role?: string | null
           updated_at?: string | null
         }
@@ -486,6 +562,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           org_id?: string | null
+          preferences?: Json | null
           role?: string | null
           updated_at?: string | null
         }
@@ -501,7 +578,7 @@ export type Database = {
       }
       proposal_sections: {
         Row: {
-          content: string | null
+          content: Json | null
           created_at: string | null
           id: string
           proposal_id: string
@@ -510,7 +587,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          content?: string | null
+          content?: Json | null
           created_at?: string | null
           id?: string
           proposal_id: string
@@ -519,7 +596,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          content?: string | null
+          content?: Json | null
           created_at?: string | null
           id?: string
           proposal_id?: string
@@ -858,7 +935,6 @@ export type Database = {
         | "budget_narrative"
         | "other"
       report_type: "interim" | "final"
-      screening_result: "green" | "yellow" | "red"
       submission_method: "auto" | "manual"
       workflow_status: "pending" | "running" | "completed" | "failed"
     }
@@ -868,23 +944,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof Database
+  schema: keyof DatabaseWithoutInternals
 }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -902,16 +980,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof Database
+  schema: keyof DatabaseWithoutInternals
 }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -927,16 +1005,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof Database
+  schema: keyof DatabaseWithoutInternals
 }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -952,16 +1030,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof Database
+  schema: keyof DatabaseWithoutInternals
 }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never

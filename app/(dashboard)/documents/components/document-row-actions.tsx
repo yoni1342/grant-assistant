@@ -20,6 +20,7 @@ export function DocumentRowActions({ document }: DocumentRowActionsProps) {
   const [isLoading, setIsLoading] = useState(false)
 
   async function handleDownload() {
+    if (!document.file_path) return
     setIsLoading(true)
     try {
       const { url, error } = await getDownloadUrl(document.file_path)
