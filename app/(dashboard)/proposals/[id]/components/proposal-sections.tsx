@@ -636,7 +636,7 @@ const viewerStyles = `
     bottom: 24px;
     right: 28px;
     font-size: 0.7rem;
-    color: hsl(var(--muted-foreground) / 0.5);
+    color: #999;
     letter-spacing: 0.02em;
     pointer-events: none;
   }
@@ -648,12 +648,13 @@ const viewerStyles = `
   }
 
   /* ── Typography ── */
+  /* Force dark text on white pages regardless of theme */
   .doc-page-content h1 {
     font-size: 1.45rem;
     font-weight: 700;
     margin: 1.5rem 0 0.5rem 0;
-    color: hsl(var(--foreground));
-    border-bottom: 2px solid hsl(var(--primary) / 0.15);
+    color: #1a1a1a;
+    border-bottom: 2px solid #e5e5e5;
     padding-bottom: 0.4rem;
     line-height: 1.3;
   }
@@ -665,7 +666,7 @@ const viewerStyles = `
     font-size: 1.15rem;
     font-weight: 700;
     margin: 1rem 0 0.2rem 0;
-    color: hsl(var(--foreground));
+    color: #1a1a1a;
     line-height: 1.35;
   }
 
@@ -673,7 +674,7 @@ const viewerStyles = `
     font-size: 0.95rem;
     font-weight: 600;
     margin: 0.6rem 0 0.1rem 0;
-    color: hsl(var(--muted-foreground));
+    color: #555;
     line-height: 1.4;
   }
 
@@ -681,7 +682,7 @@ const viewerStyles = `
     font-size: 0.875rem;
     margin: 0.25rem 0;
     line-height: 1.85;
-    color: hsl(var(--foreground));
+    color: #1a1a1a;
   }
 
   /* ── Tables ── */
@@ -693,22 +694,22 @@ const viewerStyles = `
   }
 
   .doc-page-content table th {
-    background-color: hsl(var(--muted));
+    background-color: #f5f5f5;
     font-weight: 600;
     text-align: left;
     padding: 0.5rem 0.75rem;
-    border: 1px solid hsl(var(--border));
-    color: hsl(var(--foreground));
+    border: 1px solid #e0e0e0;
+    color: #1a1a1a;
   }
 
   .doc-page-content table td {
     padding: 0.45rem 0.75rem;
-    border: 1px solid hsl(var(--border));
-    color: hsl(var(--foreground));
+    border: 1px solid #e0e0e0;
+    color: #1a1a1a;
   }
 
   .doc-page-content table tr:nth-child(even) td {
-    background-color: hsl(var(--muted) / 0.25);
+    background-color: #fafafa;
   }
 
   /* ── Editable Elements ── */
