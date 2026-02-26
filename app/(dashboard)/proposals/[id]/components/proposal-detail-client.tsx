@@ -174,7 +174,7 @@ export function ProposalDetailClient({
       </div>
 
       {/* Sections */}
-      <ProposalSections sections={sections} />
+      <ProposalSections sections={sections} proposalId={proposal.id} />
     </div>
   )
 }

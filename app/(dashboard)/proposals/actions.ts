@@ -65,7 +65,6 @@ export async function getProposal(proposalId: string) {
     .from('proposal_sections')
     .select('*')
     .eq('proposal_id', proposalId)
-    .order('sort_order', { ascending: true })
 
   if (sectionsError) {
     return { error: sectionsError.message, data: null }
@@ -272,51 +271,52 @@ export async function triggerFunderAnalysis(
   return { success: true, workflowId: workflow.id }
 }
 
-export async function updateProposalSection(sectionId: string, content: string) {
-  const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated' }
-  }
-
-  const { error } = await supabase
-    .from('proposal_sections')
-    .update({ content })
-    .eq('id', sectionId)
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  // No revalidatePath - called from debounced autosave
-  return { success: true }
-}
-
-export async function reorderSections(
-  sectionUpdates: Array<{ id: string; sort_order: number }>
+export async function updateProposalSections(
+  proposalId: string,
+  sections: {
+    id: string
+    title: string
+    content: { chapter: string; sort_order: number }[] | null
+    header1: { chapter: string; sort_order: number }[] | null
+    header2: { chapter: string; sort_order: number }[] | null
+    tabulation: { chapter: string; sort_order: number }[] | null
+  }[],
+  proposalTitle?: string
 ) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated' }
+  if (!user) return { error: 'Not authenticated' }
+
+  // Update proposal title if provided (from cover page edit)
+  if (proposalTitle) {
+    const { error } = await supabase
+      .from('proposals')
+      .update({ title: proposalTitle })
+      .eq('id', proposalId)
+
+    if (error) return { error: error.message }
   }
 
-  // Update each section's sort_order
-  for (const update of sectionUpdates) {
+  for (const section of sections) {
     const { error } = await supabase
       .from('proposal_sections')
-      .update({ sort_order: update.sort_order })
-      .eq('id', update.id)
+      .update({
+        title: section.title,
+        content: section.content,
+        header1: section.header1,
+        header2: section.header2,
+        tabulation: section.tabulation,
+      })
+      .eq('id', section.id)
+      .eq('proposal_id', proposalId)
 
-    if (error) {
-      return { error: error.message }
-    }
+    if (error) return { error: error.message }
   }
 
-  revalidatePath('/proposals')
-  return { success: true }
+  revalidatePath(`/proposals/${proposalId}`)
+  return { success: true, error: null }
 }
 
 export async function getFunder(grantId: string) {

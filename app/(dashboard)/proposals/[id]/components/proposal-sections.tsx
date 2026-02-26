@@ -1,6 +1,9 @@
 'use client'
 
 import { useMemo, useState, useLayoutEffect, useRef, useCallback, useEffect } from 'react'
+import { Button } from "@/components/ui/button"
+import { Pencil, Save, RotateCcw, Loader2 } from "lucide-react"
+import { updateProposalSections } from '../../actions'
 
 interface ChapterItem {
   chapter: string
@@ -19,6 +22,7 @@ interface Section {
 
 interface ProposalSectionsProps {
   sections: Section[]
+  proposalId: string
 }
 
 // A4 page content area: 1123px total − 96px top pad − 100px bottom pad
@@ -65,18 +69,86 @@ function buildSectionHtml(section: Section): string {
 
   return tagged
     .map((item) => {
+      const attrs = `data-section-id="${section.id}" data-type="${item.type}" data-sort-order="${item.sort_order}"`
       switch (item.type) {
-        case 'header1': return `<h2>${item.chapter}</h2>`
-        case 'header2': return `<h3>${item.chapter}</h3>`
-        case 'content': return `<p>${item.chapter}</p>`
-        case 'tabulation': return parseTabulation(item.chapter)
-        default: return `<p>${item.chapter}</p>`
+        case 'header1': return `<h2 ${attrs}>${item.chapter}</h2>`
+        case 'header2': return `<h3 ${attrs}>${item.chapter}</h3>`
+        case 'content': return `<p ${attrs}>${item.chapter}</p>`
+        case 'tabulation': return `<div ${attrs}>${parseTabulation(item.chapter)}</div>`
+        default: return `<p ${attrs}>${item.chapter}</p>`
       }
     })
     .join('')
 }
 
-export function ProposalSections({ sections }: ProposalSectionsProps) {
+function extractEditedSections(
+  container: HTMLDivElement,
+  originalSections: Section[]
+): { id: string; title: string; content: ChapterItem[] | null; header1: ChapterItem[] | null; header2: ChapterItem[] | null; tabulation: ChapterItem[] | null }[] {
+  const sectionMap = new Map<string, {
+    title: string
+    content: ChapterItem[]
+    header1: ChapterItem[]
+    header2: ChapterItem[]
+    tabulation: ChapterItem[]
+  }>()
+
+  for (const s of originalSections) {
+    sectionMap.set(s.id, {
+      title: s.title,
+      content: [],
+      header1: [],
+      header2: [],
+      tabulation: [],
+    })
+  }
+
+  const elements = container.querySelectorAll('[data-section-id]')
+
+  for (const el of elements) {
+    const sectionId = el.getAttribute('data-section-id')
+    const type = el.getAttribute('data-type')
+    const sortOrder = parseInt(el.getAttribute('data-sort-order') || '0', 10)
+
+    if (!sectionId || !type) continue
+
+    if (!sectionMap.has(sectionId)) {
+      sectionMap.set(sectionId, { title: '', content: [], header1: [], header2: [], tabulation: [] })
+    }
+
+    const section = sectionMap.get(sectionId)!
+
+    if (type === 'title') {
+      section.title = el.textContent?.trim() || section.title
+    } else if (type === 'tabulation') {
+      const table = el.querySelector('table')
+      if (table) {
+        const rows = Array.from(table.rows)
+        const pipeText = rows
+          .map(row => Array.from(row.cells).map(cell => cell.textContent?.trim() || '').join(' | '))
+          .join('\n')
+        section.tabulation.push({ chapter: pipeText, sort_order: sortOrder })
+      }
+    } else if (type === 'content') {
+      section.content.push({ chapter: el.textContent?.trim() || '', sort_order: sortOrder })
+    } else if (type === 'header1') {
+      section.header1.push({ chapter: el.textContent?.trim() || '', sort_order: sortOrder })
+    } else if (type === 'header2') {
+      section.header2.push({ chapter: el.textContent?.trim() || '', sort_order: sortOrder })
+    }
+  }
+
+  return Array.from(sectionMap.entries()).map(([id, data]) => ({
+    id,
+    title: data.title,
+    content: data.content.length > 0 ? data.content : null,
+    header1: data.header1.length > 0 ? data.header1 : null,
+    header2: data.header2.length > 0 ? data.header2 : null,
+    tabulation: data.tabulation.length > 0 ? data.tabulation : null,
+  }))
+}
+
+export function ProposalSections({ sections, proposalId }: ProposalSectionsProps) {
   const measureRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -84,6 +156,9 @@ export function ProposalSections({ sections }: ProposalSectionsProps) {
   const thumbRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
   const [contentPages, setContentPages] = useState<string[][]>([])
   const [activePage, setActivePage] = useState(0)
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [renderKey, setRenderKey] = useState(0)
 
   const { standalonePages, contentItems } = useMemo(() => {
     if (sections.length === 0) return { standalonePages: [] as string[], contentItems: [] as string[] }
@@ -99,13 +174,16 @@ export function ProposalSections({ sections }: ProposalSectionsProps) {
       if (/^\d+\./.test(section.title)) {
         contentSections.push(section)
       } else {
-        standalonePages.push(`<h1>${section.title}</h1>` + buildSectionHtml(section))
+        standalonePages.push(
+          `<h1 data-section-id="${section.id}" data-type="title">${section.title}</h1>` +
+          buildSectionHtml(section)
+        )
       }
     }
 
     const contentItems: string[] = []
     for (const section of contentSections) {
-      contentItems.push(`<h1>${section.title}</h1>`)
+      contentItems.push(`<h1 data-section-id="${section.id}" data-type="title">${section.title}</h1>`)
 
       type TaggedItem = ChapterItem & { type: 'header1' | 'header2' | 'content' | 'tabulation' }
       const tagged: TaggedItem[] = []
@@ -120,11 +198,12 @@ export function ProposalSections({ sections }: ProposalSectionsProps) {
       tagged.sort((a, b) => a.sort_order - b.sort_order)
 
       for (const item of tagged) {
+        const attrs = `data-section-id="${section.id}" data-type="${item.type}" data-sort-order="${item.sort_order}"`
         switch (item.type) {
-          case 'header1': contentItems.push(`<h2>${item.chapter}</h2>`); break
-          case 'header2': contentItems.push(`<h3>${item.chapter}</h3>`); break
-          case 'content': contentItems.push(`<p>${item.chapter}</p>`); break
-          case 'tabulation': contentItems.push(parseTabulation(item.chapter)); break
+          case 'header1': contentItems.push(`<h2 ${attrs}>${item.chapter}</h2>`); break
+          case 'header2': contentItems.push(`<h3 ${attrs}>${item.chapter}</h3>`); break
+          case 'content': contentItems.push(`<p ${attrs}>${item.chapter}</p>`); break
+          case 'tabulation': contentItems.push(`<div ${attrs}>${parseTabulation(item.chapter)}</div>`); break
         }
       }
     }
@@ -183,7 +262,6 @@ export function ProposalSections({ sections }: ProposalSectionsProps) {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        // Find the entry with the highest intersection ratio
         let bestIdx = activePage
         let bestRatio = 0
         for (const entry of entries) {
@@ -245,15 +323,72 @@ export function ProposalSections({ sections }: ProposalSectionsProps) {
     return pages
   }, [standalonePages, contentPages])
 
+  // Toggle contenteditable on elements when edit mode changes
+  useEffect(() => {
+    if (!contentRef.current) return
+    const elements = contentRef.current.querySelectorAll('[data-section-id]')
+    elements.forEach(el => {
+      const type = el.getAttribute('data-type')
+      if (isEditing) {
+        if (type === 'tabulation') {
+          el.querySelectorAll('td, th').forEach(cell => {
+            cell.setAttribute('contenteditable', 'true')
+          })
+        } else {
+          el.setAttribute('contenteditable', 'true')
+        }
+      } else {
+        el.removeAttribute('contenteditable')
+        if (type === 'tabulation') {
+          el.querySelectorAll('td, th').forEach(cell => {
+            cell.removeAttribute('contenteditable')
+          })
+        }
+      }
+    })
+  }, [isEditing, allPages, renderKey])
+
+  const handleEdit = () => {
+    setIsEditing(true)
+  }
+
+  const handleReset = () => {
+    setRenderKey(k => k + 1)
+    setIsEditing(false)
+  }
+
+  const handleSave = async () => {
+    if (!contentRef.current) return
+    setIsSaving(true)
+    try {
+      const updated = extractEditedSections(contentRef.current, sections)
+
+      // Find the cover page title (first non-numbered section) to update proposals table
+      const coverSection = updated.find(s => !/^\d+\./.test(s.title))
+      const proposalTitle = coverSection?.title || undefined
+
+      const result = await updateProposalSections(proposalId, updated, proposalTitle)
+      if (result.error) {
+        console.error('Save failed:', result.error)
+      }
+      setIsEditing(false)
+      window.location.reload()
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   if (sections.length === 0) {
     return (
-      <div className="pdf-browser">
-        <div className="pdf-content">
-          <div className="doc-page">
-            <div className="doc-page-content">
-              <p style={{ textAlign: 'center', color: 'hsl(var(--muted-foreground))' }}>
-                No sections yet. Proposal sections will appear here after generation completes.
-              </p>
+      <div>
+        <div className="pdf-browser">
+          <div className="pdf-content">
+            <div className="doc-page">
+              <div className="doc-page-content">
+                <p style={{ textAlign: 'center', color: 'hsl(var(--muted-foreground))' }}>
+                  No sections yet. Proposal sections will appear here after generation completes.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -263,62 +398,95 @@ export function ProposalSections({ sections }: ProposalSectionsProps) {
   }
 
   return (
-    <div className="pdf-browser">
-      {/* Hidden measuring container */}
-      <div
-        ref={measureRef}
-        className="doc-page-content"
-        style={{
-          position: 'absolute',
-          visibility: 'hidden',
-          width: '650px',
-          left: '-9999px',
-        }}
-        dangerouslySetInnerHTML={{ __html: contentItems.join('') }}
-      />
+    <div>
+      {/* Editing mode banner */}
+      {isEditing && (
+        <div className="flex items-center gap-2 px-4 py-2.5 mb-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <Pencil className="h-4 w-4 text-amber-600 shrink-0" />
+          <span className="text-sm font-medium text-amber-800">Editing Mode</span>
+          <span className="text-sm text-amber-600">— Click on any text to edit. Save when done or Reset to discard changes.</span>
+        </div>
+      )}
 
-      {/* Left sidebar — Thumbnail navigation */}
-      <div className="pdf-sidebar" ref={sidebarRef}>
-        {allPages.map((html, i) => (
-          <button
-            key={i}
-            ref={(el) => setThumbRef(i, el)}
-            className={`pdf-thumb${activePage === i ? ' pdf-thumb-active' : ''}`}
-            onClick={() => scrollToPage(i)}
-            aria-label={`Go to page ${i + 1}`}
-          >
-            <div className="pdf-thumb-page">
+      <div className="pdf-browser">
+        {/* Edit / Save / Reset buttons */}
+        <div className="pdf-toolbar">
+          {isEditing ? (
+            <>
+              <Button size="sm" variant="outline" onClick={handleReset} disabled={isSaving}>
+                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                Reset
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                {isSaving ? 'Saving...' : 'Save'}
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant="outline" onClick={handleEdit}>
+              <Pencil className="h-3.5 w-3.5 mr-1.5" />
+              Edit
+            </Button>
+          )}
+        </div>
+
+        {/* Hidden measuring container */}
+        <div
+          ref={measureRef}
+          className="doc-page-content"
+          style={{
+            position: 'absolute',
+            visibility: 'hidden',
+            width: '650px',
+            left: '-9999px',
+          }}
+          dangerouslySetInnerHTML={{ __html: contentItems.join('') }}
+        />
+
+        {/* Left sidebar — Thumbnail navigation */}
+        <div className="pdf-sidebar" ref={sidebarRef}>
+          {allPages.map((html, i) => (
+            <button
+              key={i}
+              ref={(el) => setThumbRef(i, el)}
+              className={`pdf-thumb${activePage === i ? ' pdf-thumb-active' : ''}`}
+              onClick={() => scrollToPage(i)}
+              aria-label={`Go to page ${i + 1}`}
+            >
+              <div className="pdf-thumb-page">
+                <div
+                  className="doc-page-content pdf-thumb-content"
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
+              </div>
+              <span className="pdf-thumb-label">{i + 1}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Main content area */}
+        <div className="pdf-content" ref={contentRef} key={renderKey}>
+          {allPages.map((html, i) => (
+            <div
+              key={i}
+              ref={(el) => setPageRef(i, el)}
+              data-page-idx={i}
+              className="doc-page"
+            >
+              <div className="doc-page-number">
+                Page {i + 1} of {totalPages}
+              </div>
               <div
-                className="doc-page-content pdf-thumb-content"
+                className="doc-page-content"
+                suppressContentEditableWarning
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             </div>
-            <span className="pdf-thumb-label">{i + 1}</span>
-          </button>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Main content area */}
-      <div className="pdf-content" ref={contentRef}>
-        {allPages.map((html, i) => (
-          <div
-            key={i}
-            ref={(el) => setPageRef(i, el)}
-            data-page-idx={i}
-            className="doc-page"
-          >
-            <div className="doc-page-number">
-              Page {i + 1} of {totalPages}
-            </div>
-            <div
-              className="doc-page-content"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          </div>
-        ))}
+        <style jsx global>{viewerStyles}</style>
       </div>
-
-      <style jsx global>{viewerStyles}</style>
     </div>
   )
 }
@@ -332,6 +500,18 @@ const viewerStyles = `
     overflow: hidden;
     height: 82vh;
     background: hsl(0 0% 92%);
+    position: relative;
+  }
+
+  /* ── Toolbar ── */
+  .pdf-toolbar {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   /* ── Sidebar ── */
@@ -530,5 +710,22 @@ const viewerStyles = `
 
   .doc-page-content table tr:nth-child(even) td {
     background-color: hsl(var(--muted) / 0.25);
+  }
+
+  /* ── Editable Elements ── */
+  .doc-page-content [contenteditable="true"] {
+    outline: none;
+    cursor: text;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+    border-radius: 2px;
+  }
+
+  .doc-page-content [contenteditable="true"]:hover:not(:focus) {
+    background: hsl(45 100% 97%);
+  }
+
+  .doc-page-content [contenteditable="true"]:focus {
+    background: hsl(45 100% 95%);
+    box-shadow: inset 0 0 0 1px hsl(45 80% 70%);
   }
 `
