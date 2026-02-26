@@ -14,6 +14,7 @@ interface Section {
   id: string
   title: string
   created_at: string
+  sort_order: number
   content: ChapterItem[] | null
   header1: ChapterItem[] | null
   header2: ChapterItem[] | null
@@ -163,9 +164,7 @@ export function ProposalSections({ sections, proposalId }: ProposalSectionsProps
   const { standalonePages, contentItems } = useMemo(() => {
     if (sections.length === 0) return { standalonePages: [] as string[], contentItems: [] as string[] }
 
-    const sorted = [...sections].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    )
+    const sorted = [...sections].sort((a, b) => a.sort_order - b.sort_order)
 
     const standalonePages: string[] = []
     const contentSections: Section[] = []

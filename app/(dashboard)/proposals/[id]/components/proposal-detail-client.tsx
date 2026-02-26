@@ -64,6 +64,7 @@ export function ProposalDetailClient({
             .from('proposal_sections')
             .select('*')
             .eq('proposal_id', proposal.id)
+            .order('sort_order', { ascending: true })
 
           if (data) {
             setSections(data)

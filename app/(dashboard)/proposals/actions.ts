@@ -65,6 +65,7 @@ export async function getProposal(proposalId: string) {
     .from('proposal_sections')
     .select('*')
     .eq('proposal_id', proposalId)
+    .order('sort_order', { ascending: true })
 
   if (sectionsError) {
     return { error: sectionsError.message, data: null }
