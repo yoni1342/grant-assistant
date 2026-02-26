@@ -259,7 +259,21 @@ export function OrganizationTab({ profile, organization, members }: Organization
             </div>
           </div>
 
-          <Button onClick={handleSaveOrg} disabled={saving}>
+          <Button
+            onClick={handleSaveOrg}
+            disabled={saving || (
+              orgName === (organization?.name || "") &&
+              description === (organization?.description || "") &&
+              mission === (organization?.mission || "") &&
+              ein === (organization?.ein || "") &&
+              address === (organization?.address || "") &&
+              phone === (organization?.phone || "") &&
+              orgEmail === (organization?.email || "") &&
+              website === (organization?.website || "") &&
+              foundingYear === (organization?.founding_year?.toString() || "") &&
+              sector === (organization?.sector || "")
+            )}
+          >
             {saving && <Loader2 className="size-4 animate-spin mr-2" />}
             Save Organization
           </Button>

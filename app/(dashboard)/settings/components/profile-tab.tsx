@@ -170,7 +170,10 @@ export function ProfileTab({ user, profile }: ProfileTabProps) {
             </div>
           </div>
 
-          <Button onClick={handleSaveProfile} disabled={saving}>
+          <Button
+            onClick={handleSaveProfile}
+            disabled={saving || (name === (profile.full_name || "") && email === (profile.email || user.email || ""))}
+          >
             {saving && <Loader2 className="size-4 animate-spin mr-2" />}
             Save Changes
           </Button>
