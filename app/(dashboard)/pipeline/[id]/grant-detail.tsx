@@ -16,7 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Loader2,
+  ExternalLink,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
 import Link from "next/link";
 import { GenerateProposalButton } from "./components/generate-proposal-button";
 import { FunderAnalysisButton } from "./components/funder-analysis-button";
@@ -27,9 +34,9 @@ const STAGES = [
   "discovery",
   "screening",
   "drafting",
-  "submission",
-  "awarded",
-  "reporting",
+  // "submission",
+  // "awarded",
+  // "reporting",
   "closed",
 ] as const;
 
@@ -49,10 +56,20 @@ export function GrantDetail({
   const [title, setTitle] = useState(grant.title);
   const [funderName, setFunderName] = useState(grant.funder_name || "");
   const [amount, setAmount] = useState(grant.amount?.toString() || "");
-  const [deadline, setDeadline] = useState(
-    grant.deadline ? new Date(grant.deadline).toISOString().split("T")[0] : ""
-  );
+  const [deadline, setDeadline] = useState(() => {
+    if (!grant.deadline) return "";
+    const d = new Date(grant.deadline);
+    return isNaN(d.getTime()) ? grant.deadline : d.toISOString().split("T")[0];
+  });
   const [stage, setStage] = useState<string>(grant.stage || "discovery");
+
+  const eligibility = grant.eligibility as {
+    score?: string;
+    indicator?: string;
+    confidence?: number;
+  } | null;
+  const concerns = grant.concerns as string[] | null;
+  const recommendations = grant.recommendations as { text?: string }[] | string[] | null;
 
   async function handleSave() {
     setSaving(true);
@@ -63,7 +80,7 @@ export function GrantDetail({
       .update({
         title,
         funder_name: funderName || null,
-        amount: amount ? parseFloat(amount) : null,
+        amount: amount || null,
         deadline: deadline || null,
         stage,
       })
@@ -84,7 +101,7 @@ export function GrantDetail({
         </Link>
       </div>
 
-      {/* Grant Info */}
+      {/* Section 1: Grant Details */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Grant Details</CardTitle>
@@ -129,11 +146,11 @@ export function GrantDetail({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Amount ($)</Label>
+              <Label>Amount</Label>
               <Input
-                type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                placeholder="Not specified"
               />
             </div>
             <div className="space-y-2">
@@ -142,38 +159,116 @@ export function GrantDetail({
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
+                placeholder="Not specified"
               />
             </div>
           </div>
 
-          {/* Screening Result */}
-          {grant.screening_result && (
-            <div className="rounded-lg border p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">
-                  Screening Result:
-                </span>
-                <Badge
-                  variant={
-                    grant.screening_result === "green"
-                      ? "default"
-                      : grant.screening_result === "yellow"
-                        ? "secondary"
-                        : "destructive"
-                  }
-                >
-                  {grant.screening_result.toUpperCase()}
-                </Badge>
-              </div>
-              {grant.screening_notes && (
-                <p className="text-sm text-muted-foreground">
-                  {grant.screening_notes}
-                </p>
-              )}
+          {/* Description */}
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <p className="text-sm text-muted-foreground leading-relaxed rounded-lg border p-3 bg-muted/30">
+              {grant.description || "No description available"}
+            </p>
+          </div>
+
+          {/* Source Link */}
+          {grant.source_url && (
+            <div className="flex items-center gap-2">
+              <Label>Source</Label>
+              <a
+                href={grant.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1"
+              >
+                {grant.source_url}
+                <ExternalLink className="h-3 w-3" />
+              </a>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Section 2: Screening Report */}
+      {(grant.screening_score != null || grant.screening_notes || eligibility || concerns?.length || recommendations?.length) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Screening Report</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Score */}
+            {grant.screening_score != null && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium">Score:</span>
+                <Badge
+                  variant={
+                    grant.screening_score >= 70
+                      ? "default"
+                      : grant.screening_score >= 40
+                        ? "secondary"
+                        : "destructive"
+                  }
+                  className="text-sm"
+                >
+                  {grant.screening_score}%
+                </Badge>
+                {eligibility?.score && (
+                  <span className="text-sm text-muted-foreground">
+                    ({eligibility.score})
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Screening Notes */}
+            {grant.screening_notes && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Assessment</p>
+                <p className="text-sm text-muted-foreground leading-relaxed rounded-lg border p-3 bg-muted/30">
+                  {grant.screening_notes}
+                </p>
+              </div>
+            )}
+
+            {/* Concerns */}
+            {concerns && concerns.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                  Concerns
+                </p>
+                <ul className="space-y-1">
+                  {concerns.map((concern, i) => (
+                    <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                      <span className="text-yellow-500 mt-0.5">-</span>
+                      {concern}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Recommendations */}
+            {recommendations && recommendations.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                  Recommendations
+                </p>
+                <ul className="space-y-1">
+                  {recommendations.map((rec, i) => (
+                    <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                      <span className="text-blue-500 mt-0.5">-</span>
+                      {typeof rec === "string" ? rec : rec.text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Tools */}
       <Card>
