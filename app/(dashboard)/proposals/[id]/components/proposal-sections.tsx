@@ -53,6 +53,10 @@ function parseTabulation(text: string): string {
   return `<table><thead>${headerRow}</thead><tbody>${bodyRows}</tbody></table>`
 }
 
+function formatInlineMarkdown(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+}
+
 function buildSectionHtml(section: Section): string {
   type TaggedItem = ChapterItem & { type: 'header1' | 'header2' | 'content' | 'tabulation' }
   const tagged: TaggedItem[] = []
@@ -72,11 +76,11 @@ function buildSectionHtml(section: Section): string {
     .map((item) => {
       const attrs = `data-section-id="${section.id}" data-type="${item.type}" data-sort-order="${item.sort_order}"`
       switch (item.type) {
-        case 'header1': return `<h2 ${attrs}>${item.chapter}</h2>`
-        case 'header2': return `<h3 ${attrs}>${item.chapter}</h3>`
-        case 'content': return `<p ${attrs}>${item.chapter}</p>`
+        case 'header1': return `<h2 ${attrs}>${formatInlineMarkdown(item.chapter)}</h2>`
+        case 'header2': return `<h3 ${attrs}>${formatInlineMarkdown(item.chapter)}</h3>`
+        case 'content': return `<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`
         case 'tabulation': return `<div ${attrs}>${parseTabulation(item.chapter)}</div>`
-        default: return `<p ${attrs}>${item.chapter}</p>`
+        default: return `<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`
       }
     })
     .join('')
@@ -169,14 +173,19 @@ export function ProposalSections({ sections, proposalId }: ProposalSectionsProps
     const standalonePages: string[] = []
     const contentSections: Section[] = []
 
-    for (const section of sorted) {
-      if (/^\d+\./.test(section.title)) {
-        contentSections.push(section)
-      } else {
+    for (let idx = 0; idx < sorted.length; idx++) {
+      const section = sorted[idx]
+      // First section (cover page) and Table of Contents are standalone pages
+      const isStandalone =
+        idx === 0 || /table of contents/i.test(section.title)
+
+      if (isStandalone) {
         standalonePages.push(
           `<h1 data-section-id="${section.id}" data-type="title">${section.title}</h1>` +
           buildSectionHtml(section)
         )
+      } else {
+        contentSections.push(section)
       }
     }
 
@@ -199,9 +208,9 @@ export function ProposalSections({ sections, proposalId }: ProposalSectionsProps
       for (const item of tagged) {
         const attrs = `data-section-id="${section.id}" data-type="${item.type}" data-sort-order="${item.sort_order}"`
         switch (item.type) {
-          case 'header1': contentItems.push(`<h2 ${attrs}>${item.chapter}</h2>`); break
-          case 'header2': contentItems.push(`<h3 ${attrs}>${item.chapter}</h3>`); break
-          case 'content': contentItems.push(`<p ${attrs}>${item.chapter}</p>`); break
+          case 'header1': contentItems.push(`<h2 ${attrs}>${formatInlineMarkdown(item.chapter)}</h2>`); break
+          case 'header2': contentItems.push(`<h3 ${attrs}>${formatInlineMarkdown(item.chapter)}</h3>`); break
+          case 'content': contentItems.push(`<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`); break
           case 'tabulation': contentItems.push(`<div ${attrs}>${parseTabulation(item.chapter)}</div>`); break
         }
       }
@@ -236,14 +245,16 @@ export function ProposalSections({ sections, proposalId }: ProposalSectionsProps
       const mb = parseFloat(style.marginBottom) || 0
       const totalHeight = mt + el.offsetHeight + mb
 
-      if (currentHeight + totalHeight > PAGE_CONTENT_HEIGHT && currentPage.length > 0) {
+      // Add the element to the current page first
+      currentPage.push(contentItems[i])
+      currentHeight += totalHeight
+
+      // Break AFTER adding — so every closed page is full (no bottom whitespace)
+      if (currentHeight >= PAGE_CONTENT_HEIGHT && i < children.length - 1) {
         pages.push(currentPage)
         currentPage = []
         currentHeight = 0
       }
-
-      currentPage.push(contentItems[i])
-      currentHeight += totalHeight
     }
 
     if (currentPage.length > 0) {
@@ -254,6 +265,13 @@ export function ProposalSections({ sections, proposalId }: ProposalSectionsProps
   }, [contentItems])
 
   const totalPages = standalonePages.length + contentPages.length
+
+  // Extract cover page title for use in content page headers
+  const coverTitle = useMemo(() => {
+    if (sections.length === 0) return ''
+    const sorted = [...sections].sort((a, b) => a.sort_order - b.sort_order)
+    return sorted[0]?.title || ''
+  }, [sections])
 
   // Track which page is in view using IntersectionObserver
   useEffect(() => {
@@ -452,7 +470,7 @@ export function ProposalSections({ sections, proposalId }: ProposalSectionsProps
               onClick={() => scrollToPage(i)}
               aria-label={`Go to page ${i + 1}`}
             >
-              <div className="pdf-thumb-page">
+              <div className={`pdf-thumb-page${i === 0 ? ' doc-cover-thumb' : ''}`}>
                 <div
                   className="doc-page-content pdf-thumb-content"
                   dangerouslySetInnerHTML={{ __html: html }}
@@ -465,23 +483,34 @@ export function ProposalSections({ sections, proposalId }: ProposalSectionsProps
 
         {/* Main content area */}
         <div className="pdf-content" ref={contentRef} key={renderKey}>
-          {allPages.map((html, i) => (
-            <div
-              key={i}
-              ref={(el) => setPageRef(i, el)}
-              data-page-idx={i}
-              className="doc-page"
-            >
-              <div className="doc-page-number">
-                Page {i + 1} of {totalPages}
-              </div>
+          {allPages.map((html, i) => {
+            const isCover = i === 0
+            return (
               <div
-                className="doc-page-content"
-                suppressContentEditableWarning
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
-            </div>
-          ))}
+                key={i}
+                ref={(el) => setPageRef(i, el)}
+                data-page-idx={i}
+                className={`doc-page${isCover ? ' doc-cover-page' : ''}`}
+              >
+                {!isCover && (
+                  <div className="doc-page-header">
+                    <span className="doc-page-header-title">{coverTitle}</span>
+                  </div>
+                )}
+                <div
+                  className="doc-page-content"
+                  suppressContentEditableWarning
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
+                {!isCover && (
+                  <div className="doc-page-footer">
+                    <span className="doc-page-footer-title">{coverTitle}</span>
+                    <span className="doc-page-footer-number">Page {i + 1} of {totalPages}</span>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         <style jsx global>{viewerStyles}</style>
@@ -579,6 +608,18 @@ const viewerStyles = `
     pointer-events: none;
   }
 
+  /* Cover page thumbnail accent bar */
+  .doc-cover-thumb::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
+    z-index: 1;
+  }
+
   .pdf-thumb-label {
     font-size: 0.65rem;
     color: hsl(var(--muted-foreground));
@@ -630,15 +671,141 @@ const viewerStyles = `
     word-wrap: break-word;
   }
 
-  /* Page number */
-  .doc-page-number {
+  /* ══════════════════════════════════════════
+     COVER PAGE
+     ══════════════════════════════════════════ */
+  .doc-cover-page {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* Top accent bar */
+  .doc-cover-page::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 8px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
+    flex-shrink: 0;
+  }
+
+  .doc-cover-page .doc-page-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 80px 72px 100px;
+  }
+
+  /* Cover title */
+  .doc-cover-page .doc-page-content h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1a2b42;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0 0 1.5rem 0;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  /* Decorative rule under cover title */
+  .doc-cover-page .doc-page-content h1::after {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
+    margin: 1.25rem auto 0;
+    border-radius: 2px;
+  }
+
+  /* Cover meta info (Funder, Deadline, Focus) */
+  .doc-cover-page .doc-page-content p {
+    font-size: 0.95rem;
+    color: #5a6a7a;
+    margin: 0.35rem 0;
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+  }
+
+  /* Cover h2/h3 if present */
+  .doc-cover-page .doc-page-content h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2d5a8e;
+    margin: 1rem 0 0.3rem 0;
+    text-align: center;
+  }
+
+  .doc-cover-page .doc-page-content h3 {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #5a6a7a;
+    text-align: center;
+  }
+
+  /* ══════════════════════════════════════════
+     CONTENT PAGE HEADER
+     ══════════════════════════════════════════ */
+  .doc-page-header {
     position: absolute;
-    bottom: 24px;
-    right: 28px;
-    font-size: 0.7rem;
-    color: #999;
-    letter-spacing: 0.02em;
+    top: 32px;
+    left: 72px;
+    right: 72px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e4e8;
     pointer-events: none;
+  }
+
+  .doc-page-header-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #8a95a5;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ══════════════════════════════════════════
+     CONTENT PAGE FOOTER
+     ══════════════════════════════════════════ */
+  .doc-page-footer {
+    position: absolute;
+    bottom: 32px;
+    left: 72px;
+    right: 72px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid #e0e4e8;
+    pointer-events: none;
+  }
+
+  .doc-page-footer-title {
+    font-size: 0.65rem;
+    color: #a0a8b4;
+    letter-spacing: 0.02em;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .doc-page-footer-number {
+    font-size: 0.65rem;
+    color: #a0a8b4;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Remove old page number since footer replaces it */
+  .doc-page-number {
+    display: none;
   }
 
   /* ── Content ── */
@@ -648,13 +815,12 @@ const viewerStyles = `
   }
 
   /* ── Typography ── */
-  /* Force dark text on white pages regardless of theme */
   .doc-page-content h1 {
     font-size: 1.45rem;
     font-weight: 700;
     margin: 1.5rem 0 0.5rem 0;
-    color: #1a1a1a;
-    border-bottom: 2px solid #e5e5e5;
+    color: #1a2b42;
+    border-bottom: 2px solid #e0e4e8;
     padding-bottom: 0.4rem;
     line-height: 1.3;
   }
@@ -666,7 +832,7 @@ const viewerStyles = `
     font-size: 1.15rem;
     font-weight: 700;
     margin: 1rem 0 0.2rem 0;
-    color: #1a1a1a;
+    color: #1a2b42;
     line-height: 1.35;
   }
 
@@ -674,7 +840,7 @@ const viewerStyles = `
     font-size: 0.95rem;
     font-weight: 600;
     margin: 0.6rem 0 0.1rem 0;
-    color: #555;
+    color: #4a5568;
     line-height: 1.4;
   }
 
@@ -694,22 +860,22 @@ const viewerStyles = `
   }
 
   .doc-page-content table th {
-    background-color: #f5f5f5;
+    background-color: #f0f3f7;
     font-weight: 600;
     text-align: left;
     padding: 0.5rem 0.75rem;
-    border: 1px solid #e0e0e0;
-    color: #1a1a1a;
+    border: 1px solid #d8dde4;
+    color: #1a2b42;
   }
 
   .doc-page-content table td {
     padding: 0.45rem 0.75rem;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #d8dde4;
     color: #1a1a1a;
   }
 
   .doc-page-content table tr:nth-child(even) td {
-    background-color: #fafafa;
+    background-color: #f8f9fb;
   }
 
   /* ── Editable Elements ── */

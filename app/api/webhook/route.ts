@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case "create_proposal": {
         const { sections, ...proposalData } = data;
+        console.log("create_proposal - proposalData:", JSON.stringify(proposalData));
+        console.log("create_proposal - sections count:", sections?.length);
 
         // Insert proposal
         const { data: proposal, error: proposalError } = await supabase
@@ -45,7 +47,11 @@ export async function POST(request: NextRequest) {
           .select("id")
           .single();
 
-        if (proposalError) throw proposalError;
+        console.log("create_proposal - proposal insert result:", JSON.stringify(proposal));
+        if (proposalError) {
+          console.error("create_proposal - proposal insert error:", JSON.stringify(proposalError));
+          throw proposalError;
+        }
 
         // Insert sections with proposal_id
         if (sections && sections.length > 0) {
@@ -60,13 +66,19 @@ export async function POST(request: NextRequest) {
             }),
           );
 
+          console.log("create_proposal - inserting sections, first section:", JSON.stringify(sectionsWithProposalId[0]));
+
           const { error: sectionsError } = await supabase
             .from("proposal_sections")
             .insert(sectionsWithProposalId);
 
-          if (sectionsError) throw sectionsError;
+          if (sectionsError) {
+            console.error("create_proposal - sections insert error:", JSON.stringify(sectionsError));
+            throw sectionsError;
+          }
         }
 
+        console.log("create_proposal - success, proposal_id:", proposal.id);
         return NextResponse.json({
           success: true,
           proposal_id: proposal.id,
@@ -76,6 +88,11 @@ export async function POST(request: NextRequest) {
 
       case "update_grant": {
         const { grantid, ...updates } = data;
+
+        // Extract screening_score from eligibility.confidence if present
+        if (updates.eligibility?.confidence != null && updates.screening_score == null) {
+          updates.screening_score = Number(updates.eligibility.confidence);
+        }
 
         const { data: grants, error } = await supabase
           .from("grants")
@@ -91,9 +108,21 @@ export async function POST(request: NextRequest) {
       }
 
       case "insert_grants": {
+        // Normalize grant data before insert
+        const normalizedGrants = data.grants.map((g: Record<string, unknown>) => ({
+          ...g,
+          amount:
+            !g.amount || g.amount === "$0 - $0" || g.amount === "$0" || g.amount === ""
+              ? null
+              : g.amount,
+          deadline: g.deadline === "" ? null : g.deadline,
+          description: g.description === "" ? null : g.description,
+          stage: g.stage || "discovery",
+        }));
+
         const { data: insertedGrants, error } = await supabase
           .from("grants")
-          .insert(data.grants)
+          .insert(normalizedGrants)
           .select("*");
         if (error) throw error;
         return NextResponse.json({
@@ -332,6 +361,48 @@ export async function POST(request: NextRequest) {
           .eq("id", id);
         if (error) throw error;
         break;
+      }
+
+      case "list_documents": {
+        let query = supabase
+          .from("documents")
+          .select("id, name, file_type, category, ai_category, created_at")
+          .eq("org_id", data.org_id)
+          .order("created_at", { ascending: false });
+
+        if (data.category) {
+          query = query.eq("category", data.category);
+        }
+
+        const { data: documents, error } = await query;
+        if (error) throw error;
+
+        return NextResponse.json({ success: true, documents });
+      }
+
+      case "get_document_url": {
+        // Look up the document to get its storage path
+        const { data: doc, error: docError } = await supabase
+          .from("documents")
+          .select("id, name, file_type, file_path")
+          .eq("id", data.document_id)
+          .single();
+
+        if (docError) throw docError;
+
+        // Generate a signed URL using the service client
+        const { data: signedUrlData, error: urlError } = await supabase.storage
+          .from("documents")
+          .createSignedUrl(doc.file_path, 3600);
+
+        if (urlError) throw urlError;
+
+        return NextResponse.json({
+          success: true,
+          url: signedUrlData.signedUrl,
+          name: doc.name,
+          file_type: doc.file_type,
+        });
       }
 
       default:

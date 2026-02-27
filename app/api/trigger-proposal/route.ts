@@ -26,6 +26,13 @@ export async function POST(req: Request) {
     data = text;
   }
 
+  if (!response.ok) {
+    return new Response(
+      JSON.stringify({ success: false, error: data?.message || data || "Workflow failed" }),
+      { status: response.status, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   return new Response(JSON.stringify({ success: true, data }), {
     headers: { "Content-Type": "application/json" },
   });

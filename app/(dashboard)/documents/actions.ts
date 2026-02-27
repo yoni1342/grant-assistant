@@ -49,6 +49,9 @@ export async function uploadDocument(formData: FormData) {
     return { error: 'User profile or organization not found' }
   }
 
+  // Read optional category
+  const category = formData.get('category') as string | null
+
   // Upload file to Storage
   const { path, error: uploadError } = await uploadFile(file, user.id)
   if (uploadError) {
@@ -60,11 +63,12 @@ export async function uploadDocument(formData: FormData) {
     .from('documents')
     .insert({
       org_id: profile.org_id,
+      title: file.name,
       name: file.name,
       file_path: path,
       file_type: file.type,
       file_size: file.size,
-      category: null,
+      category: category || null,
       ai_category: null,
     })
     .select()
@@ -171,4 +175,26 @@ export async function getDownloadUrl(filePath: string) {
   }
 
   return { url: data.signedUrl, error: null }
+}
+
+export async function updateDocumentCategory(documentId: string, category: string) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  const { error } = await supabase
+    .from('documents')
+    .update({ category })
+    .eq('id', documentId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/documents')
+  revalidatePath(`/documents/${documentId}`)
+  return { success: true }
 }

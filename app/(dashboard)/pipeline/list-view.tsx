@@ -18,9 +18,6 @@ const STAGE_COLORS: Record<string, string> = {
   discovery: "bg-blue-100 text-blue-800",
   screening: "bg-yellow-100 text-yellow-800",
   drafting: "bg-purple-100 text-purple-800",
-  submission: "bg-orange-100 text-orange-800",
-  awarded: "bg-green-100 text-green-800",
-  reporting: "bg-teal-100 text-teal-800",
   closed: "bg-zinc-100 text-zinc-800",
 };
 
@@ -69,24 +66,24 @@ export function ListView({ grants }: { grants: Grant[] }) {
                 </span>
               </TableCell>
               <TableCell>
-                {g.screening_result ? (
+                {g.screening_score != null ? (
                   <Badge
                     variant={
-                      g.screening_result === "green"
+                      g.screening_score >= 70
                         ? "default"
-                        : g.screening_result === "yellow"
+                        : g.screening_score >= 40
                           ? "secondary"
                           : "destructive"
                     }
                   >
-                    {g.screening_result.toUpperCase()}
+                    {g.screening_score}%
                   </Badge>
                 ) : (
                   <span className="text-xs text-muted-foreground">—</span>
                 )}
               </TableCell>
               <TableCell className="text-right">
-                {g.amount ? `$${g.amount.toLocaleString()}` : "—"}
+                {g.amount || "—"}
               </TableCell>
               <TableCell>
                 {g.deadline

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
   ColumnFiltersState,
   flexRender,
@@ -26,13 +27,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { columns, Document, getFileTypeLabel } from "./columns"
+import { columns, Document } from "./columns"
+import { DOCUMENT_CATEGORIES } from "../constants"
 
 interface DocumentTableProps {
   initialData: Document[]
 }
 
 export function DocumentTable({ initialData }: DocumentTableProps) {
+  const router = useRouter()
   const [documents, setDocuments] = useState<Document[]>(initialData)
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = useState("")
@@ -56,13 +59,13 @@ export function DocumentTable({ initialData }: DocumentTableProps) {
     },
   })
 
-  function handleTypeFilterChange(value: string) {
+  function handleCategoryFilterChange(value: string) {
     if (value === "all") {
-      setColumnFilters((prev) => prev.filter((f) => f.id !== "file_type"))
+      setColumnFilters((prev) => prev.filter((f) => f.id !== "category"))
     } else {
       setColumnFilters((prev) => [
-        ...prev.filter((f) => f.id !== "file_type"),
-        { id: "file_type", value },
+        ...prev.filter((f) => f.id !== "category"),
+        { id: "category", value },
       ])
     }
   }
@@ -113,17 +116,18 @@ export function DocumentTable({ initialData }: DocumentTableProps) {
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="max-w-sm"
         />
-        <Select onValueChange={handleTypeFilterChange} defaultValue="all">
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by type" />
+        <Select onValueChange={handleCategoryFilterChange} defaultValue="all">
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="application/pdf">PDF</SelectItem>
-            <SelectItem value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">Word</SelectItem>
-            <SelectItem value="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">Excel</SelectItem>
-            <SelectItem value="image/png">PNG</SelectItem>
-            <SelectItem value="image/jpeg">JPEG</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="uncategorized">Uncategorized</SelectItem>
+            {DOCUMENT_CATEGORIES.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -150,7 +154,11 @@ export function DocumentTable({ initialData }: DocumentTableProps) {
           <TableBody>
             {table.getRowModel().rows.length > 0 ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => router.push(`/documents/${row.original.id}`)}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(

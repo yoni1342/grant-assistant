@@ -16,9 +16,6 @@ const stageColors: Record<string, string> = {
   discovery: 'bg-blue-500',
   screening: 'bg-yellow-500',
   drafting: 'bg-purple-500',
-  submission: 'bg-orange-500',
-  awarded: 'bg-green-500',
-  reporting: 'bg-teal-500',
   closed: 'bg-gray-500',
 }
 
@@ -27,9 +24,6 @@ const stageBadgeColors: Record<string, 'default' | 'secondary' | 'destructive' |
   discovery: 'default',
   screening: 'secondary',
   drafting: 'secondary',
-  submission: 'secondary',
-  awarded: 'default',
-  reporting: 'default',
   closed: 'outline',
 }
 

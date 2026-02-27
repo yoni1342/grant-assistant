@@ -127,7 +127,7 @@ export default function DiscoveryPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               After discovery, trigger AI eligibility screening on any grant.
-              You&apos;ll get a GREEN / YELLOW / RED score plus detailed notes on
+              You&apos;ll get a numeric score (0–100%) plus detailed notes on
               fit, requirements, and recommendations.
             </p>
           </CardContent>

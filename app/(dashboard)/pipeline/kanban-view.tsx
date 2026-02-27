@@ -18,18 +18,19 @@ const STAGES = [
   { key: "closed", label: "Closed", color: "bg-zinc-400" },
 ] as const;
 
-function ScreeningBadge({ result }: { result: string | null }) {
-  if (!result) return null;
-  const colors = {
-    green: "bg-green-100 text-green-800",
-    yellow: "bg-yellow-100 text-yellow-800",
-    red: "bg-red-100 text-red-800",
-  };
+function ScreeningScore({ score }: { score: number | null }) {
+  if (score == null) return null;
+  const color =
+    score >= 70
+      ? "bg-green-100 text-green-800"
+      : score >= 40
+        ? "bg-yellow-100 text-yellow-800"
+        : "bg-red-100 text-red-800";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[result as keyof typeof colors] || ""}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}
     >
-      {result.toUpperCase()}
+      {score}%
     </span>
   );
 }
@@ -80,7 +81,7 @@ export function KanbanView({ grants }: { grants: Grant[] }) {
                             ${grant.amount.toLocaleString()}
                           </Badge>
                         )}
-                        <ScreeningBadge result={grant.screening_result} />
+                        <ScreeningScore score={grant.screening_score} />
                       </div>
                       {grant.deadline && (
                         <p className="text-xs text-muted-foreground">
