@@ -14,6 +14,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - api/webhook (n8n webhook endpoints)
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

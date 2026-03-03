@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo, useState, useLayoutEffect, useRef, useCallback, useEffect } from 'react'
+import { useMemo, useState, useLayoutEffect, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Button } from "@/components/ui/button"
 import { Pencil, Save, RotateCcw, Loader2 } from "lucide-react"
 import { updateProposalSections } from '../../actions'
+import { useExportPdf } from './use-export-pdf'
 
 interface ChapterItem {
   chapter: string
@@ -21,9 +22,14 @@ interface Section {
   tabulation: ChapterItem[] | null
 }
 
+export interface ProposalSectionsHandle {
+  exportPdf: () => Promise<void>
+}
+
 interface ProposalSectionsProps {
   sections: Section[]
   proposalId: string
+  proposalTitle?: string
 }
 
 // A4 page content area: 1123px total − 96px top pad − 100px bottom pad
@@ -153,7 +159,7 @@ function extractEditedSections(
   }))
 }
 
-export function ProposalSections({ sections, proposalId }: ProposalSectionsProps) {
+export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSectionsProps>(function ProposalSections({ sections, proposalId, proposalTitle }, ref) {
   const measureRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -164,6 +170,14 @@ export function ProposalSections({ sections, proposalId }: ProposalSectionsProps
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [renderKey, setRenderKey] = useState(0)
+  const { exportPdf, isExporting } = useExportPdf()
+
+  // Store latest values in a ref so the imperative handle always has current data
+  const exportDataRef = useRef({ allPages: [] as string[], coverTitle: '', totalPages: 0, proposalTitle: '' })
+
+  useImperativeHandle(ref, () => ({
+    exportPdf: () => exportPdf(exportDataRef.current),
+  }), [exportPdf])
 
   const { standalonePages, contentItems } = useMemo(() => {
     if (sections.length === 0) return { standalonePages: [] as string[], contentItems: [] as string[] }
@@ -339,6 +353,14 @@ export function ProposalSections({ sections, proposalId }: ProposalSectionsProps
     }
     return pages
   }, [standalonePages, contentPages])
+
+  // Keep export data ref in sync for imperative handle
+  exportDataRef.current = {
+    allPages,
+    coverTitle,
+    totalPages,
+    proposalTitle: proposalTitle || coverTitle || 'Proposal',
+  }
 
   // Toggle contenteditable on elements when edit mode changes
   useEffect(() => {
@@ -517,7 +539,7 @@ export function ProposalSections({ sections, proposalId }: ProposalSectionsProps
       </div>
     </div>
   )
-}
+})
 
 const viewerStyles = `
   /* ── PDF Browser Shell ── */

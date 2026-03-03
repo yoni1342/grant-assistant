@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, ClipboardCheck, Building2 } from "lucide-react"
+import { ArrowLeft, ClipboardCheck, Building2, Download, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { ProposalSections } from "./proposal-sections"
+import { toast } from "sonner"
+import { ProposalSections, ProposalSectionsHandle } from "./proposal-sections"
 import { QualityReview } from "./quality-review"
 import { FunderAnalysis } from "./funder-analysis"
+import { useRef } from "react"
 
 interface ProposalDetailClientProps {
   proposal: any
@@ -26,6 +28,21 @@ export function ProposalDetailClient({
 }: ProposalDetailClientProps) {
   const [proposal, setProposal] = useState(initialProposal)
   const [sections, setSections] = useState(initialSections)
+  const sectionsRef = useRef<ProposalSectionsHandle>(null)
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleExportPdf = useCallback(async () => {
+    if (!sectionsRef.current) return
+    setIsExporting(true)
+    try {
+      await sectionsRef.current.exportPdf()
+      toast.success('PDF exported successfully')
+    } catch {
+      toast.error('Failed to export PDF. Please try again.')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -119,6 +136,22 @@ export function ProposalDetailClient({
             For: {grant?.title || 'Unknown Grant'}
           </p>
           <div className="flex items-center gap-2 ml-auto">
+            {/* Export PDF */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={isExporting || sections.length === 0}
+              onClick={handleExportPdf}
+            >
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isExporting ? 'Exporting...' : 'Export PDF'}
+            </Button>
+
             {/* Quality Review Dialog */}
             <Dialog>
               <DialogTrigger asChild>
@@ -175,7 +208,7 @@ export function ProposalDetailClient({
       </div>
 
       {/* Sections */}
-      <ProposalSections sections={sections} proposalId={proposal.id} />
+      <ProposalSections ref={sectionsRef} sections={sections} proposalId={proposal.id} proposalTitle={proposal.title} />
     </div>
   )
 }

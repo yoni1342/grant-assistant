@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   });
 
   const response = await fetch(
-    `${n8nUrl}/generate-proposal`,
+    `${n8nUrl}/search-grant-with-query`,
     {
       method: "POST",
       headers: {

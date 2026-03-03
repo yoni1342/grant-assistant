@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserOrgId } from '@/lib/supabase/server'
 import { uploadFile, deleteFile } from '@/lib/supabase/storage'
 import { revalidatePath } from 'next/cache'
 
@@ -140,15 +140,15 @@ export async function deleteDocument(documentId: string) {
 
 export async function getDocuments() {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated', data: [] }
+  const { orgId, error: orgError } = await getUserOrgId(supabase)
+  if (!orgId) {
+    return { error: orgError || 'Not authenticated', data: [] }
   }
 
   const { data, error } = await supabase
     .from('documents')
     .select('*')
+    .eq('org_id', orgId)
     .order('created_at', { ascending: false })
 
   if (error) {

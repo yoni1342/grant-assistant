@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 export async function createClient() {
@@ -26,4 +27,27 @@ export async function createClient() {
       },
     }
   );
+}
+
+/**
+ * Get the authenticated user's org_id from their profile.
+ * Returns { orgId, error } — use orgId to scope all queries.
+ */
+export async function getUserOrgId(supabase: SupabaseClient): Promise<{ orgId: string | null; error: string | null }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { orgId: null, error: "Not authenticated" };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("org_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.org_id) {
+    return { orgId: null, error: "No organization found for user" };
+  }
+
+  return { orgId: profile.org_id, error: null };
 }

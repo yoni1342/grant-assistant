@@ -1,19 +1,19 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserOrgId } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function getNarratives() {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated', data: [] }
+  const { orgId, error: orgError } = await getUserOrgId(supabase)
+  if (!orgId) {
+    return { error: orgError || 'Not authenticated', data: [] }
   }
 
   const { data, error } = await supabase
     .from('narratives')
     .select('*')
+    .eq('org_id', orgId)
     .order('updated_at', { ascending: false })
 
   if (error) {

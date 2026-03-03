@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server"
-import { notFound } from "next/navigation"
+import { createClient, getUserOrgId } from "@/lib/supabase/server"
+import { notFound, redirect } from "next/navigation"
 import { DocumentDetail } from "./document-detail"
 
 export default async function DocumentDetailPage({
@@ -9,11 +9,14 @@ export default async function DocumentDetailPage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) redirect("/login")
 
   const { data: document } = await supabase
     .from("documents")
     .select("*")
     .eq("id", id)
+    .eq("org_id", orgId)
     .single()
 
   if (!document) {

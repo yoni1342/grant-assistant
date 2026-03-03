@@ -854,7 +854,7 @@
               "501c3_letter"
             ]
           },
-          "webhookUrl": "https://n8n.thebrownmine.com/webhook-test/get-documents",
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook/get-documents",
           "executionMode": "test"
         },
         "pairedItem": {

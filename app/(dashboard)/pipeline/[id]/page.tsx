@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { createClient, getUserOrgId } from "@/lib/supabase/server";
+import { notFound, redirect } from "next/navigation";
 import { GrantDetail } from "./grant-detail";
 
 export default async function GrantDetailPage({
@@ -9,11 +9,14 @@ export default async function GrantDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const { orgId } = await getUserOrgId(supabase);
+  if (!orgId) redirect("/login");
 
   const { data: grant } = await supabase
     .from("grants")
     .select("*")
     .eq("id", id)
+    .eq("org_id", orgId)
     .single();
 
   if (!grant) {
@@ -24,6 +27,7 @@ export default async function GrantDetailPage({
     .from("activity_log")
     .select("*")
     .eq("grant_id", id)
+    .eq("org_id", orgId)
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -31,6 +35,7 @@ export default async function GrantDetailPage({
     .from("workflow_executions")
     .select("*")
     .eq("grant_id", id)
+    .eq("org_id", orgId)
     .order("created_at", { ascending: false })
     .limit(10);
 
@@ -39,6 +44,7 @@ export default async function GrantDetailPage({
     .from("proposals")
     .select("id, title, status")
     .eq("grant_id", id)
+    .eq("org_id", orgId)
     .order("created_at", { ascending: false });
 
   return (

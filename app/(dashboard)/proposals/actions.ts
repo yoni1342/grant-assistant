@@ -1,14 +1,13 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserOrgId } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function getProposals() {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated', data: [] }
+  const { orgId, error: orgError } = await getUserOrgId(supabase)
+  if (!orgId) {
+    return { error: orgError || 'Not authenticated', data: [] }
   }
 
   const { data, error } = await supabase
@@ -22,6 +21,7 @@ export async function getProposals() {
         deadline
       )
     `)
+    .eq('org_id', orgId)
     .order('updated_at', { ascending: false })
 
   if (error) {
@@ -33,13 +33,12 @@ export async function getProposals() {
 
 export async function getProposal(proposalId: string) {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated', data: null }
+  const { orgId, error: orgError } = await getUserOrgId(supabase)
+  if (!orgId) {
+    return { error: orgError || 'Not authenticated', data: null }
   }
 
-  // Fetch proposal
+  // Fetch proposal scoped to org
   const { data: proposal, error: proposalError } = await supabase
     .from('proposals')
     .select(`
@@ -54,13 +53,14 @@ export async function getProposal(proposalId: string) {
       )
     `)
     .eq('id', proposalId)
+    .eq('org_id', orgId)
     .single()
 
   if (proposalError) {
     return { error: proposalError.message, data: null }
   }
 
-  // Fetch proposal sections
+  // Fetch proposal sections (scoped via proposal_sections RLS through proposals)
   const { data: sections, error: sectionsError } = await supabase
     .from('proposal_sections')
     .select('*')

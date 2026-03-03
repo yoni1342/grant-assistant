@@ -15,30 +15,30 @@ function validateWebhookSecret(request: NextRequest): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  // if (!validateWebhookSecret(request)) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // }
+  if (!validateWebhookSecret(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
-    console.log("another hit");
-
     let body = await request.json();
-    // 👇 handle stringified JSON from n8n
+    // Handle stringified JSON from n8n
     if (typeof body === "string") {
       body = JSON.parse(body);
     }
-    console.log("body received:", JSON.stringify(body)); // ← ADD THIS
     const { action, data } = body;
-    console.log("action:", action); // ← ADD THIS
-    console.log("data:", JSON.stringify(data)); // ← ADD THIS
 
     const supabase = createServiceClient();
 
     switch (action) {
       case "create_proposal": {
         const { sections, ...proposalData } = data;
-        console.log("create_proposal - proposalData:", JSON.stringify(proposalData));
-        console.log("create_proposal - sections count:", sections?.length);
+
+        if (!proposalData.org_id) {
+          return NextResponse.json(
+            { error: "org_id is required for create_proposal" },
+            { status: 400 },
+          );
+        }
 
         // Insert proposal
         const { data: proposal, error: proposalError } = await supabase
@@ -47,11 +47,7 @@ export async function POST(request: NextRequest) {
           .select("id")
           .single();
 
-        console.log("create_proposal - proposal insert result:", JSON.stringify(proposal));
-        if (proposalError) {
-          console.error("create_proposal - proposal insert error:", JSON.stringify(proposalError));
-          throw proposalError;
-        }
+        if (proposalError) throw proposalError;
 
         // Insert sections with proposal_id
         if (sections && sections.length > 0) {
@@ -66,19 +62,13 @@ export async function POST(request: NextRequest) {
             }),
           );
 
-          console.log("create_proposal - inserting sections, first section:", JSON.stringify(sectionsWithProposalId[0]));
-
           const { error: sectionsError } = await supabase
             .from("proposal_sections")
             .insert(sectionsWithProposalId);
 
-          if (sectionsError) {
-            console.error("create_proposal - sections insert error:", JSON.stringify(sectionsError));
-            throw sectionsError;
-          }
+          if (sectionsError) throw sectionsError;
         }
 
-        console.log("create_proposal - success, proposal_id:", proposal.id);
         return NextResponse.json({
           success: true,
           proposal_id: proposal.id,
@@ -87,18 +77,22 @@ export async function POST(request: NextRequest) {
       }
 
       case "update_grant": {
-        const { grantid, ...updates } = data;
+        const { grantid, org_id, ...updates } = data;
 
         // Extract screening_score from eligibility.confidence if present
         if (updates.eligibility?.confidence != null && updates.screening_score == null) {
           updates.screening_score = Number(updates.eligibility.confidence);
         }
 
-        const { data: grants, error } = await supabase
+        let query = supabase
           .from("grants")
           .update(updates)
-          .eq("id", grantid)
-          .select();
+          .eq("id", grantid);
+
+        // Scope to org if provided (defense-in-depth)
+        if (org_id) query = query.eq("org_id", org_id);
+
+        const { data: grants, error } = await query.select();
         if (error) throw error;
 
         return NextResponse.json({
@@ -108,6 +102,15 @@ export async function POST(request: NextRequest) {
       }
 
       case "insert_grants": {
+        // Validate all grants have org_id
+        const missingOrgId = data.grants.some((g: Record<string, unknown>) => !g.org_id);
+        if (missingOrgId) {
+          return NextResponse.json(
+            { error: "org_id is required for all grants in insert_grants" },
+            { status: 400 },
+          );
+        }
+
         // Normalize grant data before insert
         const normalizedGrants = data.grants.map((g: Record<string, unknown>) => ({
           ...g,
@@ -132,11 +135,13 @@ export async function POST(request: NextRequest) {
       }
 
       case "update_workflow": {
-        const { grantid, ...updates } = data;
-        const { error } = await supabase
+        const { grantid, org_id, ...updates } = data;
+        let query = supabase
           .from("workflow_executions")
           .update(updates)
           .eq("id", grantid);
+        if (org_id) query = query.eq("org_id", org_id);
+        const { error } = await query;
         if (error) throw error;
         break;
       }
@@ -151,11 +156,13 @@ export async function POST(request: NextRequest) {
       }
 
       case "update_document": {
-        const { id, ...updates } = data;
-        const { error } = await supabase
+        const { id, org_id, ...updates } = data;
+        let query = supabase
           .from("documents")
           .update(updates)
           .eq("id", id);
+        if (org_id) query = query.eq("org_id", org_id);
+        const { error } = await query;
         if (error) throw error;
         break;
       }
@@ -190,11 +197,13 @@ export async function POST(request: NextRequest) {
        * Triggered when: An existing Google Drive file is updated and needs to sync to Supabase
        */
       case "update_document_by_file_id": {
-        const { source_file_id, ...updates } = data;
-        const { error } = await supabase
+        const { source_file_id, org_id, ...updates } = data;
+        let query = supabase
           .from("documents")
           .update(updates)
           .eq("source_file_id", source_file_id);
+        if (org_id) query = query.eq("org_id", org_id);
+        const { error } = await query;
         if (error) throw error;
         break;
       }
@@ -218,11 +227,13 @@ export async function POST(request: NextRequest) {
       }
 
       case "update_proposal": {
-        const { id, ...updates } = data;
-        const { error } = await supabase
+        const { id, org_id, ...updates } = data;
+        let query = supabase
           .from("proposals")
           .update(updates)
           .eq("id", id);
+        if (org_id) query = query.eq("org_id", org_id);
+        const { error } = await query;
         if (error) throw error;
         break;
       }
@@ -234,21 +245,25 @@ export async function POST(request: NextRequest) {
       }
 
       case "update_funder": {
-        const { id, ...updates } = data;
-        const { error } = await supabase
+        const { id, org_id, ...updates } = data;
+        let query = supabase
           .from("funders")
           .update(updates)
           .eq("id", id);
+        if (org_id) query = query.eq("org_id", org_id);
+        const { error } = await query;
         if (error) throw error;
         break;
       }
 
       case "insert_budget_narrative": {
-        const { budget_id, narrative } = data;
-        const { error } = await supabase
+        const { budget_id, org_id, narrative } = data;
+        let query = supabase
           .from("budgets")
           .update({ narrative, updated_at: new Date().toISOString() })
           .eq("id", budget_id);
+        if (org_id) query = query.eq("org_id", org_id);
+        const { error } = await query;
         if (error) throw error;
         break;
       }
@@ -319,11 +334,13 @@ export async function POST(request: NextRequest) {
       }
 
       case "update_award": {
-        const { id, ...updates } = data;
-        const { error } = await supabase
+        const { id, org_id, ...updates } = data;
+        let query = supabase
           .from("awards")
           .update(updates)
           .eq("id", id);
+        if (org_id) query = query.eq("org_id", org_id);
+        const { error } = await query;
         if (error) throw error;
         break;
       }
@@ -354,11 +371,13 @@ export async function POST(request: NextRequest) {
       }
 
       case "update_report": {
-        const { id, ...updates } = data;
-        const { error } = await supabase
+        const { id, org_id, ...updates } = data;
+        let query = supabase
           .from("reports")
           .update(updates)
           .eq("id", id);
+        if (org_id) query = query.eq("org_id", org_id);
+        const { error } = await query;
         if (error) throw error;
         break;
       }
@@ -382,11 +401,12 @@ export async function POST(request: NextRequest) {
 
       case "get_document_url": {
         // Look up the document to get its storage path
-        const { data: doc, error: docError } = await supabase
+        let docQuery = supabase
           .from("documents")
           .select("id, name, file_type, file_path")
-          .eq("id", data.document_id)
-          .single();
+          .eq("id", data.document_id);
+        if (data.org_id) docQuery = docQuery.eq("org_id", data.org_id);
+        const { data: doc, error: docError } = await docQuery.single();
 
         if (docError) throw docError;
 

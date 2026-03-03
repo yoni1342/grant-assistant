@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserOrgId } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,17 +31,21 @@ function getDeadlineUrgency(deadline: string) {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const { orgId } = await getUserOrgId(supabase);
+  if (!orgId) redirect("/login");
 
   // Fetch grants for pipeline overview
   const { data: grants } = await supabase
     .from("grants")
     .select("id, title, funder_name, stage, amount, deadline")
+    .eq("org_id", orgId)
     .order("created_at", { ascending: false });
 
   // Fetch recent activity
   const { data: activities } = await supabase
     .from("activity_log")
     .select("id, action, details, created_at")
+    .eq("org_id", orgId)
     .order("created_at", { ascending: false })
     .limit(10);
 

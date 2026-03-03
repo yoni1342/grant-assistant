@@ -1,11 +1,14 @@
 import { getNarratives } from './actions'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserOrgId } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { NarrativePageClient } from './components/narrative-page-client'
 
 export default async function NarrativesPage() {
   const supabase = await createClient()
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) redirect('/login')
 
   // Fetch narratives
   const { data: narratives, error: narrativesError } = await getNarratives()
@@ -14,6 +17,7 @@ export default async function NarrativesPage() {
   const { data: grants } = await supabase
     .from('grants')
     .select('id, title')
+    .eq('org_id', orgId)
     .order('title', { ascending: true })
 
   return (
