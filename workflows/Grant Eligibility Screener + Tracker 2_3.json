@@ -530,7 +530,7 @@
       "typeVersion": 2,
       "position": [
         -400,
-        -48
+        0
       ],
       "webhookId": "grant-screener",
       "notesInFlow": true,
@@ -571,7 +571,7 @@
       "credentials": {
         "openAiApi": {
           "id": "XbaNaQyEtQBSUnml",
-          "name": "OpenAi account 2"
+          "name": "Brownmine"
         }
       },
       "disabled": true,
@@ -595,7 +595,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Use pre-extracted grant data from scanner\nconst body = $input.first().json.body;\nconst grantData = body.grantData || {};\n\nreturn [{ \n  json: { \n    grantContent: `\nGrant Title: ${grantData.title || 'Not specified'}\nAgency: ${grantData.agency || 'Not specified'}\nAward Range: ${grantData.awardRange || 'Not specified'}\nDeadline: ${grantData.deadline || 'Not specified'}\nOpen Date: ${grantData.openDate || 'Not specified'}\nDescription: ${grantData.description || 'No description provided'}\nSource: ${grantData.source || 'Grant Scanner'}\nMatched Keywords: ${grantData.matchedKeywords || 'None'}\n`.trim(),\n    planeIssueId: body.planeissueid || body.planeIssueId || '',\n    sourceUrl: body.url || grantData.url || '',\n    sourceType: 'scanner',\n    fetchedAt: new Date().toISOString(),\n    originalGrantData: grantData\n  } \n}];"
+        "jsCode": "// Use pre-extracted grant data from scanner\nconst body = $input.first().json.body;\nconst grantData = body.grantData || {};\n\nreturn [{ \n  json: { \n    grantContent: `\nGrant Title: ${grantData.title || 'Not specified'}\nAgency: ${grantData.agency || 'Not specified'}\nAward Range: ${grantData.awardRange || 'Not specified'}\nDeadline: ${grantData.deadline || 'Not specified'}\nOpen Date: ${grantData.openDate || 'Not specified'}\nDescription: ${grantData.description || 'No description provided'}\nSource: ${grantData.source || 'Grant Scanner'}\nMatched Keywords: ${grantData.matchedKeywords || 'None'}\n`.trim(),\n    grantid: body.grantid || '',\n    sourceUrl: body.url || grantData.url || '',\n    sourceType: 'scanner',\n    fetchedAt: new Date().toISOString(),\n    originalGrantData: grantData\n  } \n}];"
       },
       "id": "d04190e3-c4c4-406f-97e6-62a02861c51a",
       "name": "Use Scanner Data2",
@@ -630,7 +630,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1792,
+        1808,
         -192
       ],
       "notesInFlow": true,
@@ -840,11 +840,11 @@
         "messages": {
           "values": [
             {
-              "content": "You are a grant eligibility analyst for a nonprofit serving foster youth and seniors in Pennsylvania.\n\nEVALUATE against these TWO PRIORITY CATEGORIES:\n\n**CATEGORY 1: Core Program Grants (TOP PRIORITY)**\n- Focus: Direct services for youth aging out of foster care & seniors\n- Award Range: $15,000-$75,000\n- Use For: Clothing & essentials distribution, Hygiene kits & transition supplies, Senior engagement & dignity initiatives\n- Best Funders: Community foundations, Family foundations, Local corporate foundations\n- Messaging: dignity, stability, equity, transition support\n\n**CATEGORY 2: Foster Care & Youth Transition Grants**\n- Focus: Independent living, workforce readiness, education support\n- Award Range: $25,000-$100,000\n- Use For: Workforce-ready clothing, Life-skills & employment readiness support, Transitional guidance programming\n- Messaging: \"transition-age youth\", \"post-foster care outcomes\", \"equity-driven intervention\"\n  \n# and also try and consider the criterias mentioned below so its better if its related to it\nMission: A nonprofit organization designed to help people rebuild their lives, serving as the foundation. We help\n  youths that have aged out of the foster care system and seniors in assisted care and living facilities, providing them\n   with various support services ranging from volunteer care to companionship.\n\n  Vision: To be a home of plenty - a refuge offering knowledge, information, resources, and temporary housing for those\n  failed by the system.\n\n  Target Populations Served:\n  1. Foster Youth Aging Out (Ages 18-24): Young adults exiting the foster care system who need support transitioning to\n  2. Seniors in Care Facilities (Ages 65+): Elderly individuals in assisted living and long-term care facilities\n  experiencing isolation and needing companionship.\n  3. Underserved Communities: Particularly African American individuals disproportionately affected by child welfare\n  system disparities and lower reunification rates.\n\n  Programs & Services:\n  - Youth transition support (life skills, mentorship, resource navigation, career guidance)\n  - Senior companionship and volunteer care services\n  - Resource connection and information sharing\n  - Transitional housing for former foster youth (planned/future)\n\nStrong Match Keywords: foster care, foster youth, aging out, transition age youth, child welfare, senior services,\n  elderly care, aging services, older adults, companionship, volunteer services, transitional housing, youth\n  development, independent living, life skills, mentorship, African American, minority serving, underserved populations,\n   vulnerable populations, social services, human services, New Jersey, nonprofit capacity building\n\n  Moderate Match Keywords: youth services, family services, community development, at-risk youth, low-income, wraparound\n   services, supportive services, intergenerational, dignity, equity, racial equity, trauma-informed, Northeast,\n  Mid-Atlantic, urban communities\n\n\n\n**SCORING RULES:**\n- GREEN: Strong match to Category 1 or 2, award in range ($15k-$100k), eligible applicant type and located in Pennsylvania prioritize location then check the rest\n- YELLOW: Partial match OR award outside range but fundable OR requires clarification\n- RED: Does not match mission, ineligible org type, or geographic restriction excludes Pennsylvania\n\n**RETURN VALID JSON:**\n{\n  \"overallScore\": \"GREEN\" | \"YELLOW\" | \"RED\",\n  \"confidence\": 0-100,\n  \"summary\": \"2-sentence eligibility determination\",\n  \"matchedCategory\": \"Core Program Grants\" | \"Foster Care & Youth Transition\" | \"None\",\n  \"grantTitle\": \"Extracted grant title\",\n  \"agency\": \"Funding agency name\",\n  \"deadline\": \"YYYY-MM-DD or Not specified\",\n  \"fundingRange\": \"$X - $Y\",\n  \"categories\": {\n    \"category1Match\": true/false,\n    \"category2Match\": true/false,\n    \"matchedKeywords\": [\"foster youth\", \"seniors\", \"etc\"]\n  },\n  \"keyRequirements\": [\"501c3 letter\", \"budget\", \"etc\"],\n  \"concerns\": [\"Any red flags\"],\n  \"recommendations\": [\"Next steps\"]\n}",
+              "content": "You are a grant eligibility analyst for a nonprofit serving foster youth and seniors in Pennsylvania.\n\nEVALUATE against these TWO PRIORITY CATEGORIES:\n\n**CATEGORY 1: Core Program Grants (TOP PRIORITY)**\n- Focus: Direct services for youth aging out of foster care & seniors\n- Award Range: $15,000-$75,000\n- Use For: Clothing & essentials distribution, Hygiene kits & transition supplies, Senior engagement & dignity initiatives\n- Best Funders: Community foundations, Family foundations, Local corporate foundations\n- Messaging: dignity, stability, equity, transition support\n\n**CATEGORY 2: Foster Care & Youth Transition Grants**\n- Focus: Independent living, workforce readiness, education support\n- Award Range: $25,000-$100,000\n- Use For: Workforce-ready clothing, Life-skills & employment readiness support, Transitional guidance programming\n- Messaging: \"transition-age youth\", \"post-foster care outcomes\", \"equity-driven intervention\"\n  \n# and also try and consider the criterias mentioned below so its better if its related to it\nMission: A nonprofit organization designed to help people rebuild their lives, serving as the foundation. We help\n  youths that have aged out of the foster care system and seniors in assisted care and living facilities, providing them\n   with various support services ranging from volunteer care to companionship.\n\n  Vision: To be a home of plenty - a refuge offering knowledge, information, resources, and temporary housing for those\n  failed by the system.\n\n  Target Populations Served:\n  1. Foster Youth Aging Out (Ages 18-24): Young adults exiting the foster care system who need support transitioning to\n  2. Seniors in Care Facilities (Ages 65+): Elderly individuals in assisted living and long-term care facilities\n  experiencing isolation and needing companionship.\n  3. Underserved Communities: Particularly African American individuals disproportionately affected by child welfare\n  system disparities and lower reunification rates.\n\n  Programs & Services:\n  - Youth transition support (life skills, mentorship, resource navigation, career guidance)\n  - Senior companionship and volunteer care services\n  - Resource connection and information sharing\n  - Transitional housing for former foster youth (planned/future)\n\nStrong Match Keywords: foster care, foster youth, aging out, transition age youth, child welfare, senior services,\n  elderly care, aging services, older adults, companionship, volunteer services, transitional housing, youth\n  development, independent living, life skills, mentorship, African American, minority serving, underserved populations,\n   vulnerable populations, social services, human services, New Jersey, nonprofit capacity building\n\n  Moderate Match Keywords: youth services, family services, community development, at-risk youth, low-income, wraparound\n   services, supportive services, intergenerational, dignity, equity, racial equity, trauma-informed, Northeast,\n  Mid-Atlantic, urban communities\n\n\n\n**SCORING RULES:**\n- GREEN: Strong match to Category 1 or 2, award in range ($15k-$100k), eligible applicant type and located in Pennsylvania prioritize location then check the rest\n- YELLOW: Partial match OR award outside range but fundable OR requires clarification\n- RED: Does not match mission, ineligible org type, or geographic restriction excludes Pennsylvania\n\n**RETURN VALID JSON:**\n{\n  \"grantid\": \"the unique grantid of the grant\"\n  \"overallScore\": \"GREEN\" | \"YELLOW\" | \"RED\",\n  \"confidence\": 0-100,\n  \"summary\": \"2-sentence eligibility determination\",\n  \"matchedCategory\": \"Core Program Grants\" | \"Foster Care & Youth Transition\" | \"None\",\n  \"grantTitle\": \"Extracted grant title\",\n  \"agency\": \"Funding agency name\",\n\"deadline\": \"{{ extract the deadline from the grant content; if no numeric date, preserve the original text like 'Ongoing' }}\",  \n\"fundingRange\": \"$X - $Y\",\n  \"categories\": {\n    \"category1Match\": true/false,\n    \"category2Match\": true/false,\n    \"matchedKeywords\": [\"foster youth\", \"seniors\", \"etc\"]\n  },\n  \"keyRequirements\": [\"501c3 letter\", \"budget\", \"etc\"],\n  \"concerns\": [\"Any red flags\"],\n  \"recommendations\": [\"Next steps\"]\n}",
               "role": "system"
             },
             {
-              "content": "=Analyze this grant for eligibility:\n\n## GRANT CONTENT:\n{{ $json.grantContent }}\n\nSource: {{ $json.sourceUrl }}\n\n---\n\n## CHECK AGAINST THESE REQUIREMENTS:\n\n1. GEOGRAPHIC: Must allow Pennsylvania-based 501(c)(3) nonprofits\n\n2. PROGRAM ALIGNMENT - Must match one of these categories:\n\n   CATEGORY 1 (TOP PRIORITY): Core Program Grants\n   - Focus: Direct services for foster youth & seniors\n   - Award Range: $15,000-$75,000\n   - Use for: Clothing distribution, Hygiene kits, Senior dignity initiatives\n   - Best funders: Community/Family/Local corporate foundations\n\n   CATEGORY 2: Foster Care & Youth Transition Grants\n   - Focus: Independent living, workforce readiness\n   - Award Range: $25,000-$100,000\n   - Use for: Workforce clothing, Life-skills support, Transitional guidance\n\n3. BUDGET: Award should be in $15,000-$100,000 range\n\n4. FUNDER PATTERNS: Check if they typically fund direct services vs research\n\n---\n\nProvide your eligibility analysis in the specified JSON format."
+              "content": "=Analyze this grant for eligibility:\n\n## GRANT CONTENT:\n{{ $json.grantContent }}\n\nSource: {{ $json.sourceUrl }}\n\n## GRANT ID:\n{{ $json.grantid }}\n\n---\n\n## CHECK AGAINST THESE REQUIREMENTS:\n\n1. GEOGRAPHIC: Must allow Pennsylvania-based 501(c)(3) nonprofits\n\n2. PROGRAM ALIGNMENT - Must match one of these categories:\n\n   CATEGORY 1 (TOP PRIORITY): Core Program Grants\n   - Focus: Direct services for foster youth & seniors\n   - Award Range: $15,000-$75,000\n   - Use for: Clothing distribution, Hygiene kits, Senior dignity initiatives\n   - Best funders: Community/Family/Local corporate foundations\n\n   CATEGORY 2: Foster Care & Youth Transition Grants\n   - Focus: Independent living, workforce readiness\n   - Award Range: $25,000-$100,000\n   - Use for: Workforce clothing, Life-skills support, Transitional guidance\n\n3. BUDGET: Award should be in $15,000-$100,000 range\n\n4. FUNDER PATTERNS: Check if they typically fund direct services vs research\n\n---\n\nProvide your eligibility analysis in the specified JSON format."
             }
           ]
         },
@@ -864,14 +864,14 @@
       "credentials": {
         "openAiApi": {
           "id": "XbaNaQyEtQBSUnml",
-          "name": "OpenAi account 2"
+          "name": "Brownmine"
         }
       },
       "notes": "GPT-4 analyzes eligibility"
     },
     {
       "parameters": {
-        "jsCode": "// Parse AI response and format output\n  const item = $input.first();\n  const aiResponse = item.json;\n\n  let analysis = null;\n  let parseError = null;\n\n  // Try to extract JSON from AI response\n  try {\n    let responseText = '';\n\n    // Handle different response formats\n    if (aiResponse.text) {\n      responseText = aiResponse.text;\n    } else if (aiResponse.message?.content) {\n      responseText = aiResponse.message.content;\n    } else if (aiResponse.output && Array.isArray(aiResponse.output)) {\n      responseText = aiResponse.output[0]?.content?.[0]?.text || '';\n    } else if (typeof aiResponse === 'string') {\n      responseText = aiResponse;\n    }\n\n    // Extract JSON from response\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      analysis = JSON.parse(jsonMatch[0]);\n    }\n  } catch (e) {\n    parseError = e.message;\n  }\n\n  // Get original data\n  const originalData = $('Load Eligibility Criteria2').first().json;\n  const scannerData = originalData.originalGrantData || {};\n\n  if (!analysis) {\n    return [{\n      json: {\n        success: false,\n        error: 'Failed to parse AI response',\n        parseError: parseError,\n        sourceUrl: originalData.sourceUrl,\n        sourceType: originalData.sourceType\n      }\n    }];\n  }\n\n  // ============ BULLETPROOF DATE HANDLING ============\n\n  // Helper function to safely parse dates\n  function safeParseDate(dateStr) {\n    if (!dateStr || typeof dateStr !== 'string') return null;\n\n    // Skip known non-date strings\n    const nonDatePatterns = [\n      'ongoing', 'rolling', 'tbd', 'check', 'not specified',\n      'continuous', 'open', 'varies', 'unknown', 'n/a', 'none',\n      'contact', 'website', 'call', 'inquire', 'anytime'\n    ];\n    const lowerStr = dateStr.toLowerCase();\n    if (nonDatePatterns.some(pattern => lowerStr.includes(pattern))) {\n      return null;\n    }\n\n    try {\n      const parsed = new Date(dateStr);\n      // Check if valid and reasonable (after year 2000, before year 2100)\n      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000 && parsed.getFullYear() < 2100) {\n        return parsed;\n      }\n      return null;\n    } catch (e) {\n      return null;\n    }\n  }\n\n  // Safe date to ISO string conversion\n  function safeDateToISO(date) {\n    try {\n      if (date && date instanceof Date && !isNaN(date.getTime())) {\n        return date.toISOString().split('T')[0];\n      }\n      return null;\n    } catch (e) {\n      return null;\n    }\n  }\n\n  // Calculate prep start date (30 days before deadline)\n  let prepStartDate = null;\n  let deadlineDate = safeParseDate(analysis.deadline);\n\n  if (deadlineDate) {\n    prepStartDate = new Date(deadlineDate);\n    prepStartDate.setDate(prepStartDate.getDate() - 30);\n  }\n\n  // ============ END DATE HANDLING ============\n\n  // Build final response\n  const result = {\n    success: true,\n\n    // Main eligibility result\n    eligibility: {\n      score: analysis.overallScore || 'YELLOW',\n      confidence: analysis.confidence || 50,\n      summary: analysis.summary || 'Unable to determine eligibility'\n    },\n\n    // Detailed breakdown\n    categories: analysis.categories || {},\n\n    // Extracted info\n    grantInfo: {\n      title: analysis.grantTitle || scannerData.title || 'Unknown Grant',\n      agency: analysis.agency || scannerData.agency || 'Unknown Agency',\n      deadline: analysis.deadline || scannerData.deadline || 'Not specified',\n      deadlineDate: safeDateToISO(deadlineDate),\n      prepStartDate: safeDateToISO(prepStartDate),\n      fundingRange: analysis.fundingRange || scannerData.awardRange || 'Not specified',\n      keyRequirements: analysis.keyRequirements || [],\n      daysUntilDeadline: 0\n    },\n\n    // For tracker\n    tracker: {\n      grantName: analysis.grantTitle || scannerData.title || 'Unknown Grant',\n      funder: analysis.agency || scannerData.agency || 'Unknown',\n      amount: analysis.fundingRange || scannerData.awardRange || 'TBD',\n      deadline: analysis.deadline || scannerData.deadline || 'TBD',\n      prepStartDate: safeDateToISO(prepStartDate) || 'TBD',\n      status: 'Prospecting',\n      eligibilityScore: analysis.overallScore || 'YELLOW',\n      confidence: analysis.confidence || 50,\n      requiredDocs: (analysis.keyRequirements || []).join('; '),\n      notes: analysis.summary || '',\n      sourceUrl: originalData.sourceUrl,\n      daysUntilDeadline: 0\n    },\n\n    // Recommendations\n    concerns: analysis.concerns || [],\n    recommendations: analysis.recommendations || [],\n\n    // Metadata\n    source: {\n      url: originalData.sourceUrl,\n      type: originalData.sourceType,\n      analyzedAt: new Date().toISOString()\n    },\n\n    // Organization matched against\n    organization: originalData.eligibilityCriteria.geographic\n  };\n\n  // Add visual score indicator\n  const scoreEmoji = {\n    'GREEN': '🟢',\n    'YELLOW': '🟡',\n    'RED': '🔴'\n  };\n  result.eligibility.indicator = scoreEmoji[result.eligibility.score] || '⚪';\n\n  // Calculate days until deadline (using safe check)\n  if (deadlineDate && !isNaN(deadlineDate.getTime())) {\n    const today = new Date();\n    const diffTime = deadlineDate.getTime() - today.getTime();\n    const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24));\n    result.grantInfo.daysUntilDeadline = daysUntil;\n    result.tracker.daysUntilDeadline = daysUntil;\n  }\n\n  return [{ json: result }];"
+        "jsCode": "const item = $input.first();\nconst aiResponse = item.json;\n\nlet analysis = null;\nlet parseError = null;\n\n// Extract JSON from AI response\ntry {\n  let responseText = '';\n\n  if (aiResponse.text) {\n    responseText = aiResponse.text;\n  } else if (aiResponse.message?.content) {\n    responseText = aiResponse.message.content;\n  } else if (aiResponse.output && Array.isArray(aiResponse.output)) {\n    responseText = aiResponse.output[0]?.content?.[0]?.text || '';\n  } else if (typeof aiResponse === 'string') {\n    responseText = aiResponse;\n  }\n\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);\n} catch (e) {\n  parseError = e.message;\n}\n\nconst originalData = $('Load Eligibility Criteria2').first().json;\nconst scannerData = originalData.originalGrantData || {};\n\nif (!analysis) {\n  return [{\n    json: {\n      success: false,\n      error: 'Failed to parse AI response',\n      parseError,\n      sourceUrl: originalData.sourceUrl,\n      sourceType: originalData.sourceType\n    }\n  }];\n}\n\n// ===== BUILD RESULT =====\nconst score = (analysis.overallScore || 'YELLOW').toLowerCase(); // convert to lowercase to match enum\nconst allowedScores = ['green', 'yellow', 'red'];\nconst screening_result = allowedScores.includes(score) ? score : 'yellow'; // fallback if unexpected\n\nconst result = {\n  success: true,\n  data: {\n    // analysis: analysis,\n    grantid: analysis.grantid,\n    org_id: \"00000000-0000-0000-0000-000000000001\",\n    title: analysis.grantTitle,\n    stage: \"screening\",\n    funder_name: analysis.agency || scannerData.agency || 'Unknown',\n    amount: analysis.fundingRange || scannerData.awardRange || null,\n    deadline: analysis.deadline || scannerData.deadline,\n\n    eligibility: {\n      score: score.toUpperCase(),\n      confidence: analysis.confidence || 50,\n      indicator: {\n        green: '🟢',\n        yellow: '🟡',\n        red: '🔴'\n      }[score] || '⚪'\n    },\n\n    screening_score: analysis.confidence, // enum-safe value\n\n    screening_notes: analysis.summary || 'Unable to determine eligibility',\n    categories: analysis.categories || {},\n    concerns: analysis.concerns || [],\n    recommendations: analysis.recommendations || [],\n\n    source: {\n      url: originalData.sourceUrl,\n      type: originalData.sourceType,\n      analyzedAt: new Date().toISOString()\n    },\n\n    organization: originalData.eligibilityCriteria.geographic || {}\n  }\n};\nreturn result;\n"
       },
       "id": "22bcb19d-6032-4bf6-ad0f-87b9cb5a7dfd",
       "name": "Format Analysis Response1",
@@ -886,15 +886,15 @@
     },
     {
       "parameters": {
-        "jsCode": "// Return success response after adding to tracker\nconst data = $('Format Analysis Response1').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    eligibility: data.eligibility,\n    grantInfo: data.grantInfo,\n    categories: data.categories,\n    concerns: data.concerns,\n    recommendations: data.recommendations,\n    addedToTracker: true,\n    trackerData: data.tracker,\n    source: data.source\n  }\n}];"
+        "jsCode": "return items.map(item => {\n  const grant = item.json.grants;\n  const details = grant.details;\n  \n  return {\n    json: {\n      success: grant.success ?? true,\n      org_id: grant.org_id,\n      grant_id: grant.grant_id,\n      action: grant.action,\n      grant_name: details.grant_name,\n      funder: details.funder,\n      score: details.score,\n      confidence: details.confidence,\n      workflow: details.workflow,\n      summary: details.summary,\n      \"text\": \"New Grant Opportunity Found!\",\n      blocks: [  // ← THIS MUST BE HERE\n        {\n          type: \"header\",\n          text: {\n            type: \"plain_text\",\n            text: `${details.score || 'TBD'} New Grant Opportunity Found!`,\n            emoji: true\n          }\n        },\n        {\n          type: \"section\",\n          fields: [\n            {\n              type: \"mrkdwn\",\n              text: `*Grant:*\\n${details.grant_name || 'TBD'}`\n            },\n            {\n              type: \"mrkdwn\",\n              text: `*Funder:*\\n${details.funder || 'TBD'}`\n            }\n          ]\n        },\n        {\n          type: \"section\",\n          fields: [\n            {\n              type: \"mrkdwn\",\n              text: \"*Amount:*\\nTBD\"\n            },\n            {\n              type: \"mrkdwn\",\n              text: \"*Deadline:*\\nTBD\"\n            }\n          ]\n        },\n        {\n          type: \"section\",\n          fields: [\n            {\n              type: \"mrkdwn\",\n              text: `*Eligibility:*\\n${details.score || 'TBD'} (${details.confidence || 'TBD'}% confidence)`\n            },\n            {\n              type: \"mrkdwn\",\n              text: \"*Days Until Deadline:*\\nTBD\"\n            }\n          ]\n        },\n        {\n          type: \"section\",\n          text: {\n            type: \"mrkdwn\",\n            text: `*Summary:*\\n${details.summary || 'No summary available'}`\n          }\n        },\n        {\n          type: \"section\",\n          text: {\n            type: \"mrkdwn\",\n            text: \"*Start Prep By:* TBD\"\n          }\n        },\n        {\n          type: \"actions\",\n          elements: [\n            {\n              type: \"button\",\n              text: {\n                type: \"plain_text\",\n                text: \"View Grant\",\n                emoji: true\n              },\n              url: \"#\",\n              action_id: \"view_grant\"\n            }\n          ]\n        },\n        {\n          type: \"divider\"\n        },\n        {\n          type: \"context\",\n          elements: [\n            {\n              type: \"mrkdwn\",\n              text: \"Added to Grant Tracker | TBD\"\n            }\n          ]\n        }\n      ]  // ← blocks array ends here\n    }\n  };\n});"
       },
       "id": "f2dac208-10ac-4b0b-8065-f208835dc710",
       "name": "Success Response2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2064,
-        -176
+        2352,
+        -384
       ],
       "notesInFlow": true,
       "notes": "Return success with tracker confirmation"
@@ -909,7 +909,7 @@
           "cachedResultName": "grant-assistant"
         },
         "messageType": "block",
-        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"{{ $json.eligibility.indicator }} New Grant Opportunity Found!\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Grant:*\\n{{ $json.tracker.grantName }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Funder:*\\n{{ $json.tracker.funder }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Amount:*\\n{{ $json.tracker.amount }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Deadline:*\\n{{ $json.tracker.deadline }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Eligibility:*\\n{{ $json.eligibility.indicator }} {{ $json.eligibility.score }} ({{ $json.eligibility.confidence }}% confidence)\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Days Until Deadline:*\\n{{ $json.tracker.daysUntilDeadline || 'TBD' }} days\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Summary:*\\n{{ $json.eligibility.summary }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Start Prep By:* {{ $json.tracker.prepStartDate || 'TBD' }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"View Grant\",\n            \"emoji\": true\n          },\n          \"url\": \"{{ $json.source.url }}\",\n          \"action_id\": \"view_grant\"\n        }\n      ]\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Added to Grant Tracker | {{ new Date().toLocaleString() }}\"\n        }\n      ]\n    }\n  ]\n}",
+        "blocksUi": "={{ $json.blocks }}",
         "otherOptions": {
           "includeLinkToWorkflow": false
         }
@@ -917,8 +917,8 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.4,
       "position": [
-        2224,
-        -192
+        2336,
+        -176
       ],
       "id": "0b34f34a-df40-4214-a450-89d0c6b4d92a",
       "name": "Send a message",
@@ -929,47 +929,89 @@
           "name": "Grant Assistant"
         }
       }
-    }
-  ],
-  "pinData": {
-    "Webhook Trigger1": [
-      {
-        "json": {
-          "headers": {
-            "host": "n8n.thebrownmine.com",
-            "user-agent": "axios/1.12.0",
-            "content-length": "324",
-            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
-            "accept-encoding": "gzip, compress, deflate, br",
-            "content-type": "application/json",
-            "via": "1.1 Caddy",
-            "x-forwarded-for": "100.29.112.47",
-            "x-forwarded-host": "n8n.thebrownmine.com",
-            "x-forwarded-proto": "https"
-          },
-          "params": {},
-          "query": {},
-          "body": {
-            "url": "https://chanzuckerberg.com/",
-            "planeissueid": "cb3eed61-cbfd-4ddb-8552-554223585c30",
-            "grantData": {
-              "title": "Chan Zuckerberg Initiative - Philanthropic Foundation",
-              "agency": "Chan Zuckerberg Initiative",
-              "awardRange": "50000 - 5000000",
-              "deadline": "Ongoing - Check website",
-              "description": "",
-              "source": "Major Philanthropies"
-            }
-          },
-          "webhookUrl": "https://n8n.thebrownmine.com/webhook/screen-grant",
-          "executionMode": "production"
-        },
-        "pairedItem": {
-          "item": 0
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://89.58.28.152:3000//api/webhook",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  action: \"log_activity\",\n  data: {\n    org_id: $json.grants[0].org_id || null,\n    grant_id: $json.grants[0].id || null,\n    action: \"screening_completed\",\n    details: {\n      score: $json.grants[0].eligibility?.score || null,\n      confidence: $json.grants[0].eligibility?.confidence || null,\n      summary: $json.grants[0].screening_notes || null,\n      grant_name: $json.grants[0].title || null,\n      funder: $json.grants[0].funder_name || null,\n      workflow: \"WF2_eligibility_screener\"\n    }\n  }\n}) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2112,
+        -384
+      ],
+      "id": "f9a01a0b-b3fc-4c84-acf4-1c1c8ba95918",
+      "name": "log activity",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
         }
       }
-    ]
-  },
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://89.58.28.152:3000/api/webhook",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\"action\": \"update_grant\", \"data\": $json.data}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1808,
+        -384
+      ],
+      "id": "73b54f6b-ac05-4072-8c7e-4e967da7f775",
+      "name": "update grant",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook-test/generate-proposal",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 12000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2592,
+        -384
+      ],
+      "id": "ff2a78f0-e9a0-445d-bac5-fdafa96fb7b5",
+      "name": "Call proposal generator",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    }
+  ],
+  "pinData": {},
   "connections": {
     "Load Eligibility Criteria": {
       "main": [
@@ -1207,7 +1249,7 @@
       "main": [
         [
           {
-            "node": "Create Sub-Item in Plane1",
+            "node": "update grant",
             "type": "main",
             "index": 0
           }
@@ -1256,20 +1298,41 @@
     },
     "Create Sub-Item in Plane1": {
       "main": [
-        [
-          {
-            "node": "Success Response2",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Success Response2": {
       "main": [
         [
           {
-            "node": "Send a message",
+            "node": "Call proposal generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "update grant": {
+      "main": [
+        [
+          {
+            "node": "log activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log activity": {
+      "main": [
+        [
+          {
+            "node": "Success Response2",
             "type": "main",
             "index": 0
           }
@@ -1282,7 +1345,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "ddb70196-b363-4e18-8c07-40cf3875f6c4",
+  "versionId": "c15c9a88-4e6d-4b23-8ac3-419dd27e2ad1",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
