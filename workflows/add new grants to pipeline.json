@@ -1,0 +1,192 @@
+{
+  "name": "add new grants to pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "save-grant-to-pipeline",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "0726b66a-d74c-41f3-9ee6-250e8ab07485",
+      "name": "add new grant to workflow",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "generate-proposal",
+      "notes": "POST: { grantId, rfpText, funderName, funderFocus, deadline, planeIssueId }"
+    },
+    {
+      "parameters": {
+        "jsCode": "const httpResponse = $input.first().json;\nconst origItems = $('HTTP Request2').all();\n\n// Get inserted grants returned from webhook\nconst insertedGrants = httpResponse.grants || [];\n\nreturn insertedGrants.map((grant, index) => {\n  const orig = origItems[index]?.json || {};\n\n  return {\n    json: {\n      // ← Supabase UUID (replaces grantId)\n      url: orig.link || orig.url || '',\n      grantId: grant.id,\n      grantData: {\n        title: grant.title || orig.title || '',\n        agency: grant.funder_name || orig.agency || '',\n        awardRange: grant.amount || 'Not specified',\n        deadline: grant.deadline || orig.closeDate || '',\n        description: grant.description || '',\n        source: grant.source || orig.source || ''\n      }\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        0
+      ],
+      "id": "8d9c041d-da79-4803-bcbd-774e7d3c8a88",
+      "name": "Prepare Eligibility Check2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://89.58.28.152:3000/api/webhook",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "=  {{ JSON.stringify({ \"action\": \"insert_grants\", \"data\": { \"grants\": [$json.body] } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        0
+      ],
+      "id": "83146953-690f-4c41-aa31-c2bde9717752",
+      "name": "HTTP Request2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook-test/screen-grant",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n   \"url\":\"{{ $json.url }}\",\n   \"grantid\":\"{{ $json.grantId }}\",\n   \"grantData\":{\n      \"title\":\"{{ $json.grantData.title }}\",\n      \"agency\":\"{{ $json.grantData.agency }}\",\n      \"awardRange\":\"{{ $json.grantData.awardRange }}\",\n      \"deadline\":\"{{ $json.grantData.deadline }}\",\n      \"description\":\"{{ $json.grantData.description }}\",\n      \"source\":\"{{ $json.grantData.source }}\"\n   }\n}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 12000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        736,
+        0
+      ],
+      "id": "b5b3b203-4913-41d0-9e3a-7bc101d9e07a",
+      "name": "Call Eligibility Screener1"
+    },
+    {
+      "parameters": {},
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        240
+      ],
+      "id": "b80b1631-8776-4edb-89c2-709bcc623365"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, message: $json.execution?.error?.message || \"Proposal generation failed\" }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        240
+      ],
+      "id": "0ef75061-3dd6-446c-b4c7-e759677cecb5"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: \"Grant added to pipeline successfully, screening stage initiated\" }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        -176
+      ],
+      "id": "18e66299-cffc-4ce3-a462-d82a010c301c"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "add new grant to workflow": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Eligibility Check2": {
+      "main": [
+        [
+          {
+            "node": "Call Eligibility Screener1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Prepare Eligibility Check2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "d5db0ca7-345e-4c2c-9d76-2a0ef966c3ba",
+  "meta": {
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "jCJvUz6UkCQMWpmt",
+  "tags": []
+}
