@@ -46,12 +46,22 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
   }
 
   return (
-    <>
-      <Button onClick={handleCreateClick}>
-        <Plus className="h-4 w-4 mr-2" />
-        New Narrative
-      </Button>
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Narratives</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Reusable content blocks for grant proposals
+          </p>
+        </div>
+        <Button onClick={handleCreateClick}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Narrative
+        </Button>
+      </div>
 
+      {/* List with search/filter */}
       <NarrativeList
         initialData={narratives}
         grants={grants}
@@ -59,6 +69,7 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
         onAICustomizeClick={handleAICustomizeClick}
       />
 
+      {/* Dialogs */}
       <NarrativeDialog
         mode={dialogMode}
         narrative={selectedNarrative}
@@ -74,6 +85,6 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
           onOpenChange={setAiDialogOpen}
         />
       )}
-    </>
+    </div>
   )
 }

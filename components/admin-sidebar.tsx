@@ -6,14 +6,8 @@ import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
-  Kanban,
-  Search,
-  FileText,
-  BookOpen,
-  PenTool,
-  DollarSign,
-  Send,
-  Trophy,
+  Building2,
+  Users,
   Settings,
   LogOut,
   ChevronLeft,
@@ -22,19 +16,13 @@ import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/pipeline", label: "Pipeline", icon: Kanban },
-  { href: "/discovery", label: "Discovery", icon: Search },
-  { href: "/documents", label: "Documents", icon: FileText },
-  { href: "/narratives", label: "Narratives", icon: BookOpen },
-  { href: "/proposals", label: "Proposals", icon: PenTool },
-  { href: "/budgets", label: "Budgets", icon: DollarSign },
-  // { href: "/submissions", label: "Submissions", icon: Send },
-  // { href: "/awards", label: "Awards", icon: Trophy },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
+  { href: "/admin/organizations", label: "Organizations", icon: Building2 },
+  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar({ user }: { user: User }) {
+export function AdminSidebar({ user }: { user: User }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const initials =
@@ -55,7 +43,7 @@ export function Sidebar({ user }: { user: User }) {
       <div className="flex h-14 items-center justify-between border-b px-4">
         {!collapsed && (
           <span className="text-sm font-semibold tracking-tight">
-            Fundory.ai
+            Admin Panel
           </span>
         )}
         <button
@@ -74,8 +62,10 @@ export function Sidebar({ user }: { user: User }) {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-2">
         {navItems.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive = item.exact
+            ? pathname === item.href
+            : pathname === item.href ||
+              pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}

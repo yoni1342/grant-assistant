@@ -64,7 +64,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-semibold">
-            Grant Assistant
+            Fundory.ai
           </CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
@@ -136,10 +136,10 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link
-              href="/signup"
+              href="/register"
               className="font-medium text-foreground hover:underline"
             >
-              Sign up
+              Register
             </Link>
           </p>
         </CardFooter>

@@ -86,7 +86,9 @@ export function KanbanView({ grants }: { grants: Grant[] }) {
                       {grant.deadline && (
                         <p className="text-xs text-muted-foreground">
                           Due:{" "}
-                          {new Date(grant.deadline).toLocaleDateString()}
+                          {isNaN(new Date(grant.deadline).getTime())
+                            ? grant.deadline
+                            : new Date(grant.deadline).toLocaleDateString()}
                         </p>
                       )}
                     </CardContent>

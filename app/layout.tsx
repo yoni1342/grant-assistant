@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Grant Assistant",
+  title: "Fundory.ai",
   description:
     "Manage your entire grant lifecycle from discovery through submission and reporting.",
 };

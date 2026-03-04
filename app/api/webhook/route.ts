@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
 
         const { data: insertedGrants, error } = await supabase
           .from("grants")
-          .insert(normalizedGrants)
+          .upsert(normalizedGrants, { onConflict: "org_id,source_id", ignoreDuplicates: true })
           .select("*");
         if (error) throw error;
         return NextResponse.json({
@@ -434,9 +434,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     console.error("Webhook error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: errMsg },
       { status: 500 },
     );
   }

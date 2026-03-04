@@ -23,7 +23,17 @@ import {
   ExternalLink,
   AlertTriangle,
   CheckCircle2,
+  XCircle,
+  Sparkles,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 import { GenerateProposalButton } from "./components/generate-proposal-button";
 import { FunderAnalysisButton } from "./components/funder-analysis-button";
@@ -62,6 +72,9 @@ export function GrantDetail({
     return isNaN(d.getTime()) ? grant.deadline : d.toISOString().split("T")[0];
   });
   const [stage, setStage] = useState<string>(grant.stage || "discovery");
+  const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
+  const [proposalStatus, setProposalStatus] = useState<"generating" | "done" | "error">("generating");
+  const [proposalError, setProposalError] = useState<string | null>(null);
 
   const eligibility = grant.eligibility as {
     score?: string;
@@ -72,6 +85,41 @@ export function GrantDetail({
   const recommendations = grant.recommendations as { text?: string }[] | string[] | null;
 
   async function handleSave() {
+    const stageChangedToDrafting = stage === "drafting" && grant.stage !== "drafting";
+
+    // If stage changed to drafting, trigger proposal generation first
+    if (stageChangedToDrafting) {
+      setProposalError(null);
+      setProposalStatus("generating");
+      setProposalDialogOpen(true);
+
+      try {
+        const response = await fetch("/api/trigger-proposal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            grantId: grant.id,
+            timestamp: new Date().toISOString(),
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || result.success === false) {
+          setProposalStatus("error");
+          setProposalError(result.error || "Proposal generation failed.");
+          return;
+        }
+
+        setProposalStatus("done");
+      } catch (err) {
+        setProposalStatus("error");
+        setProposalError("Failed to connect to workflow.");
+        return;
+      }
+    }
+
+    // Save the grant fields
     setSaving(true);
     const supabase = createClient();
 
@@ -87,7 +135,15 @@ export function GrantDetail({
       .eq("id", grant.id);
 
     setSaving(false);
-    router.refresh();
+
+    if (stageChangedToDrafting) {
+      setTimeout(() => {
+        setProposalDialogOpen(false);
+        router.refresh();
+      }, 2000);
+    } else {
+      router.refresh();
+    }
   }
 
   return (
@@ -386,6 +442,51 @@ export function GrantDetail({
           </CardContent>
         </Card>
       </div>
+
+      {/* Proposal Generation Dialog */}
+      <Dialog open={proposalDialogOpen} onOpenChange={() => {}}>
+        <DialogContent
+          className="sm:max-w-sm [&>button]:hidden"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <div className="flex flex-col items-center gap-4 py-4">
+              {proposalStatus === "generating" && (
+                <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+              )}
+              {proposalStatus === "done" && (
+                <CheckCircle2 className="h-8 w-8 text-green-500" />
+              )}
+              {proposalStatus === "error" && (
+                <XCircle className="h-8 w-8 text-red-500" />
+              )}
+              <DialogTitle>
+                {proposalStatus === "generating" && "Generating Proposal..."}
+                {proposalStatus === "done" && "Proposal Generated!"}
+                {proposalStatus === "error" && "Generation Failed"}
+              </DialogTitle>
+              <DialogDescription className="text-center">
+                {proposalStatus === "generating" &&
+                  `Creating a proposal for "${grant.title}". This may take a minute.`}
+                {proposalStatus === "done" && "Your proposal is ready."}
+                {proposalStatus === "error" &&
+                  (proposalError || "Something went wrong.")}
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+          {proposalStatus === "error" && (
+            <DialogFooter className="sm:justify-center">
+              <Button
+                variant="outline"
+                onClick={() => setProposalDialogOpen(false)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

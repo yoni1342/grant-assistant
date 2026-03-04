@@ -87,7 +87,9 @@ export function ListView({ grants }: { grants: Grant[] }) {
               </TableCell>
               <TableCell>
                 {g.deadline
-                  ? new Date(g.deadline).toLocaleDateString()
+                  ? isNaN(new Date(g.deadline).getTime())
+                    ? g.deadline
+                    : new Date(g.deadline).toLocaleDateString()
                   : "—"}
               </TableCell>
             </TableRow>

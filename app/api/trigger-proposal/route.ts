@@ -22,40 +22,64 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
+  const payload = { ...body, org_id: orgId };
+  const fullUrl = `${n8nUrl}/generate-proposal`;
+
+  console.log('[trigger-proposal] URL:', fullUrl);
+  console.log('[trigger-proposal] Payload:', JSON.stringify(payload));
 
   const agent = new https.Agent({
     rejectUnauthorized: false,
   });
 
-  const response = await fetch(
-    `${n8nUrl}/generate-proposal`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET || "",
-      },
-      body: JSON.stringify({ ...body, org_id: orgId }),
-      agent,
-    },
-  );
-
-  const text = await response.text();
-  let data;
   try {
-    data = JSON.parse(text);
-  } catch {
-    data = text;
-  }
+    const response = await fetch(
+      fullUrl,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET || "",
+        },
+        body: JSON.stringify(payload),
+        agent,
+      },
+    );
 
-  if (!response.ok) {
+    console.log('[trigger-proposal] n8n status:', response.status);
+    const text = await response.text();
+    console.log('[trigger-proposal] n8n response:', text.substring(0, 500));
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+
+    if (!response.ok) {
+      return new Response(
+        JSON.stringify({ success: false, error: data?.message || data || "Workflow failed" }),
+        { status: response.status, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    // n8n returned 200 but empty body means workflow took wrong path
+    if (!text || text.trim() === '') {
+      return new Response(
+        JSON.stringify({ success: false, error: "Workflow returned empty response — check n8n logs" }),
+        { status: 502, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error('[trigger-proposal] Fetch error:', err);
     return new Response(
-      JSON.stringify({ success: false, error: data?.message || data || "Workflow failed" }),
-      { status: response.status, headers: { "Content-Type": "application/json" } },
+      JSON.stringify({ success: false, error: String(err) }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
-
-  return new Response(JSON.stringify({ success: true, data }), {
-    headers: { "Content-Type": "application/json" },
-  });
 }

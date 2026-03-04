@@ -118,21 +118,38 @@ export async function triggerProposalGeneration(grantId: string) {
     return { error: workflowError.message }
   }
 
-  // Fire-and-forget: trigger n8n workflow
-  if (process.env.N8N_WEBHOOK_URL) {
-    fetch(`${process.env.N8N_WEBHOOK_URL}/generate-proposal`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
-      },
-      body: JSON.stringify({
-        grant_id: grantId,
-        workflow_id: workflow.id,
-      }),
-    }).catch((err) => {
-      console.error('n8n generate-proposal webhook failed:', err)
-    })
+  // Trigger n8n workflow
+  const n8nUrl = process.env.N8N_WEBHOOK_URL
+  console.log('[proposal-gen] N8N_WEBHOOK_URL:', n8nUrl)
+  console.log('[proposal-gen] grantId:', grantId, 'org_id:', profile.org_id)
+
+  if (n8nUrl) {
+    const fullUrl = `${n8nUrl}/generate-proposal`
+    const payload = {
+      grantId: grantId,
+      org_id: profile.org_id,
+      workflow_id: workflow.id,
+    }
+    console.log('[proposal-gen] Calling:', fullUrl)
+    console.log('[proposal-gen] Payload:', JSON.stringify(payload))
+
+    try {
+      const resp = await fetch(fullUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
+        },
+        body: JSON.stringify(payload),
+      })
+      console.log('[proposal-gen] n8n response status:', resp.status)
+      const text = await resp.text()
+      console.log('[proposal-gen] n8n response body:', text.substring(0, 500))
+    } catch (err) {
+      console.error('[proposal-gen] n8n webhook failed:', err)
+    }
+  } else {
+    console.log('[proposal-gen] N8N_WEBHOOK_URL not set, skipping')
   }
 
   revalidatePath('/proposals')

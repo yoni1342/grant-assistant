@@ -487,47 +487,80 @@ export type Database = {
       organizations: {
         Row: {
           address: string | null
+          annual_budget: number | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string | null
           description: string | null
           ein: string | null
           email: string | null
+          executive_summary: string | null
           founding_year: number | null
+          geographic_focus: string[] | null
           id: string
+          metadata: Json | null
           mission: string | null
           name: string
           phone: string | null
+          programs: Json | null
+          rejection_reason: string | null
           sector: string | null
+          staff_count: number | null
+          status: Database["public"]["Enums"]["org_status"]
           updated_at: string | null
+          voice_profile: Json | null
           website: string | null
         }
         Insert: {
           address?: string | null
+          annual_budget?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
           description?: string | null
           ein?: string | null
           email?: string | null
+          executive_summary?: string | null
           founding_year?: number | null
+          geographic_focus?: string[] | null
           id?: string
+          metadata?: Json | null
           mission?: string | null
           name: string
           phone?: string | null
+          programs?: Json | null
+          rejection_reason?: string | null
           sector?: string | null
+          staff_count?: number | null
+          status?: Database["public"]["Enums"]["org_status"]
           updated_at?: string | null
+          voice_profile?: Json | null
           website?: string | null
         }
         Update: {
           address?: string | null
+          annual_budget?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
           description?: string | null
           ein?: string | null
           email?: string | null
+          executive_summary?: string | null
           founding_year?: number | null
+          geographic_focus?: string[] | null
           id?: string
+          metadata?: Json | null
           mission?: string | null
           name?: string
           phone?: string | null
+          programs?: Json | null
+          rejection_reason?: string | null
           sector?: string | null
+          staff_count?: number | null
+          status?: Database["public"]["Enums"]["org_status"]
           updated_at?: string | null
+          voice_profile?: Json | null
           website?: string | null
         }
         Relationships: []
@@ -539,6 +572,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_platform_admin: boolean
           org_id: string | null
           preferences: Json | null
           role: string | null
@@ -550,6 +584,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_platform_admin?: boolean
           org_id?: string | null
           preferences?: Json | null
           role?: string | null
@@ -561,6 +596,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_platform_admin?: boolean
           org_id?: string | null
           preferences?: Json | null
           role?: string | null
@@ -934,6 +970,7 @@ export type Database = {
         | "capacity"
         | "budget_narrative"
         | "other"
+      org_status: "pending" | "approved" | "rejected"
       report_type: "interim" | "final"
       submission_method: "auto" | "manual"
       workflow_status: "pending" | "running" | "completed" | "failed"
