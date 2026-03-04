@@ -461,6 +461,67 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      case "extract_document_text": {
+        const { document_id, org_id } = data;
+
+        // Get document record
+        let docQuery = supabase
+          .from("documents")
+          .select("id, name, file_type, file_path")
+          .eq("id", document_id);
+        if (org_id) docQuery = docQuery.eq("org_id", org_id);
+        const { data: doc, error: docError } = await docQuery.single();
+        if (docError) throw docError;
+
+        // Download file from Supabase Storage
+        const { data: fileData, error: dlError } = await supabase.storage
+          .from("documents")
+          .download(doc.file_path);
+        if (dlError) throw dlError;
+
+        let extractedText = "";
+        const buffer = Buffer.from(await fileData.arrayBuffer());
+
+        if (doc.file_type === "application/pdf") {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const pdfParse = require("pdf-parse");
+          const pdfData = await pdfParse(buffer);
+          extractedText = pdfData.text;
+        } else if (
+          doc.file_type ===
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ) {
+          // Basic DOCX extraction - pull text from XML inside the zip
+          const JSZip = await import("jszip");
+          const zip = await JSZip.loadAsync(buffer);
+          const docXml = await zip.file("word/document.xml")?.async("string");
+          if (docXml) {
+            extractedText = docXml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+          }
+        } else {
+          // For text-based formats, just decode
+          extractedText = buffer.toString("utf-8");
+        }
+
+        // Update document with extracted text
+        await supabase
+          .from("documents")
+          .update({
+            extracted_text: extractedText,
+            extraction_status: extractedText ? "completed" : "failed",
+          })
+          .eq("id", document_id);
+
+        return NextResponse.json({
+          success: true,
+          document_id,
+          file_name: doc.name,
+          file_type: doc.file_type,
+          extracted_text: extractedText,
+          text_length: extractedText.length,
+        });
+      }
+
       default:
         return NextResponse.json(
           { error: `Unknown action: ${action}` },

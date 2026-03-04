@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## WF4: Document Vault Manager (Updated)\n\n### Path 1: Process Document (triggered on upload)\nWebhook: POST /process-document\nReceives { document_id, org_id, file_name, file_type }\n1. Marks document as 'processing'\n2. Gets signed URL from Supabase Storage\n3. Downloads file, extracts text\n4. AI categorizes the document\n5. Updates DB with extracted_text + ai_category\n\n### Path 2: Retrieve Documents (called by other WFs)\nWebhook: POST /get-documents\nReceives { requiredDocs: [...], org_id }\nFetches from Supabase DB (no re-download)\n\n### Old paths (Google Drive / Plane) are disabled above",
+        "content": "## WF4: Document Vault Manager (Updated)\n\n### Path 1: Process Document (triggered on upload)\nWebhook: POST /process-document\nReceives { document_id, org_id, file_name, file_type }\n1. Marks document as 'processing'\n2. Calls app server to extract text (pdf-parse / jszip)\n3. AI categorizes the document\n4. Updates DB with ai_category + description\n\n### Path 2: Retrieve Documents (called by other WFs)\nWebhook: POST /get-documents\nReceives { requiredDocs: [...], org_id }\nFetches from Supabase DB (no re-download)",
         "height": 360,
         "width": 520
       },
@@ -68,11 +68,11 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={\n  \"action\": \"get_document_url\",\n  \"data\": {\n    \"document_id\": \"{{ $('Process Document Webhook').item.json.body.document_id }}\",\n    \"org_id\": \"{{ $('Process Document Webhook').item.json.body.org_id }}\"\n  }\n}",
+        "body": "={\n  \"action\": \"extract_document_text\",\n  \"data\": {\n    \"document_id\": \"{{ $('Process Document Webhook').item.json.body.document_id }}\",\n    \"org_id\": \"{{ $('Process Document Webhook').item.json.body.org_id }}\"\n  }\n}",
         "options": {}
       },
-      "id": "0e2d09aa-979b-4155-bc2c-f7bfcdeefbf5",
-      "name": "Get Document URL",
+      "id": "a72cd1e5-2e52-460b-bbfe-372ba27fcffc",
+      "name": "Extract Text from Server",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
@@ -85,39 +85,6 @@
           "name": "x-webhook-secret"
         }
       }
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.url }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "file"
-            }
-          }
-        }
-      },
-      "id": "8e26c668-b0f4-4ea1-90d2-2af40dd51649",
-      "name": "Download from Storage",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -3872,
-        3472
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "  const items = $input.all();\n  const results = [];\n\n  for (const item of items) {\n    const documentId = item.json.document_id || item.json.id;\n    const orgId = item.json.org_id;\n\n    const response = await $http.request({\n      method: 'POST',\n      url: 'http://89.58.28.152:3000/api/webhook',\n      headers: {\n        'Content-Type': 'application/json',\n        'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk=',\n      },\n      body: {\n        action: 'extract_document_text',\n        data: {\n          document_id: documentId,\n          org_id: orgId,\n        },\n      },\n      json: true,\n    });\n\n    results.push({\n      json: {\n        document_id: documentId,\n        org_id: orgId,\n        fileName: response.file_name || '',\n        mimeType: response.file_type || '',\n        textContent: response.extracted_text || '',\n        text_length: response.text_length || 0,\n        extraction_success: response.success || false,\n      },\n    });\n  }\n\n  return results;"
-      },
-      "id": "a72cd1e5-2e52-460b-bbfe-372ba27fcffc",
-      "name": "Extract Upload Info",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -3632,
-        3472
-      ]
     },
     {
       "parameters": {
@@ -134,7 +101,7 @@
               "role": "system"
             },
             {
-              "content": "=Filename: {{ $json.fileName }}\n\nDocument Content:\n{{ $json.textContent }}"
+              "content": "=Filename: {{ $json.file_name }}\n\nDocument Content:\n{{ $json.extracted_text }}"
             }
           ]
         },
@@ -147,7 +114,7 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        -3440,
+        -3872,
         3472
       ],
       "credentials": {
@@ -159,14 +126,14 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse AI response and update document record\nconst extractInfo = $('Extract Upload Info').first().json;\nconst aiResponse = $input.first().json;\n\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\ntry {\n  let responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    metadata = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  metadata.description = 'Failed to parse AI response';\n}\n\nreturn [{\n  json: {\n    documentId: extractInfo.documentId,\n    orgId: extractInfo.orgId,\n    extractedText: extractInfo.textContent,\n    aiCategory: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || null,\n    isTemplate: metadata.isTemplate || false\n  }\n}];"
+        "jsCode": "// Parse AI response and update document record\nconst extractInfo = $('Extract Text from Server').first().json;\nconst aiResponse = $input.first().json;\n\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\ntry {\n  let responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    metadata = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  metadata.description = 'Failed to parse AI response';\n}\n\nreturn [{\n  json: {\n    documentId: extractInfo.document_id,\n    orgId: extractInfo.org_id || '',\n    extractedText: extractInfo.extracted_text || '',\n    aiCategory: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || null,\n    isTemplate: metadata.isTemplate || false\n  }\n}];"
       },
       "id": "dcc65599-a8e3-4cd1-9881-4dee366b4ea5",
       "name": "Parse AI Category",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3152,
+        -3632,
         3472
       ]
     },
@@ -179,7 +146,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={\n  \"action\": \"update_document\",\n  \"data\": {\n    \"id\": \"{{ $json.documentId }}\",\n    \"extracted_text\": {{ JSON.stringify($json.extractedText) }},\n    \"ai_category\": \"{{ $json.aiCategory }}\",\n    \"description\": \"{{ $json.description }}\",\n    \"extraction_status\": \"completed\",\n    \"metadata\": {\n      \"fiscal_period\": \"{{ $json.fiscalPeriod }}\",\n      \"is_template\": {{ $json.isTemplate }}\n    }\n  }\n}",
+        "body": "={\n  \"action\": \"update_document\",\n  \"data\": {\n    \"id\": \"{{ $json.documentId }}\",\n    \"ai_category\": \"{{ $json.aiCategory }}\",\n    \"description\": {{ JSON.stringify($json.description) }},\n    \"extraction_status\": \"completed\",\n    \"metadata\": {\n      \"fiscal_period\": \"{{ $json.fiscalPeriod }}\",\n      \"is_template\": {{ $json.isTemplate }}\n    }\n  }\n}",
         "options": {}
       },
       "id": "b299fcda-8538-438c-b292-72fc2a035c15",
@@ -187,7 +154,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2912,
+        -3392,
         3472
       ],
       "credentials": {
@@ -273,36 +240,14 @@
       "main": [
         [
           {
-            "node": "Get Document URL",
+            "node": "Extract Text from Server",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Document URL": {
-      "main": [
-        [
-          {
-            "node": "Download from Storage",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Download from Storage": {
-      "main": [
-        [
-          {
-            "node": "Extract Upload Info",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Upload Info": {
+    "Extract Text from Server": {
       "main": [
         [
           {
