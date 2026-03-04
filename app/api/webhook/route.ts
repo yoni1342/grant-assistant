@@ -383,14 +383,50 @@ export async function POST(request: NextRequest) {
       }
 
       case "list_documents": {
+        const selectFields = data.include_content
+          ? "id, name, file_type, category, ai_category, extraction_status, extracted_text, created_at"
+          : "id, name, file_type, category, ai_category, extraction_status, created_at";
+
         let query = supabase
           .from("documents")
-          .select("id, name, file_type, category, ai_category, created_at")
+          .select(selectFields)
           .eq("org_id", data.org_id)
           .order("created_at", { ascending: false });
 
         if (data.category) {
           query = query.eq("category", data.category);
+        }
+
+        const { data: documents, error } = await query;
+        if (error) throw error;
+
+        return NextResponse.json({ success: true, documents });
+      }
+
+      case "get_document": {
+        let docQuery = supabase
+          .from("documents")
+          .select("id, org_id, name, title, file_type, category, ai_category, description, extracted_text, extraction_status, metadata, created_at, updated_at")
+          .eq("id", data.document_id);
+        if (data.org_id) docQuery = docQuery.eq("org_id", data.org_id);
+        const { data: doc, error } = await docQuery.single();
+        if (error) throw error;
+
+        return NextResponse.json({ success: true, document: doc });
+      }
+
+      case "get_documents_content": {
+        let query = supabase
+          .from("documents")
+          .select("id, name, file_type, category, ai_category, extracted_text, extraction_status")
+          .eq("org_id", data.org_id)
+          .eq("extraction_status", "completed");
+
+        if (data.category) {
+          query = query.eq("category", data.category);
+        }
+        if (data.document_ids && Array.isArray(data.document_ids)) {
+          query = query.in("id", data.document_ids);
         }
 
         const { data: documents, error } = await query;

@@ -164,15 +164,97 @@
     },
     {
       "parameters": {
-        "content": "## WF4: Document Vault Manager\n\n### Setup - Replace these values in ALL HTTP Request nodes:\n1. `YOUR_APP_URL` - Your app URL (e.g. https://your-app.vercel.app)\n2. `YOUR_WEBHOOK_SECRET` - Your N8N_WEBHOOK_SECRET env value\n\n### Flow:\n1. App uploads document to Supabase Storage\n2. Webhook fires with `document_id`\n3. Marks document as 'processing'\n4. Gets signed download URL from app\n5. Downloads the file binary\n6. If PDF: extracts text and saves to DB\n7. If not PDF: marks as 'unsupported_format'\n\n### Extending:\nAdd more branches from 'Is PDF?' for DOCX, XLSX, etc.\nYou can also add AI categorization after extraction.",
-        "height": 340,
+        "httpMethod": "POST",
+        "path": "fetch-documents",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000010",
+      "name": "Fetch Documents Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 780],
+      "webhookId": "fetch-documents"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.mode }}",
+              "value2": "single",
+              "operation": "equals"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000011",
+      "name": "Single or List?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [480, 780]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_APP_URL/api/webhook",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "YOUR_WEBHOOK_SECRET"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"get_document\",\n  \"data\": {\n    \"document_id\": \"{{ $('Fetch Documents Webhook').item.json.document_id }}\",\n    \"org_id\": \"{{ $('Fetch Documents Webhook').item.json.org_id }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000012",
+      "name": "Get Single Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 680]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_APP_URL/api/webhook",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "YOUR_WEBHOOK_SECRET"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"get_documents_content\",\n  \"data\": {\n    \"org_id\": \"{{ $('Fetch Documents Webhook').item.json.org_id }}\",\n    \"category\": \"{{ $('Fetch Documents Webhook').item.json.category || '' }}\",\n    \"document_ids\": {{ JSON.stringify($('Fetch Documents Webhook').item.json.document_ids || []) }}\n  }\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000013",
+      "name": "Get Documents Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 880]
+    },
+    {
+      "parameters": {
+        "content": "## WF4: Document Vault Manager\n\n### Setup - Replace these values in ALL HTTP Request nodes:\n1. `YOUR_APP_URL` - Your app URL (e.g. https://your-app.vercel.app)\n2. `YOUR_WEBHOOK_SECRET` - Your N8N_WEBHOOK_SECRET env value\n\n### Two paths:\n\n**Path 1: Extract (triggered on upload)**\nWebhook: POST /get-documents { document_id }\n1. Marks document as 'processing'\n2. Downloads file from Supabase Storage\n3. Extracts text (PDF) and saves to DB\n\n**Path 2: Fetch (called by other workflows)**\nWebhook: POST /fetch-documents\nFetches already-extracted text from DB — no re-download needed.\n\nSingle doc: { mode: 'single', document_id, org_id }\nMultiple docs: { mode: 'list', org_id, category?, document_ids? }\n\n### Extending:\nAdd branches from 'Is PDF?' for DOCX, XLSX, etc.\nAdd AI categorization after extraction.",
+        "height": 420,
         "width": 520
       },
       "id": "a1b2c3d4-0001-4000-8000-000000000009",
       "name": "Sticky Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [240, -20]
+      "position": [240, -60]
     }
   ],
   "connections": {
@@ -248,6 +330,35 @@
           }
         ]
       ]
+    },
+    "Fetch Documents Webhook": {
+      "main": [
+        [
+          {
+            "node": "Single or List?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Single or List?": {
+      "main": [
+        [
+          {
+            "node": "Get Single Document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Documents Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -255,5 +366,5 @@
   },
   "staticData": null,
   "tags": [],
-  "triggerCount": 1
+  "triggerCount": 2
 }
