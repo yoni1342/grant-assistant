@@ -115,7 +115,7 @@
       "credentials": {
         "openAiApi": {
           "id": "XbaNaQyEtQBSUnml",
-          "name": "OpenAi account 2"
+          "name": "Brownmine"
         }
       },
       "disabled": true
@@ -506,65 +506,6 @@
     },
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "get-documents",
-        "responseMode": "lastNode",
-        "options": {}
-      },
-      "id": "c7ab12f7-89e2-41a4-bb76-9ccb22a1bf52",
-      "name": "Document Retrieval Webhook1",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        -4400,
-        912
-      ],
-      "webhookId": "get-documents",
-      "notes": "POST: { requiredDocs: ['501c3_letter', 'budget_program', ...] }"
-    },
-    {
-      "parameters": {
-        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search=%5BDoc%5D&per_page=100",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {}
-          ]
-        },
-        "options": {}
-      },
-      "id": "462e604d-8639-4ba2-8246-6bd2be58bd36",
-      "name": "Get All Documents1",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -4160,
-        912
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Match requested document types to Plane issues tagged [Doc]\nconst requestBody = $('Document Retrieval Webhook1').first().json.body;\nconst requiredDocs = requestBody.requiredDocs || [];\n\n// Plane returns issues in results array\nconst response = $('Get All Documents1').first().json;\nconst allIssues = response.results || response || [];\nconst issueList = Array.isArray(allIssues) ? allIssues : [];\n\n// Parse document metadata from issue names and descriptions\n// Issue name format: [Doc] category - fileName\nconst activeDocs = [];\nfor (const issue of issueList) {\n  const name = issue.name || '';\n  const match = name.match(/\\[Doc\\]\\s*(\\S+)\\s*-\\s*(.+)/);\n  if (!match) continue;\n  \n  // Extract metadata from description_html\n  const desc = issue.description_html || '';\n  const getField = (label) => {\n    const m = desc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)'));\n    return m ? m[1].trim() : '';\n  };\n  \n  activeDocs.push({\n    category: match[1],\n    fileName: match[2].trim(),\n    fileId: getField('File ID'),\n    driveLink: getField('Drive Link'),\n    version: getField('Version') || '1',\n    description: getField('Description'),\n    fiscalPeriod: getField('Fiscal Period'),\n    lastUpdated: issue.updated_at || '',\n    isTemplate: getField('Template') === 'Yes',\n    planeIssueId: issue.id\n  });\n}\n\nconst matchedDocs = {};\nconst missingDocs = [];\n\nfor (const docType of requiredDocs) {\n  const matches = activeDocs.filter(d => d.category === docType);\n  if (matches.length > 0) {\n    const latest = matches.reduce((a, b) => parseInt(a.version || 0) > parseInt(b.version || 0) ? a : b);\n    matchedDocs[docType] = { found: true, ...latest };\n  } else {\n    missingDocs.push(docType);\n    matchedDocs[docType] = { found: false, message: 'No ' + docType + ' document found in vault' };\n  }\n}\n\nreturn [{\n  json: {\n    success: missingDocs.length === 0,\n    requestedCount: requiredDocs.length,\n    foundCount: requiredDocs.length - missingDocs.length,\n    missingDocs: missingDocs,\n    documents: matchedDocs,\n    retrievedAt: new Date().toISOString()\n  }\n}];"
-      },
-      "id": "51808bd8-f9b1-49a0-92fd-393fe602e6fb",
-      "name": "Match Requested Documents1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -3904,
-        912
-      ]
-    },
-    {
-      "parameters": {
         "jsCode": "// Extract text from file for AI categorization\nconst item = $input.first();\nconst fileInfo = $('Watch Vault Folder1').first().json;\n\n// Get file content - handle different formats\nlet textContent = '';\nif (item.json.data) {\n  textContent = typeof item.json.data === 'string' \n    ? item.json.data \n    : Buffer.from(item.json.data).toString('utf-8');\n}\n\n// Limit to first 3000 chars for AI\nif (textContent.length > 3000) {\n  textContent = textContent.substring(0, 3000) + '...';\n}\n\nreturn [{\n  json: {\n    fileId: fileInfo.id,\n    fileName: fileInfo.name,\n    mimeType: fileInfo.mimeType,\n    fileSize: fileInfo.size,\n    driveLink: `https://drive.google.com/file/d/${fileInfo.id}/view`,\n    createdTime: fileInfo.createdTime,\n    modifiedTime: fileInfo.modifiedTime,\n    textContent: textContent\n  }\n}];"
       },
       "id": "a82ac3aa-2d61-438c-b3d6-bca9acfda20e",
@@ -610,7 +551,7 @@
       "credentials": {
         "openAiApi": {
           "id": "XbaNaQyEtQBSUnml",
-          "name": "OpenAi account 2"
+          "name": "Brownmine"
         }
       }
     },
@@ -629,35 +570,7 @@
     },
     {
       "parameters": {
-        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search=%5BDoc%5D&per_page=100",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {}
-          ]
-        },
-        "options": {}
-      },
-      "id": "3a760db0-7c18-484e-9ca6-0d0bc66472c3",
-      "name": "Get Existing Docs",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -3136,
-        672
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Calculate version number from Plane issues\nconst newDoc = $('Format Metadata').first().json;\n\n// Parse existing docs from Plane response\nlet existingDocs = [];\ntry {\n  const response = $('Get Existing Docs').first().json;\n  const issues = response.results || response || [];\n  const issueList = Array.isArray(issues) ? issues : [];\n  \n  for (const issue of issueList) {\n    const name = issue.name || '';\n    if (!name.startsWith('[Doc]')) continue;\n    const desc = issue.description_html || '';\n    const getField = (label) => {\n      const m = desc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)'));\n      return m ? m[1].trim() : '';\n    };\n    existingDocs.push({\n      fileId: getField('File ID'),\n      category: getField('Category') || name.match(/\\[Doc\\]\\s*(\\S+)/)?.[1] || '',\n      version: getField('Version') || '1',\n      dateAdded: getField('Date Added'),\n      status: 'Active',\n      planeIssueId: issue.id\n    });\n  }\n} catch (e) {\n  existingDocs = [];\n}\n\nconst sameCategoryDocs = existingDocs.filter(d => d.category === newDoc.category);\nconst existingFile = existingDocs.find(d => d.fileId === newDoc.fileId);\n\nif (existingFile) {\n  return [{\n    json: {\n      ...newDoc,\n      version: parseInt(existingFile.version || 1) + 1,\n      dateAdded: existingFile.dateAdded,\n      isUpdate: true,\n      planeIssueId: existingFile.planeIssueId\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...newDoc,\n    version: sameCategoryDocs.length + 1,\n    isUpdate: false\n  }\n}];"
+        "jsCode": "// Calculate version number from Supabase documents\nconst newDoc = $('Format Metadata').first().json;\n\n// Get existing docs from Supabase (previous node)\nlet existingDocs = [];\ntry {\n  const supabaseResponse = $('Get Existing Docs2').all();\n  existingDocs = supabaseResponse.map(item => item.json);\n} catch (e) {\n  existingDocs = [];\n}\n\n// ← DEBUG: Log what we're comparing\nconsole.log(\"NEW DOC fileId:\", newDoc.fileId);\nconsole.log(\"NEW DOC category:\", newDoc.category);\nconsole.log(\"EXISTING DOCS:\", JSON.stringify(existingDocs, null, 2));\n\n// Find docs in same category\nconst sameCategoryDocs = existingDocs.filter(d => \n  d.category === newDoc.category\n);\n\nconsole.log(\"SAME CATEGORY DOCS:\", sameCategoryDocs.length);\n\n// Check if this exact file already exists\nconst existingFile = existingDocs.find(d => {\n  console.log(\n    \"Comparing:\",\n    d.source_file_id,\n    \"===\",\n    newDoc.fileId,\n    \"?\",\n    d.source_file_id === newDoc.fileId\n  );\n  return d.source_file_id === newDoc.fileId;\n});\n\nconsole.log(\"EXISTING FILE FOUND:\", existingFile);\n\nif (existingFile) {\n  // UPDATE existing document\n  return [{\n    json: {\n      docid: existingFile.id,\n      ...newDoc,\n      version: (existingFile.version || 1) + 1,\n      dateAdded: existingFile.created_at,\n      isUpdate: true,\n      supabaseDocId: existingFile.id\n    }\n  }];\n}\n\n// CREATE new document\nreturn [{\n  json: {\n    ...newDoc,\n    org_id: \"00000000-0000-0000-0000-000000000001\",\n    version: sameCategoryDocs.length + 1,\n    dateAdded: new Date().toISOString(),\n    isUpdate: false\n  }\n}];\n"
       },
       "id": "5f16679a-bf4f-45b3-b81b-c5e31f879fb1",
       "name": "Calculate Version",
@@ -700,74 +613,6 @@
         -2688,
         672
       ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {}
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"name\": \"[Doc] {{ $json.category }} - {{ $json.fileName.substring(0, 150) }}\",\n  \"description_html\": \"<h3>Document Vault Entry</h3><p><strong>File ID:</strong> {{ $json.fileId }}</p><p><strong>File Name:</strong> {{ $json.fileName }}</p><p><strong>Drive Link:</strong> <a href='{{ $json.driveLink }}'>{{ $json.driveLink }}</a></p><p><strong>MIME Type:</strong> {{ $json.mimeType }}</p><p><strong>Category:</strong> {{ $json.category }}</p><p><strong>Description:</strong> {{ $json.description }}</p><p><strong>Fiscal Period:</strong> {{ $json.fiscalPeriod }}</p><p><strong>Template:</strong> {{ $json.isTemplate }}</p><p><strong>Version:</strong> {{ $json.version }}</p><p><strong>Date Added:</strong> {{ $json.dateAdded }}</p><p><strong>Status:</strong> Active</p>\",\n  \"priority\": \"medium\"\n}",
-        "options": {}
-      },
-      "id": "df0a963f-94c5-47c2-beca-ec1c858e5eb4",
-      "name": "Add New Document",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -2464,
-        768
-      ],
-      "notesInFlow": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
-      },
-      "notes": "Create new document index issue in Plane"
-    },
-    {
-      "parameters": {
-        "method": "PATCH",
-        "url": "=https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/{{ $json.planeIssueId }}/",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {}
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"name\": \"[Doc] {{ $json.category }} - {{ $json.fileName.substring(0, 150) }}\",\n  \"description_html\": \"<h3>Document Vault Entry</h3><p><strong>File ID:</strong> {{ $json.fileId }}</p><p><strong>File Name:</strong> {{ $json.fileName }}</p><p><strong>Drive Link:</strong> <a href='{{ $json.driveLink }}'>{{ $json.driveLink }}</a></p><p><strong>MIME Type:</strong> {{ $json.mimeType }}</p><p><strong>Category:</strong> {{ $json.category }}</p><p><strong>Description:</strong> {{ $json.description }}</p><p><strong>Fiscal Period:</strong> {{ $json.fiscalPeriod }}</p><p><strong>Template:</strong> {{ $json.isTemplate }}</p><p><strong>Version:</strong> {{ $json.version }}</p><p><strong>Date Added:</strong> {{ $json.dateAdded }}</p><p><strong>Last Updated:</strong> {{ $json.lastUpdated }}</p><p><strong>Status:</strong> Active</p>\"\n}",
-        "options": {}
-      },
-      "id": "42ef56b2-84e8-4a61-8ec1-2864fc54ad47",
-      "name": "Update Existing Document",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -2464,
-        576
-      ],
-      "notesInFlow": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
-      },
-      "notes": "Update existing document issue in Plane"
     },
     {
       "parameters": {
@@ -828,6 +673,182 @@
           "name": "n8ndrivelead"
         }
       }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://89.58.28.152:3000//api/webhook",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={   \"action\": \"update_document\",   \"data\": {     \"id\": \"{{ $json.docid }}\",     \"title\": \"{{ $json.fileName }}\",     \"category\": \"{{ $json.category }}\",     \"description\": \"{{ $json.description }}\",     \"source_url\": \"{{ $json.driveLink }}\",     \"source_file_id\": \"{{ $json.fileId }}\",     \"mime_type\": \"{{ $json.mimeType }}\",     \"version\": \"{{ $json.version }}\",     \"status\": \"{{ $json.status }}\",     \"metadata\": {       \"fiscal_period\": \"{{ $json.fiscalPeriod }}\",       \"is_template\": \"{{ $json.isTemplate }}\",             \"last_updated\": \"{{ $json.lastUpdated }}\"     }   } }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2464,
+        368
+      ],
+      "id": "cad47468-f280-4b51-b0c6-2ef63ab916b4",
+      "name": "Update Existing Document2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://89.58.28.152:3000/api/webhook",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={   \"action\": \"insert_document\",   \"data\": {     \"org_id\": \"{{ $json.org_id }}\",     \"title\": \"{{ $json.fileName }}\",     \"category\": \"{{ $json.category }}\",     \"description\": \"{{ $json.description }}\",     \"source_url\": \"{{ $json.driveLink }}\",     \"source_file_id\": \"{{ $json.fileId }}\",     \"mime_type\": \"{{ $json.mimeType }}\",     \"version\": \"{{ $json.version }}\",     \"status\": \"{{ $json.status }}\",     \"metadata\": {       \"fiscal_period\": \"{{ $json.fiscalPeriod }}\",       \"is_template\": \"{{ $json.isTemplate }}\",       \"date_added\": \"{{ $json.dateAdded }}\",       \"last_updated\": \"{{ $json.lastUpdated }}\"     }   } }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2464,
+        1008
+      ],
+      "id": "34a099da-812d-46e2-93a8-2376afac7085",
+      "name": "Add new document",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1bIIcEHRnU_9wjry3vbbxAvAuhYWl0_sl",
+          "mode": "list",
+          "cachedResultName": "Valult",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1bIIcEHRnU_9wjry3vbbxAvAuhYWl0_sl"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "id": "1558452a-88d3-4f67-b60e-3c21a8ed4440",
+      "name": "Watch Vault Folder",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -4400,
+        512
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "c8U1lxhGi7dqu4D4",
+          "name": "n8ndrivelead"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?select=id,source_file_id,title,category,version,status,metadata",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f66eb26e-faac-4d9b-b617-c0ad90ea80f3",
+      "name": "Get Existing Docs2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3120,
+        672
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Match requested document types to Plane issues tagged [Doc]\nconst requestBody = $('Document Retrieval Webhook1').first().json.body;\nconst requiredDocs = requestBody.requiredDocs || [];\n\n// Plane returns issues in results array\nconst response = $('Get All Documents1').first().json;\nconst allIssues = response.results || response || [];\nconst issueList = Array.isArray(allIssues) ? allIssues : [];\n\n// Parse document metadata from issue names and descriptions\n// Issue name format: [Doc] category - fileName\nconst activeDocs = [];\nfor (const issue of issueList) {\n  const name = issue.name || '';\n  const match = name.match(/\\[Doc\\]\\s*(\\S+)\\s*-\\s*(.+)/);\n  if (!match) continue;\n  \n  // Extract metadata from description_html\n  const desc = issue.description_html || '';\n  const getField = (label) => {\n    const m = desc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)'));\n    return m ? m[1].trim() : '';\n  };\n  \n  activeDocs.push({\n    category: match[1],\n    fileName: match[2].trim(),\n    fileId: getField('File ID'),\n    driveLink: getField('Drive Link'),\n    version: getField('Version') || '1',\n    description: getField('Description'),\n    fiscalPeriod: getField('Fiscal Period'),\n    lastUpdated: issue.updated_at || '',\n    isTemplate: getField('Template') === 'Yes',\n    planeIssueId: issue.id\n  });\n}\n\nconst matchedDocs = {};\nconst missingDocs = [];\n\nfor (const docType of requiredDocs) {\n  const matches = activeDocs.filter(d => d.category === docType);\n  if (matches.length > 0) {\n    const latest = matches.reduce((a, b) => parseInt(a.version || 0) > parseInt(b.version || 0) ? a : b);\n    matchedDocs[docType] = { found: true, ...latest };\n  } else {\n    missingDocs.push(docType);\n    matchedDocs[docType] = { found: false, message: 'No ' + docType + ' document found in vault' };\n  }\n}\n\nreturn [{\n  json: {\n    success: missingDocs.length === 0,\n    requestedCount: requiredDocs.length,\n    foundCount: requiredDocs.length - missingDocs.length,\n    missingDocs: missingDocs,\n    documents: matchedDocs,\n    retrievedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "51808bd8-f9b1-49a0-92fd-393fe602e6fb",
+      "name": "Match Requested Documents1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3904,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search=%5BDoc%5D&per_page=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "462e604d-8639-4ba2-8246-6bd2be58bd36",
+      "name": "Get All Documents1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4160,
+        912
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "get-documents",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "c7ab12f7-89e2-41a4-bb76-9ccb22a1bf52",
+      "name": "Document Retrieval Webhook1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -4400,
+        912
+      ],
+      "webhookId": "get-documents",
+      "notes": "POST: { requiredDocs: ['501c3_letter', 'budget_program', ...] }"
     }
   ],
   "pinData": {
@@ -854,7 +875,7 @@
               "501c3_letter"
             ]
           },
-          "webhookUrl": "https://n8n.thebrownmine.com/webhook/get-documents",
+          "webhookUrl": "https://n8n.thebrownmine.com/webhook-test/get-documents",
           "executionMode": "test"
         },
         "pairedItem": {
@@ -970,28 +991,6 @@
         ]
       ]
     },
-    "Document Retrieval Webhook1": {
-      "main": [
-        [
-          {
-            "node": "Get All Documents1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get All Documents1": {
-      "main": [
-        [
-          {
-            "node": "Match Requested Documents1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Extract File Info": {
       "main": [
         [
@@ -1018,18 +1017,7 @@
       "main": [
         [
           {
-            "node": "Get Existing Docs",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Existing Docs": {
-      "main": [
-        [
-          {
-            "node": "Calculate Version",
+            "node": "Get Existing Docs2",
             "type": "main",
             "index": 0
           }
@@ -1051,14 +1039,14 @@
       "main": [
         [
           {
-            "node": "Update Existing Document",
+            "node": "Update Existing Document2",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Add New Document",
+            "node": "Add new document",
             "type": "main",
             "index": 0
           }
@@ -1086,6 +1074,39 @@
           }
         ]
       ]
+    },
+    "Get Existing Docs2": {
+      "main": [
+        [
+          {
+            "node": "Calculate Version",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Documents1": {
+      "main": [
+        [
+          {
+            "node": "Match Requested Documents1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Retrieval Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Get All Documents1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1093,7 +1114,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "1cfe9d89-b37d-435e-94a2-1e80ba07753c",
+  "versionId": "774740de-c7d7-40d7-b05e-f904365d449f",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
