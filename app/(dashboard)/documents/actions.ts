@@ -80,17 +80,22 @@ export async function uploadDocument(formData: FormData) {
     return { error: dbError.message }
   }
 
-  // Fire-and-forget: trigger n8n AI categorization webhook
+  // Fire-and-forget: trigger n8n document processing webhook
   if (process.env.N8N_WEBHOOK_URL) {
-    fetch(`${process.env.N8N_WEBHOOK_URL}/get-documents`, {
+    fetch(`${process.env.N8N_WEBHOOK_URL}/process-document`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
       },
-      body: JSON.stringify({ document_id: docData.id }),
+      body: JSON.stringify({
+        document_id: docData.id,
+        org_id: profile.org_id,
+        file_name: file.name,
+        file_type: file.type,
+      }),
     }).catch((err) => {
-      console.error('n8n categorization webhook failed:', err)
+      console.error('n8n document processing webhook failed:', err)
     })
   }
 
