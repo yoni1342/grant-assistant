@@ -483,10 +483,11 @@ export async function POST(request: NextRequest) {
         const buffer = Buffer.from(await fileData.arrayBuffer());
 
         if (doc.file_type === "application/pdf") {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const pdfParse = require("pdf-parse");
-          const pdfData = await pdfParse(buffer);
-          extractedText = pdfData.text;
+          const { extractText } = await import("unpdf");
+          const pdfData = await extractText(new Uint8Array(buffer));
+          // unpdf may return text as string or array of page strings
+          const rawText = pdfData.text;
+          extractedText = Array.isArray(rawText) ? rawText.join('\n') : rawText;
         } else if (
           doc.file_type ===
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
