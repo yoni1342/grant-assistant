@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function getRedirectUrl(request: NextRequest, pathname: string) {
+  const host = request.headers.get("host") || "localhost:3000";
+  const protocol = request.headers.get("x-forwarded-proto") || "http";
+  return new URL(pathname, `${protocol}://${host}`);
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -45,16 +51,12 @@ export async function updateSession(request: NextRequest) {
     ) {
       return supabaseResponse;
     }
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(getRedirectUrl(request, "/login"));
   }
 
   // --- Authenticated: redirect away from login/signup ---
   if (pathname.startsWith("/login") || pathname.startsWith("/signup")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(getRedirectUrl(request, "/"));
   }
 
   // Fetch profile + org status in one query
@@ -77,9 +79,7 @@ export async function updateSession(request: NextRequest) {
     ) {
       return supabaseResponse;
     }
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin";
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(getRedirectUrl(request, "/admin"));
   }
 
   // --- Has org, status = pending ---
@@ -90,9 +90,7 @@ export async function updateSession(request: NextRequest) {
     ) {
       return supabaseResponse;
     }
-    const url = request.nextUrl.clone();
-    url.pathname = "/pending-approval";
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(getRedirectUrl(request, "/pending-approval"));
   }
 
   // --- Has org, status = rejected ---
@@ -103,27 +101,20 @@ export async function updateSession(request: NextRequest) {
     ) {
       return supabaseResponse;
     }
-    const url = request.nextUrl.clone();
-    url.pathname = "/rejected";
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(getRedirectUrl(request, "/rejected"));
   }
 
   // --- Has org, status = approved ---
   if (hasOrg && orgStatus === "approved") {
     if (pathname.startsWith("/admin")) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/";
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(getRedirectUrl(request, "/"));
     }
-    // Redirect away from status pages
     if (
       pathname.startsWith("/pending-approval") ||
       pathname.startsWith("/rejected") ||
       pathname.startsWith("/register")
     ) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/";
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(getRedirectUrl(request, "/"));
     }
     return supabaseResponse;
   }
@@ -136,9 +127,7 @@ export async function updateSession(request: NextRequest) {
     ) {
       return supabaseResponse;
     }
-    const url = request.nextUrl.clone();
-    url.pathname = "/register";
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(getRedirectUrl(request, "/register"));
   }
 
   return supabaseResponse;

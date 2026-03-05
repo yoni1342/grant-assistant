@@ -1,0 +1,225 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customize-narrative",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "7d9698b3-8bf0-4c39-8436-ebc653fe412e",
+      "name": "Narrative Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [1424, 352],
+      "webhookId": "customize-narrative",
+      "notes": "POST: { narrative_id: 'uuid', grant_id: 'uuid' }"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract IDs from webhook body - handle both body shapes\n// n8n webhook v2 may nest as body.narrative_id or body.$json.narrative_id\nconst raw = $('Narrative Request').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst narrative_id = payload.narrative_id;\nconst grant_id = payload.grant_id;\n\nif (!narrative_id || !grant_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing IDs. narrative_id: ${narrative_id}, grant_id: ${grant_id}. Raw body keys: ${Object.keys(body).join(', ')}`,\n    }\n  }];\n}\n\nreturn [{\n  json: { narrative_id, grant_id }\n}];"
+      },
+      "id": "f1a2b3c4-0001-0001-0001-000000000001",
+      "name": "Extract IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1648, 352]
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/narratives?id=eq.{{ $json.narrative_id }}&select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1c21683e-dacb-4a7a-8c86-3c775ffa63d2",
+      "name": "Get Narrative",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1872, 352],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fetch the specific narrative by ID from Supabase"
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $('Extract IDs').first().json.grant_id }}&select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Get Grant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2096, 352],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fetch the grant by ID from Supabase"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine narrative + grant into a single object for AI customization\nconst narrative = $('Get Narrative').first().json;\nconst grant = $('Get Grant').first().json;\n\nif (!narrative || !narrative.id) {\n  return [{\n    json: {\n      error: true,\n      message: 'Narrative not found for the given narrative_id',\n    }\n  }];\n}\n\nif (!grant || !grant.id) {\n  return [{\n    json: {\n      error: true,\n      message: 'Grant not found for the given grant_id',\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    narrative_id: narrative.id,\n    org_id: narrative.org_id,\n    section_id: narrative.category || 'general',\n    section_name: narrative.title,\n    base_content: narrative.content,\n    word_limit: narrative.metadata?.word_count || 250,\n    grantContext: {\n      grantId: grant.id,\n      org_id: grant.org_id,\n      grant_title: grant.title,\n      grant_description: grant.description,\n      funder_name: grant.funder_name,\n      deadline: grant.deadline,\n      amount: grant.amount,\n    },\n    is_fallback: false\n  }\n}];"
+      },
+      "id": "3ddaaebe-9758-441d-af39-f73463afe820",
+      "name": "Prepare Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2320, 352]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Writer for The Virtuous House, a community-based nonprofit serving:\n- African American youth aging out of foster care: clothing, essentials, workforce readiness, transition support\n- Seniors in long-term care facilities: dignity through engagement and essentials\n\nKEY FACTS (use these, don't invent):\n- Majority of foster youth served are African American\n- Serves youth aging out of foster care and seniors in long-term care\n- Programs: The Virtuous Closet (clothing/essentials), Senior Dignity Initiative, Rural Youth Camp (PA - future)\n- Uses trauma-informed, dignity-centered, culturally responsive approach\n- Boutique-style experience where clients choose their own items\n- Provides interview clothing, hygiene kits, school supplies, emergency placement kits\n- Long-term vision: Rural youth development camp in Pennsylvania\n\nCUSTOMIZATION RULES:\n- 'racial equity' focus → emphasize African American youth, systemic barriers, culturally responsive practices\n- 'workforce' focus → emphasize interview clothing, professional attire, job readiness, workforce-ready capsules\n- 'mental health' focus → emphasize trauma-informed care, dignity, healing, restorative environments\n- 'seniors/aging' focus → emphasize Senior Dignity Initiative, long-term care partnerships, quality of life\n- 'youth development' focus → emphasize rural camp initiative, nature-based healing, mentorship\n- 'community' focus → emphasize volunteers, local partnerships, community impact\n\nOUTPUT: Only the rewritten narrative text. No explanations. Stay within word limit.",
+              "role": "system"
+            },
+            {
+              "content": "=SECTION: {{ $json.section_name }}\n\nBASE NARRATIVE:\n{{ $json.base_content }}\n\nGRANT CONTEXT:\n- Grant Title: {{ $json.grantContext.grant_title || 'Not specified' }}\n- Funder: {{ $json.grantContext.funder_name || 'Not specified' }}\n- Description: {{ $json.grantContext.grant_description || 'Not specified' }}\n- Deadline: {{ $json.grantContext.deadline || 'Not specified' }}\n- Amount: {{ $json.grantContext.amount || 'Not specified' }}\n\nWORD LIMIT: {{ $json.word_limit }} words\n\nRewrite the base narrative to align with this grant's focus and funder priorities."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "67b9d052-d525-4730-9421-57680f1c0202",
+      "name": "AI Customize",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [2544, 352],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "Brownmine"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format and return the customized narrative\nconst sectionInfo = $('Prepare Context').first().json;\nconst aiResponse = $input.first().json;\n\nconst customizedText = aiResponse.message?.content || aiResponse.text || '';\n\nreturn [{\n  json: {\n    success: true,\n    narrative_id: sectionInfo.narrative_id,\n    grant_id: sectionInfo.grantContext.grantId,\n    section_id: sectionInfo.section_id,\n    section_name: sectionInfo.section_name,\n    customized_content: customizedText.trim(),\n    word_count: customizedText.trim().split(/\\s+/).length,\n    word_limit: sectionInfo.word_limit,\n    grant_title: sectionInfo.grantContext.grant_title || 'general',\n    funder_name: sectionInfo.grantContext.funder_name || 'unknown',\n    generatedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "1d870d0c-1337-4de1-9c94-3de9ae06ef5e",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2768, 352]
+    }
+  ],
+  "connections": {
+    "Narrative Request": {
+      "main": [
+        [
+          {
+            "node": "Extract IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract IDs": {
+      "main": [
+        [
+          {
+            "node": "Get Narrative",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Narrative": {
+      "main": [
+        [
+          {
+            "node": "Get Grant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Grant": {
+      "main": [
+        [
+          {
+            "node": "Prepare Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Context": {
+      "main": [
+        [
+          {
+            "node": "AI Customize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Customize": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  }
+}
