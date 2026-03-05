@@ -1,0 +1,227 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "get-documents",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "e975a653-b093-4859-8fc5-2d2d534920cf",
+      "name": "Document Retrieval Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-4352, 2512],
+      "webhookId": "get-documents"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract context from the calling workflow's payload\nconst raw = $('Document Retrieval Webhook').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grant_id || payload.grantId;\nconst org_id = payload.org_id;\nconst funder_name = payload.funder_name || 'Not specified';\nconst narratives = payload.narratives || {};\nconst sectionsReturned = payload.sectionsReturned || 0;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    funder_name,\n    narratives,\n    sectionsReturned,\n  }\n}];"
+      },
+      "id": "f2a3b4c5-0001-0001-0001-000000000001",
+      "name": "Extract Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-4112, 2512]
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $json.grant_id }}&select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f2a3b4c5-0002-0002-0002-000000000002",
+      "name": "Get Grant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-3872, 2352],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?org_id=eq.{{ $('Extract Context').first().json.org_id }}&select=id,name,file_type,category,ai_category,extraction_status,extracted_text,created_at&order=created_at.desc",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f2a3b4c5-0003-0003-0003-000000000003",
+      "name": "Get All Documents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-3872, 2672],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a summary of all documents for the AI to evaluate\nconst grant = $('Get Grant').first().json;\nconst allDocs = $('Get All Documents').all().map(item => item.json);\nconst context = $('Extract Context').first().json;\n\nif (!allDocs || allDocs.length === 0 || !allDocs[0].id) {\n  return [{\n    json: {\n      error: true,\n      message: 'No documents found for this org',\n    }\n  }];\n}\n\n// Build a concise doc list for AI (avoid sending full extracted_text to save tokens)\nconst docSummaries = allDocs.map((d, i) => ({\n  index: i,\n  id: d.id,\n  name: d.name,\n  category: d.ai_category || d.category || 'uncategorized',\n  file_type: d.file_type,\n  has_content: !!(d.extracted_text && d.extracted_text.length > 0),\n  content_preview: (d.extracted_text || '').substring(0, 300),\n}));\n\nreturn [{\n  json: {\n    grant_title: grant.title || context.funder_name,\n    grant_description: grant.description || '',\n    funder_name: grant.funder_name || context.funder_name,\n    grant_amount: grant.amount || '',\n    grant_deadline: grant.deadline || '',\n    doc_summaries: docSummaries,\n    all_docs: allDocs,\n  }\n}];"
+      },
+      "id": "f2a3b4c5-0004-0004-0004-000000000004",
+      "name": "Prepare for AI Filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3632, 2512]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Application Document Specialist.\n\nYour job is to review a list of documents from a nonprofit's document vault and determine which ones are RELEVANT to a specific grant application.\n\nA document is relevant if it would typically be required or useful for the grant application. Common relevant documents include:\n- 501(c)(3) determination letter (almost always required)\n- Board roster / list of board members\n- Financial statements, audits, or IRS Form 990\n- Operating or program budgets\n- Impact metrics or outcomes data\n- Program narratives that relate to the grant's focus area\n- Organizational charts, bylaws, or governance docs\n- Letters of support or partnership agreements\n\nA document is IRRELEVANT if:\n- It's a template that hasn't been filled out\n- It's about a completely unrelated program or topic\n- It's outdated beyond usefulness (e.g. financials from 5+ years ago)\n- It's a duplicate of another document already selected\n\nReturn ONLY valid JSON — no markdown, no explanation:\n{\n  \"relevant_indices\": [0, 2, 5],\n  \"reasoning\": {\n    \"0\": \"501c3 letter - required for most grant applications\",\n    \"2\": \"Operating budget - needed for NIH application\",\n    \"5\": \"Impact data - supports program effectiveness\"\n  }\n}",
+              "role": "system"
+            },
+            {
+              "content": "=GRANT APPLICATION:\n- Title: {{ $json.grant_title }}\n- Funder: {{ $json.funder_name }}\n- Description: {{ $json.grant_description }}\n- Amount: {{ $json.grant_amount }}\n- Deadline: {{ $json.grant_deadline }}\n\nDOCUMENTS IN VAULT:\n{{ JSON.stringify($json.doc_summaries, null, 2) }}\n\nWhich documents are relevant for this grant application? Return the indices of relevant documents."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "1b45b61d-14e5-4e35-9d77-3ca565fdb92b",
+      "name": "AI Filter Documents",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [-3392, 2512],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "Brownmine"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and return only relevant documents\nconst aiResponse = $('AI Filter Documents').first().json;\nconst prepData = $('Prepare for AI Filter').first().json;\nconst context = $('Extract Context').first().json;\nconst allDocs = prepData.all_docs;\n\nlet aiText = aiResponse.message?.content || aiResponse.text || '';\n\n// Strip markdown code fences if present\naiText = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(aiText);\n} catch (e) {\n  // Fallback: try to extract indices from the text\n  const matches = aiText.match(/\\d+/g);\n  parsed = {\n    relevant_indices: matches ? matches.map(Number) : [],\n    reasoning: { fallback: 'Could not parse AI response, extracted indices from text' }\n  };\n}\n\nconst relevantIndices = parsed.relevant_indices || [];\nconst reasoning = parsed.reasoning || {};\n\nconst relevantDocs = {};\nconst missingTypes = [];\n\nfor (const idx of relevantIndices) {\n  if (idx >= 0 && idx < allDocs.length) {\n    const doc = allDocs[idx];\n    const category = doc.ai_category || doc.category || 'other';\n    relevantDocs[category] = {\n      found: true,\n      id: doc.id,\n      fileName: doc.name,\n      category: category,\n      extractedText: doc.extracted_text || '',\n      extractionStatus: doc.extraction_status,\n      createdAt: doc.created_at,\n      relevanceReason: reasoning[String(idx)] || 'Selected by AI'\n    };\n  }\n}\n\nreturn [{\n  json: {\n    success: true,\n    grant_id: context.grant_id,\n    org_id: context.org_id,\n    funder_name: context.funder_name,\n    totalDocuments: allDocs.length,\n    relevantCount: Object.keys(relevantDocs).length,\n    documents: relevantDocs,\n    narratives: context.narratives,\n    sectionsReturned: context.sectionsReturned,\n    retrievedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "f2a3b4c5-0005-0005-0005-000000000005",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3152, 2512]
+    }
+  ],
+  "connections": {
+    "Document Retrieval Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Context": {
+      "main": [
+        [
+          {
+            "node": "Get Grant",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get All Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Grant": {
+      "main": [
+        [
+          {
+            "node": "Prepare for AI Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Documents": {
+      "main": [
+        [
+          {
+            "node": "Prepare for AI Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare for AI Filter": {
+      "main": [
+        [
+          {
+            "node": "AI Filter Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Filter Documents": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  }
+}
