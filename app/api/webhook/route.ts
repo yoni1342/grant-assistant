@@ -69,6 +69,18 @@ export async function POST(request: NextRequest) {
           if (sectionsError) throw sectionsError;
         }
 
+        // Auto-create notification for proposal generation
+        if (proposalData.org_id && proposalData.grant_id) {
+          const proposalTitle = proposalData.title || "a grant";
+          await supabase.from("notifications").insert({
+            org_id: proposalData.org_id,
+            grant_id: proposalData.grant_id,
+            type: "proposal_generated",
+            title: `Proposal generated for "${proposalTitle}"`,
+            message: "The proposal draft is ready for review.",
+          });
+        }
+
         return NextResponse.json({
           success: true,
           proposal_id: proposal.id,
@@ -95,11 +107,37 @@ export async function POST(request: NextRequest) {
         const { data: grants, error } = await query.select();
         if (error) throw error;
 
-        // Auto-create notification for stage transitions
+        // Auto-create notifications for screening results and stage transitions
         if (grants?.[0] && org_id) {
           const grant = grants[0] as { title?: string; stage?: string; id?: string };
           const grantTitle = grant.title || "a grant";
 
+          // Screening completed — check eligibility results
+          if (updates.eligibility != null || updates.screening_score != null) {
+            const eligible = updates.eligibility?.eligible !== false
+              && updates.eligibility?.score !== "Not Eligible"
+              && updates.eligibility?.indicator !== "not_eligible";
+
+            if (!eligible) {
+              await supabase.from("notifications").insert({
+                org_id,
+                grant_id: grantid,
+                type: "grant_not_eligible",
+                title: `"${grantTitle}" is not eligible`,
+                message: updates.screening_notes || "The grant did not pass eligibility screening.",
+              });
+            } else {
+              await supabase.from("notifications").insert({
+                org_id,
+                grant_id: grantid,
+                type: "screening_completed",
+                title: `Screening completed for "${grantTitle}"`,
+                message: updates.screening_notes || null,
+              });
+            }
+          }
+
+          // Proposal generated
           if (updates.stage === "drafting" && updates.metadata?.proposal) {
             await supabase.from("notifications").insert({
               org_id,
@@ -176,6 +214,18 @@ export async function POST(request: NextRequest) {
             screening_completed: {
               type: "screening_completed",
               title: `Screening completed for "${data.details?.grant_name || "a grant"}"`,
+            },
+            grant_not_eligible: {
+              type: "grant_not_eligible",
+              title: `"${data.details?.grant_name || "A grant"}" is not eligible`,
+            },
+            proposal_started: {
+              type: "proposal_started",
+              title: `Proposal generation started for "${data.details?.grant_name || "a grant"}"`,
+            },
+            proposal_generated: {
+              type: "proposal_generated",
+              title: `Proposal generated for "${data.details?.grant_name || "a grant"}"`,
             },
           };
           const notif = notifMap[data.action];
