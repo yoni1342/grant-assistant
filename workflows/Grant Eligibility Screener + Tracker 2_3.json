@@ -521,7 +521,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "screen-grant",
-        "responseMode": "lastNode",
+        "responseMode": "responseNode",
         "options": {}
       },
       "id": "413b6e89-6dac-47ce-b4fc-aad613d7c93e",
@@ -959,30 +959,20 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "http://89.58.28.152:3000/api/webhook",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n  action: \"log_activity\",\n  data: {\n    org_id: $json.body.org_id,\n    grant_id: $json.body.grant_id,\n    action: \"screening_started\",\n    details: {\n      message: \"Eligibility screening workflow has started\",\n      workflow: \"WF2_eligibility_screener\",\n      started_at: new Date().toISOString()\n    }\n  }\n}) }}",
-        "options": {}
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: \"Screening phase has started\" }) }}",
+        "options": {
+          "responseCode": 200
+        }
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
       "position": [
         -100,
         200
       ],
       "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "name": "Notify Screening Started",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
+      "name": "Notify Screening Started"
     },
     {
       "parameters": {
