@@ -677,7 +677,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://89.58.28.152:3000//api/webhook",
+        "url": "http://152.53.91.134:3000/api/webhook",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -704,7 +704,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://89.58.28.152:3000/api/webhook",
+        "url": "http://152.53.91.134:3000/api/webhook",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,

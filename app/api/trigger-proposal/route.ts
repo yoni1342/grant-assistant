@@ -72,6 +72,14 @@ export async function POST(req: Request) {
       );
     }
 
+    // Forward n8n's success/failure status to the UI
+    if (data && data.success === false) {
+      return new Response(
+        JSON.stringify({ success: false, error: data.message || "Workflow returned failure" }),
+        { headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     return new Response(JSON.stringify({ success: true, data }), {
       headers: { "Content-Type": "application/json" },
     });

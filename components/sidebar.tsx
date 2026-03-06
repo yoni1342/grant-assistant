@@ -17,8 +17,10 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
+  Bell,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
@@ -31,18 +33,74 @@ const navItems = [
   { href: "/budgets", label: "Budgets", icon: DollarSign },
   // { href: "/submissions", label: "Submissions", icon: Send },
   // { href: "/awards", label: "Awards", icon: Trophy },
+  { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Sidebar({ user }: { user: User }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const initials =
     user.user_metadata?.full_name
       ?.split(" ")
       .map((n: string) => n[0])
       .join("")
       .toUpperCase() || user.email?.[0]?.toUpperCase() || "?";
+
+  // Fetch unread count and subscribe to realtime updates
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Initial fetch
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("is_read", false)
+      .then(({ count }) => {
+        setUnreadCount(count || 0);
+      });
+
+    // Realtime: new notifications increment count
+    const channel = supabase
+      .channel("sidebar-notifications")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications" },
+        () => {
+          // Only increment if not on the notifications page
+          if (!window.location.pathname.startsWith("/notifications")) {
+            setUnreadCount((prev) => prev + 1);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "notifications" },
+        () => {
+          // Re-fetch count on updates (e.g. mark as read)
+          supabase
+            .from("notifications")
+            .select("id", { count: "exact", head: true })
+            .eq("is_read", false)
+            .then(({ count }) => {
+              setUnreadCount(count || 0);
+            });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Reset count when navigating to notifications page
+  useEffect(() => {
+    if (pathname.startsWith("/notifications")) {
+      setUnreadCount(0);
+    }
+  }, [pathname]);
 
   return (
     <aside
@@ -76,6 +134,7 @@ export function Sidebar({ user }: { user: User }) {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
+          const isNotifications = item.href === "/notifications";
           return (
             <Link
               key={item.href}
@@ -87,7 +146,18 @@ export function Sidebar({ user }: { user: User }) {
                   : "text-muted-foreground hover:bg-zinc-50 hover:text-foreground dark:hover:bg-zinc-800/50"
               )}
             >
-              <item.icon className="h-4 w-4 shrink-0" />
+              {isNotifications ? (
+                <div className="relative shrink-0">
+                  <item.icon className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <item.icon className="h-4 w-4 shrink-0" />
+              )}
               {!collapsed && <span>{item.label}</span>}
             </Link>
           );

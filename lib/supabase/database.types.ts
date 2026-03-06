@@ -304,6 +304,54 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          id: string
+          org_id: string
+          grant_id: string | null
+          type: string
+          title: string
+          message: string | null
+          is_read: boolean
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          grant_id?: string | null
+          type: string
+          title: string
+          message?: string | null
+          is_read?: boolean
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          grant_id?: string | null
+          type?: string
+          title?: string
+          message?: string | null
+          is_read?: boolean
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "grants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funders: {
         Row: {
           created_at: string | null

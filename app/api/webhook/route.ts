@@ -95,6 +95,22 @@ export async function POST(request: NextRequest) {
         const { data: grants, error } = await query.select();
         if (error) throw error;
 
+        // Auto-create notification for stage transitions
+        if (grants?.[0] && org_id) {
+          const grant = grants[0] as { title?: string; stage?: string; id?: string };
+          const grantTitle = grant.title || "a grant";
+
+          if (updates.stage === "drafting" && updates.metadata?.proposal) {
+            await supabase.from("notifications").insert({
+              org_id,
+              grant_id: grantid,
+              type: "proposal_generated",
+              title: `Proposal generated for "${grantTitle}"`,
+              message: `The proposal draft is ready for review.`,
+            });
+          }
+        }
+
         return NextResponse.json({
           success: true,
           grants: grants,
@@ -149,10 +165,47 @@ export async function POST(request: NextRequest) {
       case "log_activity": {
         const { error } = await supabase.from("activity_log").insert(data);
         if (error) throw error;
+
+        // Auto-create notification from activity log
+        if (data.org_id && data.action) {
+          const notifMap: Record<string, { type: string; title: string }> = {
+            screening_started: {
+              type: "screening_started",
+              title: `Screening started for "${data.details?.grant_name || "a grant"}"`,
+            },
+            screening_completed: {
+              type: "screening_completed",
+              title: `Screening completed for "${data.details?.grant_name || "a grant"}"`,
+            },
+          };
+          const notif = notifMap[data.action];
+          if (notif) {
+            await supabase.from("notifications").insert({
+              org_id: data.org_id,
+              grant_id: data.grant_id || null,
+              type: notif.type,
+              title: notif.title,
+              message: data.details?.summary || data.details?.message || null,
+            });
+          }
+        }
+
         return NextResponse.json({
           success: true,
           grants: data,
         });
+      }
+
+      case "create_notification": {
+        const { error } = await supabase.from("notifications").insert({
+          org_id: data.org_id,
+          grant_id: data.grant_id || null,
+          type: data.type,
+          title: data.title,
+          message: data.message || null,
+        });
+        if (error) throw error;
+        return NextResponse.json({ success: true });
       }
 
       case "update_document": {
