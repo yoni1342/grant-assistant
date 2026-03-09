@@ -49,10 +49,16 @@ export const columns: ColumnDef<Document>[] = [
     cell: ({ row }) => {
       const name = row.getValue("name") as string
       const fileType = row.original.file_type
+      const aiCategory = row.original.ai_category
       return (
         <div className="flex items-center gap-2">
           {getFileTypeIcon(fileType)}
-          <span className="font-medium">{name}</span>
+          <div className="min-w-0">
+            <span className="font-medium block truncate">{name}</span>
+            {aiCategory && (
+              <span className="text-xs text-muted-foreground truncate block">{aiCategory}</span>
+            )}
+          </div>
         </div>
       )
     },
@@ -69,6 +75,14 @@ export const columns: ColumnDef<Document>[] = [
   {
     accessorKey: "category",
     header: "Category",
+    filterFn: (row, _columnId, filterValue) => {
+      if (filterValue === "uncategorized") {
+        return !row.original.category && !row.original.ai_category
+      }
+      const category = row.original.category || ""
+      const aiCategory = row.original.ai_category || ""
+      return category === filterValue || aiCategory === filterValue
+    },
     cell: ({ row }) => {
       const aiCategory = row.original.ai_category
       const category = row.original.category
@@ -109,6 +123,10 @@ export const columns: ColumnDef<Document>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => <DocumentRowActions document={row.original} />,
+    cell: ({ row }) => (
+      <div onClick={(e) => e.stopPropagation()}>
+        <DocumentRowActions document={row.original} />
+      </div>
+    ),
   },
 ]

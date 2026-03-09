@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/supabase/database.types";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,9 @@ import {
 import { KanbanView } from "./kanban-view";
 import { ListView } from "./list-view";
 import { AddGrantDialog } from "./add-grant-dialog";
+import { triggerStageWorkflow } from "./actions";
 import { Search, Plus, LayoutGrid, List } from "lucide-react";
+import { toast } from "sonner";
 
 type Grant = Tables<"grants">;
 
@@ -70,8 +72,41 @@ export function PipelineClient({
       )
       .subscribe();
 
+    // Listen for notifications to show toasts
+    const notifChannel = supabase
+      .channel("pipeline-notifications")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications" },
+        (payload) => {
+          const notif = payload.new as {
+            type: string;
+            title: string;
+            message: string | null;
+          };
+          const text = notif.title;
+          switch (notif.type) {
+            case "screening_started":
+            case "proposal_started":
+              toast.info(text);
+              break;
+            case "screening_completed":
+            case "proposal_generated":
+              toast.success(text);
+              break;
+            case "grant_not_eligible":
+              toast.error(text);
+              break;
+            default:
+              toast(text);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(notifChannel);
     };
   }, []);
 
@@ -91,6 +126,35 @@ export function PipelineClient({
     setGrants((prev) => [grant, ...prev]);
     setShowAddDialog(false);
   }
+
+  const handleStageChange = useCallback(async (grantId: string, targetStage: string) => {
+    // Optimistically move the grant in the UI
+    const grant = grants.find((g) => g.id === grantId);
+    if (!grant) return;
+    const previousStage = grant.stage;
+
+    setGrants((prev) =>
+      prev.map((g) =>
+        g.id === grantId
+          ? { ...g, stage: targetStage as Grant["stage"] }
+          : g
+      )
+    );
+
+    const result = await triggerStageWorkflow(grantId, targetStage);
+
+    if (result.error) {
+      // Revert on failure
+      setGrants((prev) =>
+        prev.map((g) => (g.id === grantId ? { ...g, stage: previousStage } : g))
+      );
+      toast.error(`Failed to move grant: ${result.error}`);
+    } else {
+      toast.success(
+        `Grant moved to ${targetStage}${result.workflowId ? " — workflow triggered" : ""}`
+      );
+    }
+  }, [grants]);
 
   return (
     <div className="p-6 space-y-4">
@@ -148,7 +212,7 @@ export function PipelineClient({
 
       {/* Views */}
       {view === "kanban" ? (
-        <KanbanView grants={filtered} />
+        <KanbanView grants={filtered} onStageChange={handleStageChange} />
       ) : (
         <ListView grants={filtered} />
       )}

@@ -1,13 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUserOrgId } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText,
-  Target,
   DollarSign,
   Clock,
   TrendingUp,
-  AlertCircle,
 } from "lucide-react";
 
 const STAGE_LABELS: Record<string, string> = {
@@ -32,31 +31,25 @@ function getDeadlineUrgency(deadline: string) {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const { orgId } = await getUserOrgId(supabase);
+  if (!orgId) redirect("/login");
 
   // Fetch grants for pipeline overview
   const { data: grants } = await supabase
     .from("grants")
     .select("id, title, funder_name, stage, amount, deadline")
+    .eq("org_id", orgId)
     .order("created_at", { ascending: false });
 
   // Fetch recent activity
   const { data: activities } = await supabase
     .from("activity_log")
     .select("id, action, details, created_at")
+    .eq("org_id", orgId)
     .order("created_at", { ascending: false })
     .limit(10);
 
-  // Fetch submissions and awards for metrics
-  const { data: submissions } = await supabase
-    .from("submissions")
-    .select("id");
-  const { data: awards } = await supabase
-    .from("awards")
-    .select("id, amount");
-
   const allGrants = grants || [];
-  const allAwards = awards || [];
-  const allSubmissions = submissions || [];
 
   // Pipeline counts by stage
   const stageCounts = allGrants.reduce(
@@ -70,14 +63,6 @@ export default async function DashboardPage() {
 
   // Metrics
   const totalGrants = allGrants.length;
-  const pipelineValue = allGrants.reduce(
-    (sum, g) => sum + (g.amount || 0),
-    0
-  );
-  const winRate =
-    allSubmissions.length > 0
-      ? ((allAwards.length / allSubmissions.length) * 100).toFixed(0)
-      : "0";
   const upcomingDeadlines = allGrants.filter(
     (g) => g.deadline && new Date(g.deadline) > new Date()
   ).length;
@@ -101,7 +86,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Grants</CardTitle>
@@ -109,28 +94,6 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalGrants}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{winRate}%</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pipeline Value
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${pipelineValue.toLocaleString()}
-            </div>
           </CardContent>
         </Card>
         <Card>

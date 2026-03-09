@@ -6,12 +6,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = "/";
-
-  const redirectTo = request.nextUrl.clone();
-  redirectTo.pathname = next;
-  redirectTo.searchParams.delete("token_hash");
-  redirectTo.searchParams.delete("type");
+  const host = request.headers.get("host") || "localhost:3000";
+  const protocol = request.headers.get("x-forwarded-proto") || "http";
+  const origin = `${protocol}://${host}`;
 
   if (token_hash && type) {
     const supabase = await createClient();
@@ -21,12 +18,9 @@ export async function GET(request: NextRequest) {
       token_hash,
     });
     if (!error) {
-      redirectTo.searchParams.delete("next");
-      return NextResponse.redirect(redirectTo);
+      return NextResponse.redirect(new URL("/", origin));
     }
   }
 
-  redirectTo.pathname = "/login";
-  redirectTo.searchParams.set("error", "confirmation_failed");
-  return NextResponse.redirect(redirectTo);
+  return NextResponse.redirect(new URL("/login?error=confirmation_failed", origin));
 }

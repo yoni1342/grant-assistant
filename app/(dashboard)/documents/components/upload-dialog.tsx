@@ -12,8 +12,16 @@ import {
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Upload } from "lucide-react"
 import { uploadDocument } from "../actions"
+import { DOCUMENT_CATEGORIES } from "../constants"
 
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -28,6 +36,7 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25MB
 export function UploadDialog() {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [category, setCategory] = useState<string>("")
   const [isPending, startTransition] = useTransition()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -60,6 +69,11 @@ export function UploadDialog() {
       return
     }
 
+    // Append category if selected
+    if (category) {
+      formData.set("category", category)
+    }
+
     startTransition(async () => {
       const result = await uploadDocument(formData)
       if (result.error) {
@@ -68,6 +82,7 @@ export function UploadDialog() {
         // Success - close dialog and reset
         setOpen(false)
         setError(null)
+        setCategory("")
         if (fileInputRef.current) {
           fileInputRef.current.value = ""
         }
@@ -102,6 +117,21 @@ export function UploadDialog() {
               disabled={isPending}
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <Select value={category} onValueChange={setCategory} disabled={isPending}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category (or let AI decide)" />
+              </SelectTrigger>
+              <SelectContent>
+                {DOCUMENT_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {error && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">

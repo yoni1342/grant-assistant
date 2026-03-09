@@ -1,0 +1,200 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customize-narrative",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "7d9698b3-8bf0-4c39-8436-ebc653fe412e",
+      "name": "Narrative Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [1424, 352],
+      "webhookId": "customize-narrative"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract grant context from webhook body\nconst raw = $('Narrative Request').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grantId || payload.grant_id;\nconst org_id = payload.org_id;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    grant_title: payload.grant_title || 'Not specified',\n    grant_description: payload.grant_description || 'Not specified',\n    funder_name: payload.funder_name || 'Not specified',\n    deadline: payload.deadline || 'Not specified',\n    amount: payload.amount || 'Not specified',\n  }\n}];"
+      },
+      "id": "f1a2b3c4-0001-0001-0001-000000000001",
+      "name": "Extract Grant Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1648, 352]
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/narratives?org_id=eq.{{ $json.org_id }}&select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1c21683e-dacb-4a7a-8c86-3c775ffa63d2",
+      "name": "Get Narratives",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1872, 352],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fetch all narratives for the org from Supabase"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter narratives for relevance to the grant, then pair with grant context\nconst narratives = $('Get Narratives').all().map(item => item.json);\nconst gc = $('Extract Grant Context').first().json;\n\nif (!narratives || narratives.length === 0 || !narratives[0].id) {\n  return [{\n    json: {\n      error: true,\n      message: 'No narratives found for this org',\n    }\n  }];\n}\n\n// Build a searchable string from grant context for relevance matching\nconst grantText = [\n  gc.grant_title,\n  gc.grant_description,\n  gc.funder_name,\n].join(' ').toLowerCase();\n\n// Keywords that map narrative categories/content to grant topics\nconst relevanceKeywords = {\n  mission: ['mission', 'organization', 'nonprofit', 'community', 'overview', 'about'],\n  impact: ['impact', 'outcomes', 'results', 'data', 'metrics', 'evaluation', 'measure'],\n  methods: ['methods', 'approach', 'strategy', 'program', 'activities', 'services', 'intervention'],\n  evaluation: ['evaluation', 'assessment', 'measure', 'outcomes', 'data', 'metrics'],\n  youth: ['youth', 'foster', 'children', 'young', 'adolescent', 'teen', 'aging out'],\n  seniors: ['senior', 'aging', 'elderly', 'older adults', 'long-term care', 'alzheimer', 'dementia'],\n  equity: ['equity', 'racial', 'diversity', 'inclusion', 'african american', 'disparit'],\n  workforce: ['workforce', 'employment', 'job', 'career', 'professional', 'work'],\n  mental_health: ['mental health', 'trauma', 'healing', 'wellness', 'behavioral'],\n  community: ['community', 'volunteer', 'partner', 'collaboration', 'local'],\n};\n\n// Score each narrative for relevance\nconst scored = narratives.map(n => {\n  const narrativeText = [\n    n.title || '',\n    n.category || '',\n    n.content || '',\n    (n.tags || []).join(' '),\n  ].join(' ').toLowerCase();\n\n  let score = 0;\n\n  // Always include mission/overview narratives (score boost)\n  if ((n.category || '').toLowerCase() === 'mission' || (n.title || '').toLowerCase().includes('mission')) {\n    score += 3;\n  }\n\n  // Check if narrative category keywords appear in grant text\n  for (const [category, keywords] of Object.entries(relevanceKeywords)) {\n    const narrativeMatchesCategory = keywords.some(kw => narrativeText.includes(kw));\n    const grantMatchesCategory = keywords.some(kw => grantText.includes(kw));\n    if (narrativeMatchesCategory && grantMatchesCategory) {\n      score += 2;\n    }\n  }\n\n  // Direct word overlap between narrative title/category and grant text\n  const titleWords = (n.title || '').toLowerCase().split(/\\s+/);\n  for (const word of titleWords) {\n    if (word.length > 3 && grantText.includes(word)) {\n      score += 1;\n    }\n  }\n\n  return { narrative: n, score };\n});\n\n// Filter: keep narratives with score > 0, sorted by relevance\nlet relevant = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);\n\n// Fallback: if nothing matched, use mission + methods + impact narratives\nif (relevant.length === 0) {\n  const fallbackCategories = ['mission', 'methods', 'impact'];\n  relevant = scored.filter(s => {\n    const cat = (s.narrative.category || '').toLowerCase();\n    return fallbackCategories.includes(cat);\n  });\n}\n\n// Still nothing? Use all narratives\nif (relevant.length === 0) {\n  relevant = scored;\n}\n\nreturn relevant.map(s => ({\n  json: {\n    narrative_id: s.narrative.id,\n    section_id: s.narrative.category || 'general',\n    section_name: s.narrative.title,\n    base_content: s.narrative.content,\n    word_limit: s.narrative.metadata?.word_count || 250,\n    relevance_score: s.score,\n    grantContext: gc,\n  }\n}));"
+      },
+      "id": "3ddaaebe-9758-441d-af39-f73463afe820",
+      "name": "Prepare Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2096, 352]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Writer for The Virtuous House, a community-based nonprofit serving:\n- African American youth aging out of foster care: clothing, essentials, workforce readiness, transition support\n- Seniors in long-term care facilities: dignity through engagement and essentials\n\nKEY FACTS (use these, don't invent):\n- Majority of foster youth served are African American\n- Serves youth aging out of foster care and seniors in long-term care\n- Programs: The Virtuous Closet (clothing/essentials), Senior Dignity Initiative, Rural Youth Camp (PA - future)\n- Uses trauma-informed, dignity-centered, culturally responsive approach\n- Boutique-style experience where clients choose their own items\n- Provides interview clothing, hygiene kits, school supplies, emergency placement kits\n- Long-term vision: Rural youth development camp in Pennsylvania\n\nCUSTOMIZATION RULES:\n- 'racial equity' focus → emphasize African American youth, systemic barriers, culturally responsive practices\n- 'workforce' focus → emphasize interview clothing, professional attire, job readiness, workforce-ready capsules\n- 'mental health' focus → emphasize trauma-informed care, dignity, healing, restorative environments\n- 'seniors/aging' focus → emphasize Senior Dignity Initiative, long-term care partnerships, quality of life\n- 'youth development' focus → emphasize rural camp initiative, nature-based healing, mentorship\n- 'community' focus → emphasize volunteers, local partnerships, community impact\n\nOUTPUT: Only the rewritten narrative text. No explanations. Stay within word limit.",
+              "role": "system"
+            },
+            {
+              "content": "=SECTION: {{ $json.section_name }}\n\nBASE NARRATIVE:\n{{ $json.base_content }}\n\nGRANT CONTEXT:\n- Grant Title: {{ $json.grantContext.grant_title }}\n- Funder: {{ $json.grantContext.funder_name }}\n- Description: {{ $json.grantContext.grant_description }}\n- Deadline: {{ $json.grantContext.deadline }}\n- Amount: {{ $json.grantContext.amount }}\n\nWORD LIMIT: {{ $json.word_limit }} words\n\nRewrite the base narrative to align with this grant's focus and funder priorities."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "67b9d052-d525-4730-9421-57680f1c0202",
+      "name": "AI Customize",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [2320, 352],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "Brownmine"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format each customized narrative\nconst sectionInfo = $('Prepare Context').item.json;\nconst aiResponse = $input.first().json;\n\nconst customizedText = aiResponse.message?.content || aiResponse.text || '';\n\nreturn [{\n  json: {\n    section_id: sectionInfo.section_id,\n    section_name: sectionInfo.section_name,\n    customized_content: customizedText.trim(),\n    word_count: customizedText.trim().split(/\\s+/).length,\n    word_limit: sectionInfo.word_limit,\n  }\n}];"
+      },
+      "id": "1d870d0c-1337-4de1-9c94-3de9ae06ef5e",
+      "name": "Format Section",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2544, 352]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all customized narratives into final response\nconst allSections = $input.all();\nconst grantContext = $('Extract Grant Context').first().json;\n\nconst narratives = {};\nfor (const item of allSections) {\n  const s = item.json;\n  narratives[s.section_id] = {\n    section_name: s.section_name,\n    content: s.customized_content,\n    word_count: s.word_count,\n    word_limit: s.word_limit\n  };\n}\n\nreturn [{\n  json: {\n    success: true,\n    grant_id: grantContext.grant_id,\n    funder_name: grantContext.funder_name,\n    sectionsReturned: Object.keys(narratives).length,\n    narratives,\n    generatedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "bb9fa1a7-b9ea-4c39-a53d-beed3ba09a6b",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2768, 352]
+    }
+  ],
+  "connections": {
+    "Narrative Request": {
+      "main": [
+        [
+          {
+            "node": "Extract Grant Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Grant Context": {
+      "main": [
+        [
+          {
+            "node": "Get Narratives",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Narratives": {
+      "main": [
+        [
+          {
+            "node": "Prepare Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Context": {
+      "main": [
+        [
+          {
+            "node": "AI Customize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Customize": {
+      "main": [
+        [
+          {
+            "node": "Format Section",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Section": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  }
+}

@@ -1,14 +1,13 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserOrgId } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function getProposals() {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated', data: [] }
+  const { orgId, error: orgError } = await getUserOrgId(supabase)
+  if (!orgId) {
+    return { error: orgError || 'Not authenticated', data: [] }
   }
 
   const { data, error } = await supabase
@@ -22,6 +21,7 @@ export async function getProposals() {
         deadline
       )
     `)
+    .eq('org_id', orgId)
     .order('updated_at', { ascending: false })
 
   if (error) {
@@ -33,13 +33,12 @@ export async function getProposals() {
 
 export async function getProposal(proposalId: string) {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated', data: null }
+  const { orgId, error: orgError } = await getUserOrgId(supabase)
+  if (!orgId) {
+    return { error: orgError || 'Not authenticated', data: null }
   }
 
-  // Fetch proposal
+  // Fetch proposal scoped to org
   const { data: proposal, error: proposalError } = await supabase
     .from('proposals')
     .select(`
@@ -54,13 +53,14 @@ export async function getProposal(proposalId: string) {
       )
     `)
     .eq('id', proposalId)
+    .eq('org_id', orgId)
     .single()
 
   if (proposalError) {
     return { error: proposalError.message, data: null }
   }
 
-  // Fetch proposal sections
+  // Fetch proposal sections (scoped via proposal_sections RLS through proposals)
   const { data: sections, error: sectionsError } = await supabase
     .from('proposal_sections')
     .select('*')
@@ -118,21 +118,38 @@ export async function triggerProposalGeneration(grantId: string) {
     return { error: workflowError.message }
   }
 
-  // Fire-and-forget: trigger n8n workflow
-  if (process.env.N8N_WEBHOOK_URL) {
-    fetch(`${process.env.N8N_WEBHOOK_URL}/generate-proposal`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
-      },
-      body: JSON.stringify({
-        grant_id: grantId,
-        workflow_id: workflow.id,
-      }),
-    }).catch((err) => {
-      console.error('n8n generate-proposal webhook failed:', err)
-    })
+  // Trigger n8n workflow
+  const n8nUrl = process.env.N8N_WEBHOOK_URL
+  console.log('[proposal-gen] N8N_WEBHOOK_URL:', n8nUrl)
+  console.log('[proposal-gen] grantId:', grantId, 'org_id:', profile.org_id)
+
+  if (n8nUrl) {
+    const fullUrl = `${n8nUrl}/generate-proposal`
+    const payload = {
+      grantId: grantId,
+      org_id: profile.org_id,
+      workflow_id: workflow.id,
+    }
+    console.log('[proposal-gen] Calling:', fullUrl)
+    console.log('[proposal-gen] Payload:', JSON.stringify(payload))
+
+    try {
+      const resp = await fetch(fullUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
+        },
+        body: JSON.stringify(payload),
+      })
+      console.log('[proposal-gen] n8n response status:', resp.status)
+      const text = await resp.text()
+      console.log('[proposal-gen] n8n response body:', text.substring(0, 500))
+    } catch (err) {
+      console.error('[proposal-gen] n8n webhook failed:', err)
+    }
+  } else {
+    console.log('[proposal-gen] N8N_WEBHOOK_URL not set, skipping')
   }
 
   revalidatePath('/proposals')
@@ -272,51 +289,52 @@ export async function triggerFunderAnalysis(
   return { success: true, workflowId: workflow.id }
 }
 
-export async function updateProposalSection(sectionId: string, content: string) {
-  const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated' }
-  }
-
-  const { error } = await supabase
-    .from('proposal_sections')
-    .update({ content })
-    .eq('id', sectionId)
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  // No revalidatePath - called from debounced autosave
-  return { success: true }
-}
-
-export async function reorderSections(
-  sectionUpdates: Array<{ id: string; sort_order: number }>
+export async function updateProposalSections(
+  proposalId: string,
+  sections: {
+    id: string
+    title: string
+    content: { chapter: string; sort_order: number }[] | null
+    header1: { chapter: string; sort_order: number }[] | null
+    header2: { chapter: string; sort_order: number }[] | null
+    tabulation: { chapter: string; sort_order: number }[] | null
+  }[],
+  proposalTitle?: string
 ) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated' }
+  if (!user) return { error: 'Not authenticated' }
+
+  // Update proposal title if provided (from cover page edit)
+  if (proposalTitle) {
+    const { error } = await supabase
+      .from('proposals')
+      .update({ title: proposalTitle })
+      .eq('id', proposalId)
+
+    if (error) return { error: error.message }
   }
 
-  // Update each section's sort_order
-  for (const update of sectionUpdates) {
+  for (const section of sections) {
     const { error } = await supabase
       .from('proposal_sections')
-      .update({ sort_order: update.sort_order })
-      .eq('id', update.id)
+      .update({
+        title: section.title,
+        content: section.content,
+        header1: section.header1,
+        header2: section.header2,
+        tabulation: section.tabulation,
+      })
+      .eq('id', section.id)
+      .eq('proposal_id', proposalId)
 
-    if (error) {
-      return { error: error.message }
-    }
+    if (error) return { error: error.message }
   }
 
-  revalidatePath('/proposals')
-  return { success: true }
+  revalidatePath(`/proposals/${proposalId}`)
+  return { success: true, error: null }
 }
 
 export async function getFunder(grantId: string) {

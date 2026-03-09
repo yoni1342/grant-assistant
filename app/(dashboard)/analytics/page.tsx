@@ -1,38 +1,9 @@
-import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { getAnalytics, getSuccessRateByFunder } from './actions'
-import { MetricsCards } from './components/metrics-cards'
-import { AnalyticsCharts } from './components/analytics-charts'
 import { PipelineBreakdown } from './components/pipeline-breakdown'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default async function AnalyticsPage() {
-  // Fetch analytics data server-side in parallel
-  const [analyticsResult, funderDataResult, pipelineData] = await Promise.all([
-    getAnalytics(),
-    getSuccessRateByFunder(),
-    getPipelineBreakdown(),
-  ])
-
-  if (analyticsResult.error) {
-    return (
-      <div className="p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Error loading analytics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {analyticsResult.error}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const analytics = analyticsResult.data!
-  const funderData = funderDataResult.data || []
+  const pipelineData = await getPipelineBreakdown()
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -40,23 +11,12 @@ export default async function AnalyticsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
         <p className="text-muted-foreground mt-1">
-          Performance metrics and pipeline insights
+          Pipeline insights
         </p>
       </div>
 
-      {/* Metrics Cards */}
-      <MetricsCards
-        winRate={analytics.winRate}
-        pipelineValue={analytics.pipelineValue}
-        totalSubmissions={analytics.totalSubmissions}
-        totalAwards={analytics.totalAwards}
-        totalAwardAmount={analytics.totalAwardAmount}
-        avgTimeToSubmission={analytics.avgTimeToSubmission}
-      />
-
-      {/* Charts and Pipeline Breakdown in 2-column grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <AnalyticsCharts funderData={funderData} />
+      {/* Pipeline Breakdown */}
+      <div className="max-w-lg">
         <PipelineBreakdown stages={pipelineData} />
       </div>
     </div>
@@ -96,7 +56,7 @@ async function getPipelineBreakdown() {
   const stageCounts = new Map<string, number>()
 
   // Initialize all stages with 0
-  const allStages = ['discovery', 'screening', 'drafting', 'submission', 'awarded', 'reporting', 'closed']
+  const allStages = ['discovery', 'screening', 'drafting', 'closed']
   allStages.forEach(stage => stageCounts.set(stage, 0))
 
   // Count actual grants per stage

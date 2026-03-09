@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserOrgId } from '@/lib/supabase/server'
 import { uploadFile, deleteFile } from '@/lib/supabase/storage'
 import { revalidatePath } from 'next/cache'
 
@@ -49,6 +49,9 @@ export async function uploadDocument(formData: FormData) {
     return { error: 'User profile or organization not found' }
   }
 
+  // Read optional category
+  const category = formData.get('category') as string | null
+
   // Upload file to Storage
   const { path, error: uploadError } = await uploadFile(file, user.id)
   if (uploadError) {
@@ -60,11 +63,12 @@ export async function uploadDocument(formData: FormData) {
     .from('documents')
     .insert({
       org_id: profile.org_id,
+      title: file.name,
       name: file.name,
       file_path: path,
       file_type: file.type,
       file_size: file.size,
-      category: null,
+      category: category || null,
       ai_category: null,
     })
     .select()
@@ -76,17 +80,22 @@ export async function uploadDocument(formData: FormData) {
     return { error: dbError.message }
   }
 
-  // Fire-and-forget: trigger n8n AI categorization webhook
+  // Fire-and-forget: trigger n8n document processing webhook
   if (process.env.N8N_WEBHOOK_URL) {
-    fetch(`${process.env.N8N_WEBHOOK_URL}/get-documents`, {
+    fetch(`${process.env.N8N_WEBHOOK_URL}/process-document`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
       },
-      body: JSON.stringify({ document_id: docData.id }),
+      body: JSON.stringify({
+        document_id: docData.id,
+        org_id: profile.org_id,
+        file_name: file.name,
+        file_type: file.type,
+      }),
     }).catch((err) => {
-      console.error('n8n categorization webhook failed:', err)
+      console.error('n8n document processing webhook failed:', err)
     })
   }
 
@@ -136,15 +145,15 @@ export async function deleteDocument(documentId: string) {
 
 export async function getDocuments() {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Not authenticated', data: [] }
+  const { orgId, error: orgError } = await getUserOrgId(supabase)
+  if (!orgId) {
+    return { error: orgError || 'Not authenticated', data: [] }
   }
 
   const { data, error } = await supabase
     .from('documents')
     .select('*')
+    .eq('org_id', orgId)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -171,4 +180,26 @@ export async function getDownloadUrl(filePath: string) {
   }
 
   return { url: data.signedUrl, error: null }
+}
+
+export async function updateDocumentCategory(documentId: string, category: string) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  const { error } = await supabase
+    .from('documents')
+    .update({ category })
+    .eq('id', documentId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/documents')
+  revalidatePath(`/documents/${documentId}`)
+  return { success: true }
 }

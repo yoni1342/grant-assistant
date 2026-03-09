@@ -56,27 +56,18 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
   useEffect(() => {
     const supabase = createClient()
 
-    // Subscribe to Realtime changes
     const channel = supabase
       .channel('narratives-changes')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'narratives',
-        },
+        { event: 'INSERT', schema: 'public', table: 'narratives' },
         (payload) => {
           setNarratives((prev) => [payload.new as Narrative, ...prev])
         }
       )
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'narratives',
-        },
+        { event: 'UPDATE', schema: 'public', table: 'narratives' },
         (payload) => {
           setNarratives((prev) =>
             prev.map((n) => (n.id === payload.new.id ? (payload.new as Narrative) : n))
@@ -85,11 +76,7 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
       )
       .on(
         'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'narratives',
-        },
+        { event: 'DELETE', schema: 'public', table: 'narratives' },
         (payload) => {
           setNarratives((prev) => prev.filter((n) => n.id !== payload.old.id))
         }
@@ -102,9 +89,7 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
   }, [])
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Are you sure you want to delete "${title}"?`)) {
-      return
-    }
+    if (!confirm(`Are you sure you want to delete "${title}"?`)) return
 
     const result = await deleteNarrative(id)
     if (result.error) {
@@ -112,14 +97,12 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
     }
   }
 
-  // Strip HTML tags from content for preview
   const stripHtml = (html: string) => {
     const tmp = document.createElement('div')
     tmp.innerHTML = html
     return tmp.textContent || tmp.innerText || ''
   }
 
-  // Filter narratives
   const filteredNarratives = narratives.filter((narrative) => {
     const matchesSearch = narrative.title.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesCategory = categoryFilter === 'all' || narrative.category === categoryFilter
@@ -129,7 +112,7 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
   if (narratives.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground mb-4">
+        <p className="text-muted-foreground">
           No narratives yet. Create your first narrative block to get started.
         </p>
       </div>
@@ -137,58 +120,56 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
   }
 
   return (
-    <div className="space-y-6">
-      {/* Search and Filter Controls */}
-      <div className="flex flex-col sm:flex-row gap-4">
+    <div className="space-y-4">
+      {/* Search and Filter */}
+      <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search narratives by title..."
+            placeholder="Search narratives..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
           />
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-full sm:w-[200px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="mission">Mission</SelectItem>
-            <SelectItem value="impact">Impact</SelectItem>
-            <SelectItem value="methods">Methods</SelectItem>
-            <SelectItem value="evaluation">Evaluation</SelectItem>
-            <SelectItem value="sustainability">Sustainability</SelectItem>
-            <SelectItem value="capacity">Capacity</SelectItem>
-            <SelectItem value="budget_narrative">Budget Narrative</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
+            {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Narrative Cards Grid */}
+      {/* Cards */}
       {filteredNarratives.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground">No narratives match your search.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredNarratives.map((narrative) => {
-            const contentPreview = stripHtml(narrative.content).slice(0, 150)
-            const hasMore = stripHtml(narrative.content).length > 150
+            const plainText = stripHtml(narrative.content)
+            const preview = plainText.slice(0, 150)
+            const hasMore = plainText.length > 150
 
             return (
               <Card key={narrative.id} className="flex flex-col">
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold line-clamp-1 flex-1">
+                    <h3 className="font-semibold leading-snug line-clamp-1 flex-1">
                       {narrative.title}
                     </h3>
                     {narrative.category && (
                       <Badge
                         variant="secondary"
-                        className={CATEGORY_COLORS[narrative.category]}
+                        className={`shrink-0 ${CATEGORY_COLORS[narrative.category]}`}
                       >
                         {CATEGORY_LABELS[narrative.category]}
                       </Badge>
@@ -196,14 +177,14 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
                   </div>
                 </CardHeader>
 
-                <CardContent className="flex-1 pb-3">
+                <CardContent className="flex-1 pb-2">
                   <p className="text-sm text-muted-foreground line-clamp-3">
-                    {contentPreview}
+                    {preview}
                     {hasMore && '...'}
                   </p>
 
                   {narrative.tags && narrative.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-3">
+                    <div className="flex flex-wrap gap-1 mt-2">
                       {narrative.tags.map((tag, idx) => (
                         <Badge key={idx} variant="outline" className="text-xs">
                           {tag}
@@ -213,38 +194,40 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
                   )}
                 </CardContent>
 
-                <CardFooter className="flex flex-col gap-2 pt-3 border-t">
-                  <p className="text-xs text-muted-foreground w-full">
-                    Updated {formatDistanceToNow(new Date(narrative.updated_at || narrative.created_at || ''), { addSuffix: true })}
+                <CardFooter className="border-t pt-3 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(
+                      new Date(narrative.updated_at || narrative.created_at || ''),
+                      { addSuffix: true }
+                    )}
                   </p>
-
-                  <div className="flex gap-2 w-full">
+                  <div className="flex gap-1">
                     <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1"
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
                       onClick={() => onEditClick(narrative)}
+                      title="Edit"
                     >
-                      <Pencil className="h-3 w-3 mr-1" />
-                      Edit
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
-
                     <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1"
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
                       onClick={() => onAICustomizeClick(narrative)}
+                      title="AI Customize"
                     >
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      AI
+                      <Sparkles className="h-3.5 w-3.5" />
                     </Button>
-
                     <Button
-                      size="sm"
-                      variant="outline"
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-muted-foreground hover:text-red-600"
                       onClick={() => handleDelete(narrative.id, narrative.title)}
+                      title="Delete"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </CardFooter>
