@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
-import { FileText, ClipboardList, Upload, X, Check } from "lucide-react";
+import { FileText, ClipboardList, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   registerOrganization,
@@ -347,7 +347,6 @@ export function RegisterWizard({
   }
 
   const stepLabels = ["Create your account", "Organization details", "Organization profile"];
-  const totalSteps = isAuthenticated ? 2 : 3;
   const currentStepLabel = isAuthenticated
     ? stepLabels[step]
     : stepLabels[step - 1];

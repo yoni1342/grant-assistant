@@ -71,7 +71,7 @@ export function AnalyticsCharts({ funderData }: AnalyticsChartsProps) {
                 <ChartTooltip
                   content={
                     <ChartTooltipContent
-                      formatter={(value, name, props) => (
+                      formatter={(value) => (
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{value}% success rate</span>
                         </div>

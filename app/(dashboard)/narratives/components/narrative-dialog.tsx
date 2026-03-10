@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,7 @@ type Narrative = {
   category: string | null
   tags: string[] | null
   embedding: string | null
-  metadata: any
+  metadata: Record<string, unknown> | null
   created_at: string | null
   updated_at: string | null
 }
@@ -36,32 +36,13 @@ interface NarrativeDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-export function NarrativeDialog({ mode, narrative, open, onOpenChange }: NarrativeDialogProps) {
-  const [title, setTitle] = useState('')
-  const [category, setCategory] = useState<string>('none')
-  const [tags, setTags] = useState('')
-  const [content, setContent] = useState('')
+function NarrativeForm({ mode, narrative, onOpenChange }: Omit<NarrativeDialogProps, 'open'>) {
+  const [title, setTitle] = useState(mode === 'edit' && narrative ? narrative.title : '')
+  const [category, setCategory] = useState<string>(mode === 'edit' && narrative ? (narrative.category || 'none') : 'none')
+  const [tags, setTags] = useState(mode === 'edit' && narrative ? (narrative.tags?.join(', ') || '') : '')
+  const [content, setContent] = useState(mode === 'edit' && narrative ? narrative.content : '')
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-
-  // Initialize form when dialog opens or narrative changes
-  useEffect(() => {
-    if (open) {
-      if (mode === 'edit' && narrative) {
-        setTitle(narrative.title)
-        setCategory(narrative.category || 'none')
-        setTags(narrative.tags?.join(', ') || '')
-        setContent(narrative.content)
-      } else {
-        // Reset form for create mode
-        setTitle('')
-        setCategory('none')
-        setTags('')
-        setContent('')
-      }
-      setError(null)
-    }
-  }, [open, mode, narrative])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,12 +70,92 @@ export function NarrativeDialog({ mode, narrative, open, onOpenChange }: Narrati
       if (result?.error) {
         setError(result.error)
       } else {
-        // Success - close dialog
         onOpenChange(false)
       }
     })
   }
 
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Title */}
+      <div className="space-y-2">
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
+          placeholder="e.g., Organization Mission Statement"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+        />
+      </div>
+
+      {/* Category */}
+      <div className="space-y-2">
+        <Label htmlFor="category">Category (optional)</Label>
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger id="category">
+            <SelectValue placeholder="Select a category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None</SelectItem>
+            <SelectItem value="mission">Mission</SelectItem>
+            <SelectItem value="impact">Impact</SelectItem>
+            <SelectItem value="methods">Methods</SelectItem>
+            <SelectItem value="evaluation">Evaluation</SelectItem>
+            <SelectItem value="sustainability">Sustainability</SelectItem>
+            <SelectItem value="capacity">Capacity</SelectItem>
+            <SelectItem value="budget_narrative">Budget Narrative</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Tags */}
+      <div className="space-y-2">
+        <Label htmlFor="tags">Tags (optional)</Label>
+        <Input
+          id="tags"
+          placeholder="e.g., education, youth, STEM (comma-separated)"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+        />
+      </div>
+
+      {/* Content */}
+      <div className="space-y-2">
+        <Label>Content</Label>
+        <NarrativeEditor
+          content={content}
+          onUpdate={setContent}
+          placeholder="Start writing your narrative..."
+        />
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
+          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+        </div>
+      )}
+
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          disabled={isPending}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? 'Saving...' : mode === 'create' ? 'Create' : 'Save Changes'}
+        </Button>
+      </DialogFooter>
+    </form>
+  )
+}
+
+export function NarrativeDialog({ mode, narrative, open, onOpenChange }: NarrativeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -109,82 +170,14 @@ export function NarrativeDialog({ mode, narrative, open, onOpenChange }: Narrati
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              placeholder="e.g., Organization Mission Statement"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* Category */}
-          <div className="space-y-2">
-            <Label htmlFor="category">Category (optional)</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="mission">Mission</SelectItem>
-                <SelectItem value="impact">Impact</SelectItem>
-                <SelectItem value="methods">Methods</SelectItem>
-                <SelectItem value="evaluation">Evaluation</SelectItem>
-                <SelectItem value="sustainability">Sustainability</SelectItem>
-                <SelectItem value="capacity">Capacity</SelectItem>
-                <SelectItem value="budget_narrative">Budget Narrative</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Tags */}
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tags (optional)</Label>
-            <Input
-              id="tags"
-              placeholder="e.g., education, youth, STEM (comma-separated)"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-            />
-          </div>
-
-          {/* Content */}
-          <div className="space-y-2">
-            <Label>Content</Label>
-            <NarrativeEditor
-              content={content}
-              onUpdate={setContent}
-              placeholder="Start writing your narrative..."
-            />
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? 'Saving...' : mode === 'create' ? 'Create' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
-        </form>
+        {open && (
+          <NarrativeForm
+            key={`${mode}-${narrative?.id ?? 'new'}`}
+            mode={mode}
+            narrative={narrative}
+            onOpenChange={onOpenChange}
+          />
+        )}
       </DialogContent>
     </Dialog>
   )

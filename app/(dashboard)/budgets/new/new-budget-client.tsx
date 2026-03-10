@@ -36,13 +36,13 @@ export function NewBudgetClient({ grants, templates }: NewBudgetClientProps) {
   const [selectedGrantId, setSelectedGrantId] = useState<string>("")
   const router = useRouter()
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: { name: string; line_items: { category: string; description: string; amount: number; quantity?: number; unit?: string }[] }) => {
     if (!selectedGrantId) {
       toast.error("Please select a grant")
       return
     }
 
-    const { data: budget, error } = await createBudget({
+    const { error } = await createBudget({
       grant_id: selectedGrantId,
       name: data.name,
       line_items: data.line_items,
@@ -67,7 +67,7 @@ export function NewBudgetClient({ grants, templates }: NewBudgetClientProps) {
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <h1 className="text-2xl font-semibold">New Budget</h1>
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">New Budget</h1>
       </div>
 
       {/* Grant Selector */}

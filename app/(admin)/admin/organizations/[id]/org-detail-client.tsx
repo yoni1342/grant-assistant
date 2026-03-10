@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -52,7 +52,7 @@ interface DocumentItem {
   file_path: string | null;
   extraction_status: string | null;
   extracted_text: string | null;
-  metadata: any;
+  metadata: Record<string, unknown>;
   created_at: string | null;
 }
 
@@ -109,8 +109,8 @@ interface OrgDetailClientProps {
     created_at: string | null;
   }>;
   documents: DocumentItem[];
-  budgets: any[];
-  narratives: any[];
+  budgets: Record<string, unknown>[];
+  narratives: Record<string, unknown>[];
 }
 
 function groupByMonth(items: Array<{ created_at: string | null }>, months = 6) {
@@ -196,22 +196,43 @@ function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
   const [selectedDocId, setSelectedDocId] = useState<string | null>(
     documents[0]?.id || null
   );
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const [urlLoading, setUrlLoading] = useState(false);
+  const [urlCache, setUrlCache] = useState<Record<string, string | null>>({});
+  const [loadingDocId, setLoadingDocId] = useState<string | null>(null);
 
   const selectedDoc = documents.find((d) => d.id === selectedDocId) || null;
 
-  // Load signed URL when selected document changes
-  useEffect(() => {
-    setSignedUrl(null);
-    if (!selectedDoc?.file_path) return;
+  // Derive signedUrl and urlLoading from cache
+  const signedUrl = selectedDocId && selectedDocId in urlCache ? urlCache[selectedDocId] : null;
+  const urlLoading = loadingDocId === selectedDocId;
 
-    setUrlLoading(true);
-    getAdminDocumentUrl(selectedDoc.file_path).then((result) => {
-      if (result.url) setSignedUrl(result.url);
-      setUrlLoading(false);
+  // Load signed URL when selected document changes
+  const loadDocumentUrl = useCallback(async (filePath: string) => {
+    const result = await getAdminDocumentUrl(filePath);
+    return result.url ?? null;
+  }, []);
+
+  useEffect(() => {
+    const docId = selectedDoc?.id;
+    const filePath = selectedDoc?.file_path;
+
+    if (!docId || !filePath) return;
+    if (docId in urlCache) return;
+
+    let cancelled = false;
+    setLoadingDocId(docId);
+
+    loadDocumentUrl(filePath).then((url) => {
+      if (!cancelled) {
+        setUrlCache((prev) => ({ ...prev, [docId]: url }));
+        setLoadingDocId(null);
+      }
     });
-  }, [selectedDoc?.id, selectedDoc?.file_path]);
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- urlCache is intentionally excluded to avoid re-fetching cached URLs
+  }, [selectedDoc?.id, selectedDoc?.file_path, loadDocumentUrl]);
 
   if (documents.length === 0) {
     return (
@@ -316,6 +337,7 @@ function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
                 />
               ) : signedUrl && isImage ? (
                 <div className="p-4 flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- signed URL from Supabase storage; next/image cannot optimize dynamic external URLs */}
                   <img
                     src={signedUrl}
                     alt={selectedDoc.title || selectedDoc.name || "Document"}

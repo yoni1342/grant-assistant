@@ -61,39 +61,29 @@ export function Sidebar({ user }: { user: User }) {
   useEffect(() => {
     const supabase = createClient();
 
-    // Initial fetch
-    supabase
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("is_read", false)
-      .then(({ count }) => {
-        setUnreadCount(count || 0);
-      });
+    async function fetchUnreadCount() {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("is_read", false);
+      if (!error) setUnreadCount(count ?? 0);
+    }
 
-    // Realtime: new notifications increment count
+    // Initial fetch
+    fetchUnreadCount();
+
+    // Realtime: refetch on any insert or update
     const channel = supabase
       .channel("sidebar-notifications")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications" },
-        () => {
-          if (!window.location.pathname.startsWith("/notifications")) {
-            setUnreadCount((prev) => prev + 1);
-          }
-        }
+        () => fetchUnreadCount()
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "notifications" },
-        () => {
-          supabase
-            .from("notifications")
-            .select("id", { count: "exact", head: true })
-            .eq("is_read", false)
-            .then(({ count }) => {
-              setUnreadCount(count || 0);
-            });
-        }
+        () => fetchUnreadCount()
       )
       .subscribe();
 
@@ -168,7 +158,7 @@ export function Sidebar({ user }: { user: User }) {
                 <div className="relative shrink-0">
                   <item.icon className="h-4 w-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[oklch(var(--brand-accent))] px-1 text-[10px] font-medium text-white">
+                    <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white shadow-sm">
                       {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                   )}

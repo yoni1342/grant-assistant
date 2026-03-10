@@ -15,7 +15,7 @@ type Narrative = {
   category: string | null
   tags: string[] | null
   embedding: string | null
-  metadata: any
+  metadata: Record<string, unknown>
   created_at: string | null
   updated_at: string | null
 }
@@ -60,8 +60,8 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
       {/* Page header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Narratives</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Narratives</h1>
+          <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
             Reusable content blocks for grant proposals
           </p>
         </div>
@@ -74,7 +74,6 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
       {/* List with search/filter */}
       <NarrativeList
         initialData={narratives}
-        grants={grants}
         onEditClick={handleEditClick}
         onAICustomizeClick={handleAICustomizeClick}
       />

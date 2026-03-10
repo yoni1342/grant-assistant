@@ -53,7 +53,6 @@ const budgetSchema = z.object({
 })
 
 type BudgetFormData = z.infer<typeof budgetSchema>
-type LineItemData = z.infer<typeof lineItemSchema>
 
 interface Template {
   id: string

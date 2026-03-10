@@ -30,8 +30,8 @@ export default async function OrganizationsPage() {
 
   // Group by org_id
   const documentsByOrg: Record<string, typeof allDocuments> = {};
-  const budgetsByOrg: Record<string, any[]> = {};
-  const narrativesByOrg: Record<string, any[]> = {};
+  const budgetsByOrg: Record<string, Record<string, unknown>[]> = {};
+  const narrativesByOrg: Record<string, Record<string, unknown>[]> = {};
 
   for (const doc of allDocuments || []) {
     if (!documentsByOrg[doc.org_id]) documentsByOrg[doc.org_id] = [];
@@ -44,8 +44,8 @@ export default async function OrganizationsPage() {
         org_id: doc.org_id,
         name: doc.title || doc.name || "Untitled Budget",
         narrative: doc.extracted_text,
-        total_amount: (doc.metadata as any)?.total_amount ?? null,
-        is_template: (doc.metadata as any)?.is_template ?? false,
+        total_amount: (doc.metadata as Record<string, unknown>)?.total_amount ?? null,
+        is_template: (doc.metadata as Record<string, unknown>)?.is_template ?? false,
         created_at: doc.created_at,
       });
     } else if (doc.category === "narrative") {

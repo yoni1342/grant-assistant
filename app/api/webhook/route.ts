@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
       }
 
       case "insert_proposal": {
-        const { data: proposal, error } = await supabase
+        const { error } = await supabase
           .from("proposals")
           .insert(data.proposal)
           .select()
@@ -397,7 +397,7 @@ export async function POST(request: NextRequest) {
       case "insert_checklist": {
         const { grant_id, org_id, items } = data;
         const totalItems = items.length;
-        const completedItems = items.filter((i: any) => i.completed).length;
+        const completedItems = items.filter((i: Record<string, unknown>) => i.completed).length;
         const completion_percentage =
           totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
         const { error } = await supabase.from("submission_checklists").upsert(

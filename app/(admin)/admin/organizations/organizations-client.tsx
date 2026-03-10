@@ -51,9 +51,9 @@ interface Organization {
   annual_budget: number | null;
   staff_count: number | null;
   geographic_focus: string[] | null;
-  documents: any[];
-  budgets: any[];
-  narratives: any[];
+  documents: Record<string, unknown>[];
+  budgets: Record<string, unknown>[];
+  narratives: Record<string, unknown>[];
 }
 
 type Filter = "all" | "pending" | "approved" | "rejected";

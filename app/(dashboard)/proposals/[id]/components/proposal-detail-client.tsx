@@ -13,12 +13,14 @@ import { QualityReview } from "./quality-review"
 import { FunderAnalysis } from "./funder-analysis"
 import { useRef } from "react"
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 interface ProposalDetailClientProps {
   proposal: any
   sections: any[]
   grant: any
   funder: any
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export function ProposalDetailClient({
   proposal: initialProposal,

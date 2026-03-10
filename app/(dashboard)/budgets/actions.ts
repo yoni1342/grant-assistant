@@ -53,7 +53,7 @@ export async function getBudgets() {
     id: doc.id,
     name: doc.title || doc.name || 'Untitled Budget',
     narrative: doc.extracted_text,
-    total_amount: (doc.metadata as any)?.total_amount ?? null,
+    total_amount: ((doc.metadata as Record<string, unknown>)?.total_amount as number) ?? null,
     updated_at: doc.updated_at,
     grant: Array.isArray(doc.grant) ? doc.grant[0] || null : doc.grant,
   }))
@@ -97,13 +97,13 @@ export async function getBudget(budgetId: string) {
     return { error: docError.message, data: null }
   }
 
-  const meta = (doc.metadata as any) || {}
-  const lineItems = (meta.line_items || []).map((item: any, index: number) => ({
+  const meta = (doc.metadata as Record<string, unknown>) || {}
+  const lineItems = ((meta.line_items as Record<string, unknown>[]) || []).map((item: Record<string, unknown>, index: number) => ({
     id: `${doc.id}-${index}`,
-    category: item.category || null,
-    description: item.description,
-    amount: item.amount,
-    justification: item.justification || null,
+    category: (item.category as string) || null,
+    description: item.description as string,
+    amount: item.amount as number,
+    justification: (item.justification as string) || null,
     sort_order: index,
   }))
 
@@ -113,7 +113,7 @@ export async function getBudget(budgetId: string) {
         id: doc.id,
         name: doc.title || doc.name || 'Untitled Budget',
         narrative: doc.extracted_text,
-        total_amount: meta.total_amount ?? null,
+        total_amount: (meta.total_amount as number) ?? null,
         created_at: doc.created_at,
         updated_at: doc.updated_at,
       },
@@ -212,10 +212,10 @@ export async function updateBudget(
     .eq('id', budgetId)
     .single()
 
-  const meta = (existing?.metadata as any) || {}
+  const meta = (existing?.metadata as Record<string, unknown>) || {}
 
   // Build update object
-  const updates: any = {}
+  const updates: Record<string, unknown> = {}
   if (data.name !== undefined) {
     updates.title = data.name
     updates.name = data.name
@@ -342,7 +342,7 @@ export async function saveBudgetAsTemplate(budgetId: string, templateName: strin
     return { error: docError.message }
   }
 
-  const meta = (doc.metadata as any) || {}
+  const meta = (doc.metadata as Record<string, unknown>) || {}
 
   // Insert new document as template
   const { error: templateError } = await supabase
@@ -386,16 +386,16 @@ export async function loadBudgetTemplate(templateId: string) {
     return { error: docError.message, data: null }
   }
 
-  const meta = (doc.metadata as any) || {}
+  const meta = (doc.metadata as Record<string, unknown>) || {}
 
   return {
     data: {
       name: doc.title || doc.name || 'Untitled Template',
-      lineItems: (meta.line_items || []).map((item: any) => ({
-        category: item.category,
-        description: item.description,
-        amount: item.amount,
-        justification: item.justification || '',
+      lineItems: ((meta.line_items as Record<string, unknown>[]) || []).map((item: Record<string, unknown>) => ({
+        category: item.category as string,
+        description: item.description as string,
+        amount: item.amount as number,
+        justification: (item.justification as string) || '',
       })),
     },
     error: null,

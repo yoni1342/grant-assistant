@@ -23,9 +23,9 @@ export function SettingsClient({ data }: { data: SettingsData }) {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="space-y-2 mb-8">
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account and application preferences.
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Settings</h1>
+        <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
+          Manage your account and application preferences
         </p>
       </div>
 

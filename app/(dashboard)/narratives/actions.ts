@@ -28,7 +28,7 @@ export async function getNarratives() {
     title: doc.title || doc.name || 'Untitled',
     content: doc.extracted_text || '',
     category: doc.ai_category || null,
-    tags: ((doc.metadata as any)?.tags as string[]) || null,
+    tags: ((doc.metadata as Record<string, unknown>)?.tags as string[]) || null,
     embedding: doc.embedding,
     metadata: doc.metadata,
     created_at: doc.created_at,
@@ -100,7 +100,7 @@ export async function createNarrative(formData: FormData) {
     title: doc.title || '',
     content: doc.extracted_text || '',
     category: doc.ai_category || null,
-    tags: ((doc.metadata as any)?.tags as string[]) || null,
+    tags: ((doc.metadata as Record<string, unknown>)?.tags as string[]) || null,
     embedding: doc.embedding,
     metadata: doc.metadata,
     created_at: doc.created_at,
@@ -136,7 +136,7 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
     .eq('id', narrativeId)
     .single()
 
-  const existingMeta = (existing?.metadata as any) || {}
+  const existingMeta = (existing?.metadata as Record<string, unknown>) || {}
 
   // Update document
   const { data: doc, error } = await supabase
@@ -162,7 +162,7 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
     title: doc.title || '',
     content: doc.extracted_text || '',
     category: doc.ai_category || null,
-    tags: ((doc.metadata as any)?.tags as string[]) || null,
+    tags: ((doc.metadata as Record<string, unknown>)?.tags as string[]) || null,
     embedding: doc.embedding,
     metadata: doc.metadata,
     created_at: doc.created_at,

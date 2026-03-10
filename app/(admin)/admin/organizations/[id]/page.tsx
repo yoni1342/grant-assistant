@@ -73,8 +73,8 @@ export default async function OrgDetailPage({
       id: d.id,
       name: d.title || d.name || "Untitled Budget",
       narrative: d.extracted_text,
-      total_amount: (d.metadata as any)?.total_amount ?? null,
-      is_template: (d.metadata as any)?.is_template ?? false,
+      total_amount: (d.metadata as Record<string, unknown>)?.total_amount ?? null,
+      is_template: (d.metadata as Record<string, unknown>)?.is_template ?? false,
       created_at: d.created_at,
     }));
   const narratives = allDocs

@@ -273,8 +273,8 @@ export default function DiscoveryPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Grant Discovery</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Grant Discovery</h1>
+        <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
           Search for grant opportunities across Grants.gov, ProPublica,
           USAspending, CFDA, and Philanthropy News Digest
         </p>

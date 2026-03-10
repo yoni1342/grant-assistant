@@ -20,19 +20,13 @@ type Narrative = {
   category: string | null
   tags: string[] | null
   embedding: string | null
-  metadata: any
+  metadata: Record<string, unknown>
   created_at: string | null
   updated_at: string | null
 }
 
-type Grant = {
-  id: string
-  title: string
-}
-
 interface NarrativeListProps {
   initialData: Narrative[]
-  grants: Grant[]
   onEditClick: (narrative: Narrative) => void
   onAICustomizeClick: (narrative: Narrative) => void
 }
@@ -59,7 +53,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   other: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
 }
 
-export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeClick }: NarrativeListProps) {
+export function NarrativeList({ initialData, onEditClick, onAICustomizeClick }: NarrativeListProps) {
   const [narratives, setNarratives] = useState<Narrative[]>(initialData)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -73,19 +67,20 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'documents' },
         (payload) => {
-          const doc = payload.new as any
+          const doc = payload.new as Record<string, unknown>
           if (doc.category === 'narrative') {
+            const meta = doc.metadata as Record<string, unknown> | null
             setNarratives((prev) => [{
-              id: doc.id,
-              org_id: doc.org_id,
-              title: doc.title || doc.name || 'Untitled',
-              content: doc.extracted_text || '',
-              category: doc.ai_category || null,
-              tags: doc.metadata?.tags || null,
-              embedding: doc.embedding,
-              metadata: doc.metadata,
-              created_at: doc.created_at,
-              updated_at: doc.updated_at,
+              id: doc.id as string,
+              org_id: doc.org_id as string,
+              title: (doc.title as string) || (doc.name as string) || 'Untitled',
+              content: (doc.extracted_text as string) || '',
+              category: (doc.ai_category as string) || null,
+              tags: (meta?.tags as string[]) || null,
+              embedding: doc.embedding as string | null,
+              metadata: meta as Record<string, unknown>,
+              created_at: doc.created_at as string | null,
+              updated_at: doc.updated_at as string | null,
             }, ...prev])
           }
         }
@@ -94,20 +89,21 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'documents' },
         (payload) => {
-          const doc = payload.new as any
+          const doc = payload.new as Record<string, unknown>
           if (doc.category === 'narrative') {
+            const meta = doc.metadata as Record<string, unknown> | null
             setNarratives((prev) =>
               prev.map((n) => n.id === doc.id ? {
-                id: doc.id,
-                org_id: doc.org_id,
-                title: doc.title || doc.name || 'Untitled',
-                content: doc.extracted_text || '',
-                category: doc.ai_category || null,
-                tags: doc.metadata?.tags || null,
-                embedding: doc.embedding,
-                metadata: doc.metadata,
-                created_at: doc.created_at,
-                updated_at: doc.updated_at,
+                id: doc.id as string,
+                org_id: doc.org_id as string,
+                title: (doc.title as string) || (doc.name as string) || 'Untitled',
+                content: (doc.extracted_text as string) || '',
+                category: (doc.ai_category as string) || null,
+                tags: (meta?.tags as string[]) || null,
+                embedding: doc.embedding as string | null,
+                metadata: meta as Record<string, unknown>,
+                created_at: doc.created_at as string | null,
+                updated_at: doc.updated_at as string | null,
               } : n)
             )
           }

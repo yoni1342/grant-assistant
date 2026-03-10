@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -44,7 +43,6 @@ import {
   Pencil,
   ExternalLink,
   DollarSign,
-  CalendarDays,
 } from "lucide-react"
 
 interface Budget {
@@ -215,7 +213,7 @@ export function BudgetDetailClient({
     }
   }, [budget.id, router])
 
-  const handleFormSubmit = async (data: any) => {
+  const handleFormSubmit = async (data: { name?: string; line_items?: { category: string; description: string; amount: number; justification?: string }[] }) => {
     const { error } = await updateBudget(budget.id, {
       name: data.name,
       line_items: data.line_items,

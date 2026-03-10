@@ -20,6 +20,7 @@ interface Template {
 
 interface TemplateSelectorProps {
   templates: Template[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
 }
 
@@ -42,7 +43,7 @@ export function TemplateSelector({ templates, form }: TemplateSelectorProps) {
       form.reset({
         grant_id: form.getValues("grant_id"), // Preserve grant_id
         name: `${data.name} (Copy)`,
-        line_items: data.lineItems.map((item: { category: string; description: string; amount: number; justification?: string }) => ({
+        line_items: data.lineItems.map((item) => ({
           category: item.category,
           description: item.description,
           amount: item.amount,
@@ -51,7 +52,7 @@ export function TemplateSelector({ templates, form }: TemplateSelectorProps) {
       })
 
       toast.success(`${data.name} has been loaded into the form`)
-    } catch (err) {
+    } catch {
       toast.error("Failed to load template")
     } finally {
       setIsLoading(false)
