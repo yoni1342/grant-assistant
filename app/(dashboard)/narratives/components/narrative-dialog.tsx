@@ -38,7 +38,7 @@ interface NarrativeDialogProps {
 
 export function NarrativeDialog({ mode, narrative, open, onOpenChange }: NarrativeDialogProps) {
   const [title, setTitle] = useState('')
-  const [category, setCategory] = useState<string>('')
+  const [category, setCategory] = useState<string>('none')
   const [tags, setTags] = useState('')
   const [content, setContent] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -49,13 +49,13 @@ export function NarrativeDialog({ mode, narrative, open, onOpenChange }: Narrati
     if (open) {
       if (mode === 'edit' && narrative) {
         setTitle(narrative.title)
-        setCategory(narrative.category || '')
+        setCategory(narrative.category || 'none')
         setTags(narrative.tags?.join(', ') || '')
         setContent(narrative.content)
       } else {
         // Reset form for create mode
         setTitle('')
-        setCategory('')
+        setCategory('none')
         setTags('')
         setContent('')
       }
@@ -76,7 +76,7 @@ export function NarrativeDialog({ mode, narrative, open, onOpenChange }: Narrati
       const formData = new FormData()
       formData.set('title', title.trim())
       formData.set('content', content)
-      formData.set('category', category || '')
+      formData.set('category', category === 'none' ? '' : category)
       formData.set('tags', tags)
 
       let result
@@ -130,7 +130,7 @@ export function NarrativeDialog({ mode, narrative, open, onOpenChange }: Narrati
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 <SelectItem value="mission">Mission</SelectItem>
                 <SelectItem value="impact">Impact</SelectItem>
                 <SelectItem value="methods">Methods</SelectItem>
