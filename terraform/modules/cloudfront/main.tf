@@ -26,6 +26,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   # Static assets — long cache
+  # NOTE: Host header must be forwarded so ALB routes correctly — without it, CSS/JS 502s
   ordered_cache_behavior {
     path_pattern           = "/_next/static/*"
     allowed_methods        = ["GET", "HEAD"]
@@ -35,6 +36,7 @@ resource "aws_cloudfront_distribution" "main" {
     compress               = true
     forwarded_values {
       query_string = false
+      headers      = ["Host"]
       cookies { forward = "none" }
     }
     min_ttl     = 31536000
