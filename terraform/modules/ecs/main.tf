@@ -119,13 +119,8 @@ resource "aws_ecs_task_definition" "app" {
       }
     }
 
-    healthCheck = {
-      command     = ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
-      interval    = 30
-      timeout     = 10
-      retries     = 3
-      startPeriod = 60
-    }
+    # No container health check — ALB target group health check handles this.
+    # ECS container health check with wget caused false UNHEALTHY on Alpine.
   }])
 }
 
