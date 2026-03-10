@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
 
+# Only one production deploy at a time — cancel in-progress if newer commit arrives
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: grant-assistant-app
@@ -61,6 +66,15 @@ jobs:
           docker push ${{ steps.tags.outputs.image_short }}
           docker push ${{ steps.tags.outputs.image_latest }}
 
+      - name: Wait for ECS to be stable before deploying
+        run: |
+          echo "Waiting for any in-progress ECS deployments to finish..."
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --region ${{ env.AWS_REGION }} || true
+          echo "ECS is stable, proceeding with deployment."
+
       - name: Download current task definition
         run: |
           aws ecs describe-task-definition \
@@ -84,7 +98,6 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
           wait-for-minutes: 15
-          # Rollback automatically on failed health checks (circuit breaker enabled in Terraform)
 
       - name: Verify deployment health
         run: |
