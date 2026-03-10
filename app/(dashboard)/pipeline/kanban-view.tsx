@@ -17,7 +17,7 @@ const STAGES = [
   // { key: "submission", label: "Submission", color: "bg-orange-500" },
   // { key: "awarded", label: "Awarded", color: "bg-green-500" },
   // { key: "reporting", label: "Reporting", color: "bg-teal-500" },
-  { key: "closed", label: "Closed", color: "bg-zinc-400" },
+  { key: "closed", label: "Closed", color: "bg-muted-foreground" },
 ] as const;
 
 function ScreeningScore({ score }: { score: number | null }) {
@@ -112,8 +112,8 @@ export function KanbanView({
           onDrop={(e) => handleDrop(e, col.key)}
           className={`flex w-64 shrink-0 flex-col rounded-lg transition-colors ${
             dropTarget === col.key && draggedGrantId
-              ? "bg-zinc-200/80 ring-2 ring-primary/40 dark:bg-zinc-700/50"
-              : "bg-zinc-100/50 dark:bg-zinc-800/30"
+              ? "bg-muted ring-2 ring-primary/40"
+              : "bg-muted/50"
           }`}
         >
           {/* Column Header */}

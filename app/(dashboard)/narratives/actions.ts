@@ -11,16 +11,31 @@ export async function getNarratives() {
   }
 
   const { data, error } = await supabase
-    .from('narratives')
+    .from('documents')
     .select('*')
     .eq('org_id', orgId)
+    .eq('category', 'narrative')
     .order('updated_at', { ascending: false })
 
   if (error) {
     return { error: error.message, data: [] }
   }
 
-  return { data: data || [], error: null }
+  // Map to narrative shape for UI compatibility
+  const narratives = (data || []).map(doc => ({
+    id: doc.id,
+    org_id: doc.org_id,
+    title: doc.title || doc.name || 'Untitled',
+    content: doc.extracted_text || '',
+    category: doc.ai_category || null,
+    tags: ((doc.metadata as any)?.tags as string[]) || null,
+    embedding: doc.embedding,
+    metadata: doc.metadata,
+    created_at: doc.created_at,
+    updated_at: doc.updated_at,
+  }))
+
+  return { data: narratives, error: null }
 }
 
 export async function createNarrative(formData: FormData) {
@@ -58,21 +73,38 @@ export async function createNarrative(formData: FormData) {
     return { error: 'User profile or organization not found' }
   }
 
-  // Insert narrative
-  const { data: narrative, error } = await supabase
-    .from('narratives')
+  // Insert as document
+  const { data: doc, error } = await supabase
+    .from('documents')
     .insert({
       org_id: profile.org_id,
       title,
-      content,
-      category: category || null,
-      tags: tags.length > 0 ? tags : null,
+      name: title,
+      category: 'narrative',
+      ai_category: category || null,
+      extracted_text: content,
+      extraction_status: 'completed',
+      metadata: tags.length > 0 ? { tags } : null,
     })
     .select()
     .single()
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Map back to narrative shape
+  const narrative = {
+    id: doc.id,
+    org_id: doc.org_id,
+    title: doc.title || '',
+    content: doc.extracted_text || '',
+    category: doc.ai_category || null,
+    tags: ((doc.metadata as any)?.tags as string[]) || null,
+    embedding: doc.embedding,
+    metadata: doc.metadata,
+    created_at: doc.created_at,
+    updated_at: doc.updated_at,
   }
 
   revalidatePath('/narratives')
@@ -97,14 +129,24 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
     ? tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
     : []
 
-  // Update narrative
-  const { data: narrative, error } = await supabase
-    .from('narratives')
+  // Get existing metadata to merge
+  const { data: existing } = await supabase
+    .from('documents')
+    .select('metadata')
+    .eq('id', narrativeId)
+    .single()
+
+  const existingMeta = (existing?.metadata as any) || {}
+
+  // Update document
+  const { data: doc, error } = await supabase
+    .from('documents')
     .update({
       title,
-      content,
-      category: category || null,
-      tags: tags.length > 0 ? tags : null,
+      name: title,
+      ai_category: category || null,
+      extracted_text: content,
+      metadata: { ...existingMeta, tags: tags.length > 0 ? tags : undefined },
     })
     .eq('id', narrativeId)
     .select()
@@ -112,6 +154,19 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
 
   if (error) {
     return { error: error.message }
+  }
+
+  const narrative = {
+    id: doc.id,
+    org_id: doc.org_id,
+    title: doc.title || '',
+    content: doc.extracted_text || '',
+    category: doc.ai_category || null,
+    tags: ((doc.metadata as any)?.tags as string[]) || null,
+    embedding: doc.embedding,
+    metadata: doc.metadata,
+    created_at: doc.created_at,
+    updated_at: doc.updated_at,
   }
 
   revalidatePath('/narratives')
@@ -127,7 +182,7 @@ export async function deleteNarrative(narrativeId: string) {
   }
 
   const { error } = await supabase
-    .from('narratives')
+    .from('documents')
     .delete()
     .eq('id', narrativeId)
 

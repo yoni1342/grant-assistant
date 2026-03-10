@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -415,50 +415,6 @@ export default function DiscoveryPage() {
         </div>
       )}
 
-      {/* Empty state - info cards (only show when no results) */}
-      {results.length === 0 && !loading && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">How it works</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                <li>Enter keywords describing grants you&apos;re looking for</li>
-                <li>n8n searches across 5 databases simultaneously</li>
-                <li>Review matching grants and add them to your pipeline</li>
-                <li>Run AI screening on any grant to check eligibility</li>
-              </ol>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Data Sources</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>Grants.gov</li>
-                <li>ProPublica Nonprofit Explorer</li>
-                <li>USAspending.gov</li>
-                <li>CFDA (Assistance Listings)</li>
-                <li>Philanthropy News Digest</li>
-              </ul>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">AI Screening</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                After discovery, add grants to your pipeline then trigger AI
-                eligibility screening. You&apos;ll get a numeric score (0–100%)
-                plus detailed notes on fit, requirements, and recommendations.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Grant Detail Dialog */}
       <Dialog

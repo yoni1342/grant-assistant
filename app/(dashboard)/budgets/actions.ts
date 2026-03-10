@@ -23,9 +23,16 @@ export async function getBudgets() {
   }
 
   const { data, error } = await supabase
-    .from('budgets')
+    .from('documents')
     .select(`
-      *,
+      id,
+      title,
+      name,
+      extracted_text,
+      metadata,
+      grant_id,
+      created_at,
+      updated_at,
       grant:grants (
         id,
         title,
@@ -33,14 +40,25 @@ export async function getBudgets() {
       )
     `)
     .eq('org_id', profile.org_id)
-    .eq('is_template', false)
+    .eq('category', 'budget')
+    .not('metadata->is_template', 'eq', 'true')
     .order('updated_at', { ascending: false })
 
   if (error) {
     return { error: error.message, data: [] }
   }
 
-  return { data: data || [], error: null }
+  // Map to budget shape for UI compatibility
+  const budgets = (data || []).map(doc => ({
+    id: doc.id,
+    name: doc.title || doc.name || 'Untitled Budget',
+    narrative: doc.extracted_text,
+    total_amount: (doc.metadata as any)?.total_amount ?? null,
+    updated_at: doc.updated_at,
+    grant: Array.isArray(doc.grant) ? doc.grant[0] || null : doc.grant,
+  }))
+
+  return { data: budgets, error: null }
 }
 
 export async function getBudget(budgetId: string) {
@@ -51,11 +69,18 @@ export async function getBudget(budgetId: string) {
     return { error: 'Not authenticated', data: null }
   }
 
-  // Fetch budget with grant data
-  const { data: budget, error: budgetError } = await supabase
-    .from('budgets')
+  // Fetch document with grant data
+  const { data: doc, error: docError } = await supabase
+    .from('documents')
     .select(`
-      *,
+      id,
+      title,
+      name,
+      extracted_text,
+      metadata,
+      grant_id,
+      created_at,
+      updated_at,
       grant:grants (
         id,
         title,
@@ -65,28 +90,35 @@ export async function getBudget(budgetId: string) {
       )
     `)
     .eq('id', budgetId)
+    .eq('category', 'budget')
     .single()
 
-  if (budgetError) {
-    return { error: budgetError.message, data: null }
+  if (docError) {
+    return { error: docError.message, data: null }
   }
 
-  // Fetch line items
-  const { data: lineItems, error: lineItemsError } = await supabase
-    .from('budget_line_items')
-    .select('*')
-    .eq('budget_id', budgetId)
-    .order('sort_order', { ascending: true })
-
-  if (lineItemsError) {
-    return { error: lineItemsError.message, data: null }
-  }
+  const meta = (doc.metadata as any) || {}
+  const lineItems = (meta.line_items || []).map((item: any, index: number) => ({
+    id: `${doc.id}-${index}`,
+    category: item.category || null,
+    description: item.description,
+    amount: item.amount,
+    justification: item.justification || null,
+    sort_order: index,
+  }))
 
   return {
     data: {
-      budget,
-      lineItems: lineItems || [],
-      grant: budget.grant,
+      budget: {
+        id: doc.id,
+        name: doc.title || doc.name || 'Untitled Budget',
+        narrative: doc.extracted_text,
+        total_amount: meta.total_amount ?? null,
+        created_at: doc.created_at,
+        updated_at: doc.updated_at,
+      },
+      lineItems,
+      grant: Array.isArray(doc.grant) ? doc.grant[0] || null : doc.grant,
     },
     error: null,
   }
@@ -125,45 +157,37 @@ export async function createBudget(data: {
   // Calculate total amount from line items
   const total_amount = data.line_items.reduce((sum, item) => sum + item.amount, 0)
 
-  // Insert budget
-  const { data: budget, error: budgetError } = await supabase
-    .from('budgets')
+  // Insert as a document
+  const { data: doc, error: docError } = await supabase
+    .from('documents')
     .insert({
       org_id: profile.org_id,
       grant_id: data.grant_id,
+      title: data.name,
       name: data.name,
-      total_amount,
-      is_template: false,
+      category: 'budget',
+      extraction_status: 'completed',
+      metadata: {
+        total_amount,
+        is_template: false,
+        line_items: data.line_items.map((item, index) => ({
+          category: item.category,
+          description: item.description,
+          amount: item.amount,
+          justification: item.justification || null,
+          sort_order: index,
+        })),
+      },
     })
     .select()
     .single()
 
-  if (budgetError) {
-    return { error: budgetError.message }
-  }
-
-  // Insert line items with sort_order
-  const lineItemsToInsert = data.line_items.map((item, index) => ({
-    budget_id: budget.id,
-    category: item.category,
-    description: item.description,
-    amount: item.amount,
-    justification: item.justification || null,
-    sort_order: index,
-  }))
-
-  const { error: lineItemsError } = await supabase
-    .from('budget_line_items')
-    .insert(lineItemsToInsert)
-
-  if (lineItemsError) {
-    // Rollback: delete the budget if line items fail
-    await supabase.from('budgets').delete().eq('id', budget.id)
-    return { error: lineItemsError.message }
+  if (docError) {
+    return { error: docError.message }
   }
 
   revalidatePath('/budgets')
-  return { data: budget, error: null }
+  return { data: doc, error: null }
 }
 
 export async function updateBudget(
@@ -181,48 +205,42 @@ export async function updateBudget(
     return { error: 'Not authenticated' }
   }
 
+  // Get existing document to merge metadata
+  const { data: existing } = await supabase
+    .from('documents')
+    .select('metadata')
+    .eq('id', budgetId)
+    .single()
+
+  const meta = (existing?.metadata as any) || {}
+
   // Build update object
   const updates: any = {}
-  if (data.name !== undefined) updates.name = data.name
-  if (data.narrative !== undefined) updates.narrative = data.narrative
+  if (data.name !== undefined) {
+    updates.title = data.name
+    updates.name = data.name
+  }
+  if (data.narrative !== undefined) {
+    updates.extracted_text = data.narrative
+  }
 
-  // If line_items provided, recalculate total_amount
   if (data.line_items) {
     const total_amount = data.line_items.reduce((sum, item) => sum + item.amount, 0)
-    updates.total_amount = total_amount
-
-    // Delete existing line items
-    const { error: deleteError } = await supabase
-      .from('budget_line_items')
-      .delete()
-      .eq('budget_id', budgetId)
-
-    if (deleteError) {
-      return { error: deleteError.message }
-    }
-
-    // Insert new line items
-    const lineItemsToInsert = data.line_items.map((item, index) => ({
-      budget_id: budgetId,
-      category: item.category,
-      description: item.description,
-      amount: item.amount,
-      justification: item.justification || null,
-      sort_order: index,
-    }))
-
-    const { error: insertError } = await supabase
-      .from('budget_line_items')
-      .insert(lineItemsToInsert)
-
-    if (insertError) {
-      return { error: insertError.message }
+    updates.metadata = {
+      ...meta,
+      total_amount,
+      line_items: data.line_items.map((item, index) => ({
+        category: item.category,
+        description: item.description,
+        amount: item.amount,
+        justification: item.justification || null,
+        sort_order: index,
+      })),
     }
   }
 
-  // Update budget row
   const { error: updateError } = await supabase
-    .from('budgets')
+    .from('documents')
     .update(updates)
     .eq('id', budgetId)
 
@@ -243,7 +261,7 @@ export async function deleteBudget(budgetId: string) {
   }
 
   const { error } = await supabase
-    .from('budgets')
+    .from('documents')
     .delete()
     .eq('id', budgetId)
 
@@ -275,17 +293,23 @@ export async function getBudgetTemplates() {
   }
 
   const { data, error } = await supabase
-    .from('budgets')
-    .select('*')
+    .from('documents')
+    .select('id, title, name, metadata')
     .eq('org_id', profile.org_id)
-    .eq('is_template', true)
+    .eq('category', 'budget')
+    .filter('metadata->is_template', 'eq', 'true')
     .order('updated_at', { ascending: false })
 
   if (error) {
     return { error: error.message, data: [] }
   }
 
-  return { data: data || [], error: null }
+  const templates = (data || []).map(doc => ({
+    id: doc.id,
+    name: doc.title || doc.name || 'Untitled Template',
+  }))
+
+  return { data: templates, error: null }
 }
 
 export async function saveBudgetAsTemplate(budgetId: string, templateName: string) {
@@ -307,65 +331,36 @@ export async function saveBudgetAsTemplate(budgetId: string, templateName: strin
     return { error: 'User profile or organization not found' }
   }
 
-  // Fetch the budget
-  const { data: budget, error: budgetError } = await supabase
-    .from('budgets')
-    .select('*')
+  // Fetch the source document
+  const { data: doc, error: docError } = await supabase
+    .from('documents')
+    .select('metadata')
     .eq('id', budgetId)
     .single()
 
-  if (budgetError) {
-    return { error: budgetError.message }
+  if (docError) {
+    return { error: docError.message }
   }
 
-  // Fetch the line items
-  const { data: lineItems, error: lineItemsError } = await supabase
-    .from('budget_line_items')
-    .select('*')
-    .eq('budget_id', budgetId)
-    .order('sort_order', { ascending: true })
+  const meta = (doc.metadata as any) || {}
 
-  if (lineItemsError) {
-    return { error: lineItemsError.message }
-  }
-
-  // Insert new budget as template
-  const { data: template, error: templateError } = await supabase
-    .from('budgets')
+  // Insert new document as template
+  const { error: templateError } = await supabase
+    .from('documents')
     .insert({
       org_id: profile.org_id,
-      grant_id: null,
+      title: templateName,
       name: templateName,
-      total_amount: budget.total_amount,
-      is_template: true,
+      category: 'budget',
+      extraction_status: 'completed',
+      metadata: {
+        ...meta,
+        is_template: true,
+      },
     })
-    .select()
-    .single()
 
   if (templateError) {
     return { error: templateError.message }
-  }
-
-  // Copy line items
-  const lineItemsToInsert = (lineItems || []).map((item) => ({
-    budget_id: template.id,
-    category: item.category,
-    description: item.description,
-    amount: item.amount,
-    justification: item.justification,
-    sort_order: item.sort_order,
-  }))
-
-  if (lineItemsToInsert.length > 0) {
-    const { error: copyError } = await supabase
-      .from('budget_line_items')
-      .insert(lineItemsToInsert)
-
-    if (copyError) {
-      // Rollback: delete the template if line items fail
-      await supabase.from('budgets').delete().eq('id', template.id)
-      return { error: copyError.message }
-    }
   }
 
   revalidatePath('/budgets')
@@ -380,33 +375,28 @@ export async function loadBudgetTemplate(templateId: string) {
     return { error: 'Not authenticated', data: null }
   }
 
-  // Fetch template
-  const { data: template, error: templateError } = await supabase
-    .from('budgets')
-    .select('*')
+  // Fetch template document
+  const { data: doc, error: docError } = await supabase
+    .from('documents')
+    .select('title, name, metadata')
     .eq('id', templateId)
-    .eq('is_template', true)
     .single()
 
-  if (templateError) {
-    return { error: templateError.message, data: null }
+  if (docError) {
+    return { error: docError.message, data: null }
   }
 
-  // Fetch line items
-  const { data: lineItems, error: lineItemsError } = await supabase
-    .from('budget_line_items')
-    .select('*')
-    .eq('budget_id', templateId)
-    .order('sort_order', { ascending: true })
-
-  if (lineItemsError) {
-    return { error: lineItemsError.message, data: null }
-  }
+  const meta = (doc.metadata as any) || {}
 
   return {
     data: {
-      name: template.name,
-      lineItems: lineItems || [],
+      name: doc.title || doc.name || 'Untitled Template',
+      lineItems: (meta.line_items || []).map((item: any) => ({
+        category: item.category,
+        description: item.description,
+        amount: item.amount,
+        justification: item.justification || '',
+      })),
     },
     error: null,
   }
@@ -432,14 +422,14 @@ export async function triggerBudgetNarrative(budgetId: string) {
     return { error: 'User profile or organization not found' }
   }
 
-  // Get the budget to find its grant_id
-  const { data: budget, error: budgetError } = await supabase
-    .from('budgets')
+  // Get the document to find its grant_id
+  const { data: doc, error: docError } = await supabase
+    .from('documents')
     .select('grant_id')
     .eq('id', budgetId)
     .single()
 
-  if (budgetError || !budget) {
+  if (docError || !doc) {
     return { error: 'Budget not found' }
   }
 
@@ -448,7 +438,7 @@ export async function triggerBudgetNarrative(budgetId: string) {
     .from('workflow_executions')
     .insert({
       org_id: profile.org_id,
-      grant_id: budget.grant_id,
+      grant_id: doc.grant_id,
       workflow_name: 'generate-budget',
       status: 'running',
       webhook_url: '/webhook/generate-budget',

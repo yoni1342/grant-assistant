@@ -1,14 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { Tables } from '@/lib/supabase/database.types'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { NarrativeList } from './narrative-list'
 import { NarrativeDialog } from './narrative-dialog'
 import { AICustomizeButton } from './ai-customize-button'
 
-type Narrative = Tables<'narratives'>
+type Narrative = {
+  id: string
+  org_id: string
+  title: string
+  content: string
+  category: string | null
+  tags: string[] | null
+  embedding: string | null
+  metadata: any
+  created_at: string | null
+  updated_at: string | null
+}
 
 type Grant = {
   id: string

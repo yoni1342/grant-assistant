@@ -362,8 +362,8 @@ export async function POST(request: NextRequest) {
       case "insert_budget_narrative": {
         const { budget_id, org_id, narrative } = data;
         let query = supabase
-          .from("budgets")
-          .update({ narrative, updated_at: new Date().toISOString() })
+          .from("documents")
+          .update({ extracted_text: narrative, updated_at: new Date().toISOString() })
           .eq("id", budget_id);
         if (org_id) query = query.eq("org_id", org_id);
         const { error } = await query;
@@ -567,10 +567,10 @@ export async function POST(request: NextRequest) {
       case "extract_document_text": {
         const { document_id, org_id } = data;
 
-        // Get document record
+        // Get document record (include category to route extracted text)
         let docQuery = supabase
           .from("documents")
-          .select("id, name, file_type, file_path")
+          .select("id, name, file_type, file_path, category, org_id")
           .eq("id", document_id);
         if (org_id) docQuery = docQuery.eq("org_id", org_id);
         const { data: doc, error: docError } = await docQuery.single();

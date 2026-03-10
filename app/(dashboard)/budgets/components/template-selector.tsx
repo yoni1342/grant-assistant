@@ -42,7 +42,7 @@ export function TemplateSelector({ templates, form }: TemplateSelectorProps) {
       form.reset({
         grant_id: form.getValues("grant_id"), // Preserve grant_id
         name: `${data.name} (Copy)`,
-        line_items: data.lineItems.map((item) => ({
+        line_items: data.lineItems.map((item: { category: string; description: string; amount: number; justification?: string }) => ({
           category: item.category,
           description: item.description,
           amount: item.amount,

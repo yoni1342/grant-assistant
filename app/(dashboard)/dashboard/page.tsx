@@ -79,8 +79,8 @@ export default async function DashboardPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Dashboard</h1>
+        <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
           Your grant pipeline at a glance
         </p>
       </div>
@@ -133,9 +133,9 @@ export default async function DashboardPage() {
                       <span className="w-24 text-sm text-muted-foreground">
                         {label}
                       </span>
-                      <div className="flex-1 h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <div className="flex-1 h-2 bg-muted">
                         <div
-                          className="h-full rounded-full bg-zinc-900 dark:bg-zinc-100 transition-all"
+                          className="h-full bg-foreground transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>

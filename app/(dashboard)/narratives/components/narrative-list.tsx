@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Tables } from '@/lib/supabase/database.types'
+// Narrative shape mapped from documents table
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,18 @@ import { Pencil, Trash2, Sparkles, Search } from 'lucide-react'
 import { deleteNarrative } from '../actions'
 import { formatDistanceToNow } from 'date-fns'
 
-type Narrative = Tables<'narratives'>
+type Narrative = {
+  id: string
+  org_id: string
+  title: string
+  content: string
+  category: string | null
+  tags: string[] | null
+  embedding: string | null
+  metadata: any
+  created_at: string | null
+  updated_at: string | null
+}
 
 type Grant = {
   id: string
@@ -60,23 +71,51 @@ export function NarrativeList({ initialData, grants, onEditClick, onAICustomizeC
       .channel('narratives-changes')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'narratives' },
+        { event: 'INSERT', schema: 'public', table: 'documents' },
         (payload) => {
-          setNarratives((prev) => [payload.new as Narrative, ...prev])
+          const doc = payload.new as any
+          if (doc.category === 'narrative') {
+            setNarratives((prev) => [{
+              id: doc.id,
+              org_id: doc.org_id,
+              title: doc.title || doc.name || 'Untitled',
+              content: doc.extracted_text || '',
+              category: doc.ai_category || null,
+              tags: doc.metadata?.tags || null,
+              embedding: doc.embedding,
+              metadata: doc.metadata,
+              created_at: doc.created_at,
+              updated_at: doc.updated_at,
+            }, ...prev])
+          }
         }
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'narratives' },
+        { event: 'UPDATE', schema: 'public', table: 'documents' },
         (payload) => {
-          setNarratives((prev) =>
-            prev.map((n) => (n.id === payload.new.id ? (payload.new as Narrative) : n))
-          )
+          const doc = payload.new as any
+          if (doc.category === 'narrative') {
+            setNarratives((prev) =>
+              prev.map((n) => n.id === doc.id ? {
+                id: doc.id,
+                org_id: doc.org_id,
+                title: doc.title || doc.name || 'Untitled',
+                content: doc.extracted_text || '',
+                category: doc.ai_category || null,
+                tags: doc.metadata?.tags || null,
+                embedding: doc.embedding,
+                metadata: doc.metadata,
+                created_at: doc.created_at,
+                updated_at: doc.updated_at,
+              } : n)
+            )
+          }
         }
       )
       .on(
         'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'narratives' },
+        { event: 'DELETE', schema: 'public', table: 'documents' },
         (payload) => {
           setNarratives((prev) => prev.filter((n) => n.id !== payload.old.id))
         }

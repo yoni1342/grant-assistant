@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
+import { Eye } from "lucide-react";
 import { approveOrganization, rejectOrganization } from "./actions";
 
 interface Organization {
@@ -38,6 +39,21 @@ interface Organization {
   created_at: string | null;
   owner_email: string | null;
   owner_name: string | null;
+  mission: string | null;
+  ein: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  founding_year: number | null;
+  description: string | null;
+  executive_summary: string | null;
+  annual_budget: number | null;
+  staff_count: number | null;
+  geographic_focus: string[] | null;
+  documents: any[];
+  budgets: any[];
+  narratives: any[];
 }
 
 type Filter = "all" | "pending" | "approved" | "rejected";
@@ -197,28 +213,36 @@ export function OrganizationsClient({
                         : "-"}
                     </TableCell>
                     <TableCell className="text-right">
-                      {org.status === "pending" && (
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-green-700 border-green-300 hover:bg-green-50"
-                            onClick={() => handleApprove(org.id)}
-                            disabled={loading === org.id}
-                          >
-                            {loading === org.id ? "..." : "Approve"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-700 border-red-300 hover:bg-red-50"
-                            onClick={() => openRejectDialog(org.id)}
-                            disabled={loading === org.id}
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/admin/organizations/${org.id}`}>
+                            <Eye className="mr-1 h-3 w-3" />
+                            View
+                          </Link>
+                        </Button>
+                        {org.status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-700 border-green-300 hover:bg-green-50"
+                              onClick={() => handleApprove(org.id)}
+                              disabled={loading === org.id}
+                            >
+                              {loading === org.id ? "..." : "Approve"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-700 border-red-300 hover:bg-red-50"
+                              onClick={() => openRejectDialog(org.id)}
+                              disabled={loading === org.id}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

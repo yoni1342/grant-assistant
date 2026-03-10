@@ -22,6 +22,17 @@ const navItems = [
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
+/** Fundory convergence mark — 3 descending bars */
+function FundoryMark({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex flex-col gap-[5px]", className)}>
+      <div className="h-[4px] w-[28px] bg-current" />
+      <div className="h-[4px] w-[20px] bg-current" />
+      <div className="h-[4px] w-[12px] bg-current" />
+    </div>
+  );
+}
+
 export function AdminSidebar({ user }: { user: User }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -35,32 +46,43 @@ export function AdminSidebar({ user }: { user: User }) {
   return (
     <aside
       className={cn(
-        "flex h-full flex-col border-r bg-white dark:bg-zinc-900 transition-all duration-200",
+        "flex h-full flex-col border-r border-border bg-card transition-all duration-200",
         collapsed ? "w-16" : "w-56"
       )}
     >
-      {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b px-4">
-        {!collapsed && (
-          <span className="text-sm font-semibold tracking-tight">
-            Admin Panel
-          </span>
+      {/* Header — Brand lockup */}
+      <div className="flex h-14 items-center justify-between border-b border-border px-4">
+        {!collapsed ? (
+          <Link href="/admin" className="flex items-center gap-3">
+            <FundoryMark className="text-foreground" />
+            <div className="h-[24px] w-px bg-border" />
+            <div className="flex flex-col">
+              <span className="font-display text-sm font-black uppercase tracking-[0.04em] leading-none">
+                Fundory
+              </span>
+              <span className="font-mono text-[8px] tracking-[0.18em] text-muted-foreground uppercase">
+                Admin Panel
+              </span>
+            </div>
+          </Link>
+        ) : (
+          <Link href="/admin" className="mx-auto">
+            <FundoryMark className="text-foreground" />
+          </Link>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="rounded-md p-1 text-muted-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className={cn(
+            "rounded-md p-1 text-muted-foreground hover:bg-muted",
+            collapsed && "hidden"
+          )}
         >
-          <ChevronLeft
-            className={cn(
-              "h-4 w-4 transition-transform",
-              collapsed && "rotate-180"
-            )}
-          />
+          <ChevronLeft className="h-4 w-4" />
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-2">
+      <nav className="flex-1 space-y-0.5 p-2">
         {navItems.map((item) => {
           const isActive = item.exact
             ? pathname === item.href
@@ -73,19 +95,23 @@ export function AdminSidebar({ user }: { user: User }) {
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                 isActive
-                  ? "bg-zinc-100 font-medium text-foreground dark:bg-zinc-800"
-                  : "text-muted-foreground hover:bg-zinc-50 hover:text-foreground dark:hover:bg-zinc-800/50"
+                  ? "bg-foreground/[0.06] font-medium text-foreground"
+                  : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
               )}
             >
               <item.icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && (
+                <span className="font-mono text-xs tracking-wide uppercase">
+                  {item.label}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
       {/* User section */}
-      <div className="border-t p-2">
+      <div className="border-t border-border p-2">
         <div
           className={cn(
             "flex items-center gap-3 rounded-md px-3 py-2",
@@ -93,7 +119,9 @@ export function AdminSidebar({ user }: { user: User }) {
           )}
         >
           <Avatar className="h-7 w-7">
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            <AvatarFallback className="text-xs bg-foreground text-background font-medium">
+              {initials}
+            </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex-1 truncate">

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { Tables } from '@/lib/supabase/database.types'
 import {
   Dialog,
   DialogContent,
@@ -17,7 +16,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { NarrativeEditor } from './narrative-editor'
 import { createNarrative, updateNarrative } from '../actions'
 
-type Narrative = Tables<'narratives'>
+type Narrative = {
+  id: string
+  org_id: string
+  title: string
+  content: string
+  category: string | null
+  tags: string[] | null
+  embedding: string | null
+  metadata: any
+  created_at: string | null
+  updated_at: string | null
+}
 
 interface NarrativeDialogProps {
   mode: 'create' | 'edit'

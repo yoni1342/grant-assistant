@@ -23,20 +23,19 @@ export function BudgetPageClient({ initialBudgets }: BudgetPageClientProps) {
     const channel = supabase
       .channel('budget-changes')
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'budgets' },
-        () => {
-          // Refresh server data on any change
-          router.refresh()
-        }
-      )
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'budgets' },
+        { event: 'INSERT', schema: 'public', table: 'documents' },
         () => {
           router.refresh()
         }
       )
       .on('postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'budgets' },
+        { event: 'UPDATE', schema: 'public', table: 'documents' },
+        () => {
+          router.refresh()
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'documents' },
         () => {
           router.refresh()
         }
