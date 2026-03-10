@@ -3286,7 +3286,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Input: $input.all() contains items from the HTTP Request node\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n    const html = item.json.data; // raw HTML from SAM.gov opportunities page\n    if (!html) continue;\n\n    // Regex to extract each table row inside <tbody>\n    const rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/gi;\n    let match;\n\n    while ((match = rowRegex.exec(html)) !== null) {\n        const rowHtml = match[1];\n\n        // Extract each <td> content in this row\n        const tdRegex = /<td[^>]*>[\\s\\S]*?<div[^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?<\\/td>/gi;\n        let tdMatch;\n        const tds = [];\n        while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {\n            let value = tdMatch[1]\n                .replace(/<[^>]+>/g, '')  // remove inner HTML tags\n                .replace(/&nbsp;/g, ' ')\n                .trim();\n            tds.push(value);\n        }\n\n        // Check if row has at least the expected columns (Close date, Status, Title, Agency, Award min, Award max)\n        if (tds.length < 6) continue;\n\n        grants.push({\n            json: {\n                id: 'SAM-' + tds[2].replace(/\\s+/g, '-').substring(0, 50) + '-' + Date.now(),\n                title: tds[2] || 'No title',\n                description: '', // optional, could add opportunity number from hidden div if needed\n                link: 'https://sam.gov' + (tds[2].match(/href=\"([^\"]+)\"/) ? tds[2].match(/href=\"([^\"]+)\"/)[1] : ''),\n                openDate: '', // SAM.gov table doesn’t have open date directly\n                closeDate: tds[0] || 'Check site',\n                status: tds[1] || 'Unknown',\n                agency: tds[3] || 'Unknown',\n                awardFloor: tds[4] ? parseFloat(tds[4].replace(/[^0-9.]/g, '')) : 0,\n                awardCeiling: tds[5] ? parseFloat(tds[5].replace(/[^0-9.]/g, '')) : 0,\n                category: 'Federal Grant',\n                source: 'SAM.gov Opportunities',\n            }\n        });\n    }\n}\n\n// Return placeholder if no grants found\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'SAM.gov' } }];\n"
+        "jsCode": "// Input: $input.all() contains items from the HTTP Request node\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n    const html = item.json.data; // raw HTML from SAM.gov opportunities page\n    if (!html) continue;\n\n    // Regex to extract each table row inside <tbody>\n    const rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/gi;\n    let match;\n\n    while ((match = rowRegex.exec(html)) !== null) {\n        const rowHtml = match[1];\n\n        // Extract each <td> content in this row\n        const tdRegex = /<td[^>]*>[\\s\\S]*?<div[^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?<\\/td>/gi;\n        let tdMatch;\n        const tds = [];\n        while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {\n            let value = tdMatch[1]\n                .replace(/<[^>]+>/g, '')  // remove inner HTML tags\n                .replace(/&nbsp;/g, ' ')\n                .trim();\n            tds.push(value);\n        }\n\n        // Check if row has at least the expected columns (Close date, Status, Title, Agency, Award min, Award max)\n        if (tds.length < 6) continue;\n\n        grants.push({\n            json: {\n                id: 'SAM-' + tds[2].replace(/\\s+/g, '-').substring(0, 50) + '-' + Date.now(),\n                title: tds[2] || 'No title',\n                description: '', // optional, could add opportunity number from hidden div if needed\n                link: 'https://sam.gov' + (tds[2].match(/href=\"([^\"]+)\"/) ? tds[2].match(/href=\"([^\"]+)\"/)[1] : ''),\n                openDate: '', // SAM.gov table doesn\u2019t have open date directly\n                closeDate: tds[0] || 'Check site',\n                status: tds[1] || 'Unknown',\n                agency: tds[3] || 'Unknown',\n                awardFloor: tds[4] ? parseFloat(tds[4].replace(/[^0-9.]/g, '')) : 0,\n                awardCeiling: tds[5] ? parseFloat(tds[5].replace(/[^0-9.]/g, '')) : 0,\n                category: 'Federal Grant',\n                source: 'SAM.gov Opportunities',\n            }\n        });\n    }\n}\n\n// Return placeholder if no grants found\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'SAM.gov' } }];\n"
       },
       "id": "13c86bdf-fd76-45d3-8faa-5d51f7775ab3",
       "name": "Additional Major Foundations6",
@@ -3331,7 +3331,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// n8n Code node – Extract ALL data from \"Upcoming Funding Opportunity\" section on RWJF page\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  // Get HTML from common n8n HTTP Response locations\n  let html = item.json?.body || item.json?.data || item.json?.html || item.json || \"\";\n  if (typeof html !== 'string' || html.length < 500) {\n    results.push({\n      json: {\n        error: \"No valid HTML received\",\n        receivedType: typeof html,\n        length: html?.length || 0\n      }\n    });\n    continue;\n  }\n\n  // Normalize whitespace and remove script/style tags to make regex more reliable\n  html = html.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n             .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n             .replace(/\\s+/g, ' ');\n\n  // Find the \"Upcoming Funding Opportunity\" heading and grab content until next major section\n  // We look for the h3/p with \"Upcoming\" then the following card with h4 + paragraphs\n  const sectionRegex = /<h3[^>]*>Active Funding Opportunities<\\/h3>[\\s\\S]*?<p[^>]*><span[^>]*>Upcoming Funding Opportunity<\\/span><\\/p>[\\s\\S]*?(<div class=\"card image[^>]*>[\\s\\S]*?<div class=\"cmp-customcard[^>]*>[\\s\\S]*?<\\/div>)/i;\n\n  const sectionMatch = sectionRegex.exec(html);\n  if (!sectionMatch) {\n    results.push({\n      json: {\n        empty: true,\n        message: \"No 'Upcoming Funding Opportunity' section found in HTML\",\n        hint: \"Content may be loaded dynamically via JavaScript → check Network tab for JSON calls\"\n      }\n    });\n    continue;\n  }\n\n  const cardHtml = sectionMatch[1];\n\n  // Extract title (h4 with heading8-style or similar)\n  const titleMatch = cardHtml.match(/<h4[^>]*class=\"[^\"]*heading8-style[^\"]*\"[^>]*>([\\s\\S]*?)<\\/h4>/i);\n  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : \"No title found\";\n\n  // Extract all <p> paragraphs in the card (description + release date)\n  const descParagraphs = [];\n  const pRegex = /<p[^>]*>([\\s\\S]*?)<\\/p>/gi;\n  let pMatch;\n  while ((pMatch = pRegex.exec(cardHtml)) !== null) {\n    let text = pMatch[1]\n      .replace(/<[^>]+>/g, '')          // strip inner tags\n      .replace(/&nbsp;/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    if (text && text.length > 10) {      // ignore very short/empty\n      descParagraphs.push(text);\n    }\n  }\n\n  // Look for bold release date specifically\n  const releaseMatch = cardHtml.match(/<b>Release date:\\s*([^<]+)<\\/b>/i);\n  const releaseDate = releaseMatch ? releaseMatch[1].trim() : \"Not found\";\n\n  // Build clean output\n  results.push({\n    json: {\n      section: \"Upcoming Funding Opportunity\",\n      title: title,\n      releaseDate: releaseDate,\n      description: descParagraphs.join(\"\\n\\n\"),  // full text, paragraphs separated\n      sourceUrl: \"https://www.rwjf.org/en/grants/active-funding-opportunities.html\",\n      scrapedAt: new Date().toISOString(),\n      note: \"This is the static upcoming card. Active/open opportunities load via JS → see Network tab for JSON endpoint if you need more.\"\n    }\n  });\n}\n\n// If nothing was found at all\nif (results.length === 0) {\n  results.push({\n    json: {\n      empty: true,\n      message: \"No upcoming opportunity data extracted\"\n    }\n  });\n}\n\nreturn results;"
+        "jsCode": "// n8n Code node \u2013 Extract ALL data from \"Upcoming Funding Opportunity\" section on RWJF page\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  // Get HTML from common n8n HTTP Response locations\n  let html = item.json?.body || item.json?.data || item.json?.html || item.json || \"\";\n  if (typeof html !== 'string' || html.length < 500) {\n    results.push({\n      json: {\n        error: \"No valid HTML received\",\n        receivedType: typeof html,\n        length: html?.length || 0\n      }\n    });\n    continue;\n  }\n\n  // Normalize whitespace and remove script/style tags to make regex more reliable\n  html = html.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n             .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n             .replace(/\\s+/g, ' ');\n\n  // Find the \"Upcoming Funding Opportunity\" heading and grab content until next major section\n  // We look for the h3/p with \"Upcoming\" then the following card with h4 + paragraphs\n  const sectionRegex = /<h3[^>]*>Active Funding Opportunities<\\/h3>[\\s\\S]*?<p[^>]*><span[^>]*>Upcoming Funding Opportunity<\\/span><\\/p>[\\s\\S]*?(<div class=\"card image[^>]*>[\\s\\S]*?<div class=\"cmp-customcard[^>]*>[\\s\\S]*?<\\/div>)/i;\n\n  const sectionMatch = sectionRegex.exec(html);\n  if (!sectionMatch) {\n    results.push({\n      json: {\n        empty: true,\n        message: \"No 'Upcoming Funding Opportunity' section found in HTML\",\n        hint: \"Content may be loaded dynamically via JavaScript \u2192 check Network tab for JSON calls\"\n      }\n    });\n    continue;\n  }\n\n  const cardHtml = sectionMatch[1];\n\n  // Extract title (h4 with heading8-style or similar)\n  const titleMatch = cardHtml.match(/<h4[^>]*class=\"[^\"]*heading8-style[^\"]*\"[^>]*>([\\s\\S]*?)<\\/h4>/i);\n  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : \"No title found\";\n\n  // Extract all <p> paragraphs in the card (description + release date)\n  const descParagraphs = [];\n  const pRegex = /<p[^>]*>([\\s\\S]*?)<\\/p>/gi;\n  let pMatch;\n  while ((pMatch = pRegex.exec(cardHtml)) !== null) {\n    let text = pMatch[1]\n      .replace(/<[^>]+>/g, '')          // strip inner tags\n      .replace(/&nbsp;/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    if (text && text.length > 10) {      // ignore very short/empty\n      descParagraphs.push(text);\n    }\n  }\n\n  // Look for bold release date specifically\n  const releaseMatch = cardHtml.match(/<b>Release date:\\s*([^<]+)<\\/b>/i);\n  const releaseDate = releaseMatch ? releaseMatch[1].trim() : \"Not found\";\n\n  // Build clean output\n  results.push({\n    json: {\n      section: \"Upcoming Funding Opportunity\",\n      title: title,\n      releaseDate: releaseDate,\n      description: descParagraphs.join(\"\\n\\n\"),  // full text, paragraphs separated\n      sourceUrl: \"https://www.rwjf.org/en/grants/active-funding-opportunities.html\",\n      scrapedAt: new Date().toISOString(),\n      note: \"This is the static upcoming card. Active/open opportunities load via JS \u2192 see Network tab for JSON endpoint if you need more.\"\n    }\n  });\n}\n\n// If nothing was found at all\nif (results.length === 0) {\n  results.push({\n    json: {\n      empty: true,\n      message: \"No upcoming opportunity data extracted\"\n    }\n  });\n}\n\nreturn results;"
       },
       "id": "a4442fb3-0936-4757-b02f-dad90815be10",
       "name": "Additional Major Foundations9",
@@ -3442,7 +3442,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const httpResponse = $input.first().json;\nconst origItems = $('HTTP Request3').all();\n\n// Get inserted grants returned from webhook\nconst insertedGrants = httpResponse.grants || [];\n\nreturn insertedGrants.map((grant, index) => {\n  const orig = origItems[index]?.json || {};\n\n  return {\n    json: {\n      // ← Supabase UUID (replaces grantId)\n      url: orig.link || orig.url || '',\n      grantId: grant.id,\n      grantData: {\n        title: grant.title || orig.title || '',\n        agency: grant.funder_name || orig.agency || '',\n        awardRange: grant.amount || 'Not specified',\n        deadline: grant.deadline || orig.closeDate || '',\n        description: grant.description || '',\n        source: grant.source || orig.source || ''\n      }\n    }\n  };\n});"
+        "jsCode": "const httpResponse = $input.first().json;\nconst origItems = $('HTTP Request3').all();\n\n// Get inserted grants returned from webhook\nconst insertedGrants = httpResponse.grants || [];\n\nreturn insertedGrants.map((grant, index) => {\n  const orig = origItems[index]?.json || {};\n\n  return {\n    json: {\n      // \u2190 Supabase UUID (replaces grantId)\n      url: orig.link || orig.url || '',\n      grantId: grant.id,\n      grantData: {\n        title: grant.title || orig.title || '',\n        agency: grant.funder_name || orig.agency || '',\n        awardRange: grant.amount || 'Not specified',\n        deadline: grant.deadline || orig.closeDate || '',\n        description: grant.description || '',\n        source: grant.source || orig.source || ''\n      }\n    }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -3610,6 +3610,141 @@
       "notesInFlow": true,
       "continueOnFail": true,
       "notes": "Georgia state grants portal"
+    },
+    {
+      "parameters": {
+        "url": "https://grantivia.com/grants.json",
+        "options": {}
+      },
+      "id": "f9e610b0-0561-490e-8bd9-edda443f3d17",
+      "name": "Fetch Grantivia Grants",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5584,
+        3296
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const response = item.json;\n  const grantList = response.grants || [];\n  for (const g of grantList) {\n    if (!g || !g.title) continue;\n    grants.push({\n      json: {\n        oppNum: g.opportunity_number || g.id || 'GV-' + Date.now(),\n        title: g.title,\n        description: g.funding_instrument + ' - ' + (g.source_level || 'federal') + ' level',\n        link: g.source_url || 'https://grantivia.com',\n        openDate: g.open_date || '',\n        closeDate: g.deadline_type === 'rolling' ? 'Rolling' : (g.close_date || 'See listing'),\n        agency: g.agency || '',\n        source: 'Grantivia',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: g.status || ''\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'grantivia' } }];"
+      },
+      "id": "150f0980-ca66-4d34-93fa-54cf7cc37397",
+      "name": "Extract Grantivia Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5808,
+        3296
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://grantivia.com/grants.json",
+        "options": {}
+      },
+      "id": "715e834c-f8d5-4906-abe0-debfbbccb965",
+      "name": "Fetch Grantivia Grants1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2576,
+        3536
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const response = item.json;\n  const grantList = response.grants || [];\n  for (const g of grantList) {\n    if (!g || !g.title) continue;\n    grants.push({\n      json: {\n        oppNum: g.opportunity_number || g.id || 'GV-' + Date.now(),\n        title: g.title,\n        description: g.funding_instrument + ' - ' + (g.source_level || 'federal') + ' level',\n        link: g.source_url || 'https://grantivia.com',\n        openDate: g.open_date || '',\n        closeDate: g.deadline_type === 'rolling' ? 'Rolling' : (g.close_date || 'See listing'),\n        agency: g.agency || '',\n        source: 'Grantivia',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: g.status || ''\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'grantivia' } }];"
+      },
+      "id": "8bf0fe84-7842-4176-9e5c-7cb0419d3162",
+      "name": "Extract Grantivia Grants1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        3536
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://grantivia.com/grants.json",
+        "options": {}
+      },
+      "id": "841657fd-7d30-4e32-9b37-34590c8330f5",
+      "name": "Fetch Grantivia Grants3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -10688,
+        2544
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const response = item.json;\n  const grantList = response.grants || [];\n  for (const g of grantList) {\n    if (!g || !g.title) continue;\n    grants.push({\n      json: {\n        oppNum: g.opportunity_number || g.id || 'GV-' + Date.now(),\n        title: g.title,\n        description: g.funding_instrument + ' - ' + (g.source_level || 'federal') + ' level',\n        link: g.source_url || 'https://grantivia.com',\n        openDate: g.open_date || '',\n        closeDate: g.deadline_type === 'rolling' ? 'Rolling' : (g.close_date || 'See listing'),\n        agency: g.agency || '',\n        source: 'Grantivia',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: g.status || ''\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'grantivia' } }];"
+      },
+      "id": "69f673f5-d67f-4128-b036-955c4e7ed5fb",
+      "name": "Extract Grantivia Grants3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -10464,
+        2544
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://grantivia.com/grants.json",
+        "options": {}
+      },
+      "id": "49aca8e3-4765-4393-8dd9-198e594cf30c",
+      "name": "Fetch Grantivia Grants4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -13696,
+        2784
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const response = item.json;\n  const grantList = response.grants || [];\n  for (const g of grantList) {\n    if (!g || !g.title) continue;\n    grants.push({\n      json: {\n        oppNum: g.opportunity_number || g.id || 'GV-' + Date.now(),\n        title: g.title,\n        description: g.funding_instrument + ' - ' + (g.source_level || 'federal') + ' level',\n        link: g.source_url || 'https://grantivia.com',\n        openDate: g.open_date || '',\n        closeDate: g.deadline_type === 'rolling' ? 'Rolling' : (g.close_date || 'See listing'),\n        agency: g.agency || '',\n        source: 'Grantivia',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: g.status || ''\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'grantivia' } }];"
+      },
+      "id": "2fcc7ddc-ca8f-4dee-a8ed-e5bdb5d4ef79",
+      "name": "Extract Grantivia Grants4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -13472,
+        2784
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://grantivia.com/grants.json",
+        "options": {}
+      },
+      "id": "76f1effc-f777-4c27-b2aa-a58923353de6",
+      "name": "Fetch Grantivia Grants5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -21616,
+        5776
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const response = item.json;\n  const grantList = response.grants || [];\n  for (const g of grantList) {\n    if (!g || !g.title) continue;\n    grants.push({\n      json: {\n        oppNum: g.opportunity_number || g.id || 'GV-' + Date.now(),\n        title: g.title,\n        description: g.funding_instrument + ' - ' + (g.source_level || 'federal') + ' level',\n        link: g.source_url || 'https://grantivia.com',\n        openDate: g.open_date || '',\n        closeDate: g.deadline_type === 'rolling' ? 'Rolling' : (g.close_date || 'See listing'),\n        agency: g.agency || '',\n        source: 'Grantivia',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: g.status || ''\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'grantivia' } }];"
+      },
+      "id": "ad80afcb-ee83-4be3-9e7c-bc58322b4a2f",
+      "name": "Extract Grantivia Grants5",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -21392,
+        5776
+      ]
     }
   ],
   "pinData": {},
@@ -4020,6 +4155,11 @@
           },
           {
             "node": "Georgia Grants Management1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Grantivia Grants1",
             "type": "main",
             "index": 0
           }
@@ -4657,6 +4797,11 @@
           },
           {
             "node": "Georgia Grants Management3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Grantivia Grants4",
             "type": "main",
             "index": 0
           }
@@ -5563,6 +5708,11 @@
             "node": "usa spending1",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Fetch Grantivia Grants5",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -5579,6 +5729,116 @@
       ]
     },
     "Extract Georgia Portal Grants5": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Grantivia Grants": {
+      "main": [
+        [
+          {
+            "node": "Extract Grantivia Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Grantivia Grants": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Grantivia Grants1": {
+      "main": [
+        [
+          {
+            "node": "Extract Grantivia Grants1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Grantivia Grants1": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Grantivia Grants3": {
+      "main": [
+        [
+          {
+            "node": "Extract Grantivia Grants3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Grantivia Grants3": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Grantivia Grants4": {
+      "main": [
+        [
+          {
+            "node": "Extract Grantivia Grants4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Grantivia Grants4": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Grantivia Grants5": {
+      "main": [
+        [
+          {
+            "node": "Extract Grantivia Grants5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Grantivia Grants5": {
       "main": [
         [
           {
