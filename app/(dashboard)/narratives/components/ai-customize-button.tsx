@@ -47,7 +47,7 @@ export function AICustomizeButton({ narrativeId, grants, open, onOpenChange }: A
           setSuccess(false)
           setSelectedGrantId('')
         }, 1500)
-      } catch (err) {
+      } catch {
         setError('Failed to trigger AI customization. Please try again.')
       }
     })

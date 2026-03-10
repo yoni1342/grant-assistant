@@ -20,6 +20,7 @@ interface Template {
 
 interface TemplateSelectorProps {
   templates: Template[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
 }
 
@@ -51,7 +52,7 @@ export function TemplateSelector({ templates, form }: TemplateSelectorProps) {
       })
 
       toast.success(`${data.name} has been loaded into the form`)
-    } catch (err) {
+    } catch {
       toast.error("Failed to load template")
     } finally {
       setIsLoading(false)

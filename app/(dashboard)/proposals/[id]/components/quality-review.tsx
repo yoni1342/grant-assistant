@@ -27,7 +27,7 @@ interface QualityReviewProps {
   embedded?: boolean
 }
 
-export function QualityReview({ proposalId, qualityScore, qualityReview, embedded }: QualityReviewProps) {
+export function QualityReview({ proposalId, qualityReview, embedded }: QualityReviewProps) {
   const [triggering, setTriggering] = useState(false)
 
   const handleTriggerReview = async () => {

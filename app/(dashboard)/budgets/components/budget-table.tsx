@@ -125,10 +125,11 @@ const columns: ColumnDef<Budget>[] = [
 ]
 
 export function BudgetTable({ initialData }: BudgetTableProps) {
-  const [data, setData] = useState<Budget[]>(initialData)
+  const [data] = useState<Budget[]>(initialData)
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = useState("")
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

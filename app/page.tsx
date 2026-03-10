@@ -1,41 +1,54 @@
 import Link from "next/link";
 
 /* ═══════════════════════════════════════════
-   HERO — Editorial Brutalism / No Graphism
+   HERO
    ═══════════════════════════════════════════ */
 function HeroSection() {
   return (
-    <section className="relative bg-white min-h-screen flex flex-col justify-between px-6 md:px-12 lg:px-16 py-8">
+    <section className="relative bg-[#F5F5F0] min-h-screen flex flex-col justify-between px-6 md:px-12 lg:px-16 py-8">
       {/* Top bar */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-mono tracking-widest uppercase text-black">
-          Fundory.ai<sup className="text-[8px] ml-0.5">®</sup>
-        </span>
-        <span className="text-[10px] font-mono text-zinc-400 hidden md:block tracking-[0.3em]">
+        <div className="flex items-center gap-4">
+          {/* Convergence mark */}
+          <div className="flex flex-col gap-[5px]">
+            <div className="h-[4px] w-[28px] bg-[#0A0A0A]" />
+            <div className="h-[4px] w-[20px] bg-[#0A0A0A]" />
+            <div className="h-[4px] w-[12px] bg-[#0A0A0A]" />
+          </div>
+          <div className="h-[24px] w-px bg-[#D8D8D4]" />
+          <div className="flex flex-col">
+            <span className="font-display text-sm font-black uppercase tracking-[0.04em] leading-none text-[#0A0A0A]">
+              Fundory
+            </span>
+            <span className="font-mono text-[8px] tracking-[0.18em] text-[#888] uppercase">
+              Grant Intelligence
+            </span>
+          </div>
+        </div>
+        <span className="font-mono text-[10px] text-[#888] hidden md:block tracking-[0.3em] uppercase">
           EST. 2026
         </span>
       </div>
 
-      {/* Massive headline — left-aligned, stacked */}
+      {/* Massive headline */}
       <div className="flex-1 flex flex-col justify-center mt-16 md:mt-0">
-        <h1 className="text-6xl md:text-8xl lg:text-[10vw] font-bold tracking-tighter leading-[0.8] text-black uppercase">
+        <h1 className="font-display text-6xl md:text-8xl lg:text-[10vw] font-black tracking-tight leading-[0.88] text-[#0A0A0A] uppercase">
           <span className="block">All sources.</span>
           <span className="block mt-2 md:mt-4">One search.</span>
         </h1>
       </div>
 
-      {/* Bottom area: subheadline + CTA left, nav + lang right */}
+      {/* Bottom: subheadline + CTA left, nav right */}
       <div className="flex flex-col lg:flex-row items-end justify-between gap-12 pb-4">
-        {/* Left: subheadline + CTA */}
         <div className="max-w-[500px]">
-          <p className="text-lg md:text-2xl text-black leading-relaxed text-left">
+          <p className="text-lg md:text-2xl text-[#0A0A0A] leading-relaxed text-left">
             A centralized intelligence layer for the grant lifecycle. Aggregate
             data, validate eligibility, and generate technical drafts.
           </p>
           <div className="mt-8">
             <Link
               href="/register"
-              className="group inline-flex items-center justify-center gap-2 bg-black text-white font-medium rounded-full px-8 py-4 text-sm tracking-wide uppercase border border-black hover:bg-white hover:text-black transition-all duration-300 ease-in-out"
+              className="group inline-flex items-center justify-center gap-2 bg-[#0A0A0A] text-[#F5F5F0] font-medium px-8 py-4 text-sm font-mono tracking-[0.12em] uppercase border-2 border-[#0A0A0A] hover:bg-[#F5F5F0] hover:text-[#0A0A0A] transition-all duration-300 ease-in-out"
             >
               Get Access
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="transition-transform duration-300 ease-in-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
@@ -45,42 +58,36 @@ function HeroSection() {
           </div>
         </div>
 
-        {/* Right: nav + language */}
         <div className="flex flex-col items-end gap-6">
           <nav className="flex items-center gap-8">
             {["System", "Features", "Architecture", "Contact"].map((item) => (
               <a
                 key={item}
                 href={`#${item.toLowerCase()}`}
-                className="text-sm font-mono text-black hover:text-zinc-500 transition-colors tracking-wide uppercase"
+                className="font-mono text-[10px] text-[#0A0A0A] hover:text-[#888] transition-colors tracking-[0.2em] uppercase"
               >
                 {item}
               </a>
             ))}
           </nav>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-mono text-black tracking-wide">EN</span>
-            <span className="text-xs font-mono text-zinc-300 tracking-wide">FR</span>
-            <span className="text-xs font-mono text-zinc-300 tracking-wide">DE</span>
-          </div>
         </div>
       </div>
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden lg:block">
-        <span className="text-[10px] font-mono tracking-[0.3em] text-zinc-400 uppercase">
+        <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] uppercase">
           Scroll for impact
         </span>
       </div>
 
       {/* Bottom border */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-black" />
+      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0A0A0A]" />
     </section>
   );
 }
 
 /* ═══════════════════════════════════════════
-   FEATURE ROWS — Product-Led / Functional
+   FEATURE ROWS
    ═══════════════════════════════════════════ */
 const features = [
   {
@@ -128,42 +135,38 @@ function AggregateVisual() {
     { name: "PND", results: "634", status: "SYNCED" },
   ];
   return (
-    <div className="border border-zinc-200 bg-white">
-      {/* Terminal header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-200 bg-zinc-50">
+    <div className="border border-[#D8D8D4] bg-white">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#D8D8D4] bg-[#F5F5F0]">
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
         </div>
-        <span className="text-[9px] font-mono text-zinc-400 tracking-widest">QUERY ENGINE</span>
+        <span className="font-mono text-[9px] text-[#888] tracking-widest">QUERY ENGINE</span>
       </div>
-      {/* Search bar */}
-      <div className="px-4 py-3 border-b border-zinc-100">
-        <div className="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded px-3 py-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <span className="text-xs font-mono text-zinc-500">&quot;climate resilience + rural communities&quot;</span>
+      <div className="px-4 py-3 border-b border-[#D8D8D4]/50">
+        <div className="flex items-center gap-2 bg-[#F5F5F0] border border-[#D8D8D4] px-3 py-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#888]"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span className="font-mono text-xs text-[#888]">&quot;climate resilience + rural communities&quot;</span>
         </div>
       </div>
-      {/* Results */}
-      <div className="divide-y divide-zinc-100">
+      <div className="divide-y divide-[#D8D8D4]/50">
         {sources.map((s) => (
           <div key={s.name} className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-black" />
-              <span className="text-xs font-mono text-black tracking-wide">{s.name}</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-[#0A0A0A]" />
+              <span className="font-mono text-xs text-[#0A0A0A] tracking-wide">{s.name}</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-xs font-mono text-zinc-400">{s.results} results</span>
-              <span className="text-[9px] font-mono text-black bg-zinc-100 px-2 py-0.5 tracking-wider">{s.status}</span>
+              <span className="font-mono text-xs text-[#888]">{s.results} results</span>
+              <span className="font-mono text-[9px] text-[#0A0A0A] bg-[#F5F5F0] px-2 py-0.5 tracking-wider">{s.status}</span>
             </div>
           </div>
         ))}
       </div>
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-zinc-200 bg-zinc-50 flex justify-between items-center">
-        <span className="text-[9px] font-mono text-zinc-400">5 sources queried</span>
-        <span className="text-[9px] font-mono text-black tracking-wider">10,087 TOTAL</span>
+      <div className="px-4 py-3 border-t border-[#D8D8D4] bg-[#F5F5F0] flex justify-between items-center">
+        <span className="font-mono text-[9px] text-[#888]">5 sources queried</span>
+        <span className="font-mono text-[9px] text-[#0A0A0A] tracking-wider">10,087 TOTAL</span>
       </div>
     </div>
   );
@@ -179,44 +182,42 @@ function ValidateVisual() {
     { label: "Timeline Fit", score: 45, met: false },
   ];
   return (
-    <div className="border border-zinc-200 bg-white">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-200 bg-zinc-50">
+    <div className="border border-[#D8D8D4] bg-white">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#D8D8D4] bg-[#F5F5F0]">
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
         </div>
-        <span className="text-[9px] font-mono text-zinc-400 tracking-widest">ELIGIBILITY ENGINE</span>
+        <span className="font-mono text-[9px] text-[#888] tracking-widest">ELIGIBILITY ENGINE</span>
       </div>
-      {/* Overall score */}
-      <div className="px-4 py-5 border-b border-zinc-100 flex items-end justify-between">
+      <div className="px-4 py-5 border-b border-[#D8D8D4]/50 flex items-end justify-between">
         <div>
-          <span className="text-[9px] font-mono text-zinc-400 tracking-widest block mb-1">COMPOSITE SCORE</span>
-          <span className="text-4xl md:text-5xl font-bold tracking-tighter text-black">79.3</span>
-          <span className="text-sm text-zinc-400 ml-1">/100</span>
+          <span className="font-mono text-[9px] text-[#888] tracking-widest block mb-1">COMPOSITE SCORE</span>
+          <span className="font-display text-4xl md:text-5xl font-black tracking-tight text-[#0A0A0A]">79.3</span>
+          <span className="text-sm text-[#888] ml-1">/100</span>
         </div>
-        <span className="text-[9px] font-mono text-black bg-zinc-100 px-2.5 py-1 tracking-wider mb-1">STRONG FIT</span>
+        <span className="font-mono text-[9px] text-[#0A0A0A] bg-[#F5F5F0] px-2.5 py-1 tracking-wider mb-1">STRONG FIT</span>
       </div>
-      {/* Criteria bars */}
       <div className="px-4 py-4 space-y-3">
         {criteria.map((c) => (
           <div key={c.label}>
             <div className="flex justify-between mb-1">
-              <span className="text-[10px] font-mono text-zinc-500 tracking-wide">{c.label}</span>
-              <span className={`text-[10px] font-mono tracking-wide ${c.score >= 70 ? "text-black" : "text-zinc-400"}`}>{c.score}%</span>
+              <span className="font-mono text-[10px] text-[#888] tracking-wide">{c.label}</span>
+              <span className={`font-mono text-[10px] tracking-wide ${c.score >= 70 ? "text-[#0A0A0A]" : "text-[#888]"}`}>{c.score}%</span>
             </div>
-            <div className="h-1.5 bg-zinc-100 w-full">
+            <div className="h-1.5 bg-[#F5F5F0] w-full">
               <div
-                className={`h-full ${c.score >= 70 ? "bg-black" : "bg-zinc-300"}`}
+                className={`h-full ${c.score >= 70 ? "bg-[#0A0A0A]" : "bg-[#D8D8D4]"}`}
                 style={{ width: `${c.score}%` }}
               />
             </div>
           </div>
         ))}
       </div>
-      <div className="px-4 py-3 border-t border-zinc-200 bg-zinc-50 flex justify-between items-center">
-        <span className="text-[9px] font-mono text-zinc-400">6 criteria evaluated</span>
-        <span className="text-[9px] font-mono text-zinc-400">1 FLAG</span>
+      <div className="px-4 py-3 border-t border-[#D8D8D4] bg-[#F5F5F0] flex justify-between items-center">
+        <span className="font-mono text-[9px] text-[#888]">6 criteria evaluated</span>
+        <span className="font-mono text-[9px] text-[#888]">1 FLAG</span>
       </div>
     </div>
   );
@@ -224,56 +225,54 @@ function ValidateVisual() {
 
 function ComposeVisual() {
   return (
-    <div className="border border-zinc-200 bg-white">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-200 bg-zinc-50">
+    <div className="border border-[#D8D8D4] bg-white">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#D8D8D4] bg-[#F5F5F0]">
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
         </div>
-        <span className="text-[9px] font-mono text-zinc-400 tracking-widest">DRAFT COMPOSER</span>
+        <span className="font-mono text-[9px] text-[#888] tracking-widest">DRAFT COMPOSER</span>
       </div>
-      {/* Document tabs */}
-      <div className="flex border-b border-zinc-200">
-        <div className="px-4 py-2 border-b-2 border-black">
-          <span className="text-[10px] font-mono text-black tracking-wide">Executive Summary</span>
+      <div className="flex border-b border-[#D8D8D4]">
+        <div className="px-4 py-2 border-b-2 border-[#0A0A0A]">
+          <span className="font-mono text-[10px] text-[#0A0A0A] tracking-wide">Executive Summary</span>
         </div>
         <div className="px-4 py-2">
-          <span className="text-[10px] font-mono text-zinc-400 tracking-wide">Program Narrative</span>
+          <span className="font-mono text-[10px] text-[#888] tracking-wide">Program Narrative</span>
         </div>
         <div className="px-4 py-2">
-          <span className="text-[10px] font-mono text-zinc-400 tracking-wide">Eval. Plan</span>
+          <span className="font-mono text-[10px] text-[#888] tracking-wide">Eval. Plan</span>
         </div>
       </div>
-      {/* Document content */}
       <div className="px-5 py-5 space-y-4">
         <div>
-          <span className="text-[9px] font-mono text-zinc-400 tracking-widest block mb-2">SECTION 1.0 — OVERVIEW</span>
+          <span className="font-mono text-[9px] text-[#888] tracking-widest block mb-2">SECTION 1.0 — OVERVIEW</span>
           <div className="space-y-2">
-            <div className="h-2.5 bg-zinc-800 rounded-sm w-full" />
-            <div className="h-2.5 bg-zinc-800 rounded-sm w-[95%]" />
-            <div className="h-2.5 bg-zinc-800 rounded-sm w-[88%]" />
-            <div className="h-2.5 bg-zinc-200 rounded-sm w-[70%]" />
+            <div className="h-2.5 bg-[#0A0A0A] w-full" />
+            <div className="h-2.5 bg-[#0A0A0A] w-[95%]" />
+            <div className="h-2.5 bg-[#0A0A0A] w-[88%]" />
+            <div className="h-2.5 bg-[#D8D8D4] w-[70%]" />
           </div>
         </div>
         <div>
-          <span className="text-[9px] font-mono text-zinc-400 tracking-widest block mb-2">SECTION 1.1 — OBJECTIVES</span>
+          <span className="font-mono text-[9px] text-[#888] tracking-widest block mb-2">SECTION 1.1 — OBJECTIVES</span>
           <div className="space-y-2">
-            <div className="h-2.5 bg-zinc-800 rounded-sm w-full" />
-            <div className="h-2.5 bg-zinc-800 rounded-sm w-[92%]" />
-            <div className="h-2.5 bg-zinc-300 rounded-sm w-[60%] animate-pulse" />
+            <div className="h-2.5 bg-[#0A0A0A] w-full" />
+            <div className="h-2.5 bg-[#0A0A0A] w-[92%]" />
+            <div className="h-2.5 bg-[#D8D8D4] w-[60%] animate-pulse" />
           </div>
         </div>
         <div>
-          <span className="text-[9px] font-mono text-zinc-400 tracking-widest block mb-2">SECTION 1.2 — METHODOLOGY</span>
+          <span className="font-mono text-[9px] text-[#888] tracking-widest block mb-2">SECTION 1.2 — METHODOLOGY</span>
           <div className="space-y-2">
-            <div className="h-2.5 bg-zinc-200 rounded-sm w-[40%] animate-pulse" />
+            <div className="h-2.5 bg-[#D8D8D4] w-[40%] animate-pulse" />
           </div>
         </div>
       </div>
-      <div className="px-4 py-3 border-t border-zinc-200 bg-zinc-50 flex justify-between items-center">
-        <span className="text-[9px] font-mono text-zinc-400">Tailored to NSF rubric</span>
-        <span className="text-[9px] font-mono text-black tracking-wider">GENERATING...</span>
+      <div className="px-4 py-3 border-t border-[#D8D8D4] bg-[#F5F5F0] flex justify-between items-center">
+        <span className="font-mono text-[9px] text-[#888]">Tailored to NSF rubric</span>
+        <span className="font-mono text-[9px] text-[#0A0A0A] tracking-wider">GENERATING...</span>
       </div>
     </div>
   );
@@ -288,43 +287,41 @@ function ManageVisual() {
     { name: "EPA Water Quality", stage: "DISCOVERED", deadline: "Jul 15", progress: 5 },
   ];
   return (
-    <div className="border border-zinc-200 bg-white">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-200 bg-zinc-50">
+    <div className="border border-[#D8D8D4] bg-white">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#D8D8D4] bg-[#F5F5F0]">
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#D8D8D4]" />
         </div>
-        <span className="text-[9px] font-mono text-zinc-400 tracking-widest">PIPELINE CONTROL</span>
+        <span className="font-mono text-[9px] text-[#888] tracking-widest">PIPELINE CONTROL</span>
       </div>
-      {/* Stats row */}
-      <div className="grid grid-cols-3 border-b border-zinc-200">
-        <div className="px-4 py-3 border-r border-zinc-200 text-center">
-          <span className="text-xl md:text-2xl font-bold text-black block">12</span>
-          <span className="text-[9px] font-mono text-zinc-400 tracking-wider">ACTIVE</span>
+      <div className="grid grid-cols-3 border-b border-[#D8D8D4]">
+        <div className="px-4 py-3 border-r border-[#D8D8D4] text-center">
+          <span className="font-display text-xl md:text-2xl font-black text-[#0A0A0A] block">12</span>
+          <span className="font-mono text-[9px] text-[#888] tracking-wider">ACTIVE</span>
         </div>
-        <div className="px-4 py-3 border-r border-zinc-200 text-center">
-          <span className="text-xl md:text-2xl font-bold text-black block">3</span>
-          <span className="text-[9px] font-mono text-zinc-400 tracking-wider">DUE SOON</span>
+        <div className="px-4 py-3 border-r border-[#D8D8D4] text-center">
+          <span className="font-display text-xl md:text-2xl font-black text-[#0A0A0A] block">3</span>
+          <span className="font-mono text-[9px] text-[#888] tracking-wider">DUE SOON</span>
         </div>
         <div className="px-4 py-3 text-center">
-          <span className="text-xl md:text-2xl font-bold text-black block">$2.4M</span>
-          <span className="text-[9px] font-mono text-zinc-400 tracking-wider">PIPELINE</span>
+          <span className="font-display text-xl md:text-2xl font-black text-[#0A0A0A] block">$2.4M</span>
+          <span className="font-mono text-[9px] text-[#888] tracking-wider">PIPELINE</span>
         </div>
       </div>
-      {/* Pipeline items */}
-      <div className="divide-y divide-zinc-100">
+      <div className="divide-y divide-[#D8D8D4]/50">
         {items.map((item) => (
           <div key={item.name} className="px-4 py-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-mono text-black tracking-wide">{item.name}</span>
-              <span className="text-[9px] font-mono text-zinc-400">{item.deadline}</span>
+              <span className="font-mono text-xs text-[#0A0A0A] tracking-wide">{item.name}</span>
+              <span className="font-mono text-[9px] text-[#888]">{item.deadline}</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-1.5 bg-zinc-100">
-                <div className="h-full bg-black" style={{ width: `${item.progress}%` }} />
+              <div className="flex-1 h-1.5 bg-[#F5F5F0]">
+                <div className="h-full bg-[#0A0A0A]" style={{ width: `${item.progress}%` }} />
               </div>
-              <span className="text-[9px] font-mono text-black bg-zinc-100 px-2 py-0.5 tracking-wider whitespace-nowrap">{item.stage}</span>
+              <span className="font-mono text-[9px] text-[#0A0A0A] bg-[#F5F5F0] px-2 py-0.5 tracking-wider whitespace-nowrap">{item.stage}</span>
             </div>
           </div>
         ))}
@@ -339,27 +336,26 @@ function FeatureRow({
   feature: (typeof features)[number];
 }) {
   return (
-    <div className="border-b border-black">
+    <div className="border-b-2 border-[#0A0A0A]">
       <div className="flex flex-col lg:flex-row w-full">
         {/* Left: label + copy */}
-        <div className="lg:w-2/5 px-6 md:px-12 lg:px-16 py-12 lg:py-20 flex flex-col justify-center lg:border-r lg:border-black">
-          <span className="text-[10px] font-mono tracking-[0.3em] text-zinc-400 mb-6 block">
+        <div className="lg:w-2/5 px-6 md:px-12 lg:px-16 py-12 lg:py-20 flex flex-col justify-center lg:border-r-2 lg:border-[#0A0A0A]">
+          <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] mb-6 block">
             {feature.number} / {feature.label}
           </span>
-          <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter text-black leading-[0.9] whitespace-pre-line">
+          <h3 className="font-display text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-[#0A0A0A] leading-[0.9] whitespace-pre-line uppercase">
             {feature.title}
           </h3>
-          <p className="mt-8 text-lg md:text-xl text-zinc-500 max-w-[460px] leading-relaxed">
+          <p className="mt-8 text-lg md:text-xl text-[#888] max-w-[460px] leading-relaxed">
             {feature.description}
           </p>
 
-          {/* Database list for AGGREGATE */}
           {feature.databases && (
             <div className="mt-8 flex flex-wrap gap-2">
               {feature.databases.map((db) => (
                 <span
                   key={db}
-                  className="text-[10px] font-mono tracking-[0.2em] text-black border border-black px-3 py-1.5 uppercase"
+                  className="font-mono text-[10px] tracking-[0.2em] text-[#0A0A0A] border-2 border-[#0A0A0A] px-3 py-1.5 uppercase"
                 >
                   {db}
                 </span>
@@ -369,7 +365,7 @@ function FeatureRow({
         </div>
 
         {/* Right: visual area */}
-        <div className="lg:w-3/5 px-6 md:px-12 lg:px-16 py-12 lg:py-20 bg-zinc-50 flex items-center justify-center min-h-[320px] lg:min-h-[480px]">
+        <div className="lg:w-3/5 px-6 md:px-12 lg:px-16 py-12 lg:py-20 bg-[#F5F5F0] flex items-center justify-center min-h-[320px] lg:min-h-[480px]">
           <div className="w-full max-w-2xl">
             {feature.number === "01" && <AggregateVisual />}
             {feature.number === "02" && <ValidateVisual />}
@@ -393,7 +389,7 @@ function FeaturesSection() {
 }
 
 /* ═══════════════════════════════════════════
-   SYSTEM ARCHITECTURE — Replaces "Process"
+   SYSTEM ARCHITECTURE
    ═══════════════════════════════════════════ */
 const architecture = [
   {
@@ -428,13 +424,13 @@ const architecture = [
 
 function ArchitectureSection() {
   return (
-    <section id="architecture" className="bg-white border-b border-black">
+    <section id="architecture" className="bg-white border-b-2 border-[#0A0A0A]">
       <div className="px-6 md:px-12 lg:px-16 py-24 md:py-40">
         <div className="mb-24">
-          <span className="text-[10px] font-mono tracking-[0.3em] text-zinc-400 uppercase block mb-4">
+          <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] uppercase block mb-4">
             System
           </span>
-          <h2 className="text-5xl md:text-7xl lg:text-[10vw] font-bold tracking-tighter text-black leading-[0.85] uppercase">
+          <h2 className="font-display text-5xl md:text-7xl lg:text-[10vw] font-black tracking-tight text-[#0A0A0A] leading-[0.85] uppercase">
             Architecture.
           </h2>
         </div>
@@ -445,17 +441,17 @@ function ArchitectureSection() {
               key={step.number}
               className={`py-10 lg:py-0 ${
                 i > 0
-                  ? "border-t border-black lg:border-t-0 lg:border-l lg:border-black"
+                  ? "border-t-2 border-[#0A0A0A] lg:border-t-0 lg:border-l-2 lg:border-[#0A0A0A]"
                   : ""
               } lg:px-10 first:lg:pl-0 last:lg:pr-0`}
             >
-              <span className="text-[10px] font-mono tracking-[0.3em] text-zinc-400 block mb-8">
+              <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] block mb-8">
                 {step.number} / {step.label}
               </span>
-              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-black mb-4">
+              <h3 className="font-display text-xl md:text-2xl font-black tracking-tight text-[#0A0A0A] mb-4 uppercase">
                 {step.title}
               </h3>
-              <p className="text-sm text-zinc-500 leading-relaxed max-w-xs">
+              <p className="text-sm text-[#888] leading-relaxed max-w-xs">
                 {step.description}
               </p>
             </div>
@@ -480,13 +476,13 @@ const sectors = [
 
 function SectorsSection() {
   return (
-    <section id="system" className="bg-white border-b border-black">
+    <section id="system" className="bg-white border-b-2 border-[#0A0A0A]">
       <div className="px-6 md:px-12 lg:px-16 py-24 md:py-32">
         <div className="mb-16">
-          <span className="text-[10px] font-mono tracking-[0.3em] text-zinc-400 uppercase block mb-4">
+          <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] uppercase block mb-4">
             Coverage
           </span>
-          <h2 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-black leading-[0.85] uppercase">
+          <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-black tracking-tight text-[#0A0A0A] leading-[0.85] uppercase">
             Sectors.
           </h2>
         </div>
@@ -495,7 +491,7 @@ function SectorsSection() {
           {sectors.map((sector) => (
             <span
               key={sector}
-              className="border border-black px-6 py-3 text-xs font-mono text-black tracking-wide uppercase hover:bg-black hover:text-white transition-colors cursor-default"
+              className="border-2 border-[#0A0A0A] px-6 py-3 font-mono text-xs text-[#0A0A0A] tracking-wide uppercase hover:bg-[#0A0A0A] hover:text-[#F5F5F0] transition-colors cursor-default"
             >
               {sector}
             </span>
@@ -511,21 +507,21 @@ function SectorsSection() {
    ═══════════════════════════════════════════ */
 function FinalCTA() {
   return (
-    <section id="contact" className="bg-black">
+    <section id="contact" className="bg-[#0A0A0A]">
       <div className="px-6 md:px-12 lg:px-16 py-24 md:py-40">
-        <span className="text-[10px] font-mono tracking-[0.3em] text-zinc-600 uppercase block mb-8">
+        <span className="font-mono text-[10px] tracking-[0.3em] text-[#888]/60 uppercase block mb-8">
           Access
         </span>
-        <h2 className="text-5xl md:text-7xl lg:text-[10vw] font-bold tracking-tighter text-white leading-[0.85] uppercase">
+        <h2 className="font-display text-5xl md:text-7xl lg:text-[10vw] font-black tracking-tight text-[#F5F5F0] leading-[0.85] uppercase">
           Start<br />searching.
         </h2>
-        <p className="mt-8 text-lg md:text-2xl text-zinc-500 max-w-[500px] leading-relaxed">
+        <p className="mt-8 text-lg md:text-2xl text-[#888] max-w-[500px] leading-relaxed">
           Replace manual grant workflows with a centralized intelligence system.
         </p>
         <div className="mt-12">
           <Link
             href="/register"
-            className="group inline-flex items-center justify-center gap-2 bg-white text-black font-medium rounded-full px-8 py-4 text-sm tracking-wide uppercase border border-white hover:bg-black hover:text-white hover:border-zinc-700 transition-all duration-300 ease-in-out"
+            className="group inline-flex items-center justify-center gap-2 bg-[#F5F5F0] text-[#0A0A0A] font-medium px-8 py-4 font-mono text-sm tracking-[0.12em] uppercase border-2 border-[#F5F5F0] hover:bg-[#0A0A0A] hover:text-[#F5F5F0] hover:border-[#888]/30 transition-all duration-300 ease-in-out"
           >
             Get Access
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="transition-transform duration-300 ease-in-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
@@ -535,8 +531,7 @@ function FinalCTA() {
         </div>
       </div>
 
-      {/* Bottom border */}
-      <div className="h-px bg-zinc-800" />
+      <div className="h-px bg-[#888]/20" />
     </section>
   );
 }
@@ -546,32 +541,40 @@ function FinalCTA() {
    ═══════════════════════════════════════════ */
 function Footer() {
   return (
-    <footer className="bg-black py-10">
+    <footer className="bg-[#0A0A0A] py-10">
       <div className="px-6 md:px-12 lg:px-16 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div>
-          <span className="text-sm font-mono text-zinc-500 tracking-widest">
-            Fundory.ai<sup className="text-[8px] ml-0.5">®</sup>
-          </span>
-          <span className="text-[10px] font-mono text-zinc-700 block mt-1 tracking-[0.2em]">
+          <div className="flex items-center gap-3">
+            {/* Small convergence mark */}
+            <div className="flex flex-col gap-[3px]">
+              <div className="h-[3px] w-[18px] bg-[#888]" />
+              <div className="h-[3px] w-[13px] bg-[#888]" />
+              <div className="h-[3px] w-[8px] bg-[#888]" />
+            </div>
+            <span className="font-display text-sm font-black text-[#888] tracking-[0.04em] uppercase">
+              Fundory
+            </span>
+          </div>
+          <span className="font-mono text-[10px] text-[#888]/40 block mt-2 tracking-[0.2em]">
             &copy; 2026 All rights reserved.
           </span>
         </div>
         <div className="flex gap-8">
           <Link
             href="#"
-            className="text-[10px] font-mono text-zinc-600 hover:text-white transition-colors uppercase tracking-[0.2em]"
+            className="font-mono text-[10px] text-[#888]/50 hover:text-[#F5F5F0] transition-colors uppercase tracking-[0.2em]"
           >
             Privacy
           </Link>
           <Link
             href="#"
-            className="text-[10px] font-mono text-zinc-600 hover:text-white transition-colors uppercase tracking-[0.2em]"
+            className="font-mono text-[10px] text-[#888]/50 hover:text-[#F5F5F0] transition-colors uppercase tracking-[0.2em]"
           >
             Terms
           </Link>
           <Link
             href="#"
-            className="text-[10px] font-mono text-zinc-600 hover:text-white transition-colors uppercase tracking-[0.2em]"
+            className="font-mono text-[10px] text-[#888]/50 hover:text-[#F5F5F0] transition-colors uppercase tracking-[0.2em]"
           >
             Documentation
           </Link>
@@ -586,7 +589,7 @@ function Footer() {
    ═══════════════════════════════════════════ */
 export default function LandingPage() {
   return (
-    <main className="min-h-screen font-sans bg-white text-black">
+    <main className="min-h-screen bg-[#F5F5F0] text-[#0A0A0A]">
       <HeroSection />
       <FeaturesSection />
       <ArchitectureSection />

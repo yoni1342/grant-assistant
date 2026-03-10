@@ -18,7 +18,7 @@ const STAGE_COLORS: Record<string, string> = {
   discovery: "bg-blue-100 text-blue-800",
   screening: "bg-yellow-100 text-yellow-800",
   drafting: "bg-purple-100 text-purple-800",
-  closed: "bg-zinc-100 text-zinc-800",
+  closed: "bg-muted text-foreground",
 };
 
 export function ListView({ grants }: { grants: Grant[] }) {
@@ -31,7 +31,7 @@ export function ListView({ grants }: { grants: Grant[] }) {
   }
 
   return (
-    <div className="rounded-lg border bg-white dark:bg-zinc-900">
+    <div className="rounded-lg border bg-card">
       <Table>
         <TableHeader>
           <TableRow>

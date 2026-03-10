@@ -167,10 +167,11 @@ const columns: ColumnDef<Proposal>[] = [
 ]
 
 export function ProposalTable({ initialData }: ProposalTableProps) {
-  const [data, setData] = useState<Proposal[]>(initialData)
+  const [data] = useState<Proposal[]>(initialData)
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = useState("")
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

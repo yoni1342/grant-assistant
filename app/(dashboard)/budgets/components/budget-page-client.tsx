@@ -23,20 +23,19 @@ export function BudgetPageClient({ initialBudgets }: BudgetPageClientProps) {
     const channel = supabase
       .channel('budget-changes')
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'budgets' },
-        () => {
-          // Refresh server data on any change
-          router.refresh()
-        }
-      )
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'budgets' },
+        { event: 'INSERT', schema: 'public', table: 'documents' },
         () => {
           router.refresh()
         }
       )
       .on('postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'budgets' },
+        { event: 'UPDATE', schema: 'public', table: 'documents' },
+        () => {
+          router.refresh()
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'documents' },
         () => {
           router.refresh()
         }
@@ -57,7 +56,7 @@ export function BudgetPageClient({ initialBudgets }: BudgetPageClientProps) {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Budgets</h1>
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Budgets</h1>
         <Button asChild>
           <Link href="/budgets/new">
             <Plus className="h-4 w-4 mr-2" />

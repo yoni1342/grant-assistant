@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/supabase/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -160,8 +159,8 @@ export function PipelineClient({
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Pipeline</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Pipeline</h1>
+          <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
             {grants.length} grants in pipeline
           </p>
         </div>

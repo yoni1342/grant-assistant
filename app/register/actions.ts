@@ -13,6 +13,79 @@ interface OrgData {
   email?: string
   website?: string
   founding_year?: number | null
+  geographic_focus?: string[]
+}
+
+interface QuestionnaireData {
+  annualBudget: number | null
+  staffCount: number | null
+  orgDescription: string
+  executiveSummary: string
+  missionNarrative: string
+  impactNarrative: string
+  methodsNarrative: string
+  budgetNarrative: string
+}
+
+function getServiceClient() {
+  return createServiceRoleClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+}
+
+async function processQuestionnaire(
+  serviceClient: ReturnType<typeof getServiceClient>,
+  orgId: string,
+  q: QuestionnaireData
+) {
+  // Update organization with additional fields
+  await serviceClient.from('organizations').update({
+    annual_budget: q.annualBudget,
+    staff_count: q.staffCount,
+    description: q.orgDescription || null,
+    executive_summary: q.executiveSummary || null,
+  }).eq('id', orgId)
+
+  // Insert budget as a document record
+  if (q.annualBudget || q.budgetNarrative) {
+    await serviceClient.from('documents').insert({
+      org_id: orgId,
+      title: 'Organization Budget',
+      name: 'Organization Budget',
+      category: 'budget',
+      extracted_text: q.budgetNarrative || null,
+      extraction_status: 'completed',
+      metadata: {
+        total_amount: q.annualBudget,
+        is_template: true,
+        source: 'questionnaire',
+      },
+    })
+  }
+
+  // Insert narrative records as documents for non-empty entries
+  const narrativeEntries = [
+    { title: 'Mission', content: q.missionNarrative, ai_category: 'mission' },
+    { title: 'Impact', content: q.impactNarrative, ai_category: 'impact' },
+    { title: 'Methods & Approach', content: q.methodsNarrative, ai_category: 'methods' },
+    { title: 'Budget Narrative', content: q.budgetNarrative, ai_category: 'budget_narrative' },
+  ].filter(n => n.content.trim())
+
+  if (narrativeEntries.length > 0) {
+    await serviceClient.from('documents').insert(
+      narrativeEntries.map(n => ({
+        org_id: orgId,
+        title: n.title,
+        name: n.title,
+        category: 'narrative',
+        ai_category: n.ai_category,
+        extracted_text: n.content,
+        extraction_status: 'completed',
+        metadata: { source: 'questionnaire' },
+      }))
+    )
+  }
 }
 
 export async function registerOrganization(data: {
@@ -20,11 +93,9 @@ export async function registerOrganization(data: {
   email: string
   password: string
   org: OrgData
+  questionnaire?: QuestionnaireData | null
 }) {
-  const serviceClient = createServiceRoleClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const serviceClient = getServiceClient()
 
   // 1. Create user with email confirmed
   const { data: userData, error: userError } = await serviceClient.auth.admin.createUser({
@@ -34,22 +105,56 @@ export async function registerOrganization(data: {
     user_metadata: { full_name: data.fullName },
   })
 
-  if (userError) return { error: userError.message }
-  if (!userData.user) return { error: 'Failed to create user' }
+  if (userError) {
+    // If user already exists, check if they have an org — if not, clean up and retry
+    if (userError.message?.includes('already been registered')) {
+      const { data: { users } } = await serviceClient.auth.admin.listUsers()
+      const existingUser = users?.find((u: { email?: string }) => u.email === data.email)
+      if (existingUser) {
+        const { data: profile } = await serviceClient
+          .from('profiles')
+          .select('org_id')
+          .eq('id', existingUser.id)
+          .single()
+
+        if (profile?.org_id) {
+          return { error: 'An account with this email already exists. Please sign in instead.' }
+        }
+
+        // Orphaned user with no org — delete and recreate
+        await serviceClient.auth.admin.deleteUser(existingUser.id)
+        const { data: retryData, error: retryError } = await serviceClient.auth.admin.createUser({
+          email: data.email,
+          password: data.password,
+          email_confirm: true,
+          user_metadata: { full_name: data.fullName },
+        })
+        if (retryError || !retryData.user) {
+          return { error: 'Failed to create account. Please try again.' }
+        }
+        // Continue with the retried user below
+        Object.assign(userData as Record<string, unknown>, { user: retryData.user })
+      } else {
+        return { error: 'An account with this email already exists. Please sign in instead.' }
+      }
+    } else {
+      return { error: `Registration failed: ${userError.message}` }
+    }
+  }
+  if (!userData.user) return { error: 'Failed to create account. Please try again.' }
 
   const userId = userData.user.id
 
   // 2. Insert organization (status defaults to 'pending')
   const { data: org, error: orgError } = await serviceClient
     .from('organizations')
-    .insert({ name: data.org.name, ein: data.org.ein, mission: data.org.mission, sector: data.org.sector, address: data.org.address, phone: data.org.phone, email: data.org.email, website: data.org.website, founding_year: data.org.founding_year })
+    .insert({ name: data.org.name, ein: data.org.ein, mission: data.org.mission, sector: data.org.sector, address: data.org.address, phone: data.org.phone, email: data.org.email, website: data.org.website, founding_year: data.org.founding_year, geographic_focus: data.org.geographic_focus })
     .select('id')
     .single()
 
   if (orgError || !org) {
-    // Cleanup: delete user
     await serviceClient.auth.admin.deleteUser(userId)
-    return { error: orgError?.message || 'Failed to create organization' }
+    return { error: 'Failed to create organization. Please try again.' }
   }
 
   // 3. Update profile with org_id + role
@@ -59,29 +164,33 @@ export async function registerOrganization(data: {
     .eq('id', userId)
 
   if (profileError) {
-    // Cleanup: delete org and user
     await serviceClient.from('organizations').delete().eq('id', org.id)
     await serviceClient.auth.admin.deleteUser(userId)
-    return { error: profileError.message }
+    return { error: 'Failed to set up your profile. Please try again.' }
   }
 
-  return { success: true }
+  // 4. Process questionnaire if provided
+  if (data.questionnaire) {
+    await processQuestionnaire(serviceClient, org.id, data.questionnaire)
+  }
+
+  return { success: true, orgId: org.id, userId }
 }
 
-export async function registerOrganizationForExistingUser(orgData: OrgData) {
+export async function registerOrganizationForExistingUser(data: {
+  org: OrgData
+  questionnaire?: QuestionnaireData | null
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  const serviceClient = createServiceRoleClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const serviceClient = getServiceClient()
 
   // Insert organization
   const { data: org, error: orgError } = await serviceClient
     .from('organizations')
-    .insert({ name: orgData.name, ein: orgData.ein, mission: orgData.mission, sector: orgData.sector, address: orgData.address, phone: orgData.phone, email: orgData.email, website: orgData.website, founding_year: orgData.founding_year })
+    .insert({ name: data.org.name, ein: data.org.ein, mission: data.org.mission, sector: data.org.sector, address: data.org.address, phone: data.org.phone, email: data.org.email, website: data.org.website, founding_year: data.org.founding_year, geographic_focus: data.org.geographic_focus })
     .select('id')
     .single()
 
@@ -98,6 +207,88 @@ export async function registerOrganizationForExistingUser(orgData: OrgData) {
   if (profileError) {
     await serviceClient.from('organizations').delete().eq('id', org.id)
     return { error: profileError.message }
+  }
+
+  // Process questionnaire if provided
+  if (data.questionnaire) {
+    await processQuestionnaire(serviceClient, org.id, data.questionnaire)
+  }
+
+  return { success: true, orgId: org.id, userId: user.id }
+}
+
+export async function uploadRegistrationDocuments(orgId: string, userId: string, formData: FormData) {
+  const serviceClient = getServiceClient()
+
+  const budgetFile = formData.get('budgetFile') as File | null
+  const narrativeFile = formData.get('narrativeFile') as File | null
+  const additionalFiles = formData.getAll('additionalFiles') as File[]
+
+  const allFiles: { file: File; category: string }[] = []
+  if (budgetFile && budgetFile.size > 0) allFiles.push({ file: budgetFile, category: 'budget' })
+  if (narrativeFile && narrativeFile.size > 0) allFiles.push({ file: narrativeFile, category: 'narrative' })
+  for (const f of additionalFiles) {
+    if (f && f.size > 0) allFiles.push({ file: f, category: 'supporting' })
+  }
+
+  const errors: string[] = []
+
+  for (const { file, category } of allFiles) {
+    const path = `${userId}/${Date.now()}-${file.name}`
+
+    const { error: uploadError } = await serviceClient.storage
+      .from('documents')
+      .upload(path, file, { contentType: file.type, cacheControl: '3600', upsert: false })
+
+    if (uploadError) {
+      errors.push(`Failed to upload ${file.name}: ${uploadError.message}`)
+      continue
+    }
+
+    const { data: docData, error: dbError } = await serviceClient
+      .from('documents')
+      .insert({
+        org_id: orgId,
+        title: file.name,
+        name: file.name,
+        file_path: path,
+        file_type: file.type,
+        file_size: file.size,
+        category,
+      })
+      .select('id')
+      .single()
+
+    if (dbError) {
+      errors.push(`Failed to save ${file.name}: ${dbError.message}`)
+      continue
+    }
+
+    // Trigger n8n document processing webhook (awaited so all files get sent)
+    if (process.env.N8N_WEBHOOK_URL) {
+      try {
+        await fetch(`${process.env.N8N_WEBHOOK_URL}/process-document`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
+          },
+          body: JSON.stringify({
+            document_id: docData.id,
+            org_id: orgId,
+            file_name: file.name,
+            file_type: file.type,
+            category,
+          }),
+        })
+      } catch (err) {
+        console.error('n8n document processing webhook failed:', err)
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return { error: errors.join('; ') }
   }
 
   return { success: true }

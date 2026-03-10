@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTheme } from "next-themes";
 import {
   Card,
   CardContent,
@@ -52,7 +53,7 @@ export function SettingsClient({ profile, preferences }: SettingsClientProps) {
   const [passwordMessage, setPasswordMessage] = useState("");
 
   // Preferences state
-  const [theme, setTheme] = useState(preferences.theme || "system");
+  const { theme, setTheme } = useTheme();
   const [timezone, setTimezone] = useState(
     preferences.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
   );
@@ -91,11 +92,16 @@ export function SettingsClient({ profile, preferences }: SettingsClientProps) {
     setPasswordLoading(false);
   }
 
+  function handleThemeChange(value: string) {
+    setTheme(value);
+    updatePreferences({ theme: value as "light" | "dark" | "system" });
+  }
+
   async function handlePrefsSave() {
     setPrefsLoading(true);
     setPrefsMessage("");
     const result = await updatePreferences({
-      theme: theme as "light" | "dark" | "system",
+      theme: (theme || "system") as "light" | "dark" | "system",
       timezone,
       date_format: dateFormat as "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD",
     });
@@ -218,7 +224,7 @@ export function SettingsClient({ profile, preferences }: SettingsClientProps) {
             <CardContent className="space-y-4 max-w-md">
               <div className="space-y-2">
                 <Label>Theme</Label>
-                <Select value={theme} onValueChange={setTheme}>
+                <Select value={theme || "system"} onValueChange={handleThemeChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

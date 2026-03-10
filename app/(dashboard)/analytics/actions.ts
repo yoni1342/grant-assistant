@@ -161,15 +161,17 @@ export async function getSuccessRateByFunder() {
   const funderMap = new Map<string, { awards: number; submissions: number }>()
 
   for (const award of awards || []) {
-    const grant = award.grant as any
-    const funderName = grant?.funder_name || 'Unknown'
+    const grantData = award.grant as unknown
+    const grant = (Array.isArray(grantData) ? grantData[0] : grantData) as Record<string, unknown> | null
+    const funderName = (grant?.funder_name as string) || 'Unknown'
     const current = funderMap.get(funderName) || { awards: 0, submissions: 0 }
     funderMap.set(funderName, { ...current, awards: current.awards + 1 })
   }
 
   for (const submission of submissions || []) {
-    const grant = submission.grant as any
-    const funderName = grant?.funder_name || 'Unknown'
+    const submissionGrantData = submission.grant as unknown
+    const grant = (Array.isArray(submissionGrantData) ? submissionGrantData[0] : submissionGrantData) as Record<string, unknown> | null
+    const funderName = (grant?.funder_name as string) || 'Unknown'
     const current = funderMap.get(funderName) || { awards: 0, submissions: 0 }
     funderMap.set(funderName, { ...current, submissions: current.submissions + 1 })
   }

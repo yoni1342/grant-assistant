@@ -31,9 +31,6 @@ export function PipelineBreakdown({ stages }: PipelineBreakdownProps) {
   // Calculate total for percentage
   const total = stages.reduce((sum, stage) => sum + stage.count, 0)
 
-  // Filter out stages with zero count for display
-  const activeStages = stages.filter(stage => stage.count > 0)
-
   return (
     <Card>
       <CardHeader>

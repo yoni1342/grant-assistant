@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { getBudgets } from './actions'
 import { BudgetPageClient } from './components/budget-page-client'
 
