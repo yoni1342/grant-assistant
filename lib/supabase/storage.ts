@@ -10,7 +10,6 @@ export async function uploadFile(
 ): Promise<{ path: string; error: string | null }> {
   const supabase = await createClient()
 
-  const fileExt = file.name.split('.').pop()
   const fileName = `${userId}/${Date.now()}-${file.name}`
 
   const { data, error } = await supabase.storage

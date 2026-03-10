@@ -12,8 +12,6 @@ import {
   BookOpen,
   PenTool,
   DollarSign,
-  Send,
-  Trophy,
   Settings,
   LogOut,
   ChevronLeft,
@@ -93,11 +91,7 @@ export function Sidebar({ user }: { user: User }) {
   }, []);
 
   // Reset count when navigating to notifications page
-  useEffect(() => {
-    if (pathname.startsWith("/notifications")) {
-      setUnreadCount(0);
-    }
-  }, [pathname]);
+  const displayCount = pathname.startsWith("/notifications") ? 0 : unreadCount;
 
   return (
     <aside
@@ -157,9 +151,9 @@ export function Sidebar({ user }: { user: User }) {
               {isNotifications ? (
                 <div className="relative shrink-0">
                   <item.icon className="h-4 w-4" />
-                  {unreadCount > 0 && (
+                  {displayCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white shadow-sm">
-                      {unreadCount > 99 ? "99+" : unreadCount}
+                      {displayCount > 99 ? "99+" : displayCount}
                     </span>
                   )}
                 </div>
