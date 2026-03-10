@@ -1,0 +1,11 @@
+variable "aws_region" { type = string }
+variable "environment" { type = string }
+variable "app_name" { type = string }
+variable "domain_name" { type = string }
+variable "route53_zone_id" { type = string }
+variable "task_cpu" { type = number }
+variable "task_memory" { type = number }
+variable "min_tasks" { type = number }
+variable "max_tasks" { type = number }
+variable "next_public_supabase_url" { type = string }
+variable "next_public_supabase_anon_key" { type = string }
