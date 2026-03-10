@@ -83,7 +83,7 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
-          wait-for-minutes: 10
+          wait-for-minutes: 15
           # Rollback automatically on failed health checks (circuit breaker enabled in Terraform)
 
       - name: Verify deployment health
