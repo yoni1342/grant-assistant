@@ -1,0 +1,98 @@
+name: ✅ PR Checks — Lint, Type-check, Build
+
+on:
+  pull_request:
+    branches: [main, staging]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+
+  build-test:
+    name: Build Test (Docker)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image (no push)
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="https://placeholder.supabase.co" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="placeholder" \
+            -t grant-assistant:pr-test \
+            .
+          echo "✅ Docker build succeeded"
+
+      - name: Test container starts
+        run: |
+          docker run -d --name test-container \
+            -e NODE_ENV=production \
+            -e PORT=3000 \
+            grant-assistant:pr-test
+          sleep 8
+          docker ps | grep test-container | grep -q "Up" && echo "✅ Container is running" || exit 1
+          docker logs test-container | head -10
+          docker stop test-container && docker rm test-container
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    if: github.base_ref == 'main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.5.0'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Terraform Init
+        working-directory: terraform/environments/production
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: terraform/environments/production
+        run: |
+          terraform plan \
+            -var-file=terraform.tfvars \
+            -no-color \
+            -out=tfplan 2>&1 | tee plan-output.txt
+          echo "### Terraform Plan" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -20 plan-output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
