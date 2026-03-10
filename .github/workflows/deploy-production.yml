@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
 
-# Only one production deploy at a time — cancel in-progress if newer commit arrives
+# Only one deploy runs at a time. New push cancels in-progress deploy.
 concurrency:
   group: deploy-production
   cancel-in-progress: true
@@ -66,15 +66,6 @@ jobs:
           docker push ${{ steps.tags.outputs.image_short }}
           docker push ${{ steps.tags.outputs.image_latest }}
 
-      - name: Wait for ECS to be stable before deploying
-        run: |
-          echo "Waiting for any in-progress ECS deployments to finish..."
-          aws ecs wait services-stable \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --services ${{ env.ECS_SERVICE }} \
-            --region ${{ env.AWS_REGION }} || true
-          echo "ECS is stable, proceeding with deployment."
-
       - name: Download current task definition
         run: |
           aws ecs describe-task-definition \
@@ -90,14 +81,14 @@ jobs:
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.tags.outputs.image_sha }}
 
-      - name: Deploy to ECS (with automatic rollback)
+      - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
-          wait-for-minutes: 15
+          wait-for-minutes: 10
 
       - name: Verify deployment health
         run: |
@@ -120,12 +111,10 @@ jobs:
             --distribution-id E3ETCKK4FKET13 \
             --paths "/*"
 
-      - name: ✅ Success notification
+      - name: ✅ Deployed
         if: success()
-        run: |
-          echo "::notice title=Deployed::✅ fundory.ai deployed — commit ${{ steps.tags.outputs.sha_short }}"
+        run: echo "::notice title=Deployed::✅ fundory.ai deployed — ${{ steps.tags.outputs.sha_short }}"
 
-      - name: ❌ Failure notification
+      - name: ❌ Failed
         if: failure()
-        run: |
-          echo "::error title=Deploy Failed::❌ Deployment failed for ${{ github.sha }} — ECS rolled back automatically"
+        run: echo "::error title=Deploy Failed::❌ Deployment failed — ${{ github.sha }}"
