@@ -1,0 +1,76 @@
+name: 🧪 Deploy — Staging
+
+on:
+  push:
+    branches: [staging]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: grant-assistant-app
+  ECS_CLUSTER: grant-assistant-production
+  ECS_SERVICE: grant-assistant-production-app
+  CONTAINER_NAME: app
+
+jobs:
+  deploy-staging:
+    name: Build → Push → Deploy (Staging)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push staging image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:staging \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:staging-${{ github.sha }} \
+            .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging-${{ github.sha }}
+
+      - name: Deploy staging image to ECS
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition grant-assistant-production-app \
+            --query taskDefinition \
+            --output json)
+          NEW_TASK_DEF=$(echo $TASK_DEF | python3 -c "
+          import json,sys
+          td = json.load(sys.stdin)
+          for c in td['containerDefinitions']:
+              if c['name'] == 'app':
+                  c['image'] = '$ECR_REGISTRY/$ECR_REPOSITORY:staging'
+          for k in ['taskDefinitionArn','revision','status','requiresAttributes',
+                    'placementConstraints','compatibilities','registeredAt',
+                    'registeredBy','deregisteredAt']:
+              td.pop(k, None)
+          print(json.dumps(td))
+          ")
+          NEW_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --task-definition $NEW_ARN \
+            --force-new-deployment
+          echo "Staging deployment triggered with $NEW_ARN"
