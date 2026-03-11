@@ -10,9 +10,9 @@ export default async function DocumentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Documents</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage your organization's document vault
+          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Documents</h1>
+          <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
+            Manage your organization&apos;s document vault
           </p>
         </div>
         <UploadDialog />

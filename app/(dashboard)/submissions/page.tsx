@@ -67,9 +67,9 @@ export default async function SubmissionsPage() {
   if (!grants || grants.length === 0) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-semibold">Submissions</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Track submission progress and deadlines for all grants in your pipeline.
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Submissions</h1>
+        <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
+          Track submission progress and deadlines for all grants in your pipeline
         </p>
         <div className="mt-8 text-center py-12 border rounded-lg bg-muted/30">
           <p className="text-muted-foreground">No grants in your pipeline. Add grants to start tracking submissions.</p>
@@ -80,9 +80,9 @@ export default async function SubmissionsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold">Submissions</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Track submission progress and deadlines for all grants in your pipeline.
+      <h1 className="font-display text-2xl font-black uppercase tracking-tight">Submissions</h1>
+      <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
+        Track submission progress and deadlines for all grants in your pipeline
       </p>
 
       <div className="mt-6 border rounded-lg overflow-hidden">

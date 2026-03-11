@@ -40,6 +40,7 @@ export function DocumentTable({ initialData }: DocumentTableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = useState("")
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: documents,
     columns,

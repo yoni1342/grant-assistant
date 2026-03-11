@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { SettingsClient } from "./components/settings-client"
+import type { SettingsData } from "./components/settings-client"
 import type { Tables } from "@/lib/supabase/database.types"
 
 export default async function SettingsPage() {
@@ -45,8 +46,8 @@ export default async function SettingsPage() {
     <SettingsClient
       data={{
         user,
-        profile: profile as any,
-        members: members as any,
+        profile: profile as unknown as SettingsData['profile'],
+        members: members as unknown as SettingsData['members'],
         workflows,
       }}
     />

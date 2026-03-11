@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/supabase/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -72,28 +71,33 @@ export function PipelineClient({
       )
       .subscribe();
 
-    // Listen for workflow notifications via activity_log
-    const activityChannel = supabase
-      .channel("activity-log-realtime")
+    // Listen for notifications to show toasts
+    const notifChannel = supabase
+      .channel("pipeline-notifications")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "activity_log" },
+        { event: "INSERT", schema: "public", table: "notifications" },
         (payload) => {
-          const activity = payload.new as {
-            action: string;
-            details: { message?: string } | null;
+          const notif = payload.new as {
+            type: string;
+            title: string;
+            message: string | null;
           };
-          if (
-            activity.action === "screening_started" ||
-            activity.action === "screening_completed"
-          ) {
-            const message =
-              activity.details?.message || `Workflow: ${activity.action}`;
-            if (activity.action === "screening_started") {
-              toast.info(message);
-            } else {
-              toast.success(message);
-            }
+          const text = notif.title;
+          switch (notif.type) {
+            case "screening_started":
+            case "proposal_started":
+              toast.info(text);
+              break;
+            case "screening_completed":
+            case "proposal_generated":
+              toast.success(text);
+              break;
+            case "grant_not_eligible":
+              toast.error(text);
+              break;
+            default:
+              toast(text);
           }
         }
       )
@@ -101,7 +105,7 @@ export function PipelineClient({
 
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(activityChannel);
+      supabase.removeChannel(notifChannel);
     };
   }, []);
 
@@ -155,8 +159,8 @@ export function PipelineClient({
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Pipeline</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Pipeline</h1>
+          <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
             {grants.length} grants in pipeline
           </p>
         </div>

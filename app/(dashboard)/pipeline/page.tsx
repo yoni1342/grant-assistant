@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 export default async function PipelinePage() {
   const supabase = await createClient();
-  const { orgId, error } = await getUserOrgId(supabase);
+  const { orgId } = await getUserOrgId(supabase);
   if (!orgId) redirect("/login");
 
   const { data: grants } = await supabase

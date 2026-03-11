@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import {
   Bell,
-  Search,
   FileText,
   CheckCircle2,
   XCircle,
@@ -118,8 +117,8 @@ export function NotificationsClient({
   return (
     <div className="p-6 space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Notifications</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Notifications</h1>
+        <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
           Grant status updates and workflow progress
         </p>
       </div>

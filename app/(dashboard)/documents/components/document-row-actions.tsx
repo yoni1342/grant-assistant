@@ -31,7 +31,7 @@ export function DocumentRowActions({ document }: DocumentRowActionsProps) {
       if (url) {
         window.open(url, "_blank")
       }
-    } catch (err) {
+    } catch {
       alert("Failed to download document")
     } finally {
       setIsLoading(false)
@@ -49,7 +49,7 @@ export function DocumentRowActions({ document }: DocumentRowActionsProps) {
       if (result.error) {
         alert("Failed to delete document: " + result.error)
       }
-    } catch (err) {
+    } catch {
       alert("Failed to delete document")
     } finally {
       setIsLoading(false)

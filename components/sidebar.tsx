@@ -35,6 +35,17 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+/** Fundory convergence mark — 3 descending bars */
+function FundoryMark({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex flex-col gap-[5px]", className)}>
+      <div className="h-[4px] w-[28px] bg-current" />
+      <div className="h-[4px] w-[20px] bg-current" />
+      <div className="h-[4px] w-[12px] bg-current" />
+    </div>
+  );
+}
+
 export function Sidebar({ user }: { user: User }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -50,41 +61,29 @@ export function Sidebar({ user }: { user: User }) {
   useEffect(() => {
     const supabase = createClient();
 
-    // Initial fetch
-    supabase
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("is_read", false)
-      .then(({ count }) => {
-        setUnreadCount(count || 0);
-      });
+    async function fetchUnreadCount() {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("is_read", false);
+      if (!error) setUnreadCount(count ?? 0);
+    }
 
-    // Realtime: new notifications increment count
+    // Initial fetch
+    fetchUnreadCount();
+
+    // Realtime: refetch on any insert or update
     const channel = supabase
       .channel("sidebar-notifications")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications" },
-        () => {
-          // Only increment if not on the notifications page
-          if (!window.location.pathname.startsWith("/notifications")) {
-            setUnreadCount((prev) => prev + 1);
-          }
-        }
+        () => fetchUnreadCount()
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "notifications" },
-        () => {
-          // Re-fetch count on updates (e.g. mark as read)
-          supabase
-            .from("notifications")
-            .select("id", { count: "exact", head: true })
-            .eq("is_read", false)
-            .then(({ count }) => {
-              setUnreadCount(count || 0);
-            });
-        }
+        () => fetchUnreadCount()
       )
       .subscribe();
 
@@ -94,41 +93,48 @@ export function Sidebar({ user }: { user: User }) {
   }, []);
 
   // Reset count when navigating to notifications page
-  useEffect(() => {
-    if (pathname.startsWith("/notifications")) {
-      setUnreadCount(0);
-    }
-  }, [pathname]);
+  const displayCount = pathname.startsWith("/notifications") ? 0 : unreadCount;
 
   return (
     <aside
       className={cn(
-        "flex h-full flex-col border-r bg-white dark:bg-zinc-900 transition-all duration-200",
+        "flex h-full flex-col border-r border-border bg-card transition-all duration-200",
         collapsed ? "w-16" : "w-56"
       )}
     >
-      {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b px-4">
-        {!collapsed && (
-          <span className="text-sm font-semibold tracking-tight">
-            Fundory.ai
-          </span>
+      {/* Header — Brand lockup */}
+      <div className="flex h-14 items-center justify-between border-b border-border px-4">
+        {!collapsed ? (
+          <Link href="/dashboard" className="flex items-center gap-3">
+            <FundoryMark className="text-foreground" />
+            <div className="h-[24px] w-px bg-border" />
+            <div className="flex flex-col">
+              <span className="font-display text-sm font-black uppercase tracking-[0.04em] leading-none">
+                Fundory
+              </span>
+              <span className="font-mono text-[8px] tracking-[0.18em] text-muted-foreground uppercase">
+                Grant Intelligence
+              </span>
+            </div>
+          </Link>
+        ) : (
+          <Link href="/dashboard" className="mx-auto">
+            <FundoryMark className="text-foreground" />
+          </Link>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="rounded-md p-1 text-muted-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className={cn(
+            "rounded-md p-1 text-muted-foreground hover:bg-muted",
+            collapsed && "hidden"
+          )}
         >
-          <ChevronLeft
-            className={cn(
-              "h-4 w-4 transition-transform",
-              collapsed && "rotate-180"
-            )}
-          />
+          <ChevronLeft className="h-4 w-4" />
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-2">
+      <nav className="flex-1 space-y-0.5 p-2">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
@@ -140,30 +146,34 @@ export function Sidebar({ user }: { user: User }) {
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                 isActive
-                  ? "bg-zinc-100 font-medium text-foreground dark:bg-zinc-800"
-                  : "text-muted-foreground hover:bg-zinc-50 hover:text-foreground dark:hover:bg-zinc-800/50"
+                  ? "bg-foreground/[0.06] font-medium text-foreground"
+                  : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
               )}
             >
               {isNotifications ? (
                 <div className="relative shrink-0">
                   <item.icon className="h-4 w-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
-                      {unreadCount > 99 ? "99+" : unreadCount}
+                  {displayCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white shadow-sm">
+                      {displayCount > 99 ? "99+" : displayCount}
                     </span>
                   )}
                 </div>
               ) : (
                 <item.icon className="h-4 w-4 shrink-0" />
               )}
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && (
+                <span className="font-mono text-xs tracking-wide uppercase">
+                  {item.label}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
       {/* User section */}
-      <div className="border-t p-2">
+      <div className="border-t border-border p-2">
         <div
           className={cn(
             "flex items-center gap-3 rounded-md px-3 py-2",
@@ -171,7 +181,9 @@ export function Sidebar({ user }: { user: User }) {
           )}
         >
           <Avatar className="h-7 w-7">
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            <AvatarFallback className="text-xs bg-foreground text-background font-medium">
+              {initials}
+            </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex-1 truncate">

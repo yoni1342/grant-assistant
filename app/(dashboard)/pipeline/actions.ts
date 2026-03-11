@@ -98,12 +98,15 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
   }
   const notif = notifTypeMap[webhookPath]
   if (notif) {
-    await supabase.from('notifications').insert({
+    const { error: notifError } = await supabase.from('notifications').insert({
       org_id: profile.org_id,
       grant_id: grantId,
       type: notif.type,
       title: notif.title,
     })
+    if (notifError) {
+      console.error('Failed to create notification:', notifError)
+    }
   }
 
   // Fire-and-forget: trigger n8n workflow

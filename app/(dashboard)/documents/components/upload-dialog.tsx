@@ -102,7 +102,7 @@ export function UploadDialog() {
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
-            Upload a document to your organization's vault. Accepted formats: PDF, DOCX, XLSX, PNG, JPG (max 25MB).
+            Upload a document to your organization&apos;s vault. Accepted formats: PDF, DOCX, XLSX, PNG, JPG (max 25MB).
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
