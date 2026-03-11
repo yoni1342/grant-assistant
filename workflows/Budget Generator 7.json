@@ -115,7 +115,7 @@
       "credentials": {
         "openAiApi": {
           "id": "XbaNaQyEtQBSUnml",
-          "name": "OpenAi account 2"
+          "name": "Brownmine"
         }
       },
       "disabled": true
@@ -146,45 +146,15 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        1120,
-        1024
+        736,
+        1008
       ],
       "webhookId": "generate-budget",
       "notes": "POST: { grantAmount: 50000, programFocus: 'youth', funderName: 'X Foundation', adminCap: 15, grantPurpose: 'clothing program' }"
     },
     {
       "parameters": {
-        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search=%5BBudget%5D&per_page=100",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {}
-          ]
-        },
-        "options": {}
-      },
-      "id": "120245ea-f537-4679-a90b-43a10f0e4a44",
-      "name": "Get Budget Template1",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1344,
-        1024
-      ],
-      "notesInFlow": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
-      },
-      "notes": "Fetch budget template items from Plane [Budget] issues"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Calculate budget allocations based on grant amount and program focus\n  const request = $('Budget Request1').first().json.body;\n\n  // Parse Plane [Budget] issues into template items\n  const response = $('Get Budget Template1').first().json;\n  const allIssues = response.results || response || [];\n  const issueList = Array.isArray(allIssues) ? allIssues : [];\n\n  const templateItems = [];\n  for (const issue of issueList) {\n    const name = issue.name || '';\n    const match = name.match(/\\[Budget\\]\\s*\\S+\\s*-\\s*(.+)/);\n    if (!match) continue;\n\n    const desc = issue.description_html || '';\n    const getField = (label) => {\n      const m = desc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)'));\n      return m ? m[1].trim() : '';\n    };\n\n    templateItems.push({\n      line_item: match[1].trim(),\n      category: getField('Category'),\n      program_area: getField('Program Area'),\n      default_percent: parseFloat(getField('Default Percent')) || 0,\n      description: getField('Description')\n    });\n  }\n\n  // Handle different amount types: range, exact, or none\n  const amountType = request.amountType || 'none';\n  const grantAmountExact = parseFloat(request.grantAmount) || 0;\n  const grantAmountMin = parseFloat(request.grantAmountMin) || 0;\n  const grantAmountMax = parseFloat(request.grantAmountMax) || 0;\n\n  let grantAmount = 0;\n  let amountNote = '';\n\n  if (amountType === 'exact') {\n    grantAmount = grantAmountExact;\n    amountNote = `Exact amount: $${grantAmount.toLocaleString()}`;\n  } else if (amountType === 'range') {\n    // Use minimum as conservative budget target\n    grantAmount = grantAmountMin;\n    amountNote = `Range: $${grantAmountMin.toLocaleString()} - $${grantAmountMax.toLocaleString()} (using minimum)`;\n  } else {\n    // No amount specified - can't generate real budget\n    grantAmount = 0;\n    amountNote = 'No grant amount specified - budget percentages only';\n  }\n\n  const programFocus = (request.programFocus || 'balanced').toLowerCase();\n  const adminCap = parseFloat(request.adminCap) || 100;\n\n  // Adjust percentages based on program focus\n  const focusMultipliers = {\n    youth: { youth: 1.3, senior: 0.5, shared: 1.0, admin: 1.0 },\n    senior: { youth: 0.5, senior: 1.3, shared: 1.0, admin: 1.0 },\n    balanced: { youth: 1.0, senior: 1.0, shared: 1.0, admin: 1.0 }\n  };\n\n  const multipliers = focusMultipliers[programFocus] || focusMultipliers.balanced;\n\n  // Calculate raw allocations\n  let lineItems = templateItems.map(item => {\n    const basePercent = parseFloat(item.default_percent) || 0;\n    const programArea = (item.program_area || 'shared').toLowerCase();\n    const category = (item.category || 'direct').toLowerCase();\n\n    const multiplier = multipliers[programArea] || 1.0;\n    const adjustedPercent = basePercent * multiplier;\n\n    return {\n      lineItem: item.line_item,\n      category: category,\n      programArea: programArea,\n      basePercent: basePercent,\n      adjustedPercent: adjustedPercent,\n      description: item.description || ''\n    };\n  });\n\n  // Normalize percentages to 100%\n  const totalPercent = lineItems.reduce((sum, item) => sum + item.adjustedPercent, 0);\n  lineItems = lineItems.map(item => ({\n    ...item,\n    normalizedPercent: totalPercent > 0 ? (item.adjustedPercent / totalPercent) * 100 : 0,\n    amount: totalPercent > 0 ? Math.round((item.adjustedPercent / totalPercent) * grantAmount) : 0\n  }));\n\n  // Calculate category totals\n  const categoryTotals = {\n    personnel: { amount: 0, percent: 0 },\n    direct: { amount: 0, percent: 0 },\n    indirect: { amount: 0, percent: 0 }\n  };\n\n  let adminTotal = 0;\n  let adminPercent = 0;\n\n  for (const item of lineItems) {\n    const cat = item.category === 'personnel' ? 'personnel' :\n                item.category === 'indirect' ? 'indirect' : 'direct';\n    categoryTotals[cat].amount += item.amount;\n    categoryTotals[cat].percent += item.normalizedPercent;\n\n    if (item.category === 'indirect' || item.programArea === 'admin') {\n      adminTotal += item.amount;\n      adminPercent += item.normalizedPercent;\n    }\n  }\n\n  return [{\n    json: {\n      // Amount info\n      grantAmount: grantAmount,\n      amountType: amountType,\n      grantAmountMin: grantAmountMin,\n      grantAmountMax: grantAmountMax,\n      amountNote: amountNote,\n      hasAmount: grantAmount > 0,\n\n      // Other fields\n      programFocus: programFocus,\n      funderName: request.funderName || 'Unknown Funder',\n      grantPurpose: request.grantPurpose || 'general program support',\n      adminCap: adminCap,\n      lineItems: lineItems,\n      categoryTotals: categoryTotals,\n      adminTotal: adminTotal,\n      adminPercent: Math.round(adminPercent * 10) / 10,\n      needsAdjustment: adminPercent > adminCap\n    }\n  }];"
+        "jsCode": "// Calculate budget allocations based on grant amount and program focus\nconst request = $('Budget Request1').first().json.body;\n\n// --------------------------------------------------\n// ✅ Parse amount (always string)\n// --------------------------------------------------\n\nconst rawAmount = (request.grantAmount || '').toString();\n\n// Extract all dollar values like $15,000\nconst matches = rawAmount.match(/\\$[\\d,]+/g) || [];\n\n// Helper to clean \"$2,000,000\" -> 2000000\nconst cleanMoney = (str) =>\n  parseFloat(str.replace(/[^0-9.]/g, '')) || 0;\n\nlet amountType = 'none';\nlet grantAmount = 0;\nlet grantAmountMin = 0;\nlet grantAmountMax = 0;\nlet amountNote = '';\n\nif (matches.length === 1) {\n  amountType = 'exact';\n  grantAmount = cleanMoney(matches[0]);\n  amountNote = `Exact amount: $${grantAmount.toLocaleString()}`;\n}\n\nif (matches.length >= 2) {\n  amountType = 'range';\n  grantAmountMin = cleanMoney(matches[0]);\n  grantAmountMax = cleanMoney(matches[1]);\n  grantAmount = grantAmountMin; // conservative choice\n  amountNote = `Range: $${grantAmountMin.toLocaleString()} - $${grantAmountMax.toLocaleString()} (using minimum)`;\n}\n\nif (matches.length === 0) {\n  amountType = 'none';\n  grantAmount = 0;\n  amountNote = 'No grant amount specified - budget percentages only';\n}\n\nconst hasAmount = matches.length > 0;\n\n// --------------------------------------------------\n// Parse Plane [Budget] issues into template items\n// --------------------------------------------------\n\nconst response = $('Get Budget Template1').first().json;\nconst allIssues = response.results || response || [];\nconst issueList = Array.isArray(allIssues) ? allIssues : [];\n\nconst templateItems = [];\n\nfor (const issue of issueList) {\n  const name = issue.name || '';\n  const match = name.match(/\\[Budget\\]\\s*\\S+\\s*-\\s*(.+)/);\n  if (!match) continue;\n\n  const desc = issue.description_html || '';\n\n  const getField = (label) => {\n    const m = desc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)'));\n    return m ? m[1].trim() : '';\n  };\n\n  templateItems.push({\n    line_item: match[1].trim(),\n    category: getField('Category'),\n    program_area: getField('Program Area'),\n    default_percent: parseFloat(getField('Default Percent')) || 0,\n    description: getField('Description')\n  });\n}\n\n// --------------------------------------------------\n// Program focus logic\n// --------------------------------------------------\n\nconst programFocus = (request.programFocus || 'balanced').toLowerCase();\nconst adminCap = parseFloat(request.adminCap) || 100;\n\nconst focusMultipliers = {\n  youth: { youth: 1.3, senior: 0.5, shared: 1.0, admin: 1.0 },\n  senior: { youth: 0.5, senior: 1.3, shared: 1.0, admin: 1.0 },\n  balanced: { youth: 1.0, senior: 1.0, shared: 1.0, admin: 1.0 }\n};\n\nconst multipliers = focusMultipliers[programFocus] || focusMultipliers.balanced;\n\n// --------------------------------------------------\n// Calculate allocations\n// --------------------------------------------------\n\nlet lineItems = templateItems.map(item => {\n  const basePercent = parseFloat(item.default_percent) || 0;\n  const programArea = (item.program_area || 'shared').toLowerCase();\n  const category = (item.category || 'direct').toLowerCase();\n\n  const multiplier = multipliers[programArea] || 1.0;\n  const adjustedPercent = basePercent * multiplier;\n\n  return {\n    lineItem: item.line_item,\n    category,\n    programArea,\n    basePercent,\n    adjustedPercent,\n    description: item.description || ''\n  };\n});\n\nconst totalPercent = lineItems.reduce((sum, item) => sum + item.adjustedPercent, 0);\n\nlineItems = lineItems.map(item => ({\n  ...item,\n  normalizedPercent: totalPercent > 0 ? (item.adjustedPercent / totalPercent) * 100 : 0,\n  amount: totalPercent > 0 ? Math.round((item.adjustedPercent / totalPercent) * grantAmount) : 0\n}));\n\n// --------------------------------------------------\n// Category totals\n// --------------------------------------------------\n\nconst categoryTotals = {\n  personnel: { amount: 0, percent: 0 },\n  direct: { amount: 0, percent: 0 },\n  indirect: { amount: 0, percent: 0 }\n};\n\nlet adminTotal = 0;\nlet adminPercent = 0;\n\nfor (const item of lineItems) {\n  const cat =\n    item.category === 'personnel'\n      ? 'personnel'\n      : item.category === 'indirect'\n      ? 'indirect'\n      : 'direct';\n\n  categoryTotals[cat].amount += item.amount;\n  categoryTotals[cat].percent += item.normalizedPercent;\n\n  if (item.category === 'indirect' || item.programArea === 'admin') {\n    adminTotal += item.amount;\n    adminPercent += item.normalizedPercent;\n  }\n}\n\n// --------------------------------------------------\n// Return result\n// --------------------------------------------------\n\nreturn [{\n  json: {\n    grantAmount,\n    amountType,\n    grantAmountMin,\n    grantAmountMax,\n    amountNote,\n    hasAmount,\n\n    programFocus,\n    funderName: request.funderName || 'Unknown Funder',\n    grantPurpose: request.grantPurpose || 'general program support',\n    adminCap,\n\n    lineItems,\n    categoryTotals,\n    adminTotal,\n    adminPercent: Math.round(adminPercent * 10) / 10,\n    needsAdjustment: adminPercent > adminCap\n  }\n}];"
       },
       "id": "2554c61c-167f-475d-9a28-5f9a6250d538",
       "name": "Calculate Allocations1",
@@ -192,7 +162,7 @@
       "typeVersion": 2,
       "position": [
         1568,
-        1024
+        1008
       ]
     },
     {
@@ -205,7 +175,7 @@
       "typeVersion": 2,
       "position": [
         1792,
-        1024
+        1008
       ]
     },
     {
@@ -219,7 +189,7 @@
         "messages": {
           "values": [
             {
-              "content": " You are a Grant Budget Specialist for The Virtuous House, a Pennsylvania 501(c)(3) supporting African American youth aging out of the foster\n  care system and seniors in long-term care facilities\n\nWrite a budget narrative/justification for a grant budget. The narrative should:\n1. Explain how funds will be used\n2. Justify each major expense category\n3. Show connection between expenses and program outcomes\n4. Be professional and compelling\n5. Reference specific line items and amounts\n\nFormat:\n- Start with a brief overview paragraph\n- Then justify each category (Personnel, Direct Program Costs, Administrative)\n- End with a statement about cost-effectiveness\n\nKeep it concise but thorough (300-500 words total).",
+              "content": " You are a Grant Budget Specialist for an organization.\n\nWrite a budget narrative/justification for a grant budget. The narrative should:\n1. Explain how funds will be used\n2. Justify each major expense category\n3. Show connection between expenses and program outcomes\n4. Be professional and compelling\n5. Reference specific line items and amounts\n\nFormat:\n- Start with a brief overview paragraph\n- Then justify each category (Personnel, Direct Program Costs, Administrative)\n- End with a statement about cost-effectiveness\n\nKeep it concise but thorough (300-500 words total).",
               "role": "system"
             },
             {
@@ -237,12 +207,12 @@
       "typeVersion": 1.8,
       "position": [
         2016,
-        1024
+        1008
       ],
       "credentials": {
         "openAiApi": {
           "id": "XbaNaQyEtQBSUnml",
-          "name": "OpenAi account 2"
+          "name": "Brownmine"
         }
       }
     },
@@ -256,47 +226,94 @@
       "typeVersion": 2,
       "position": [
         2368,
-        1024
+        1008
       ]
-    }
-  ],
-  "pinData": {
-    "Budget Request1": [
-      {
-        "json": {
-          "headers": {
-            "host": "n8n.thebrownmine.com",
-            "user-agent": "axios/1.12.0",
-            "content-length": "225",
-            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
-            "accept-encoding": "gzip, compress, deflate, br",
-            "content-type": "application/json",
-            "via": "1.1 Caddy",
-            "x-forwarded-for": "100.29.112.47",
-            "x-forwarded-host": "n8n.thebrownmine.com",
-            "x-forwarded-proto": "https"
-          },
-          "params": {},
-          "query": {},
-          "body": {
-            "grantAmount": 0,
-            "grantAmountMin": 10000,
-            "grantAmountMax": 1000000,
-            "amountType": "range",
-            "programFocus": "youth",
-            "funderName": "Rockefeller Foundation",
-            "adminCap": 15,
-            "grantPurpose": "Rockefeller Foundation - youth program support"
-          },
-          "webhookUrl": "https://n8n.thebrownmine.com/webhook/generate-budget",
-          "executionMode": "production"
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?category=eq.budget&org_id=eq.{{$json.body.org_id}}&select=id,title,extracted_text,metadata&order=created_at.desc",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
         },
-        "pairedItem": {
-          "item": 0
+        "sendBody": true,
+        "specifyBody": "={{ $json.body.org_id   }}",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "120245ea-f537-4679-a90b-43a10f0e4a44",
+      "name": "Get Budget Template1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        1008
+      ],
+      "notesInFlow": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fetch budget template items from Plane [Budget] issues"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": " You are a budget document parser. Extract budget line items from the provided document text and return ONLY valid JSON — no markdown, no explanation.\n\n  Return this exact structure:\n  [\n    {\n      \"line_item\": \"Category name\",\n      \"category\": \"personnel\" | \"direct\" | \"indirect\",\n      \"program_area\": \"youth\" | \"senior\" | \"shared\" | \"admin\",\n      \"default_percent\": <number>,\n      \"description\": \"Brief description of what this covers\"\n    }\n  ]\n\n  Rules:\n  - \"category\" must be one of: personnel, direct, indirect\n  - \"program_area\" must be one of: youth, senior, shared, admin\n  - \"default_percent\" should be the percentage allocation from the document\n  - All percentages should sum to 100\n  - If the document doesn't specify a program_area, use \"shared\"\n  - Map management/admin/overhead items to category \"indirect\" and program_area \"admin\"\n  - Map staffing/salary items to category \"personnel\"\n  - Map everything else to category \"direct\"",
+              "role": "system"
+            },
+            {
+              "content": "= =Parse this budget document into line items:\n\n  {{ $json.extracted_text }}\n\n  Organization context:\n  - Funder: {{ $('Budget Request1').first().json.body.funderName }}\n  - Purpose: {{ $('Budget Request1').first().json.body.grantPurpose }}\n\n  Then update Calculate Allocations"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "8018235b-9ab7-49fa-9faf-a2ecfb264a98",
+      "name": "AI Parse Budget Template",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1200,
+        1008
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "Brownmine"
         }
       }
-    ]
-  },
+    }
+  ],
+  "pinData": {},
   "connections": {
     "Budget Request": {
       "main": [
@@ -364,17 +381,6 @@
         ]
       ]
     },
-    "Get Budget Template1": {
-      "main": [
-        [
-          {
-            "node": "Calculate Allocations1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Calculate Allocations1": {
       "main": [
         [
@@ -407,6 +413,28 @@
           }
         ]
       ]
+    },
+    "Get Budget Template1": {
+      "main": [
+        [
+          {
+            "node": "AI Parse Budget Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Parse Budget Template": {
+      "main": [
+        [
+          {
+            "node": "Calculate Allocations1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -414,7 +442,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "42164309-6012-44a0-9b7f-846147bec330",
+  "versionId": "c4d1b363-8639-4e39-8237-470e531fff8f",
   "meta": {
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
   },
