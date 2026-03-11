@@ -116,104 +116,6 @@ export type Database = {
           },
         ]
       }
-      budget_line_items: {
-        Row: {
-          amount: number
-          budget_id: string
-          category: Database["public"]["Enums"]["budget_category"] | null
-          created_at: string | null
-          description: string
-          id: string
-          justification: string | null
-          sort_order: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          amount: number
-          budget_id: string
-          category?: Database["public"]["Enums"]["budget_category"] | null
-          created_at?: string | null
-          description: string
-          id?: string
-          justification?: string | null
-          sort_order?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          amount?: number
-          budget_id?: string
-          category?: Database["public"]["Enums"]["budget_category"] | null
-          created_at?: string | null
-          description?: string
-          id?: string
-          justification?: string | null
-          sort_order?: number | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "budget_line_items_budget_id_fkey"
-            columns: ["budget_id"]
-            isOneToOne: false
-            referencedRelation: "budgets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      budgets: {
-        Row: {
-          created_at: string | null
-          grant_id: string | null
-          id: string
-          is_template: boolean | null
-          metadata: Json | null
-          name: string
-          narrative: string | null
-          org_id: string
-          total_amount: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          grant_id?: string | null
-          id?: string
-          is_template?: boolean | null
-          metadata?: Json | null
-          name: string
-          narrative?: string | null
-          org_id: string
-          total_amount?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          grant_id?: string | null
-          id?: string
-          is_template?: boolean | null
-          metadata?: Json | null
-          name?: string
-          narrative?: string | null
-          org_id?: string
-          total_amount?: number | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "budgets_grant_id_fkey"
-            columns: ["grant_id"]
-            isOneToOne: false
-            referencedRelation: "grants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "budgets_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       documents: {
         Row: {
           ai_category: string | null
@@ -992,15 +894,6 @@ export type Database = {
       get_user_org_id: { Args: never; Returns: string }
     }
     Enums: {
-      budget_category:
-        | "personnel"
-        | "fringe"
-        | "travel"
-        | "equipment"
-        | "supplies"
-        | "contractual"
-        | "other"
-        | "indirect"
       grant_stage:
         | "discovery"
         | "screening"

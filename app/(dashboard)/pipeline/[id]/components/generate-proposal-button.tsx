@@ -38,10 +38,11 @@ export function GenerateProposalButton({
     setDialogOpen(true);
 
     try {
-      const response = await fetch("/api/trigger-proposal", {
+      const response = await fetch("/api/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          service: "proposal-generation",
           grantId,
           timestamp: new Date().toISOString(),
         }),
