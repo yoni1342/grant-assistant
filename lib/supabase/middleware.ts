@@ -45,6 +45,7 @@ export async function updateSession(request: NextRequest) {
   // --- Not authenticated ---
   if (!user) {
     if (
+      pathname === "/" ||
       pathname.startsWith("/login") ||
       pathname.startsWith("/register") ||
       pathname.startsWith("/auth")
@@ -54,9 +55,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(getRedirectUrl(request, "/login"));
   }
 
-  // --- Authenticated: redirect away from login/signup ---
-  if (pathname.startsWith("/login") || pathname.startsWith("/signup")) {
-    return NextResponse.redirect(getRedirectUrl(request, "/"));
+  // --- Authenticated: redirect away from login/signup/landing ---
+  if (pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname === "/") {
+    return NextResponse.redirect(getRedirectUrl(request, "/dashboard"));
   }
 
   // Fetch profile + org status in one query
