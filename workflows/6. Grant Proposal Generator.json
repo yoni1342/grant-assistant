@@ -585,7 +585,7 @@
         "url": "https://n8n.thebrownmine.com/webhook/customize-narrative",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({$json}) }}",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
         "options": {
           "allowUnauthorizedCerts": true
         }
@@ -623,7 +623,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const budgetData = $('Merge Budget Data').first().json;\n  const narratives = $('Step 3: Get Narratives').first().json;\n  const documents = $input.first().json;\n\n  // Combine all narrative sections into one string\n  const allNarratives = {};\n  let narrativeText = '';\n  if (narratives.narratives) {\n    for (const [sectionId, section] of Object.entries(narratives.narratives)) {\n      allNarratives[sectionId] = section;\n      narrativeText += `\\n\\n### ${section.section_name}\\n${section.content}`;\n    }\n  }\n\n  // Combine all relevant document content\n  const allDocuments = {};\n  let documentText = '';\n  if (documents.documents) {\n    for (const [category, doc] of Object.entries(documents.documents)) {\n      if (doc.found) {\n        allDocuments[category] = {\n          id: doc.id,\n          fileName: doc.fileName,\n          category: doc.category,\n          extractedText: doc.extractedText,\n        };\n        documentText += `\\n\\n### ${doc.fileName} (${doc.category})\\n${doc.extractedText}`;\n      }\n    }\n  }\n\n  return [{\n    json: {\n      grantId: budgetData.grantId,\n      org_id: budgetData.org_id,\n      grant_title: budgetData.grant_title,\n      grant_description: budgetData.grant_description,\n      funder_name: budgetData.funder_name,\n      deadline: budgetData.deadline,\n      amount: budgetData.amount,\n      budget: budgetData.budget || {},\n      narratives: allNarratives,\n      narrativeText: narrativeText.trim(),\n      sectionsReturned: narratives.sectionsReturned || 0,\n      documents: allDocuments,\n      documentText: documentText.trim(),\n      totalDocuments: documents.totalDocuments || 0,\n      relevantDocuments: Object.keys(allDocuments).length,\n    }\n  }];"
+        "jsCode": " const item = $input.first().json;\n\n  // Combine all narrative sections into one string\n  const allNarratives = {};\n  let narrativeText = '';\n  if (item.narratives) {\n    for (const [sectionId, section] of Object.entries(item.narratives)) {\n      allNarratives[sectionId] = section;\n      narrativeText += `\\n\\n### ${section.section_name}\\n${section.content}`;\n    }\n  }\n\n  // Combine all relevant document content\n  const allDocuments = {};\n  let documentText = '';\n  if (item.documents) {\n    for (const [category, doc] of Object.entries(item.documents)) {\n      if (doc.found) {\n        allDocuments[category] = {\n          id: doc.id,\n          fileName: doc.fileName,\n          category: doc.category,\n          extractedText: doc.extractedText,\n        };\n        documentText += `\\n\\n### ${doc.fileName} (${doc.category})\\n${doc.extractedText}`;\n      }\n    }\n  }\n\n  return [{\n    json: {\n      grantId: item.grant_id || '',\n      org_id: item.org_id || '',\n      grant_title: item.grant_title || '',\n      grant_description: item.grant_description || '',\n      funder_name: item.funder_name,\n      deadline: item.deadline,\n      amount: item.amount,\n      narratives: allNarratives,\n      narrativeText: narrativeText.trim(),\n      sectionsReturned: item.sectionsReturned || 0,\n      documents: allDocuments,\n      documentText: documentText.trim(),\n      totalDocuments: item.totalDocuments || 0,\n      relevantDocuments: Object.keys(allDocuments).length,\n    }\n  }];"
       },
       "id": "15e1f9e1-eedd-4cd2-b6d3-f2ca36000817",
       "name": "Step 5: Combine Content",
@@ -657,94 +657,6 @@
     },
     {
       "parameters": {
-        "jsCode": "let grantItems = [];\n\n// Try the first node\ntry {\n  const fetchEligible = $('Fetch Eligible Grants').all();\n  if (fetchEligible.length > 0) {\n    grantItems = fetchEligible;\n  } else {\n    // fallback to second node\n    const fetchEligible2 = $('Fetch Eligible Grants2').all();\n    grantItems = fetchEligible2;\n  }\n} catch (err) {\n  // If the node hasn't executed or doesn't exist, fallback\n  try {\n    grantItems = $('Fetch Eligible Grants2').all();\n  } catch {\n    grantItems = []; // nothing available\n  }\n}const budgetItems = $input.all();\n\nreturn grantItems.map((grantItem, index) => {\n  const grant = grantItem.json;\n  const budget = budgetItems[index]?.json || {};\n\n  return {\n    json: {\n      // Grant info\n      grantId: grant.id,\n      org_id: grant.org_id,\n      grant_title: grant.title,\n      grant_description: grant.description|| '', \n      funder_name: grant.funder_name,\n      deadline: grant.deadline,\n      amount: grant.amount,\n      \n      // Budget info\n      budget: {\n        generated: budget.success || false,\n        amount: budget.grantAmount || 0,\n        narrative: budget.narrative || '',\n        line_items: budget.lineItems || [],\n        category_totals: budget.categoryTotals || {},\n        admin_percent: budget.adminPercent || 0,\n        markdown: budget.markdownBudget || ''\n      }\n    }\n  };\n});"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -1008,
-        -3568
-      ],
-      "id": "9de8b0ea-7190-43e8-a422-d953e8df8e3f",
-      "name": "Merge Budget Data"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.thebrownmine.com/webhook/generate-budget",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n\"org_id\": \"{{ $json.org_id }}\",\n  \"grantAmount\": \"{{ $json.amount ? $json.amount : 'Not specified' }}\",\n\n  \"grantAmountMin\": {{\n    $json.amount && ($json.amount.match(/\\$[\\d,]+/g) || []).length === 2\n      ? parseFloat($json.amount.match(/\\$[\\d,]+/g)[0].replace(/[^0-9.]/g, ''))\n      : 0\n  }},\n\n  \"grantAmountMax\": {{\n    $json.amount && ($json.amount.match(/\\$[\\d,]+/g) || []).length === 2\n      ? parseFloat($json.amount.match(/\\$[\\d,]+/g)[1].replace(/[^0-9.]/g, ''))\n      : 0\n  }},\n\n  \"amountType\": \"{{\n    !$json.amount\n      ? 'none'\n      : ($json.amount.match(/\\$[\\d,]+/g) || []).length === 2\n        ? 'range'\n        : ($json.amount.match(/\\$[\\d,]+/g) || []).length === 1\n          ? 'exact'\n          : 'none'\n  }}\",\n\n  \"programFocus\": \"{{ $json.programFocus ? $json.programFocus : 'balanced' }}\",\n  \"funderName\": \"{{ $json.funder_name ? $json.funder_name : '' }}\",\n  \"adminCap\": {{ $json.adminCap ? $json.adminCap : 15 }},\n  \"grantPurpose\": \"{{ $json.description ? $json.description : ($json.title ? $json.title : 'program support') }}\"\n}",
-        "options": {
-          "allowUnauthorizedCerts": true
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -1280,
-        -3568
-      ],
-      "id": "0ebd217d-39d6-4947-8b02-d4ea705f1107",
-      "name": "Call Budget Generator"
-    },
-    {
-      "parameters": {
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?screening_score=gt.50&stage=eq.screening&org_id=eq.{{ $json.body.org_id }}&select=*",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -2000,
-        -3472
-      ],
-      "id": "870c3f6f-6fb1-4e8b-a976-74a69dde0d8b",
-      "name": "Fetch Eligible Grants",
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $json.body.grantId || $json.body.grant_id}}&org_id=eq.{{ $json.body.org_id }}&select=*",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -2000,
-        -3696
-      ],
-      "id": "a55286a7-ffb4-419c-a178-9e57359487e4",
-      "name": "Fetch Eligible Grants2"
-    },
-    {
-      "parameters": {
         "jsCode": "const { sections, ...proposal } = $('Format Proposal').first().json.proposalData;\n\n  return [{\n      json: { proposal, sections }\n  }];"
       },
       "id": "9337b900-c3f7-4780-b83b-abd5c647a320",
@@ -752,57 +664,9 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1088,
+        1072,
         -3568
       ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "is-update",
-              "leftValue": "={{ $json.body.grantId || $json.body.grant_id? true : false }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "79c1b409-9eec-4558-b730-488d006abe0e",
-      "name": "has body?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -2192,
-        -3568
-      ]
-    },
-    {
-      "parameters": {
-        "content": "## Fetches data from the db that can be used as a base data to generate proposal",
-        "height": 384,
-        "width": 1280
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -1360,
-        -3744
-      ],
-      "typeVersion": 1,
-      "id": "0ec51cf1-29a5-4c0a-9dd0-fd01ec00a010",
-      "name": "Sticky Note"
     },
     {
       "parameters": {
@@ -815,7 +679,7 @@
         "messages": {
           "values": [
             {
-              "content": "You are a Grant Proposal Writer. Your job is to take organizational narratives, supporting documents, budget data, and grant details to produce a\n  complete, professionally formatted, funder-aligned grant proposal.\n\n  You will receive a single JSON object with these fields:\n\n  - grantId, grant_title, grant_description — the grant opportunity details\n  - funder_name — the funder to align the proposal toward\n  - deadline — submission deadline\n  - amount — requested funding amount\n  - budget — object with: amount, narrative, line_items, category_totals (personnel/direct/indirect), admin_percent, markdown\n  - narratives — object keyed by section_id (e.g. \"mission\"), each with section_name and content (AI-customized for this grant)\n  - narrativeText — all narrative sections concatenated as text\n  - documents — object keyed by category, each with fileName, extractedText (organizational documents like program descriptions, case for support,\n  partnership letters, etc.)\n  - documentText — all document content concatenated as text\n  - sectionsReturned — number of narrative sections available\n  - totalDocuments, relevantDocuments — document counts\n\n  STRATEGY:\n  1. Read the grant_title, grant_description, and funder_name to understand what the funder cares about\n  2. Use narrativeText as the primary source for organizational mission, programs, and impact language\n  3. Use documentText as supporting evidence — pull specific facts, program details, statistics, quotes, and organizational capabilities from the extracted\n  documents\n  4. Use budget data to populate the budget section with realistic line items that sum to budget.amount and respect budget.admin_percent\n  5. Mirror the funder's language and priorities throughout — if the grant focuses on aging/dementia, emphasize senior programs; if youth development,\n  emphasize foster youth programs\n  6. Do NOT invent facts — only use information found in the narratives and documents provided\n  7. If budget.amount is 0 or not specified, create a realistic budget request based on the program scope described in the documents (suggest a reasonable\n  amount)\n\n  Output ONLY a valid JSON object with this exact structure — do NOT output any explanations, markdown outside the JSON, or additional text:\n\n  {\n    \"grant_proposal\": {\n      \"organization\": \"The Virtuous House\",\n      \"funder\": \"[Funder Name from funder_name]\",\n      \"project_title\": \"[Strong, funder-aligned project title you create based on grant_description and org programs]\",\n      \"generated_date\": \"[Current date in format: Month DD, YYYY]\",\n      \"sections\": {\n        \"1_executive_summary\": \"[Full Executive Summary — introduce the org, the problem, the proposed solution, and the ask. Use bullets and bold via\n  **text** for key points]\",\n        \"2_organizational_overview\": \"[Full org overview — draw from narratives and documents. Include At a Glance bullets: founded, mission, programs,\n  populations served, geography]\",\n        \"3_statement_of_need\": \"[Full statement of need — use statistics and evidence from documents. Explain the problem this grant will address, tied to\n  funder priorities]\",\n        \"4_program_design_and_activities\": \"[Full program design — one subsection per relevant program with bullets describing activities, participants, and\n   methods. Draw from document extractedText for specifics]\",\n        \"5_measurable_outcomes_and_evaluation\": \"[Full outcomes section — realistic targets per program + Evaluation Methodology bullets]\",\n        \"6_budget_summary_and_justification\": \"Category | Amount | % of Total\\nPersonnel ... | $XX,XXX | XX.X%\\nDirect Program Costs ... | $XX,XXX |\n  XX.X%\\nAdministrative ... | $XX,XXX | XX.X%\\nTOTAL | $XXX,XXX | 100%\\n\\nBudget Justification Highlights:\\n• [bullet for each major category explaining the\n   allocation]\",\n        \"7_organizational_capacity_and_fiscal_management\": \"[Full capacity section — draw from documents for org structure, leadership, track record.\n  Include Fiscal Management Practices bullets]\",\n        \"8_sustainability_plan\": \"[Full sustainability plan — strategies for continuing beyond the grant period, with specific targets]\",\n        \"9_conclusion_and_request\": \"[Full conclusion — restate alignment with funder, summarize impact, end with Request Summary bullets including amount\n  and project period]\"\n      },\n      \"request_amount\": \"[budget.amount or suggested amount if 0]\",\n      \"project_period\": \"[e.g. July 2026 – June 2027 (12 months)] — choose realistic period based on deadline\",\n      \"admin_overhead_percent\": \"[budget.admin_percent value]\"\n    }\n  }\n\n  Important rules:\n  - The entire proposal should have a minimum of 15000 characters\n  - Preserve ALL formatting INSIDE the string values: bullet styles (• or -), subheadings, bold via **text**, line breaks, pipe tables for budget\n  - Do NOT escape newlines or special characters inside the strings\n  - Create realistic budget line-item numbers that sum exactly to request_amount and respect admin_overhead_percent\n  - Create realistic targets, enrollment figures, and outcomes drawn from document content\n  - Make the project title strong, concise, and aligned with the funder's stated priorities\n  - Use the current date for generated_date\n  - Output ONLY the JSON — nothing else before or after",
+              "content": "You are a Grant Proposal Writer. Your job is to take organizational narratives, supporting documents, and grant details to produce a complete,\n  professionally formatted, funder-aligned grant proposal.\n\n    You will receive a single JSON object with these fields:\n\n    - grantId, grant_title, grant_description — the grant opportunity details\n    - funder_name — the funder to align the proposal toward\n    - deadline — submission deadline\n    - amount — requested funding amount\n    - narratives — object keyed by section_id (e.g. \"mission\"), each with section_name and content (AI-customized for this grant)\n    - narrativeText — all narrative sections concatenated as text\n    - documents — object keyed by category, each with fileName, extractedText (organizational documents like program descriptions, case for support,\n    partnership letters, etc.)\n    - documentText — all document content concatenated as text\n    - sectionsReturned — number of narrative sections available\n    - totalDocuments, relevantDocuments — document counts\n\n    STRATEGY:\n    1. Read the grant_title, grant_description, and funder_name to understand what the funder cares about\n    2. Use narrativeText as the primary source for organizational mission, programs, and impact language\n    3. Use documentText as supporting evidence — pull specific facts, program details, statistics, quotes, and organizational capabilities from the\n  extracted\n    documents\n    4. Generate a realistic budget breakdown based on the grant amount, the org's programs described in narratives and documents, and standard nonprofit\n  budget conventions (e.g., ~40% personnel, ~15% materials, ~3% admin). If amount is not specified, suggest a reasonable amount based on the program scope\n    5. Mirror the funder's language and priorities throughout — if the grant focuses on aging/dementia, emphasize senior programs; if youth development,\n    emphasize foster youth programs\n    6. Do NOT invent facts — only use information found in the narratives and documents provided. Budget allocations are the exception: generate realistic\n  line items based on the described programs and standard nonprofit cost structures\n\n    Output ONLY a valid JSON object with this exact structure — do NOT output any explanations, markdown outside the JSON, or additional text:\n\n    {\n      \"grant_proposal\": {\n        \"organization\": \"[Organization name extracted from narratives or documents]\",\n        \"funder\": \"[Funder Name from funder_name]\",\n        \"project_title\": \"[Strong, funder-aligned project title you create based on grant_description and org programs]\",\n        \"generated_date\": \"[Current date in format: Month DD, YYYY]\",\n        \"sections\": {\n          \"1_executive_summary\": \"[Full Executive Summary — introduce the org, the problem, the proposed solution, and the ask. Use bullets and bold via\n    **text** for key points]\",\n          \"2_organizational_overview\": \"[Full org overview — draw from narratives and documents. Include At a Glance bullets: founded, mission, programs,\n    populations served, geography]\",\n          \"3_statement_of_need\": \"[Full statement of need — use statistics and evidence from documents. Explain the problem this grant will address, tied to\n    funder priorities]\",\n          \"4_program_design_and_activities\": \"[Full program design — one subsection per relevant program with bullets describing activities, participants,\n  and\n     methods. Draw from document extractedText for specifics]\",\n          \"5_measurable_outcomes_and_evaluation\": \"[Full outcomes section — realistic targets per program + Evaluation Methodology bullets]\",\n          \"6_budget_summary_and_justification\": \"Category | Description | Amount | % of Total\\nProgram Staff & Coordination | Personnel costs for program\n  director, coordinators, and part-time staff | $XX,XXX | XX.X%\\nEducational Resources & Materials | Curriculum, books, technology tools, and learning\n  supplies | $XX,XXX | XX.X%\\nProgram Operations | Program delivery, recruitment, training, and retention activities | $XX,XXX | XX.X%\\nCollege & Career\n  Readiness Activities | College tours, career workshops, test prep, and scholarship guidance | $XX,XXX | XX.X%\\nCommunity Events & Family Engagement |\n  Summits, family nights, recognition ceremonies, and community outreach | $XX,XXX | XX.X%\\nEvaluation & Data Management | Program evaluation tools, data\n  tracking systems, and reporting | $XX,XXX | XX.X%\\nAdministrative & Indirect Costs | Essential administrative overhead to support program delivery |\n  $XX,XXX | XX.X%\\nTOTAL | | $XXX,XXX | 100%\\n\\nBudget Justification Highlights:\\n• [bullet for each major category explaining the allocation]\",\n          \"7_organizational_capacity_and_fiscal_management\": \"[Full capacity section — draw from documents for org structure, leadership, track record.\n    Include Fiscal Management Practices bullets]\",\n          \"8_sustainability_plan\": \"[Full sustainability plan — strategies for continuing beyond the grant period, with specific targets]\",\n          \"9_conclusion_and_request\": \"[Full conclusion — restate alignment with funder, summarize impact, end with Request Summary bullets including amount\n    and project period]\"\n        },\n        \"request_amount\": \"[amount from grant details, or a suggested realistic amount if not specified]\",\n        \"project_period\": \"[e.g. July 2026 – June 2027 (12 months)] — choose realistic period based on deadline\",\n        \"admin_overhead_percent\": \"[calculated admin/indirect cost percentage, typically 3-15% depending on funder norms]\"\n      }\n    }\n\n    Important rules:\n    - The entire proposal should have a minimum of 15000 characters\n    - Preserve ALL formatting INSIDE the string values: bullet styles (• or -), subheadings, bold via **text**, line breaks, pipe tables for budget\n    - Do NOT escape newlines or special characters inside the strings\n    - Generate realistic budget line items based on the org's programs described in narratives and documents. Line items should sum exactly to\n  request_amount and keep admin/indirect costs within standard funder expectations (typically 3-15%)\n    - Budget categories should follow the standard format from the Section VIII template: Program Staff & Coordination, Educational Resources & Materials,\n  Program Operations, College & Career Readiness Activities, Community Events & Family Engagement, Evaluation & Data Management, Administrative & Indirect\n  Costs\n    - Create realistic targets, enrollment figures, and outcomes drawn from document content\n    - Make the project title strong, concise, and aligned with the funder's stated priorities\n    - Use the current date for generated_date\n    - Output ONLY the JSON — nothing else before or after\n\n  ADDITIONAL WRITING REQUIREMENTS:\n\n  - Use **active voice** throughout the proposal. Write as if the organization is directly describing its work and impact (e.g., \"We provide workforce\n  training to youth aging out of foster care\"), rather than passive or third-party phrasing (e.g., avoid \"The organization provides...\" or \"Services are\n  provided...\").\n\n  - Keep language **clear, direct, and free of unnecessary jargon**. Write in a professional but accessible style so that non-technical reviewers can easily\n   understand the proposal.\n\n  - When introducing any **acronym**, always write out the full name the first time followed by the acronym in parentheses. Example:\n    International Business Machines (IBM).\n\n  - After introducing the acronym once, it may be used alone for the remainder of the proposal.\n\n  - Avoid introducing acronyms that are not necessary. Prefer plain language when possible.",
               "role": "system"
             },
             {
@@ -844,7 +708,7 @@
     },
     {
       "parameters": {
-        "jsCode": " const rawContent = $input.all()[0].json.message.content;\n  const combinedData = $('Step 5: Combine Content').first().json;\n\n  const funder = combinedData.funder_name;\n  const deadline = combinedData.deadline;\n  const grantId = combinedData.grantId;\n  const org_id = combinedData.org_id;\n\n  // Parse AI response\n  let proposal;\n  try {\n    let cleaned = rawContent.trim();\n    // Strip markdown code fences if present\n    cleaned = cleaned.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    proposal = JSON.parse(cleaned).grant_proposal;\n  } catch (e) {\n    throw new Error(\"Failed to parse AI response JSON: \" + e.message);\n  }\n\n  // Helper to extract markdown tables\n  function extractTable(text) {\n    const lines = text.split('\\n');\n    const tableLines = [];\n    const remainingLines = [];\n\n    lines.forEach(line => {\n      if (line.includes('|')) tableLines.push(line);\n      else remainingLines.push(line);\n    });\n\n    return {\n      content: remainingLines.join('\\n').trim() || null,\n      tabulation: tableLines.length ? tableLines.join('\\n') : null\n    };\n  }\n\n  const sections = [];\n  let sectionIndex = 1;\n\n  // =============================\n  // 1️⃣ TOP TITLE META SECTION\n  // =============================\n  sections.push({\n    title: funder + ' Proposal',\n    header1: null,\n    header2: null,\n    content: [\n      { chapter: 'Funder: ' + funder, sort_order: 1 },\n      { chapter: 'Deadline: ' + (deadline || 'Not specified'), sort_order: 2 },\n      { chapter: 'Grant: ' + (combinedData.grant_title || ''), sort_order: 3 },\n    ],\n    tabulation: null,\n    sort_order: sectionIndex++,\n  });\n\n  // =============================\n  // 2️⃣ BUILD ACTUAL PROPOSAL SECTIONS FIRST (store separately)\n  // =============================\n  const proposalSections = [];\n  const tocChapters = [];\n\n  let tocIndex = 1;\n\n  for (const [sectionKey, sectionContent] of Object.entries(proposal.sections)) {\n\n    let sortOrder = 1;\n    const header1Arr = [];\n    const header2Arr = [];\n    const contentArr = [];\n    const tabulationArr = [];\n\n    const sectionTitle = sectionKey\n      .replace(/^\\d+_/, '')\n      .replace(/_/g, ' ')\n      .replace(/\\b\\w/g, l => l.toUpperCase());\n\n    // Add to TOC (numbered dynamically)\n    tocChapters.push({\n      chapter: `${tocIndex}. ${sectionTitle}`,\n      sort_order: tocIndex\n    });\n\n    tocIndex++;\n\n    const { content: mainContent, tabulation } = extractTable(sectionContent);\n\n    if (mainContent) {\n      mainContent.split('\\n').forEach(line => {\n        const trimmed = line.trim();\n        if (!trimmed) return;\n\n        if (/:$/.test(trimmed)) {\n          header2Arr.push({ chapter: trimmed, sort_order: sortOrder++ });\n        } else {\n          contentArr.push({ chapter: trimmed, sort_order: sortOrder++ });\n        }\n      });\n    }\n\n    if (tabulation) {\n      tabulationArr.push({ chapter: tabulation, sort_order: sortOrder++ });\n    }\n\n    proposalSections.push({\n      title: sectionTitle,\n      header1: header1Arr.length ? header1Arr : null,\n      header2: header2Arr.length ? header2Arr : null,\n      content: contentArr.length ? contentArr : null,\n      tabulation: tabulationArr.length ? tabulationArr : null,\n    });\n  }\n\n  // =============================\n  // 3️⃣ INSERT TABLE OF CONTENTS\n  // =============================\n  sections.push({\n    title: 'Table of Contents',\n    header1: null,\n    header2: null,\n    content: tocChapters,\n    tabulation: null,\n    sort_order: sectionIndex++,\n  });\n\n  // =============================\n  // 4️⃣ APPEND REAL SECTIONS\n  // =============================\n  proposalSections.forEach(sec => {\n    sections.push({\n      ...sec,\n      sort_order: sectionIndex++,\n    });\n  });\n\n  // =============================\n  // FINAL RETURN\n  // =============================\n  return [{\n    json: {\n      proposalData: {\n        org_id: org_id,\n        grant_id: grantId,\n        title: funder + ' Proposal',\n        status: 'draft',\n        sections: sections,\n      },\n      proposalMarkdown: rawContent,\n      funder: funder,\n      deadline: deadline,\n      focus: combinedData.grant_description || '',\n      alignmentScore: null,\n      complianceScore: null,\n      warnings: [],\n    }\n  }];"
+        "jsCode": "const rawContent = $input.all()[0].json.message.content;\n  const combinedData = $('Step 5: Combine Content').first().json;\n\n  const funder = combinedData.funder_name;\n  const deadline = combinedData.deadline;\n  const grantId = combinedData.grantId;\n  const org_id = combinedData.org_id;\n\n  // Parse AI response\n  let proposal;\n  try {\n    let cleaned = rawContent.trim();\n    cleaned = cleaned.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    proposal = JSON.parse(cleaned).grant_proposal;\n  } catch (e) {\n    throw new Error(\"Failed to parse AI response JSON: \" + e.message);\n  }\n\n  const orgName = proposal.organization || 'Organization';\n  const grantTitle = combinedData.grant_title || proposal.project_title || 'Grant Proposal';\n\n  // Helper to extract markdown tables\n  function extractTable(text) {\n    const lines = text.split('\\n');\n    const tableLines = [];\n    const remainingLines = [];\n\n    lines.forEach(line => {\n      if (line.includes('|')) tableLines.push(line);\n      else remainingLines.push(line);\n    });\n\n    return {\n      content: remainingLines.join('\\n').trim() || null,\n      tabulation: tableLines.length ? tableLines.join('\\n') : null\n    };\n  }\n\n  // Helper to detect if a line is a header\n  function isHeader2(line) {\n    if (/^\\*\\*.+:\\*\\*$/.test(line)) return true;\n    if (line.length < 60 && /:$/.test(line)) return true;\n    return false;\n  }\n\n  const sections = [];\n  let sectionIndex = 1;\n\n  // =============================\n  // 1️⃣ TOP TITLE META SECTION\n  // =============================\n  sections.push({\n    title: orgName + ' Proposal' ,\n    header1: null,\n    header2: null,\n    content: [\n    ...(funder ? [{ chapter: 'Funder: ' + funder, sort_order: 1 }] : []),\n    { chapter: 'Deadline: ' + (deadline || 'Not specified'), sort_order: 2 },\n    { chapter: 'Grant: ' + grantTitle, sort_order: 3 },\n  ],\n    tabulation: null,\n    sort_order: sectionIndex++,\n  });\n\n  // =============================\n  // 2️⃣ BUILD ACTUAL PROPOSAL SECTIONS FIRST\n  // =============================\n  const proposalSections = [];\n  const tocChapters = [];\n\n  let tocIndex = 1;\n\n  for (const [sectionKey, sectionContent] of Object.entries(proposal.sections)) {\n    // Skip duplicate sections\n    if (/_duplicate/.test(sectionKey)) continue;\n\n    let sortOrder = 1;\n    const header1Arr = [];\n    const header2Arr = [];\n    const contentArr = [];\n    const tabulationArr = [];\n\n    const sectionTitle = sectionKey\n      .replace(/^\\d+_/, '')\n      .replace(/_/g, ' ')\n      .replace(/\\b\\w/g, l => l.toUpperCase());\n\n    tocChapters.push({\n      chapter: `${tocIndex}. ${sectionTitle}`,\n      sort_order: tocIndex\n    });\n\n    tocIndex++;\n\n    const { content: mainContent, tabulation } = extractTable(sectionContent);\n\n    if (mainContent) {\n      mainContent.split('\\n').forEach(line => {\n        const trimmed = line.trim();\n        if (!trimmed) return;\n\n        if (isHeader2(trimmed)) {\n          header2Arr.push({ chapter: trimmed, sort_order: sortOrder++ });\n        } else {\n          contentArr.push({ chapter: trimmed, sort_order: sortOrder++ });\n        }\n      });\n    }\n\n    if (tabulation) {\n      tabulationArr.push({ chapter: tabulation, sort_order: sortOrder++ });\n    }\n\n    proposalSections.push({\n      title: sectionTitle,\n      header1: header1Arr.length ? header1Arr : null,\n      header2: header2Arr.length ? header2Arr : null,\n      content: contentArr.length ? contentArr : null,\n      tabulation: tabulationArr.length ? tabulationArr : null,\n    });\n  }\n\n  // =============================\n  // 3️⃣ INSERT TABLE OF CONTENTS\n  // =============================\n  sections.push({\n    title: 'Table of Contents',\n    header1: null,\n    header2: null,\n    content: tocChapters,\n    tabulation: null,\n    sort_order: sectionIndex++,\n  });\n\n  // =============================\n  // 4️⃣ APPEND REAL SECTIONS\n  // =============================\n  proposalSections.forEach(sec => {\n    sections.push({\n      ...sec,\n      sort_order: sectionIndex++,\n    });\n  });\n\n  // =============================\n  // FINAL RETURN\n  // =============================\n  return [{\n    json: {\n      proposalData: {\n        org_id: org_id,\n        grant_id: grantId,\n        title: orgName,\n        status: 'draft',\n        sections: sections,\n      },\n      proposalMarkdown: rawContent,\n      funder: funder,\n      deadline: deadline,\n      focus: combinedData.grant_description || '',\n      alignmentScore: null,\n      complianceScore: null,\n      warnings: [],\n    }\n  }];"
       },
       "id": "e8f8e1fa-f365-4a44-b140-e64889895c9e",
       "name": "Format Proposal",
@@ -869,7 +733,7 @@
       "typeVersion": 1.1,
       "position": [
         1616,
-        -3552
+        -3568
       ],
       "id": "af94098c-d8e2-4e27-ba57-1b74b519f6c1"
     },
@@ -885,7 +749,7 @@
           "conditions": [
             {
               "id": "is-update",
-              "leftValue": "={{$json.eligibility.score === \"RED\"}}",
+              "leftValue": "={{$json.body?.grantData?.eligibility?.score === \"RED\" || $json.eligibility?.score === \"RED\"}}",
               "rightValue": false,
               "operator": {
                 "type": "boolean",
@@ -902,8 +766,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -1648,
-        -3584
+        -2048,
+        -3600
       ]
     },
     {
@@ -1043,8 +907,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1232,
-        -3552
+        1248,
+        -3568
       ],
       "id": "e525f33d-e92d-46ec-affc-dbf566302025",
       "name": "HTTP Request7",
@@ -1088,7 +952,7 @@
       "typeVersion": 4.3,
       "position": [
         1408,
-        -3552
+        -3568
       ],
       "id": "1c8775d4-9442-4e51-94dc-94eca81d9305",
       "name": "HTTP Request8",
@@ -1355,7 +1219,7 @@
       "main": [
         [
           {
-            "node": "has body?",
+            "node": "is grant eligible?",
             "type": "main",
             "index": 0
           }
@@ -1395,39 +1259,6 @@
         ]
       ]
     },
-    "Merge Budget Data": {
-      "main": [
-        [
-          {
-            "node": "Step 3: Get Narratives",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call Budget Generator": {
-      "main": [
-        [
-          {
-            "node": "Merge Budget Data",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch Eligible Grants": {
-      "main": [
-        [
-          {
-            "node": "is grant eligible?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "HTTP Request": {
       "main": [
         [
@@ -1439,40 +1270,11 @@
         ]
       ]
     },
-    "Fetch Eligible Grants2": {
-      "main": [
-        [
-          {
-            "node": "is grant eligible?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Return Response1": {
       "main": [
         [
           {
             "node": "HTTP Request7",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "has body?": {
-      "main": [
-        [
-          {
-            "node": "Fetch Eligible Grants2",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Fetch Eligible Grants",
             "type": "main",
             "index": 0
           }
@@ -1523,7 +1325,7 @@
       "main": [
         [
           {
-            "node": "Call Budget Generator",
+            "node": "Step 3: Get Narratives",
             "type": "main",
             "index": 0
           }
@@ -1580,7 +1382,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "2ad6ce9d-1415-4ccd-b22a-56916ca93b88",
+  "versionId": "924ae0dd-fc3f-4622-af89-078fe5908db1",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
