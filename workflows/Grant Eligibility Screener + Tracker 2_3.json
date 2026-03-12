@@ -883,8 +883,8 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.4,
       "position": [
-        -3504,
-        -8416
+        -2976,
+        -8032
       ],
       "id": "e65fd6f5-bdd7-49cd-8649-227a12681ddd",
       "name": "Send a message",
@@ -899,57 +899,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://152.53.91.134:3000/api/webhook",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n  action: \"log_activity\",\n  data: {\n    org_id: $json.grants[0].org_id || null,\n    grant_id: $json.grants[0].id || null,\n    action: \"screening_completed\",\n    details: {\n      score: $json.grants[0].eligibility?.score || null,\n      confidence: $json.grants[0].eligibility?.confidence || null,\n      summary: $json.grants[0].screening_notes || null,\n      grant_name: $json.grants[0].title || null,\n      funder: $json.grants[0].funder_name || null,\n      workflow: \"WF2_eligibility_screener\"\n    }\n  }\n}) }}\n",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -3728,
-        -8624
-      ],
-      "id": "93f8e218-a8e1-4918-9505-331b466485f8",
-      "name": "log activity",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, message: \"Screening phase for grant: '\" + $json.body.grantData.title + \"' has started\" }) }}",
-        "options": {
-          "responseCode": 200
-        }
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        -6192,
-        -8240
-      ],
-      "id": "02e72b7f-7be0-41a0-b0e7-7a9e3830caf2",
-      "name": "Notify Screening Started"
-    },
-    {
-      "parameters": {
-        "method": "POST",
         "url": "https://n8n.thebrownmine.com/webhook/generate-proposal",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify($json) }}",
+        "body": "={{ JSON.stringify({\n    grant_id: $('update grant').first().json.id,\n    grantId: $('update grant').first().json.id,\n    grant_name: $('update grant').first().json.title,\n    org_id: $('update grant').first().json.org_id,\n    workflow_id: $('update grant1').first().json.id || '',\n    grantData: $('update grant').first().json\n  }) }}",
         "options": {
           "allowUnauthorizedCerts": true,
           "timeout": 12000
@@ -1250,7 +1206,7 @@
       "main": [
         [
           {
-            "node": "Notify Screening Started",
+            "node": "Has Pre-Extracted Data?",
             "type": "main",
             "index": 0
           }
@@ -1399,22 +1355,6 @@
         ]
       ]
     },
-    "log activity": {
-      "main": [
-        []
-      ]
-    },
-    "Notify Screening Started": {
-      "main": [
-        [
-          {
-            "node": "Has Pre-Extracted Data?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Notify Screening Started1": {
       "main": [
         [
@@ -1465,7 +1405,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "fd7e0008-2a1f-4dd9-a485-3ec93bf12847",
+  "versionId": "71131c8d-5a9b-4f15-8d54-f6dcff9087bd",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
