@@ -946,14 +946,29 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://152.53.91.134:3000/api/webhook",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications",
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ action: \"create_notification\", data: { org_id: $('Webhook Trigger1').first().json.body.org_id, grant_id: $('Webhook Trigger1').first().json.body.grantId || $('Webhook Trigger1').first().json.body.grant_id, type: \"grant_not_eligible\", title: \"Grant '\" + ($('Webhook Trigger1').first().json.body.grantData?.title || $('Webhook Trigger1').first().json.body.grant_name || 'Unknown') + \"' is not eligible\", message: $json.rejectionReason || \"Grant did not pass eligibility screening\" } }) }}",
-        "options": {}
+        "body": "={{ JSON.stringify({ org_id: $(\"Webhook Trigger1\").first().json.body.org_id, grant_id: $(\"Webhook Trigger1\").first().json.body.grantId || $(\"Webhook Trigger1\").first().json.body.grant_id, type: \"grant_not_eligible\", title: \"Grant \\\"\" + ($(\"Webhook Trigger1\").first().json.body.grantData?.title || $(\"Webhook Trigger1\").first().json.body.grant_name || \"Unknown\") + \"\\\" is not eligible\", message: $json.rejectionReason || \"Grant did not pass eligibility screening (RED score)\" }) }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -962,13 +977,7 @@
         -8048
       ],
       "id": "0dfe0e8a-feea-475f-9195-b50fa7546e45",
-      "name": "Notify Not Eligible2",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
+      "name": "Notify Not Eligible"
     },
     {
       "parameters": {
@@ -1057,6 +1066,80 @@
           "name": "x-webhook-secret"
         }
       }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ org_id: $json.body.org_id, grant_id: $json.body.grantId || $json.body.grant_id, type: \"screening_started\", title: \"Screening started for \\\"\" + ($json.body.grantData?.title || $json.body.grant_name || \"Unknown\") + \"\\\"\" }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -6240,
+        -8240
+      ],
+      "id": "notif-screening-started-001",
+      "name": "Notify Screening Started",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ org_id: $json.org_id, grant_id: $json.grant_id, type: \"screening_completed\", title: \"Screening completed for \\\"\" + ($json.title || \"Unknown\") + \"\\\"\", message: \"Score: \" + ($json.eligibility?.score || \"N/A\") + \" | Confidence: \" + ($json.eligibility?.confidence || \"N/A\") + \"% | \" + ($json.screening_notes || \"\") }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -3488,
+        -8816
+      ],
+      "id": "notif-screening-completed-001",
+      "name": "Notify Screening Completed",
+      "continueOnFail": true
     }
   ],
   "pinData": {},
@@ -1206,7 +1289,7 @@
       "main": [
         [
           {
-            "node": "Has Pre-Extracted Data?",
+            "node": "Notify Screening Started",
             "type": "main",
             "index": 0
           }
@@ -1370,7 +1453,7 @@
       "main": [
         [
           {
-            "node": "Notify Not Eligible2",
+            "node": "Notify Not Eligible",
             "type": "main",
             "index": 0
           }
@@ -1389,6 +1472,28 @@
       ]
     },
     "update grant1": {
+      "main": [
+        [
+          {
+            "node": "Notify Screening Completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Screening Started": {
+      "main": [
+        [
+          {
+            "node": "Has Pre-Extracted Data?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Screening Completed": {
       "main": [
         [
           {
