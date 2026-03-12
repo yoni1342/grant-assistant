@@ -83,7 +83,7 @@
       "credentials": {
         "openAiApi": {
           "id": "XbaNaQyEtQBSUnml",
-          "name": "OpenAi account 2"
+          "name": "Brownmine"
         }
       },
       "disabled": true
@@ -123,58 +123,29 @@
         "responseMode": "lastNode",
         "options": {}
       },
-      "id": "7d9698b3-8bf0-4c39-8436-ebc653fe412e",
-      "name": "Narrative Request",
+      "id": "682abd8c-21ef-4e22-848f-2145ab653e8d",
+      "name": "Narrative Request1",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        1424,
-        352
+        1408,
+        880
       ],
       "webhookId": "customize-narrative",
+      "disabled": true,
       "notes": "POST: { sections: ['mission_short', 'program_youth'], grantContext: { focus: 'racial equity', funderName: 'XYZ Foundation', tone: 'data-driven' } }"
     },
     {
       "parameters": {
-        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search=%5BNarrative%5D&per_page=100",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {}
-          ]
-        },
-        "options": {}
+        "jsCode": "const planeResponse = $('Get Narrative Library3').first().json;\n  const requestedSections = $('Narrative Request1').first().json.body.sections;\n  const grantContext = $('Narrative Request1').first().json.body.grantContext;\n\n  // Parse all [Narrative] issues from Plane\n  const allNarratives = [];\n  const issues = planeResponse.results || [];\n\n  for (const issue of issues) {\n    const name = issue.name || '';\n    const match = name.match(/^\\[Narrative\\]\\s*(\\w+)\\s*-\\s*(.+)$/i);\n\n    if (match) {\n      const sectionId = match[1].toLowerCase();\n      const sectionName = match[2].trim();\n\n      const desc = issue.description_html || '';\n      let baseContent = '';\n      let wordLimit = 250;\n\n      const contentMatch = desc.match(/<p><strong>Base Content:<\\/strong><\\/p>([\\s\\S]*?)(?:<p><strong>Word Limit:|$)/i);\n      if (contentMatch) {\n        baseContent = contentMatch[1].replace(/<[^>]+>/g,'').replace(/\\s+/g,'').trim();\n      }\n\n      const limitMatch = desc.match(/Word Limit:<\\/strong>\\s*(\\d+)/i);\n      if (limitMatch) {\n        wordLimit = parseInt(limitMatch[1], 10);\n      }\n\n      allNarratives.push({\n        section_id: sectionId,\n        section_name: sectionName,\n        base_content: baseContent,\n        word_limit: wordLimit\n      });\n    }\n  }\n\n  // Match requested sections\n  const matched = [];\n  const missing = [];\n\n  for (const sectionId of requestedSections) {\n    const found = allNarratives.find(n => n.section_id === sectionId.toLowerCase());\n    if (found) {\n      matched.push({\n        section_id: found.section_id,\n        section_name: found.section_name,\n        base_content: found.base_content,\n        word_limit: found.word_limit,\n        grantContext: grantContext,\n        is_fallback: false\n      });\n    } else {\n      missing.push(sectionId);\n    }\n  }\n\n  // GRACEFUL FALLBACK: Return valid items the workflow can process\n  if (matched.length === 0) {\n    // Return a fallback item with the same structure so workflow continues\n    const availableIds = allNarratives.map(n => n.section_id).sort();\n\n    return [{\n      json: {\n        section_id: 'error_no_match',\n        section_name: 'Section Not Found',\n        base_content: `The requested sections (${requestedSections.join(', ')}) were not found in the\n  narrative library. Available sections: ${availableIds.join(', ')}`,\n        word_limit: 500,\n        grantContext: grantContext,\n        is_fallback: true,\n        missing_sections: requestedSections,\n        available_sections: availableIds\n      }\n    }];\n  }\n\n  // Return matched sections with any missing ones noted\n  return matched.map(m => ({\n    json: {\n      ...m,\n      missing_sections: missing.length > 0 ? missing : undefined\n    }\n  }));"
       },
-      "id": "3e8a2534-702c-49b1-bd4e-67143516eb1b",
-      "name": "Get Narrative Library1",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1648,
-        352
-      ],
-      "notesInFlow": true,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
-      },
-      "notes": "Fetch narrative sections from Plane [Narrative] issues"
-    },
-    {
-      "parameters": {
-        "jsCode": "const planeResponse = $('Get Narrative Library1').first().json;\n  const requestedSections = $('Narrative Request').first().json.body.sections;\n  const grantContext = $('Narrative Request').first().json.body.grantContext;\n\n  // Parse all [Narrative] issues from Plane\n  const allNarratives = [];\n  const issues = planeResponse.results || [];\n\n  for (const issue of issues) {\n    const name = issue.name || '';\n    const match = name.match(/^\\[Narrative\\]\\s*(\\w+)\\s*-\\s*(.+)$/i);\n\n    if (match) {\n      const sectionId = match[1].toLowerCase();\n      const sectionName = match[2].trim();\n\n      const desc = issue.description_html || '';\n      let baseContent = '';\n      let wordLimit = 250;\n\n      const contentMatch = desc.match(/<p><strong>Base Content:<\\/strong><\\/p>([\\s\\S]*?)(?:<p><strong>Word Limit:|$)/i);\n      if (contentMatch) {\n        baseContent = contentMatch[1].replace(/<[^>]+>/g,'').replace(/\\s+/g,'').trim();\n      }\n\n      const limitMatch = desc.match(/Word Limit:<\\/strong>\\s*(\\d+)/i);\n      if (limitMatch) {\n        wordLimit = parseInt(limitMatch[1], 10);\n      }\n\n      allNarratives.push({\n        section_id: sectionId,\n        section_name: sectionName,\n        base_content: baseContent,\n        word_limit: wordLimit\n      });\n    }\n  }\n\n  // Match requested sections\n  const matched = [];\n  const missing = [];\n\n  for (const sectionId of requestedSections) {\n    const found = allNarratives.find(n => n.section_id === sectionId.toLowerCase());\n    if (found) {\n      matched.push({\n        section_id: found.section_id,\n        section_name: found.section_name,\n        base_content: found.base_content,\n        word_limit: found.word_limit,\n        grantContext: grantContext,\n        is_fallback: false\n      });\n    } else {\n      missing.push(sectionId);\n    }\n  }\n\n  // GRACEFUL FALLBACK: Return valid items the workflow can process\n  if (matched.length === 0) {\n    // Return a fallback item with the same structure so workflow continues\n    const availableIds = allNarratives.map(n => n.section_id).sort();\n\n    return [{\n      json: {\n        section_id: 'error_no_match',\n        section_name: 'Section Not Found',\n        base_content: `The requested sections (${requestedSections.join(', ')}) were not found in the\n  narrative library. Available sections: ${availableIds.join(', ')}`,\n        word_limit: 500,\n        grantContext: grantContext,\n        is_fallback: true,\n        missing_sections: requestedSections,\n        available_sections: availableIds\n      }\n    }];\n  }\n\n  // Return matched sections with any missing ones noted\n  return matched.map(m => ({\n    json: {\n      ...m,\n      missing_sections: missing.length > 0 ? missing : undefined\n    }\n  }));"
-      },
-      "id": "3ddaaebe-9758-441d-af39-f73463afe820",
-      "name": "Match Sections1",
+      "id": "97d4f757-6be3-4550-b745-b1801799f8c6",
+      "name": "Match Sections2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1872,
-        352
+        1856,
+        880
       ]
     },
     {
@@ -200,45 +171,227 @@
           "temperature": 0.4
         }
       },
-      "id": "67b9d052-d525-4730-9421-57680f1c0202",
-      "name": "AI Customize1",
+      "id": "ac1cc40a-0470-48e2-852d-5418b83f8138",
+      "name": "AI Customize2",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        2096,
-        352
+        2080,
+        880
       ],
       "credentials": {
         "openAiApi": {
           "id": "XbaNaQyEtQBSUnml",
-          "name": "OpenAi account 2"
+          "name": "Brownmine"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Format each customized section\nconst sectionInfo = $('Match Sections1').item.json;\nconst aiResponse = $input.first().json;\n\nconst customizedText = aiResponse.message?.content || aiResponse.text || '';\n\nreturn [{\n  json: {\n    section_id: sectionInfo.section_id,\n    section_name: sectionInfo.section_name,\n    customized_content: customizedText.trim(),\n    word_count: customizedText.trim().split(/\\s+/).length,\n    word_limit: sectionInfo.word_limit,\n    grant_focus: sectionInfo.grantContext.focus || 'general'\n  }\n}];"
+        "jsCode": "// Format each customized section\nconst sectionInfo = $('Match Sections2').item.json;\nconst aiResponse = $input.first().json;\n\nconst customizedText = aiResponse.message?.content || aiResponse.text || '';\n\nreturn [{\n  json: {\n    section_id: sectionInfo.section_id,\n    section_name: sectionInfo.section_name,\n    customized_content: customizedText.trim(),\n    word_count: customizedText.trim().split(/\\s+/).length,\n    word_limit: sectionInfo.word_limit,\n    grant_focus: sectionInfo.grantContext.focus || 'general'\n  }\n}];"
       },
-      "id": "1d870d0c-1337-4de1-9c94-3de9ae06ef5e",
-      "name": "Format Section1",
+      "id": "0d64afd6-6b78-4b9f-8400-2f1a4e7bf8ff",
+      "name": "Format Section2",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2448,
-        352
+        2432,
+        880
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Combine all customized sections into final response\nconst allSections = $input.all();\nconst request = $('Narrative Request').first().json.body;\n\nconst narratives = {};\nfor (const item of allSections) {\n  const s = item.json;\n  narratives[s.section_id] = {\n    section_name: s.section_name,\n    content: s.customized_content,\n    word_count: s.word_count,\n    word_limit: s.word_limit\n  };\n}\n\nreturn [{\n  json: {\n    success: true,\n    sectionsReturned: Object.keys(narratives).length,\n    grantContext: request.grantContext || {},\n    narratives: narratives,\n    generatedAt: new Date().toISOString()\n  }\n}];"
+        "jsCode": "// Combine all customized sections into final response\nconst allSections = $input.all();\nconst request = $('Narrative Request1').first().json.body;\n\nconst narratives = {};\nfor (const item of allSections) {\n  const s = item.json;\n  narratives[s.section_id] = {\n    section_name: s.section_name,\n    content: s.customized_content,\n    word_count: s.word_count,\n    word_limit: s.word_limit\n  };\n}\n\nreturn [{\n  json: {\n    success: true,\n    sectionsReturned: Object.keys(narratives).length,\n    grantContext: request.grantContext || {},\n    narratives: narratives,\n    generatedAt: new Date().toISOString()\n  }\n}];"
       },
-      "id": "bb9fa1a7-b9ea-4c39-a53d-beed3ba09a6b",
+      "id": "e0125497-6fc9-4275-876d-7da5001d5bbb",
+      "name": "Build Response2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2656,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/narratives?select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cfb99397-c0a3-410e-835d-a6986aa0721b",
+      "name": "Get Narrative Library3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1632,
+        864
+      ],
+      "notesInFlow": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fetch narrative sections from Plane [Narrative] issues"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customize-narrative",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "691b98ba-57fc-4ea8-a361-adfea27ed723",
+      "name": "Narrative Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        576
+      ],
+      "webhookId": "customize-narrative"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract grant context from webhook body\nconst raw = $('Narrative Request').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grantId || payload.grant_id;\nconst org_id = payload.org_id;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    grant_title: payload.grant_title || 'Not specified',\n    grant_description: payload.grant_description || 'Not specified',\n    funder_name: payload.funder_name || 'Not specified',\n    deadline: payload.deadline || 'Not specified',\n    amount: payload.amount || 'Not specified',\n  }\n}];"
+      },
+      "id": "a18a1bae-9ba1-48b7-b4f5-f24023ac4100",
+      "name": "Extract Grant Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/narratives?org_id=eq.{{ $json.org_id }}&select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9a4bc429-e1db-41ee-8c80-bae8c211d2c8",
+      "name": "Get Narratives",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1824,
+        576
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      },
+      "notes": "Fetch all narratives for the org from Supabase"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter narratives for relevance to the grant, then pair with grant context\nconst narratives = $('Get Narratives').all().map(item => item.json);\nconst gc = $('Extract Grant Context').first().json;\n\nif (!narratives || narratives.length === 0 || !narratives[0].id) {\n  return [{\n    json: {\n      error: true,\n      message: 'No narratives found for this org',\n    }\n  }];\n}\n\n// Build a searchable string from grant context for relevance matching\nconst grantText = [\n  gc.grant_title,\n  gc.grant_description,\n  gc.funder_name,\n].join(' ').toLowerCase();\n\n// Keywords that map narrative categories/content to grant topics\nconst relevanceKeywords = {\n  mission: ['mission', 'organization', 'nonprofit', 'community', 'overview', 'about'],\n  impact: ['impact', 'outcomes', 'results', 'data', 'metrics', 'evaluation', 'measure'],\n  methods: ['methods', 'approach', 'strategy', 'program', 'activities', 'services', 'intervention'],\n  evaluation: ['evaluation', 'assessment', 'measure', 'outcomes', 'data', 'metrics'],\n  youth: ['youth', 'foster', 'children', 'young', 'adolescent', 'teen', 'aging out'],\n  seniors: ['senior', 'aging', 'elderly', 'older adults', 'long-term care', 'alzheimer', 'dementia'],\n  equity: ['equity', 'racial', 'diversity', 'inclusion', 'african american', 'disparit'],\n  workforce: ['workforce', 'employment', 'job', 'career', 'professional', 'work'],\n  mental_health: ['mental health', 'trauma', 'healing', 'wellness', 'behavioral'],\n  community: ['community', 'volunteer', 'partner', 'collaboration', 'local'],\n};\n\n// Score each narrative for relevance\nconst scored = narratives.map(n => {\n  const narrativeText = [\n    n.title || '',\n    n.category || '',\n    n.content || '',\n    (n.tags || []).join(' '),\n  ].join(' ').toLowerCase();\n\n  let score = 0;\n\n  // Always include mission/overview narratives (score boost)\n  if ((n.category || '').toLowerCase() === 'mission' || (n.title || '').toLowerCase().includes('mission')) {\n    score += 3;\n  }\n\n  // Check if narrative category keywords appear in grant text\n  for (const [category, keywords] of Object.entries(relevanceKeywords)) {\n    const narrativeMatchesCategory = keywords.some(kw => narrativeText.includes(kw));\n    const grantMatchesCategory = keywords.some(kw => grantText.includes(kw));\n    if (narrativeMatchesCategory && grantMatchesCategory) {\n      score += 2;\n    }\n  }\n\n  // Direct word overlap between narrative title/category and grant text\n  const titleWords = (n.title || '').toLowerCase().split(/\\s+/);\n  for (const word of titleWords) {\n    if (word.length > 3 && grantText.includes(word)) {\n      score += 1;\n    }\n  }\n\n  return { narrative: n, score };\n});\n\n// Filter: keep narratives with score > 0, sorted by relevance\nlet relevant = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);\n\n// Fallback: if nothing matched, use mission + methods + impact narratives\nif (relevant.length === 0) {\n  const fallbackCategories = ['mission', 'methods', 'impact'];\n  relevant = scored.filter(s => {\n    const cat = (s.narrative.category || '').toLowerCase();\n    return fallbackCategories.includes(cat);\n  });\n}\n\n// Still nothing? Use all narratives\nif (relevant.length === 0) {\n  relevant = scored;\n}\n\nreturn relevant.map(s => ({\n  json: {\n    narrative_id: s.narrative.id,\n    section_id: s.narrative.category || 'general',\n    section_name: s.narrative.title,\n    base_content: s.narrative.content,\n    word_limit: s.narrative.metadata?.word_count || 250,\n    relevance_score: s.score,\n    grantContext: gc,\n  }\n}));"
+      },
+      "id": "1d9bce19-3caf-4ee2-a9cb-d09b7a8e4b9c",
+      "name": "Prepare Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Writer for The Virtuous House, a community-based nonprofit serving:\n- African American youth aging out of foster care: clothing, essentials, workforce readiness, transition support\n- Seniors in long-term care facilities: dignity through engagement and essentials\n\nKEY FACTS (use these, don't invent):\n- Majority of foster youth served are African American\n- Serves youth aging out of foster care and seniors in long-term care\n- Programs: The Virtuous Closet (clothing/essentials), Senior Dignity Initiative, Rural Youth Camp (PA - future)\n- Uses trauma-informed, dignity-centered, culturally responsive approach\n- Boutique-style experience where clients choose their own items\n- Provides interview clothing, hygiene kits, school supplies, emergency placement kits\n- Long-term vision: Rural youth development camp in Pennsylvania\n\nCUSTOMIZATION RULES:\n- 'racial equity' focus → emphasize African American youth, systemic barriers, culturally responsive practices\n- 'workforce' focus → emphasize interview clothing, professional attire, job readiness, workforce-ready capsules\n- 'mental health' focus → emphasize trauma-informed care, dignity, healing, restorative environments\n- 'seniors/aging' focus → emphasize Senior Dignity Initiative, long-term care partnerships, quality of life\n- 'youth development' focus → emphasize rural camp initiative, nature-based healing, mentorship\n- 'community' focus → emphasize volunteers, local partnerships, community impact\n\nOUTPUT: Only the rewritten narrative text. No explanations. Stay within word limit.",
+              "role": "system"
+            },
+            {
+              "content": "=SECTION: {{ $json.section_name }}\n\nBASE NARRATIVE:\n{{ $json.base_content }}\n\nGRANT CONTEXT:\n- Grant Title: {{ $json.grantContext.grant_title }}\n- Funder: {{ $json.grantContext.funder_name }}\n- Description: {{ $json.grantContext.grant_description }}\n- Deadline: {{ $json.grantContext.deadline }}\n- Amount: {{ $json.grantContext.amount }}\n\nWORD LIMIT: {{ $json.word_limit }} words\n\nRewrite the base narrative to align with this grant's focus and funder priorities."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "da560647-27f7-4776-bed5-ced646036e0a",
+      "name": "AI Customize1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2240,
+        576
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "Brownmine"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format each customized narrative\nconst sectionInfo = $('Prepare Context').item.json;\nconst aiResponse = $input.first().json;\n\nconst customizedText = aiResponse.message?.content || aiResponse.text || '';\n\nreturn [{\n  json: {\n    section_id: sectionInfo.section_id,\n    section_name: sectionInfo.section_name,\n    customized_content: customizedText.trim(),\n    word_count: customizedText.trim().split(/\\s+/).length,\n    word_limit: sectionInfo.word_limit,\n  }\n}];"
+      },
+      "id": "e7546642-3028-4fa5-9c5e-09f301a34328",
+      "name": "Format Section1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2544,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all customized narratives into final response\nconst allSections = $input.all();\nconst grantContext = $('Extract Grant Context').first().json;\n\nconst narratives = {};\nfor (const item of allSections) {\n  const s = item.json;\n  narratives[s.section_id] = {\n    section_name: s.section_name,\n    content: s.customized_content,\n    word_count: s.word_count,\n    word_limit: s.word_limit\n  };\n}\n\nreturn [{\n  json: {\n    success: true,\n    grant_id: grantContext.grant_id,\n    org_id: grantContext.org_id,\n    funder_name: grantContext.funder_name,\n    sectionsReturned: Object.keys(narratives).length,\n    narratives,\n    generatedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "83832da5-d50b-4af8-8135-e77b9ea8fd31",
       "name": "Build Response1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2672,
-        352
+        2720,
+        576
       ]
     }
   ],
@@ -288,29 +441,95 @@
         ]
       ]
     },
+    "Narrative Request1": {
+      "main": [
+        [
+          {
+            "node": "Get Narrative Library3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Sections2": {
+      "main": [
+        [
+          {
+            "node": "AI Customize2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Customize2": {
+      "main": [
+        [
+          {
+            "node": "Format Section2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Section2": {
+      "main": [
+        [
+          {
+            "node": "Build Response2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Narrative Library3": {
+      "main": [
+        [
+          {
+            "node": "Match Sections2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Narrative Request": {
       "main": [
         [
           {
-            "node": "Get Narrative Library1",
+            "node": "Extract Grant Context",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Narrative Library1": {
+    "Extract Grant Context": {
       "main": [
         [
           {
-            "node": "Match Sections1",
+            "node": "Get Narratives",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Match Sections1": {
+    "Get Narratives": {
+      "main": [
+        [
+          {
+            "node": "Prepare Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Context": {
       "main": [
         [
           {
@@ -349,7 +568,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "4e1998e1-750c-47d0-8ede-ff0821ac2543",
+  "versionId": "9dca9ebc-b51e-4596-a2cb-71ea90dcab7a",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"

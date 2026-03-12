@@ -162,10 +162,10 @@ export default function DiscoveryPage() {
     setAddedGrants(new Set());
 
     try {
-      const response = await fetch("/api/trigger-discovery", {
+      const response = await fetch("/api/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ searchQuery: query }),
+        body: JSON.stringify({ service: "grant-discovery", searchQuery: query }),
       });
 
       const text = await response.text();
@@ -238,10 +238,10 @@ export default function DiscoveryPage() {
     setAddingToPipeline(grantKey);
 
     try {
-      const response = await fetch("/api/add-to-pipeline", {
+      const response = await fetch("/api/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(grant),
+        body: JSON.stringify({ service: "grant-screening", ...grant }),
       });
 
       const text = await response.text();

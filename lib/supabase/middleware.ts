@@ -57,7 +57,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // --- Authenticated: redirect away from login/signup/landing ---
-  if (pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/signup")) {
+  if (pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname === "/") {
     return NextResponse.redirect(getRedirectUrl(request, "/dashboard"));
   }
 
