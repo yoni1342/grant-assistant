@@ -337,6 +337,38 @@ export async function updateProposalSections(
   return { success: true, error: null }
 }
 
+export async function deleteProposals(proposalIds: string[]) {
+  const supabase = await createClient()
+  const { orgId, error: orgError } = await getUserOrgId(supabase)
+  if (!orgId) {
+    return { error: orgError || 'Not authenticated' }
+  }
+
+  // Delete proposal sections first (child records)
+  const { error: sectionsError } = await supabase
+    .from('proposal_sections')
+    .delete()
+    .in('proposal_id', proposalIds)
+
+  if (sectionsError) {
+    return { error: sectionsError.message }
+  }
+
+  // Delete the proposals (scoped to org)
+  const { error } = await supabase
+    .from('proposals')
+    .delete()
+    .in('id', proposalIds)
+    .eq('org_id', orgId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/proposals')
+  return { success: true, error: null }
+}
+
 export async function getFunder(grantId: string) {
   const supabase = await createClient()
 

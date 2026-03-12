@@ -217,33 +217,51 @@ export async function registerOrganizationForExistingUser(data: {
   return { success: true, orgId: org.id, userId: user.id }
 }
 
-export async function uploadRegistrationDocuments(orgId: string, userId: string, formData: FormData) {
+export async function uploadRegistrationDocuments(formData: FormData) {
   const serviceClient = getServiceClient()
 
-  const budgetFile = formData.get('budgetFile') as File | null
+  const orgId = formData.get('orgId') as string
+  const userId = formData.get('userId') as string
+  console.log('[uploadRegistrationDocuments] orgId:', orgId, 'userId:', userId)
+  console.log('[uploadRegistrationDocuments] formData keys:', Array.from(formData.keys()))
+  if (!orgId || !userId) {
+    console.error('[uploadRegistrationDocuments] Missing orgId or userId')
+    return { error: 'Missing orgId or userId' }
+  }
+
   const narrativeFile = formData.get('narrativeFile') as File | null
   const additionalFiles = formData.getAll('additionalFiles') as File[]
+  console.log('[uploadRegistrationDocuments] narrativeFile:', narrativeFile?.name, narrativeFile?.size)
+  console.log('[uploadRegistrationDocuments] additionalFiles:', additionalFiles.length, additionalFiles.map(f => `${f.name}(${f.size})`))
 
   const allFiles: { file: File; category: string }[] = []
-  if (budgetFile && budgetFile.size > 0) allFiles.push({ file: budgetFile, category: 'budget' })
   if (narrativeFile && narrativeFile.size > 0) allFiles.push({ file: narrativeFile, category: 'narrative' })
   for (const f of additionalFiles) {
     if (f && f.size > 0) allFiles.push({ file: f, category: 'supporting' })
   }
 
   const errors: string[] = []
+  console.log('[uploadRegistrationDocuments] allFiles count:', allFiles.length)
 
   for (const { file, category } of allFiles) {
-    const path = `${userId}/${Date.now()}-${file.name}`
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const path = `${userId}/${Date.now()}-${safeName}`
+    console.log('[upload] Uploading:', file.name, 'size:', file.size, 'type:', file.type, 'path:', path)
+
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    console.log('[upload] Buffer size:', buffer.length)
 
     const { error: uploadError } = await serviceClient.storage
       .from('documents')
-      .upload(path, file, { contentType: file.type, cacheControl: '3600', upsert: false })
+      .upload(path, buffer, { contentType: file.type, cacheControl: '3600', upsert: false })
 
     if (uploadError) {
+      console.error('[upload] Storage error:', uploadError.message)
       errors.push(`Failed to upload ${file.name}: ${uploadError.message}`)
       continue
     }
+    console.log('[upload] Storage upload success for:', file.name)
 
     const { data: docData, error: dbError } = await serviceClient
       .from('documents')
@@ -260,9 +278,11 @@ export async function uploadRegistrationDocuments(orgId: string, userId: string,
       .single()
 
     if (dbError) {
+      console.error('[upload] DB error:', dbError.message)
       errors.push(`Failed to save ${file.name}: ${dbError.message}`)
       continue
     }
+    console.log('[upload] DB insert success:', docData.id)
 
     // Trigger n8n document processing webhook (awaited so all files get sent)
     if (process.env.N8N_WEBHOOK_URL) {
