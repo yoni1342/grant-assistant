@@ -170,7 +170,7 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [renderKey, setRenderKey] = useState(0)
-  const { exportPdf, isExporting } = useExportPdf()
+  const { exportPdf } = useExportPdf()
 
   // Store latest values in a ref so the imperative handle always has current data
   const exportDataRef = useRef({ allPages: [] as string[], coverTitle: '', totalPages: 0, proposalTitle: '' })
@@ -315,7 +315,7 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
     pageRefs.current.forEach((el) => observer.observe(el))
 
     return () => observer.disconnect()
-  }, [totalPages, contentPages.length])
+  }, [totalPages, contentPages.length, activePage])
 
   // Scroll the active thumbnail into view in the sidebar
   useEffect(() => {

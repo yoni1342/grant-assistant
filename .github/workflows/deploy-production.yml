@@ -1,0 +1,120 @@
+name: 🚀 Deploy — Production (fundory.ai)
+
+on:
+  push:
+    branches: [main]
+
+# Only one deploy runs at a time. New push cancels in-progress deploy.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: grant-assistant-app
+  ECS_CLUSTER: grant-assistant-production
+  ECS_SERVICE: grant-assistant-production-app
+  CONTAINER_NAME: app
+
+jobs:
+  build-and-deploy:
+    name: Build → Push → Deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://fundory.ai
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tags
+        id: tags
+        run: |
+          SHA_SHORT=${GITHUB_SHA::8}
+          ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+          echo "sha_short=$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "image_sha=$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA" >> $GITHUB_OUTPUT
+          echo "image_short=$ECR_REGISTRY/$ECR_REPOSITORY:$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "image_latest=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            --cache-from ${{ steps.tags.outputs.image_latest }} \
+            -t ${{ steps.tags.outputs.image_sha }} \
+            -t ${{ steps.tags.outputs.image_short }} \
+            -t ${{ steps.tags.outputs.image_latest }} \
+            .
+
+      - name: Push all tags to ECR
+        run: |
+          docker push ${{ steps.tags.outputs.image_sha }}
+          docker push ${{ steps.tags.outputs.image_short }}
+          docker push ${{ steps.tags.outputs.image_latest }}
+
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition grant-assistant-production-app \
+            --query taskDefinition \
+            > task-definition.json
+
+      - name: Update task definition with new image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.tags.outputs.image_sha }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          wait-for-minutes: 10
+
+      - name: Verify deployment health
+        run: |
+          RUNNING=$(aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --query 'services[0].runningCount' \
+            --output text)
+          DESIRED=$(aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --query 'services[0].desiredCount' \
+            --output text)
+          echo "Running: $RUNNING / Desired: $DESIRED"
+          [ "$RUNNING" = "$DESIRED" ] || exit 1
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E3ETCKK4FKET13 \
+            --paths "/*"
+
+      - name: ✅ Deployed
+        if: success()
+        run: echo "::notice title=Deployed::✅ fundory.ai deployed — ${{ steps.tags.outputs.sha_short }}"
+
+      - name: ❌ Failed
+        if: failure()
+        run: echo "::error title=Deploy Failed::❌ Deployment failed — ${{ github.sha }}"

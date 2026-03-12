@@ -45,9 +45,9 @@ export function NarrativeEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+            className={`p-1.5 rounded-md hover:bg-muted ${
               editor.isActive('bold')
-                ? 'bg-zinc-200 dark:bg-zinc-700'
+                ? 'bg-muted'
                 : ''
             }`}
             title="Bold"
@@ -58,9 +58,9 @@ export function NarrativeEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+            className={`p-1.5 rounded-md hover:bg-muted ${
               editor.isActive('italic')
-                ? 'bg-zinc-200 dark:bg-zinc-700'
+                ? 'bg-muted'
                 : ''
             }`}
             title="Italic"
@@ -73,9 +73,9 @@ export function NarrativeEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            className={`p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+            className={`p-1.5 rounded-md hover:bg-muted ${
               editor.isActive('heading', { level: 2 })
-                ? 'bg-zinc-200 dark:bg-zinc-700'
+                ? 'bg-muted'
                 : ''
             }`}
             title="Heading 2"
@@ -88,9 +88,9 @@ export function NarrativeEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+            className={`p-1.5 rounded-md hover:bg-muted ${
               editor.isActive('bulletList')
-                ? 'bg-zinc-200 dark:bg-zinc-700'
+                ? 'bg-muted'
                 : ''
             }`}
             title="Bullet List"
@@ -101,9 +101,9 @@ export function NarrativeEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={`p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+            className={`p-1.5 rounded-md hover:bg-muted ${
               editor.isActive('orderedList')
-                ? 'bg-zinc-200 dark:bg-zinc-700'
+                ? 'bg-muted'
                 : ''
             }`}
             title="Ordered List"
@@ -116,9 +116,9 @@ export function NarrativeEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            className={`p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+            className={`p-1.5 rounded-md hover:bg-muted ${
               editor.isActive('blockquote')
-                ? 'bg-zinc-200 dark:bg-zinc-700'
+                ? 'bg-muted'
                 : ''
             }`}
             title="Blockquote"

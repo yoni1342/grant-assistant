@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { PipelineBreakdown } from './components/pipeline-breakdown'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default async function AnalyticsPage() {
   const pipelineData = await getPipelineBreakdown()
@@ -9,8 +8,8 @@ export default async function AnalyticsPage() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Analytics</h1>
+        <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
           Pipeline insights
         </p>
       </div>

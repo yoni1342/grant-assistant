@@ -60,13 +60,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-semibold">
-            Fundory.ai
-          </CardTitle>
-          <CardDescription>Sign in to your account</CardDescription>
+        <CardHeader className="text-center space-y-3">
+          {/* Brand mark */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col gap-[5px]">
+              <div className="h-[4px] w-[28px] bg-foreground" />
+              <div className="h-[4px] w-[20px] bg-foreground" />
+              <div className="h-[4px] w-[12px] bg-foreground" />
+            </div>
+            <CardTitle className="font-display text-2xl font-black uppercase tracking-[0.04em]">
+              Fundory
+            </CardTitle>
+          </div>
+          <CardDescription className="font-mono text-[10px] tracking-[0.18em] uppercase">Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="flex flex-col gap-4">

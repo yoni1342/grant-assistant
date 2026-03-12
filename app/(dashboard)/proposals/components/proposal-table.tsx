@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import {
   ColumnDef,
   ColumnFiltersState,
+  RowSelectionState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -23,13 +24,25 @@ import {
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Loader2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { MoreHorizontal, Loader2, Trash2 } from "lucide-react"
+import { deleteProposals } from "../actions"
 
 export interface Proposal {
   id: string
@@ -49,128 +62,156 @@ interface ProposalTableProps {
   initialData: Proposal[]
 }
 
-const columns: ColumnDef<Proposal>[] = [
-  {
-    accessorKey: "title",
-    header: "Title",
-    cell: ({ row }) => {
-      const proposal = row.original
-      return (
-        <Link
-          href={`/proposals/${proposal.id}`}
-          className="font-medium hover:underline"
-        >
-          {proposal.title}
-        </Link>
-      )
-    },
-  },
-  {
-    accessorKey: "grant",
-    header: "Grant",
-    cell: ({ row }) => {
-      const grant = row.original.grant
-      return (
-        <span className="text-muted-foreground">
-          {grant?.title || "—"}
-        </span>
-      )
-    },
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.getValue("status") as string
-
-      if (status === "generating") {
-        return (
-          <Badge variant="outline" className="gap-1">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Generating
-          </Badge>
-        )
-      }
-
-      const variantMap: Record<string, "default" | "secondary" | "outline"> = {
-        draft: "secondary",
-        review: "outline",
-        final: "default",
-      }
-
-      return (
-        <Badge variant={variantMap[status] || "secondary"}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
-        </Badge>
-      )
-    },
-  },
-  {
-    accessorKey: "quality_score",
-    header: "Quality Score",
-    cell: ({ row }) => {
-      const score = row.getValue("quality_score") as number | null
-
-      if (score === null) {
-        return <span className="text-muted-foreground">—</span>
-      }
-
-      const colorClass =
-        score >= 80
-          ? "text-green-600"
-          : score >= 60
-            ? "text-yellow-600"
-            : "text-red-600"
-
-      return <span className={colorClass}>{score}/100</span>
-    },
-  },
-  {
-    accessorKey: "created_at",
-    header: "Created",
-    cell: ({ row }) => {
-      const date = row.getValue("created_at") as string
-      return format(new Date(date), "MMM d, yyyy")
-    },
-  },
-  {
-    id: "actions",
-    header: "Actions",
-    cell: ({ row }) => {
-      const proposal = row.original
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link href={`/proposals/${proposal.id}`}>View</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => {
-                // TODO: Implement delete with confirmation dialog
-                console.log("Delete proposal:", proposal.id)
-              }}
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    },
-  },
-]
-
 export function ProposalTable({ initialData }: ProposalTableProps) {
-  const [data, setData] = useState<Proposal[]>(initialData)
+  const [data] = useState<Proposal[]>(initialData)
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = useState("")
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [deleteTarget, setDeleteTarget] = useState<{ ids: string[]; title: string } | null>(null)
+  const [isPending, startTransition] = useTransition()
 
+  const columns: ColumnDef<Proposal>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableColumnFilter: false,
+    },
+    {
+      accessorKey: "title",
+      header: "Title",
+      cell: ({ row }) => {
+        const proposal = row.original
+        return (
+          <Link
+            href={`/proposals/${proposal.id}`}
+            className="font-medium hover:underline"
+          >
+            {proposal.title}
+          </Link>
+        )
+      },
+    },
+    {
+      accessorKey: "grant",
+      header: "Grant",
+      cell: ({ row }) => {
+        const grant = row.original.grant
+        return (
+          <span className="text-muted-foreground">
+            {grant?.title || "—"}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as string
+
+        if (status === "generating") {
+          return (
+            <Badge variant="outline" className="gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Generating
+            </Badge>
+          )
+        }
+
+        const variantMap: Record<string, "default" | "secondary" | "outline"> = {
+          draft: "secondary",
+          review: "outline",
+          final: "default",
+        }
+
+        return (
+          <Badge variant={variantMap[status] || "secondary"}>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </Badge>
+        )
+      },
+    },
+    {
+      accessorKey: "quality_score",
+      header: "Quality Score",
+      cell: ({ row }) => {
+        const score = row.getValue("quality_score") as number | null
+
+        if (score === null) {
+          return <span className="text-muted-foreground">—</span>
+        }
+
+        const colorClass =
+          score >= 80
+            ? "text-green-600"
+            : score >= 60
+              ? "text-yellow-600"
+              : "text-red-600"
+
+        return <span className={colorClass}>{score}/100</span>
+      },
+    },
+    {
+      accessorKey: "created_at",
+      header: "Created",
+      cell: ({ row }) => {
+        const date = row.getValue("created_at") as string
+        return format(new Date(date), "MMM d, yyyy")
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const proposal = row.original
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/proposals/${proposal.id}`}>View</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => {
+                  setDeleteTarget({
+                    ids: [proposal.id],
+                    title: `"${proposal.title}"`,
+                  })
+                }}
+              >
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
+  ]
+
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -179,24 +220,61 @@ export function ProposalTable({ initialData }: ProposalTableProps) {
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
+    onRowSelectionChange: setRowSelection,
     state: {
       columnFilters,
       globalFilter,
+      rowSelection,
     },
   })
+
+  const selectedRows = table.getFilteredSelectedRowModel().rows
+  const selectedCount = selectedRows.length
+
+  function handleBulkDelete() {
+    const ids = selectedRows.map((row) => row.original.id)
+    setDeleteTarget({
+      ids,
+      title: `${selectedCount} proposal${selectedCount > 1 ? "s" : ""}`,
+    })
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return
+    startTransition(async () => {
+      const result = await deleteProposals(deleteTarget.ids)
+      if (result.error) {
+        console.error("Delete failed:", result.error)
+      }
+      setDeleteTarget(null)
+      setRowSelection({})
+    })
+  }
 
   const isEmpty = initialData.length === 0
   const isFiltered = table.getRowModel().rows.length === 0 && !isEmpty
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <Input
-        placeholder="Search proposals..."
-        value={globalFilter}
-        onChange={(e) => setGlobalFilter(e.target.value)}
-        className="max-w-sm"
-      />
+      {/* Search + Bulk Actions */}
+      <div className="flex items-center justify-between gap-4">
+        <Input
+          placeholder="Search proposals..."
+          value={globalFilter}
+          onChange={(e) => setGlobalFilter(e.target.value)}
+          className="max-w-sm"
+        />
+        {selectedCount > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete {selectedCount} selected
+          </Button>
+        )}
+      </div>
 
       {/* Table */}
       <div className="rounded-md border">
@@ -220,7 +298,7 @@ export function ProposalTable({ initialData }: ProposalTableProps) {
           <TableBody>
             {table.getRowModel().rows.length > 0 ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(
@@ -251,6 +329,35 @@ export function ProposalTable({ initialData }: ProposalTableProps) {
           </TableBody>
         </Table>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteTarget?.ids.length === 1 ? "proposal" : "proposals"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {deleteTarget?.title}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

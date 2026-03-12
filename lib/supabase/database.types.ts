@@ -387,53 +387,6 @@ export type Database = {
           },
         ]
       }
-      narratives: {
-        Row: {
-          category: Database["public"]["Enums"]["narrative_category"] | null
-          content: string
-          created_at: string | null
-          embedding: string | null
-          id: string
-          metadata: Json | null
-          org_id: string
-          tags: string[] | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          category?: Database["public"]["Enums"]["narrative_category"] | null
-          content: string
-          created_at?: string | null
-          embedding?: string | null
-          id?: string
-          metadata?: Json | null
-          org_id: string
-          tags?: string[] | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          category?: Database["public"]["Enums"]["narrative_category"] | null
-          content?: string
-          created_at?: string | null
-          embedding?: string | null
-          id?: string
-          metadata?: Json | null
-          org_id?: string
-          tags?: string[] | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "narratives_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       organizations: {
         Row: {
           address: string | null
@@ -902,15 +855,6 @@ export type Database = {
         | "awarded"
         | "reporting"
         | "closed"
-      narrative_category:
-        | "mission"
-        | "impact"
-        | "methods"
-        | "evaluation"
-        | "sustainability"
-        | "capacity"
-        | "budget_narrative"
-        | "other"
       org_status: "pending" | "approved" | "rejected"
       report_type: "interim" | "final"
       submission_method: "auto" | "manual"

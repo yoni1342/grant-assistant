@@ -124,10 +124,11 @@ const columns: ColumnDef<Award>[] = [
 ]
 
 export function AwardTable({ initialData }: AwardTableProps) {
-  const [data, setData] = useState<Award[]>(initialData)
+  const [data] = useState<Award[]>(initialData)
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = useState("")
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

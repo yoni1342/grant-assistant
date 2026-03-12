@@ -24,7 +24,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Sparkles,
 } from "lucide-react";
 import {
   Dialog,
@@ -113,7 +112,7 @@ export function GrantDetail({
         }
 
         setProposalStatus("done");
-      } catch (err) {
+      } catch {
         setProposalStatus("error");
         setProposalError("Failed to connect to workflow.");
         return;
