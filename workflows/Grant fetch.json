@@ -638,7 +638,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://n8n.thebrownmine.com/webhook-test/screen-grant",
+        "url": "https://n8n.thebrownmine.com/webhook/screen-grant",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n   \"url\":\"{{ $json.url }}\",\n   \"grantid\":\"{{ $json.grantId }}\",\n   \"grantData\":{\n      \"title\":\"{{ $json.grantData.title }}\",\n      \"agency\":\"{{ $json.grantData.agency }}\",\n      \"awardRange\":\"{{ $json.grantData.awardRange }}\",\n      \"deadline\":\"{{ $json.grantData.deadline }}\",\n      \"description\":\"{{ $json.grantData.description }}\",\n      \"source\":\"{{ $json.grantData.source }}\"\n   }\n}",
@@ -980,7 +980,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const httpResponse = $input.first().json;\nconst origItems = $('HTTP Request3').all();\n\n// Get inserted grants returned from webhook\nconst insertedGrants = httpResponse.grants || [];\n\nreturn insertedGrants.map((grant, index) => {\n  const orig = origItems[index]?.json || {};\n\n  return {\n    json: {\n      // ← Supabase UUID (replaces grantId)\n      url: orig.link || orig.url || '',\n      grantId: grant.id,\n      grantData: {\n        title: grant.title || orig.title || '',\n        agency: grant.funder_name || orig.agency || '',\n        awardRange: grant.amount || 'Not specified',\n        deadline: grant.deadline || orig.closeDate || '',\n        description: grant.description || '',\n        source: grant.source || orig.source || ''\n      }\n    }\n  };\n});"
+        "jsCode": "  const grants = $input.all().map(item => item.json);\n\n  return grants.map(grant => ({\n    json: {\n      url: grant.source_url || '',\n      grantId: grant.id,\n      grantData: {\n        title: grant.title || '',\n        agency: grant.funder_name || '',\n        awardRange: grant.amount || 'Not specified',\n        deadline: grant.deadline || '',\n        description: grant.description || '',\n        source: grant.source || ''\n      }\n    }\n  }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1039,7 +1039,8 @@
       "position": [
         -19632,
         15168
-      ]
+      ],
+      "disabled": true
     },
     {
       "parameters": {
@@ -1983,7 +1984,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "362754fa-6c6d-4038-82d6-eadc9be9019c",
+  "versionId": "b02bc4c8-80b6-4a84-987d-2f0a3837c7c1",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
