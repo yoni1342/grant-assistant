@@ -85,31 +85,7 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
       .eq('org_id', profile.org_id)
   }
 
-  // Create notification for workflow start
-  const notifTypeMap: Record<string, { type: string; title: string }> = {
-    'screen-grant': {
-      type: 'screening_started',
-      title: `Screening started for "${grant.title}"`,
-    },
-    'generate-proposal': {
-      type: 'proposal_started',
-      title: `Proposal generation started for "${grant.title}"`,
-    },
-  }
-  const notif = notifTypeMap[webhookPath]
-  if (notif) {
-    const { error: notifError } = await supabase.from('notifications').insert({
-      org_id: profile.org_id,
-      grant_id: grantId,
-      type: notif.type,
-      title: notif.title,
-    })
-    if (notifError) {
-      console.error('Failed to create notification:', notifError)
-    }
-  }
-
-  // Fire-and-forget: trigger n8n workflow
+  // Fire-and-forget: trigger n8n workflow (notifications are created by the n8n workflows directly)
   const n8nUrl = process.env.N8N_WEBHOOK_URL
   if (n8nUrl) {
     fetch(`${n8nUrl}/${webhookPath}`, {

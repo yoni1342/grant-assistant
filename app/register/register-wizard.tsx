@@ -137,7 +137,6 @@ export function RegisterWizard({
   >(null);
 
   // Step 3: Documents
-  const [budgetFile, setBudgetFile] = useState<File | null>(null);
   const [narrativeFile, setNarrativeFile] = useState<File | null>(null);
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
 
@@ -178,6 +177,10 @@ export function RegisterWizard({
       setError("Organization name is required");
       return;
     }
+    if (geographicFocus.length === 0) {
+      setError("Please select at least one geographic focus area");
+      return;
+    }
     setStep(3);
   }
 
@@ -189,18 +192,6 @@ export function RegisterWizard({
       return `${file.name}: File too large. Max 25MB.`;
     }
     return null;
-  }
-
-  function handleBudgetFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const err = validateFile(file);
-    if (err) {
-      setError(err);
-      return;
-    }
-    setError(null);
-    setBudgetFile(file);
   }
 
   function handleNarrativeFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -237,7 +228,7 @@ export function RegisterWizard({
 
     // Validate step 3
     if (profileMode === "documents") {
-      if (!budgetFile && !narrativeFile && additionalFiles.length === 0) {
+      if (!narrativeFile && additionalFiles.length === 0) {
         setError("Please upload at least one document");
         return;
       }
@@ -295,23 +286,21 @@ export function RegisterWizard({
     }
 
     // Upload documents if that mode was selected
+    console.log('[register] profileMode:', profileMode, 'result:', JSON.stringify(result))
     if (
       profileMode === "documents" &&
       result.orgId &&
       result.userId
     ) {
       const formData = new FormData();
-      if (budgetFile) formData.append("budgetFile", budgetFile);
+      formData.append("orgId", result.orgId);
+      formData.append("userId", result.userId);
       if (narrativeFile) formData.append("narrativeFile", narrativeFile);
       for (const f of additionalFiles) {
         formData.append("additionalFiles", f);
       }
 
-      const uploadResult = await uploadRegistrationDocuments(
-        result.orgId,
-        result.userId,
-        formData
-      );
+      const uploadResult = await uploadRegistrationDocuments(formData);
       if (uploadResult.error) {
         // Org was created but documents failed - still show success with warning
         console.error("Document upload error:", uploadResult.error);
@@ -522,7 +511,7 @@ export function RegisterWizard({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Geographic Focus</Label>
+                <Label>Geographic Focus *</Label>
                 {geographicFocus.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {geographicFocus.map((state) => (
@@ -609,7 +598,7 @@ export function RegisterWizard({
                   <div>
                     <p className="font-medium">Upload Documents</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Upload your budget, narrative, and supporting documents
+                      Upload your narrative and supporting documents
                     </p>
                   </div>
                 </button>
@@ -642,33 +631,6 @@ export function RegisterWizard({
           {/* Step 3: Upload Documents */}
           {step === 3 && profileMode === "documents" && (
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label>Budget Document</Label>
-                <div className="flex items-center gap-2">
-                  <label className="flex-1 cursor-pointer">
-                    <div className="flex items-center gap-2 rounded-md border border-dashed border-muted-foreground/40 px-3 py-2 text-sm text-muted-foreground hover:border-primary transition-colors">
-                      <Upload className="h-4 w-4" />
-                      {budgetFile ? budgetFile.name : "Choose budget file (PDF, DOCX, XLSX)"}
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".pdf,.docx,.xlsx"
-                      onChange={handleBudgetFile}
-                    />
-                  </label>
-                  {budgetFile && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setBudgetFile(null)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-
               <div className="flex flex-col gap-2">
                 <Label>Narrative Document</Label>
                 <div className="flex items-center gap-2">

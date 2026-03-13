@@ -43,30 +43,28 @@ export function PipelineClient({
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  // Realtime subscription
+  // Realtime subscription + polling fallback
   useEffect(() => {
     const supabase = createClient();
+
+    async function fetchGrants() {
+      const { data } = await supabase
+        .from("grants")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (data) setGrants(data as Grant[]);
+    }
+
+    // Poll every 15 seconds for reliable updates
+    const interval = setInterval(fetchGrants, 15_000);
+
     const channel = supabase
       .channel("grants-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "grants" },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            setGrants((prev) => [payload.new as Grant, ...prev]);
-          } else if (payload.eventType === "UPDATE") {
-            setGrants((prev) =>
-              prev.map((g) =>
-                g.id === (payload.new as Grant).id
-                  ? (payload.new as Grant)
-                  : g
-              )
-            );
-          } else if (payload.eventType === "DELETE") {
-            setGrants((prev) =>
-              prev.filter((g) => g.id !== (payload.old as Grant).id)
-            );
-          }
+        () => {
+          fetchGrants();
         }
       )
       .subscribe();
@@ -104,6 +102,7 @@ export function PipelineClient({
       .subscribe();
 
     return () => {
+      clearInterval(interval);
       supabase.removeChannel(channel);
       supabase.removeChannel(notifChannel);
     };
