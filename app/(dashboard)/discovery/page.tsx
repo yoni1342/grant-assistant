@@ -41,7 +41,7 @@ const SEARCH_STAGES = [
   { message: "Classifying grants by type and relevance...", icon: Sparkles, delay: 34000 },
   { message: "Filtering based on your organization's location...", icon: MapPin, delay: 45000 },
   { message: "Wrapping up remaining sources...", icon: Filter, delay: 60000 },
-  { message: "Finalizing results — almost there...", icon: CheckCheck, delay: 80000 },
+  { message: "Finalizing results — almost done...", icon: CheckCheck, delay: 80000 },
 ];
 
 function useSearchStage(loading: boolean) {
