@@ -1219,6 +1219,110 @@
           "name": "x-webhook-secret"
         }
       }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fetch-grants",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -19632,
+        13600
+      ],
+      "id": "a1b2c3d4-fetch-grants-webhook-trigger",
+      "name": "Fetch Grants Webhook",
+      "webhookId": "fetch-grants"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"success\": true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -19200,
+        13600
+      ],
+      "id": "a1b2c3d5-webhook-respond",
+      "name": "Webhook OK Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Status callback helper: only sends status if callback_url exists (new org registration)\n// This node is placed at different stages of the pipeline\nconst items = $input.all();\n\n// Try to get webhook data\nlet callbackUrl, orgId, webhookSecret;\ntry {\n  const webhookData = $('Fetch Grants Webhook').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  webhookSecret = webhookData?.is_new_org;\n} catch(e) {\n  // Not triggered via webhook (scheduled run) - skip status updates\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      org_id: orgId,\n      status: 'searching',\n      stage_message: 'Searching Grants.gov and federal databases...'\n    }\n  });\n} catch(e) {\n  // Don't fail the workflow if status update fails\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -17400,
+        14400
+      ],
+      "id": "a1b2c3d6-status-searching",
+      "name": "Status: Searching",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId;\ntry {\n  const webhookData = $('Fetch Grants Webhook').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      org_id: orgId,\n      status: 'filtering',\n      stage_message: 'Filtering and deduplicating results...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16400,
+        14400
+      ],
+      "id": "a1b2c3d7-status-filtering",
+      "name": "Status: Filtering",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId;\ntry {\n  const webhookData = $('Fetch Grants Webhook').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      org_id: orgId,\n      status: 'filtering',\n      stage_message: 'Matching grants to your organization...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -15500,
+        14400
+      ],
+      "id": "a1b2c3d8-status-matching",
+      "name": "Status: Matching",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId;\ntry {\n  const webhookData = $('Fetch Grants Webhook').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      org_id: orgId,\n      status: 'inserting',\n      stage_message: 'Adding matched grants to your pipeline...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -15100,
+        14400
+      ],
+      "id": "a1b2c3d9-status-inserting",
+      "name": "Status: Inserting",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId;\ntry {\n  const webhookData = $('Fetch Grants Webhook').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      org_id: orgId,\n      status: 'complete',\n      stage_message: 'Grant search complete!'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -14000,
+        14400
+      ],
+      "id": "a1b2c3da-status-complete",
+      "name": "Status: Complete",
+      "continueOnFail": true
     }
   ],
   "pinData": {},
@@ -1235,6 +1339,17 @@
       ]
     },
     "Build Grant Payload": {
+      "main": [
+        [
+          {
+            "node": "Status: Inserting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Inserting": {
       "main": [
         [
           {
@@ -1601,6 +1716,17 @@
       "main": [
         [
           {
+            "node": "Status: Filtering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Filtering": {
+      "main": [
+        [
+          {
             "node": "Filter Amount & Keywords3",
             "type": "main",
             "index": 0
@@ -1766,6 +1892,17 @@
       ]
     },
     "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "Status: Matching",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Matching": {
       "main": [
         [
           {
@@ -1971,7 +2108,170 @@
       "main": [
         [
           {
+            "node": "Status: Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Complete": {
+      "main": [
+        [
+          {
             "node": "Prepare Eligibility Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Grants Webhook": {
+      "main": [
+        [
+          {
+            "node": "Webhook OK Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Status: Searching",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Searching": {
+      "main": [
+        [
+          {
+            "node": "ProPublica Rockefeller Foundation1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Kellogg Foundation1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica RWJF1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Bloomberg Philanthropies1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Walton Family Foundation1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Philanthropy News Digest RFPs5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gates Foundation Grants Page1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Ford Foundation Grants Page1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Yield Giving (MacKenzie Scott)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PA DCED Programs1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Youth Orgs PA1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Senior Orgs PA1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Additional Major Foundations5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Foster Care3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "reporter1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "rwjf1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Ford Foundation1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Gates Foundation1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica PA Foundations1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Child Welfare1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Capacity Building1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Minority/Equity1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Senior Services1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Foster Care2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "usa spending1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Grantivia Grants5",
             "type": "main",
             "index": 0
           }
