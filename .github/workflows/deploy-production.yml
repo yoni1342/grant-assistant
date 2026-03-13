@@ -5,6 +5,7 @@ on:
     branches: [main]
 
 # Only one deploy runs at a time. New push cancels in-progress deploy.
+# Secrets injected from GitHub Secrets at build time
 concurrency:
   group: deploy-production
   cancel-in-progress: true
