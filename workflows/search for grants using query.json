@@ -818,7 +818,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Input: $input.all() contains items from the HTTP Request node\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n    const html = item.json.data; // raw HTML from SAM.gov opportunities page\n    if (!html) continue;\n\n    // Regex to extract each table row inside <tbody>\n    const rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/gi;\n    let match;\n\n    while ((match = rowRegex.exec(html)) !== null) {\n        const rowHtml = match[1];\n\n        // Extract each <td> content in this row\n        const tdRegex = /<td[^>]*>[\\s\\S]*?<div[^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?<\\/td>/gi;\n        let tdMatch;\n        const tds = [];\n        while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {\n            let value = tdMatch[1]\n                .replace(/<[^>]+>/g, '')  // remove inner HTML tags\n                .replace(/&nbsp;/g, ' ')\n                .trim();\n            tds.push(value);\n        }\n\n        // Check if row has at least the expected columns (Close date, Status, Title, Agency, Award min, Award max)\n        if (tds.length < 6) continue;\n\n        grants.push({\n            json: {\n                id: 'SAM-' + tds[2].replace(/\\s+/g, '-').substring(0, 50) + '-' + Date.now(),\n                title: tds[2] || 'No title',\n                description: '', // optional, could add opportunity number from hidden div if needed\n                link: 'https://sam.gov' + (tds[2].match(/href=\"([^\"]+)\"/) ? tds[2].match(/href=\"([^\"]+)\"/)[1] : ''),\n                openDate: '', // SAM.gov table doesn’t have open date directly\n                closeDate: tds[0] || 'Check site',\n                status: tds[1] || 'Unknown',\n                agency: tds[3] || 'Unknown',\n                awardFloor: tds[4] ? parseFloat(tds[4].replace(/[^0-9.]/g, '')) : 0,\n                awardCeiling: tds[5] ? parseFloat(tds[5].replace(/[^0-9.]/g, '')) : 0,\n                category: 'Federal Grant',\n                source: 'SAM.gov Opportunities',\n            }\n        });\n    }\n}\n\n// Return placeholder if no grants found\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'SAM.gov' } }];\n"
+        "jsCode": "// Input: $input.all() contains items from the HTTP Request node\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n    const html = item.json.data; // raw HTML from SAM.gov opportunities page\n    if (!html) continue;\n\n    // Regex to extract each table row inside <tbody>\n    const rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/gi;\n    let match;\n\n    while ((match = rowRegex.exec(html)) !== null) {\n        const rowHtml = match[1];\n\n        // Extract each <td> content in this row\n        const tdRegex = /<td[^>]*>[\\s\\S]*?<div[^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?<\\/td>/gi;\n        let tdMatch;\n        const tds = [];\n        while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {\n            let value = tdMatch[1]\n                .replace(/<[^>]+>/g, '')  // remove inner HTML tags\n                .replace(/&nbsp;/g, ' ')\n                .trim();\n            tds.push(value);\n        }\n\n        // Check if row has at least the expected columns (Close date, Status, Title, Agency, Award min, Award max)\n        if (tds.length < 6) continue;\n\n        grants.push({\n            json: {\n                id: 'SAM-' + tds[2].replace(/\\s+/g, '-').substring(0, 50) + '-' + Date.now(),\n                title: tds[2] || 'No title',\n                description: '', // optional, could add opportunity number from hidden div if needed\n                link: 'https://sam.gov' + (tds[2].match(/href=\"([^\"]+)\"/) ? tds[2].match(/href=\"([^\"]+)\"/)[1] : ''),\n                openDate: '', // SAM.gov table doesn\u2019t have open date directly\n                closeDate: tds[0] || 'Check site',\n                status: tds[1] || 'Unknown',\n                agency: tds[3] || 'Unknown',\n                awardFloor: tds[4] ? parseFloat(tds[4].replace(/[^0-9.]/g, '')) : 0,\n                awardCeiling: tds[5] ? parseFloat(tds[5].replace(/[^0-9.]/g, '')) : 0,\n                category: 'Federal Grant',\n                source: 'SAM.gov Opportunities',\n            }\n        });\n    }\n}\n\n// Return placeholder if no grants found\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'SAM.gov' } }];\n"
       },
       "id": "93bb23e5-f03f-43e0-a650-4879d02009f5",
       "name": "Additional Major Foundations6",
@@ -863,7 +863,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// n8n Code node – Extract ALL data from \"Upcoming Funding Opportunity\" section on RWJF page\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  // Get HTML from common n8n HTTP Response locations\n  let html = item.json?.body || item.json?.data || item.json?.html || item.json || \"\";\n  if (typeof html !== 'string' || html.length < 500) {\n    results.push({\n      json: {\n        error: \"No valid HTML received\",\n        receivedType: typeof html,\n        length: html?.length || 0\n      }\n    });\n    continue;\n  }\n\n  // Normalize whitespace and remove script/style tags to make regex more reliable\n  html = html.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n             .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n             .replace(/\\s+/g, ' ');\n\n  // Find the \"Upcoming Funding Opportunity\" heading and grab content until next major section\n  // We look for the h3/p with \"Upcoming\" then the following card with h4 + paragraphs\n  const sectionRegex = /<h3[^>]*>Active Funding Opportunities<\\/h3>[\\s\\S]*?<p[^>]*><span[^>]*>Upcoming Funding Opportunity<\\/span><\\/p>[\\s\\S]*?(<div class=\"card image[^>]*>[\\s\\S]*?<div class=\"cmp-customcard[^>]*>[\\s\\S]*?<\\/div>)/i;\n\n  const sectionMatch = sectionRegex.exec(html);\n  if (!sectionMatch) {\n    results.push({\n      json: {\n        empty: true,\n        message: \"No 'Upcoming Funding Opportunity' section found in HTML\",\n        hint: \"Content may be loaded dynamically via JavaScript → check Network tab for JSON calls\"\n      }\n    });\n    continue;\n  }\n\n  const cardHtml = sectionMatch[1];\n\n  // Extract title (h4 with heading8-style or similar)\n  const titleMatch = cardHtml.match(/<h4[^>]*class=\"[^\"]*heading8-style[^\"]*\"[^>]*>([\\s\\S]*?)<\\/h4>/i);\n  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : \"No title found\";\n\n  // Extract all <p> paragraphs in the card (description + release date)\n  const descParagraphs = [];\n  const pRegex = /<p[^>]*>([\\s\\S]*?)<\\/p>/gi;\n  let pMatch;\n  while ((pMatch = pRegex.exec(cardHtml)) !== null) {\n    let text = pMatch[1]\n      .replace(/<[^>]+>/g, '')          // strip inner tags\n      .replace(/&nbsp;/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    if (text && text.length > 10) {      // ignore very short/empty\n      descParagraphs.push(text);\n    }\n  }\n\n  // Look for bold release date specifically\n  const releaseMatch = cardHtml.match(/<b>Release date:\\s*([^<]+)<\\/b>/i);\n  const releaseDate = releaseMatch ? releaseMatch[1].trim() : \"Not found\";\n\n  // Build clean output\n  results.push({\n    json: {\n      section: \"Upcoming Funding Opportunity\",\n      title: title,\n      releaseDate: releaseDate,\n      description: descParagraphs.join(\"\\n\\n\"),  // full text, paragraphs separated\n      sourceUrl: \"https://www.rwjf.org/en/grants/active-funding-opportunities.html\",\n      scrapedAt: new Date().toISOString(),\n      note: \"This is the static upcoming card. Active/open opportunities load via JS → see Network tab for JSON endpoint if you need more.\"\n    }\n  });\n}\n\n// If nothing was found at all\nif (results.length === 0) {\n  results.push({\n    json: {\n      empty: true,\n      message: \"No upcoming opportunity data extracted\"\n    }\n  });\n}\n\nreturn results;"
+        "jsCode": "// n8n Code node \u2013 Extract ALL data from \"Upcoming Funding Opportunity\" section on RWJF page\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  // Get HTML from common n8n HTTP Response locations\n  let html = item.json?.body || item.json?.data || item.json?.html || item.json || \"\";\n  if (typeof html !== 'string' || html.length < 500) {\n    results.push({\n      json: {\n        error: \"No valid HTML received\",\n        receivedType: typeof html,\n        length: html?.length || 0\n      }\n    });\n    continue;\n  }\n\n  // Normalize whitespace and remove script/style tags to make regex more reliable\n  html = html.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n             .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n             .replace(/\\s+/g, ' ');\n\n  // Find the \"Upcoming Funding Opportunity\" heading and grab content until next major section\n  // We look for the h3/p with \"Upcoming\" then the following card with h4 + paragraphs\n  const sectionRegex = /<h3[^>]*>Active Funding Opportunities<\\/h3>[\\s\\S]*?<p[^>]*><span[^>]*>Upcoming Funding Opportunity<\\/span><\\/p>[\\s\\S]*?(<div class=\"card image[^>]*>[\\s\\S]*?<div class=\"cmp-customcard[^>]*>[\\s\\S]*?<\\/div>)/i;\n\n  const sectionMatch = sectionRegex.exec(html);\n  if (!sectionMatch) {\n    results.push({\n      json: {\n        empty: true,\n        message: \"No 'Upcoming Funding Opportunity' section found in HTML\",\n        hint: \"Content may be loaded dynamically via JavaScript \u2192 check Network tab for JSON calls\"\n      }\n    });\n    continue;\n  }\n\n  const cardHtml = sectionMatch[1];\n\n  // Extract title (h4 with heading8-style or similar)\n  const titleMatch = cardHtml.match(/<h4[^>]*class=\"[^\"]*heading8-style[^\"]*\"[^>]*>([\\s\\S]*?)<\\/h4>/i);\n  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : \"No title found\";\n\n  // Extract all <p> paragraphs in the card (description + release date)\n  const descParagraphs = [];\n  const pRegex = /<p[^>]*>([\\s\\S]*?)<\\/p>/gi;\n  let pMatch;\n  while ((pMatch = pRegex.exec(cardHtml)) !== null) {\n    let text = pMatch[1]\n      .replace(/<[^>]+>/g, '')          // strip inner tags\n      .replace(/&nbsp;/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    if (text && text.length > 10) {      // ignore very short/empty\n      descParagraphs.push(text);\n    }\n  }\n\n  // Look for bold release date specifically\n  const releaseMatch = cardHtml.match(/<b>Release date:\\s*([^<]+)<\\/b>/i);\n  const releaseDate = releaseMatch ? releaseMatch[1].trim() : \"Not found\";\n\n  // Build clean output\n  results.push({\n    json: {\n      section: \"Upcoming Funding Opportunity\",\n      title: title,\n      releaseDate: releaseDate,\n      description: descParagraphs.join(\"\\n\\n\"),  // full text, paragraphs separated\n      sourceUrl: \"https://www.rwjf.org/en/grants/active-funding-opportunities.html\",\n      scrapedAt: new Date().toISOString(),\n      note: \"This is the static upcoming card. Active/open opportunities load via JS \u2192 see Network tab for JSON endpoint if you need more.\"\n    }\n  });\n}\n\n// If nothing was found at all\nif (results.length === 0) {\n  results.push({\n    json: {\n      empty: true,\n      message: \"No upcoming opportunity data extracted\"\n    }\n  });\n}\n\nreturn results;"
       },
       "id": "a20af04d-6e69-4ba9-a02a-f6863ad05d55",
       "name": "Additional Major Foundations9",
@@ -997,7 +997,7 @@
         "responses": {
           "values": [
             {
-              "content": "= Task 1: Intent-Aware Filtering\n\n  Search Query: {{ $('search for proposal with query').first().json.body.searchQuery }}\n\n  Filtering Rules:\n  - Identify the broad domain of the search query (e.g., \"foster care\" → social services, youth, child welfare, family services, housing, workforce)\n  - Keep grants that are DIRECTLY relevant OR PARTIALLY relevant to the query domain\n  - Keep grants that a nonprofit could reasonably apply to for programs related to the search query\n  - ONLY discard grants that are clearly unrelated (e.g., pure biomedical lab research, military equipment, foreign diplomacy)\n  - When in doubt, KEEP the grant — false negatives are worse than false positives\n  - Do NOT require exact keyword matches. A grant for \"youth workforce development\" is relevant to \"foster care youth transition\"\n\n  Task 2: Description Rewrite\n  For each kept grant, rewrite the description as one paragraph (2-3 sentences):\n  - Sentence 1: What this grant funds and who offers it\n  - Sentence 2: Who is eligible to apply\n  - Sentence 3: Deadline and timing info\n  - If award amount is $0 - $0, say \"Amount not specified\"\n  - Remove all jargon, quotes, newlines, and special characters\n\n  Task 3: Output Format\n  - Return ONLY a valid JSON array of grants that pass the filter\n  - Preserve all original object keys (id, title, funder, etc.) — only replace the description\n  - If fewer than 3 grants match, relax your filtering criteria and re-evaluate\n  - If truly no grants match after relaxed filtering, return: []\n\n  Input Data:\n  {{ JSON.stringify($json.data.grants, null, 2) }}\n\n  System message:\n\n  You are a grant discovery assistant. Your job is to help nonprofits find relevant funding opportunities. Be INCLUSIVE in your filtering — it is better to\n  show a slightly tangential grant than to return empty results. Only remove grants that are clearly irrelevant to the search query's broad domain. Consider\n   that nonprofits often serve multiple populations and can creatively apply to grants across related fields.\n\n  Key changes:\n  1. Removed the hardcoded \"foster youth and seniors\" from the system prompt — now it's dynamic\n  2. Added \"when in doubt, KEEP\" guidance to prevent over-filtering\n  3. Added a safety net: \"if fewer than 3 match, relax criteria\"\n  4. Broadened domain matching (e.g., foster care → social services, youth, workforce, housing)\n  5. Explicitly told it false negatives are worse than false positives"
+              "content": "= Task 1: Intent-Aware Filtering\n\n  Search Query: {{ $('search for proposal with query').first().json.body.searchQuery }}\n\n  Filtering Rules:\n  - Identify the broad domain of the search query (e.g., \"foster care\" \u2192 social services, youth, child welfare, family services, housing, workforce)\n  - Keep grants that are DIRECTLY relevant OR PARTIALLY relevant to the query domain\n  - Keep grants that a nonprofit could reasonably apply to for programs related to the search query\n  - ONLY discard grants that are clearly unrelated (e.g., pure biomedical lab research, military equipment, foreign diplomacy)\n  - When in doubt, KEEP the grant \u2014 false negatives are worse than false positives\n  - Do NOT require exact keyword matches. A grant for \"youth workforce development\" is relevant to \"foster care youth transition\"\n\n  Task 2: Description Rewrite\n  For each kept grant, rewrite the description as one paragraph (2-3 sentences):\n  - Sentence 1: What this grant funds and who offers it\n  - Sentence 2: Who is eligible to apply\n  - Sentence 3: Deadline and timing info\n  - If award amount is $0 - $0, say \"Amount not specified\"\n  - Remove all jargon, quotes, newlines, and special characters\n\n  Task 3: Output Format\n  - Return ONLY a valid JSON array of grants that pass the filter\n  - Preserve all original object keys (id, title, funder, etc.) \u2014 only replace the description\n  - If fewer than 3 grants match, relax your filtering criteria and re-evaluate\n  - If truly no grants match after relaxed filtering, return: []\n\n  Input Data:\n  {{ JSON.stringify($json.data.grants, null, 2) }}\n\n  System message:\n\n  You are a grant discovery assistant. Your job is to help nonprofits find relevant funding opportunities. Be INCLUSIVE in your filtering \u2014 it is better to\n  show a slightly tangential grant than to return empty results. Only remove grants that are clearly irrelevant to the search query's broad domain. Consider\n   that nonprofits often serve multiple populations and can creatively apply to grants across related fields.\n\n  Key changes:\n  1. Removed the hardcoded \"foster youth and seniors\" from the system prompt \u2014 now it's dynamic\n  2. Added \"when in doubt, KEEP\" guidance to prevent over-filtering\n  3. Added a safety net: \"if fewer than 3 match, relax criteria\"\n  4. Broadened domain matching (e.g., foster care \u2192 social services, youth, workforce, housing)\n  5. Explicitly told it false negatives are worse than false positives"
             },
             {
               "role": "system",
@@ -1803,133 +1803,6 @@
         [
           {
             "node": "Error Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "search for proposal with query ": {
-      "main": [
-        [
-          {
-            "node": "Extract Gates Info",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Extract Major Foundations",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Extract Grants.gov Results",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Senior Orgs PA",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Youth Orgs PA",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "PA DCED Programs",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Yield Giving (MacKenzie Scott)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Ford Foundation Grants Page",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Gates Foundation Grants Page",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Walton Family Foundation",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Bloomberg Philanthropies",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica RWJF",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Kellogg Foundation",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Rockefeller Foundation",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Ford Foundation",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Gates Foundation",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica PA Foundations",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Child Welfare",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Capacity Building",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Minority/Equity",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Senior Services",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Foster Care",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "search for proposal with query test": {
-      "main": [
-        [
-          {
-            "node": "PA DCED Programs",
             "type": "main",
             "index": 0
           }
