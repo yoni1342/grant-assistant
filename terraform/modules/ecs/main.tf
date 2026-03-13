@@ -10,7 +10,6 @@ variable "task_cpu" { type = number }
 variable "task_memory" { type = number }
 variable "min_tasks" { type = number }
 variable "max_tasks" { type = number }
-variable "secrets_arns" { type = map(string) }
 variable "next_public_supabase_url" {}
 variable "next_public_supabase_anon_key" {}
 
@@ -37,19 +36,6 @@ resource "aws_iam_role" "task_execution" {
 resource "aws_iam_role_policy_attachment" "ecs_execution" {
   role       = aws_iam_role.task_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-resource "aws_iam_role_policy" "secrets_access" {
-  name = "${local.name}-secrets-policy"
-  role = aws_iam_role.task_execution.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["secretsmanager:GetSecretValue"]
-      Resource = values(var.secrets_arns)
-    }]
-  })
 }
 
 resource "aws_iam_role" "task" {
@@ -88,26 +74,12 @@ resource "aws_ecs_task_definition" "app" {
     essential = true
     portMappings = [{ containerPort = 3000, protocol = "tcp" }]
 
+    # All secrets are now baked into the Docker image at build time via GitHub Secrets
     environment = [
       { name = "NODE_ENV", value = "production" },
       { name = "PORT", value = "3000" },
       { name = "NEXT_PUBLIC_SUPABASE_URL", value = var.next_public_supabase_url },
       { name = "NEXT_PUBLIC_SUPABASE_ANON_KEY", value = var.next_public_supabase_anon_key }
-    ]
-
-    secrets = [
-      {
-        name      = "SUPABASE_SERVICE_ROLE_KEY"
-        valueFrom = var.secrets_arns["supabase-service-role-key"]
-      },
-      {
-        name      = "N8N_WEBHOOK_URL"
-        valueFrom = var.secrets_arns["n8n-webhook-url"]
-      },
-      {
-        name      = "N8N_WEBHOOK_SECRET"
-        valueFrom = var.secrets_arns["n8n-webhook-secret"]
-      }
     ]
 
     logConfiguration = {
