@@ -1025,25 +1025,9 @@
     },
     {
       "parameters": {
-        "respondWith": "allInputItems",
-        "options": {
-          "responseCode": 200
-        }
-      },
-      "name": "Success Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        11680,
-        6544
-      ],
-      "id": "9c2cbd08-fffe-4f45-bd15-d5983803df04"
-    },
-    {
-      "parameters": {
         "httpMethod": "POST",
         "path": "search-grant-with-query",
-        "responseMode": "responseNode",
+        "responseMode": "lastNode",
         "options": {}
       },
       "id": "2ed3879c-2160-4200-a415-516def9b65a3",
@@ -1056,42 +1040,6 @@
       ],
       "webhookId": "generate-proposal",
       "notes": "POST: { grantId, rfpText, funderName, funderFocus, deadline, planeIssueId }"
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "search-grant-with-query",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "b7eacc38-0d71-4e24-a55e-93b1a33accc5",
-      "name": "search for proposal with query test2",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        7776,
-        6144
-      ],
-      "webhookId": "generate-proposal",
-      "disabled": true,
-      "notes": "POST: { grantId, rfpText, funderName, funderFocus, deadline, planeIssueId }"
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: false, message: $json.execution?.error?.message || \"Proposal generation failed\" }) }}",
-        "options": {
-          "responseCode": 500
-        }
-      },
-      "name": "Error Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        8320,
-        9792
-      ],
-      "id": "4e6a93ac-fbce-4648-8f1a-b2001d7b8965"
     },
     {
       "parameters": {},
@@ -1639,17 +1587,6 @@
         ]
       ]
     },
-    "Code in JavaScript4": {
-      "main": [
-        [
-          {
-            "node": "Success Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Filter based on search query1": {
       "main": [
         [
@@ -1792,17 +1729,6 @@
         [
           {
             "node": "Grants.gov Foster Care2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Error Trigger": {
-      "main": [
-        [
-          {
-            "node": "Error Response",
             "type": "main",
             "index": 0
           }
