@@ -30,16 +30,8 @@ module "ecr" {
   environment = var.environment
 }
 
-module "secrets" {
-  source      = "../../modules/secrets"
-  app_name    = var.app_name
-  environment = var.environment
-  secrets = {
-    supabase-service-role-key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-    n8n-webhook-url           = "https://n8n.thebrownmine.com/webhook-test"
-    n8n-webhook-secret        = "t+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk="
-  }
-}
+# Secrets are now injected at Docker build time via GitHub Secrets
+# See .github/workflows/deploy-production.yml
 
 module "acm" {
   source          = "../../modules/acm"
@@ -72,7 +64,6 @@ module "ecs" {
   task_memory         = var.task_memory
   min_tasks           = var.min_tasks
   max_tasks           = var.max_tasks
-  secrets_arns        = module.secrets.secret_arns
   next_public_supabase_url      = var.next_public_supabase_url
   next_public_supabase_anon_key = var.next_public_supabase_anon_key
 }
