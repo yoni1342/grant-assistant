@@ -628,7 +628,7 @@
         "url": "https://n8n.thebrownmine.com/webhook/screen-grant",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n   \"url\":\"{{ $json.url }}\",\n   \"grantid\":\"{{ $json.grantId }}\",\n   \"grantData\":{\n      \"title\":\"{{ $json.grantData.title }}\",\n      \"agency\":\"{{ $json.grantData.agency }}\",\n      \"awardRange\":\"{{ $json.grantData.awardRange }}\",\n      \"deadline\":\"{{ $json.grantData.deadline }}\",\n      \"description\":\"{{ $json.grantData.description }}\",\n      \"source\":\"{{ $json.grantData.source }}\"\n   }\n}",
+        "jsonBody": "={\n   \"url\":\"{{ $json.url }}\",\n   \"grantid\":\"{{ $json.grantId }}\",\n   \"orgId\":\"{{ $json.orgId }}\",\n   \"grantData\":{\n      \"title\":\"{{ $json.grantData.title }}\",\n      \"agency\":\"{{ $json.grantData.agency }}\",\n      \"awardRange\":\"{{ $json.grantData.awardRange }}\",\n      \"deadline\":\"{{ $json.grantData.deadline }}\",\n      \"description\":\"{{ $json.grantData.description }}\",\n      \"source\":\"{{ $json.grantData.source }}\",\n      \"org_id\":\"{{ $json.grantData.org_id }}\"\n   }\n}",
         "options": {
           "allowUnauthorizedCerts": true,
           "timeout": 12000
@@ -967,7 +967,7 @@
     },
     {
       "parameters": {
-        "jsCode": "  const grants = $input.all().map(item => item.json);\n\n  return grants.map(grant => ({\n    json: {\n      url: grant.source_url || '',\n      grantId: grant.id,\n      grantData: {\n        title: grant.title || '',\n        agency: grant.funder_name || '',\n        awardRange: grant.amount || 'Not specified',\n        deadline: grant.deadline || '',\n        description: grant.description || '',\n        source: grant.source || ''\n      }\n    }\n  }));"
+        "jsCode": "  const grants = $input.all().map(item => item.json);\n\n  return grants.map(grant => ({\n    json: {\n      url: grant.source_url || '',\n      grantId: grant.id,\n      orgId: grant.org_id || '',\n      grantData: {\n        title: grant.title || '',\n        agency: grant.funder_name || '',\n        awardRange: grant.amount || 'Not specified',\n        deadline: grant.deadline || '',\n        description: grant.description || '',\n        source: grant.source || '',\n        org_id: grant.org_id || ''\n      }\n    }\n  }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
