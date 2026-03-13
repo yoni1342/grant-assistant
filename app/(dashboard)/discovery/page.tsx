@@ -433,7 +433,7 @@ export default function DiscoveryPage() {
               </div>
               {results.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {results.length} grant{results.length !== 1 ? "s" : ""} found so far from {sourceCount} source{sourceCount !== 1 ? "s" : ""}...
+                  {results.length} grant{results.length !== 1 ? "s" : ""} found so far from {sourceCount} source{sourceCount !== 1 ? "s" : ""} — searching remaining sources
                 </p>
               )}
             </div>
