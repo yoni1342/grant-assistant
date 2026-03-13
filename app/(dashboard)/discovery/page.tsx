@@ -458,7 +458,7 @@ export default function DiscoveryPage() {
             <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-4 py-2.5 text-sm text-green-700 dark:text-green-400">
               <CheckCheck className="h-4 w-4 shrink-0" />
               <span>
-                Search complete — showing all {results.length} results from all sources.
+                Search complete — showing {results.length} results. Additional sources are still being reviewed and may yield more matches.
               </span>
             </div>
           )}

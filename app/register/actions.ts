@@ -174,6 +174,32 @@ export async function registerOrganization(data: {
     await processQuestionnaire(serviceClient, org.id, data.questionnaire)
   }
 
+  // 5. Trigger grant fetch workflow for the new org (fire-and-forget)
+  if (process.env.N8N_WEBHOOK_URL) {
+    // Insert initial fetch status so the pipeline page shows the banner immediately
+    await serviceClient.from('grant_fetch_status').upsert({
+      org_id: org.id,
+      status: 'searching',
+      stage_message: 'Starting grant search...',
+    }, { onConflict: 'org_id' })
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`
+    fetch(`${process.env.N8N_WEBHOOK_URL}/fetch-grants`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
+      },
+      body: JSON.stringify({
+        org_id: org.id,
+        callback_url: `${appUrl}/api/grant-fetch-status`,
+        is_new_org: true,
+      }),
+    }).catch((err) => {
+      console.error('n8n fetch-grants webhook failed:', err)
+    })
+  }
+
   return { success: true, orgId: org.id, userId }
 }
 
@@ -212,6 +238,31 @@ export async function registerOrganizationForExistingUser(data: {
   // Process questionnaire if provided
   if (data.questionnaire) {
     await processQuestionnaire(serviceClient, org.id, data.questionnaire)
+  }
+
+  // Trigger grant fetch workflow for the new org (fire-and-forget)
+  if (process.env.N8N_WEBHOOK_URL) {
+    await serviceClient.from('grant_fetch_status').upsert({
+      org_id: org.id,
+      status: 'searching',
+      stage_message: 'Starting grant search...',
+    }, { onConflict: 'org_id' })
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`
+    fetch(`${process.env.N8N_WEBHOOK_URL}/fetch-grants`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
+      },
+      body: JSON.stringify({
+        org_id: org.id,
+        callback_url: `${appUrl}/api/grant-fetch-status`,
+        is_new_org: true,
+      }),
+    }).catch((err) => {
+      console.error('n8n fetch-grants webhook failed:', err)
+    })
   }
 
   return { success: true, orgId: org.id, userId: user.id }
