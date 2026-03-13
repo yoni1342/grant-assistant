@@ -86,6 +86,32 @@ export function NotificationsClient({
 
   useEffect(() => {
     const supabase = createClient();
+
+    async function fetchNotifications() {
+      const { data } = await supabase
+        .from("notifications")
+        .select("*, grants(title, funder_name, stage)")
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (data) {
+        setNotifications(data as Notification[]);
+        // Mark unread ones as read since user is on the page
+        const unreadIds = data.filter((n) => !n.is_read).map((n) => n.id);
+        if (unreadIds.length > 0) {
+          supabase
+            .from("notifications")
+            .update({ is_read: true })
+            .in("id", unreadIds)
+            .then();
+        }
+      }
+    }
+
+    // Poll every 10 seconds for reliable updates
+    const interval = setInterval(fetchNotifications, 10_000);
+
+    // Also keep realtime subscription for instant updates when it works
     const channel = supabase
       .channel("notifications-realtime")
       .on(
@@ -96,20 +122,15 @@ export function NotificationsClient({
           table: "notifications",
           filter: `org_id=eq.${orgId}`,
         },
-        (payload) => {
-          const newNotif = payload.new as Notification;
-          setNotifications((prev) => [newNotif, ...prev]);
-          // Auto-mark as read since user is on the page
-          supabase
-            .from("notifications")
-            .update({ is_read: true })
-            .eq("id", newNotif.id)
-            .then();
+        () => {
+          // Fetch the full notification with grants join
+          fetchNotifications();
         }
       )
       .subscribe();
 
     return () => {
+      clearInterval(interval);
       supabase.removeChannel(channel);
     };
   }, [orgId]);

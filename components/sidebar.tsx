@@ -72,7 +72,20 @@ export function Sidebar({ user }: { user: User }) {
     // Initial fetch
     fetchUnreadCount();
 
-    // Realtime: refetch on any insert or update
+    // Poll every 10 seconds for reliable updates
+    const interval = setInterval(fetchUnreadCount, 10_000);
+
+    // Refetch when tab becomes visible or window regains focus
+    function handleVisibility() {
+      if (document.visibilityState === "visible") fetchUnreadCount();
+    }
+    function handleFocus() {
+      fetchUnreadCount();
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleFocus);
+
+    // Also keep realtime subscription for instant updates when it works
     const channel = supabase
       .channel("sidebar-notifications")
       .on(
@@ -88,6 +101,9 @@ export function Sidebar({ user }: { user: User }) {
       .subscribe();
 
     return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleFocus);
       supabase.removeChannel(channel);
     };
   }, []);

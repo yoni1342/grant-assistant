@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,8 +23,53 @@ import {
   DollarSign,
   ExternalLink,
   CheckCircle2,
+  Globe,
+  Filter,
+  MapPin,
+  Sparkles,
+  CheckCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+
+const SEARCH_STAGES = [
+  { message: "Connecting to grant databases...", icon: Globe, delay: 0 },
+  { message: "Searching Grants.gov, ProPublica, and federal sources...", icon: Search, delay: 3000 },
+  { message: "Querying foundation directories and philanthropy feeds...", icon: Building2, delay: 7000 },
+  { message: "Combining results from all sources...", icon: Sparkles, delay: 14000 },
+  { message: "Removing duplicate listings...", icon: Filter, delay: 18000 },
+  { message: "Classifying grants by type and relevance...", icon: Sparkles, delay: 22000 },
+  { message: "Filtering based on your organization's location...", icon: MapPin, delay: 28000 },
+  { message: "Ranking results by relevance to your search...", icon: Filter, delay: 34000 },
+  { message: "Finalizing results — almost there...", icon: CheckCheck, delay: 42000 },
+];
+
+function useSearchStage(loading: boolean) {
+  const [stageIndex, setStageIndex] = useState(0);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    if (!loading) {
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+      setStageIndex(0);
+      return;
+    }
+
+    setStageIndex(0);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    SEARCH_STAGES.forEach((stage, i) => {
+      if (i === 0) return; // already at 0
+      timers.push(setTimeout(() => setStageIndex(i), stage.delay));
+    });
+    timersRef.current = timers;
+
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, [loading]);
+
+  return SEARCH_STAGES[stageIndex];
+}
 
 interface DiscoveredGrant {
   org_id: string;
@@ -148,17 +193,20 @@ export default function DiscoveryPage() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<DiscoveredGrant[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [searchComplete, setSearchComplete] = useState(false);
   const [selectedGrant, setSelectedGrant] = useState<DiscoveredGrant | null>(
     null
   );
   const [addingToPipeline, setAddingToPipeline] = useState<string | null>(null);
   const [addedGrants, setAddedGrants] = useState<Set<string>>(new Set());
+  const currentStage = useSearchStage(loading);
 
   async function triggerDiscovery() {
     if (!query.trim()) return;
     setLoading(true);
     setResults([]);
     setError(null);
+    setSearchComplete(false);
     setAddedGrants(new Set());
 
     try {
@@ -190,6 +238,7 @@ export default function DiscoveryPage() {
         setError("No grants found for your search. Try different keywords.");
       } else {
         setResults(grants);
+        setSearchComplete(true);
       }
     } catch (err) {
       console.error("Discovery error:", err);
@@ -308,9 +357,18 @@ export default function DiscoveryPage() {
           </div>
 
           {loading && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Searching across grant databases... This may take a moment.
-            </p>
+            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+              {(() => {
+                const StageIcon = currentStage.icon;
+                return (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                    <StageIcon className="h-4 w-4 shrink-0" />
+                    <span className="animate-pulse">{currentStage.message}</span>
+                  </>
+                );
+              })()}
+            </div>
           )}
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
         </CardContent>
@@ -327,6 +385,15 @@ export default function DiscoveryPage() {
               </span>
             </h2>
           </div>
+
+          {searchComplete && (
+            <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-4 py-2.5 text-sm text-green-700 dark:text-green-400">
+              <CheckCheck className="h-4 w-4 shrink-0" />
+              <span>
+                Search complete — showing all {results.length} results from all sources.
+              </span>
+            </div>
+          )}
 
           <div className="grid gap-3">
             {results.map((grant, index) => {
