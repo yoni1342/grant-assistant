@@ -1027,7 +1027,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "search-grant-with-query",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "id": "2ed3879c-2160-4200-a415-516def9b65a3",
@@ -1052,6 +1052,516 @@
       ],
       "id": "7e3433a6-38f0-4a04-83ff-953a5da642c8",
       "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Candid Foundation Maps PA1\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8848,
+        7808
+      ],
+      "id": "1d934eb3-6328-4f4a-887d-8d23992f47d3",
+      "name": "Save Batch 1",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Extract Grants.gov Results1\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8848,
+        4416
+      ],
+      "id": "b0e80628-bcbf-44ad-b549-8254bae2dac1",
+      "name": "Save Batch 2",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Extract Major Foundations1\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8848,
+        6368
+      ],
+      "id": "387f8688-b598-4063-ae2e-eaa751d97272",
+      "name": "Save Batch 3",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Extract Gates Info1\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8848,
+        7040
+      ],
+      "id": "e036f262-8f78-43dd-8cb2-e261ef4c2909",
+      "name": "Save Batch 4",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Extract Ford Info1\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8848,
+        7232
+      ],
+      "id": "83ae05db-2460-44c4-8de1-3db5d0f90c63",
+      "name": "Save Batch 5",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Extract Yield Giving Info1\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8848,
+        7424
+      ],
+      "id": "373cbda3-ab8d-4897-b7a0-f9ab67236499",
+      "name": "Save Batch 6",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Extract PA DCED Programs1\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8848,
+        7616
+      ],
+      "id": "a9a15e4e-3678-4ea1-b3c0-4d37af7986e9",
+      "name": "Save Batch 7",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Additional Major Foundations5\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8848,
+        8048
+      ],
+      "id": "cc1c4764-357a-4435-8a6b-4a0577ad4a47",
+      "name": "Save Batch 8",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Extract ProPublica Foundations\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8848,
+        5888
+      ],
+      "id": "4eeeba4a-957d-4bdc-a381-b80b6f913bea",
+      "name": "Save Batch 9",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Extract PND RFPs\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8848,
+        6848
+      ],
+      "id": "680a5cdf-afe6-4249-b34c-1c049573d154",
+      "name": "Save Batch 10",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Additional Major Foundations6\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8944,
+        8576
+      ],
+      "id": "f805f638-8bde-4303-a709-3875d11cb33d",
+      "name": "Save Batch 11",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Additional Major Foundations7\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8944,
+        8784
+      ],
+      "id": "966a9721-f41c-4ffc-bc47-a43d568ecacd",
+      "name": "Save Batch 12",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Additional Major Foundations8\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8928,
+        8976
+      ],
+      "id": "da6d8ac5-3300-48bc-858b-eecb700f6237",
+      "name": "Save Batch 13",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, source_group: \"Additional Major Foundations9\", grants: $input.all().map(i => i.json) }) }}",
+        "options": {
+          "timeout": 15000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8944,
+        9168
+      ],
+      "id": "1b626f18-6b97-4048-91e4-de28e3b48fa1",
+      "name": "Save Batch 14",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, done: true }) }}",
+        "options": {
+          "timeout": 10000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11856,
+        6544
+      ],
+      "id": "1a2241e2-f475-48f1-9e57-962ed218f3ec",
+      "name": "Signal Complete",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, done: true }) }}",
+        "options": {
+          "timeout": 10000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10144,
+        7216
+      ],
+      "id": "173af063-1a0b-40e3-8cc6-2c849a63606c",
+      "name": "Signal Complete 2",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, done: true }) }}",
+        "options": {
+          "timeout": 10000,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10736,
+        7056
+      ],
+      "id": "2af7d6ad-b18b-4bcd-ad60-e2f2ffdc5c5c",
+      "name": "Signal Complete 3",
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -1272,6 +1782,11 @@
             "node": "Combine & Deduplicate All Sources",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Save Batch 1",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1305,6 +1820,11 @@
             "node": "Combine & Deduplicate All Sources",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Save Batch 2",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1314,6 +1834,11 @@
         [
           {
             "node": "Combine & Deduplicate All Sources",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Batch 3",
             "type": "main",
             "index": 0
           }
@@ -1327,6 +1852,11 @@
             "node": "Combine & Deduplicate All Sources",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Save Batch 4",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1336,6 +1866,11 @@
         [
           {
             "node": "Combine & Deduplicate All Sources",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Batch 5",
             "type": "main",
             "index": 0
           }
@@ -1349,6 +1884,11 @@
             "node": "Combine & Deduplicate All Sources",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Save Batch 6",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1360,6 +1900,11 @@
             "node": "Combine & Deduplicate All Sources",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Save Batch 7",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1369,6 +1914,11 @@
         [
           {
             "node": "Combine & Deduplicate All Sources",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Batch 8",
             "type": "main",
             "index": 0
           }
@@ -1404,6 +1954,11 @@
             "node": "Combine & Deduplicate All Sources",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Save Batch 9",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1413,6 +1968,11 @@
         [
           {
             "node": "Combine & Deduplicate All Sources",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Batch 10",
             "type": "main",
             "index": 0
           }
@@ -1495,6 +2055,11 @@
             "node": "Combine & Deduplicate All Sources",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Save Batch 11",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1504,6 +2069,11 @@
         [
           {
             "node": "Combine & Deduplicate All Sources",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Batch 12",
             "type": "main",
             "index": 0
           }
@@ -1517,6 +2087,11 @@
             "node": "Combine & Deduplicate All Sources",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Save Batch 13",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1526,6 +2101,11 @@
         [
           {
             "node": "Combine & Deduplicate All Sources",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Batch 14",
             "type": "main",
             "index": 0
           }
@@ -1724,11 +2304,33 @@
         ]
       ]
     },
-    "search for proposal with query test2": {
+    "Code in JavaScript4": {
       "main": [
         [
           {
-            "node": "Grants.gov Foster Care2",
+            "node": "Signal Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Results Found": {
+      "main": [
+        [
+          {
+            "node": "Signal Complete 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Already Tracked": {
+      "main": [
+        [
+          {
+            "node": "Signal Complete 3",
             "type": "main",
             "index": 0
           }

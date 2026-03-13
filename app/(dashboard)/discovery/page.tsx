@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,17 +30,18 @@ import {
   CheckCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 
 const SEARCH_STAGES = [
   { message: "Connecting to grant databases...", icon: Globe, delay: 0 },
   { message: "Searching Grants.gov, ProPublica, and federal sources...", icon: Search, delay: 3000 },
   { message: "Querying foundation directories and philanthropy feeds...", icon: Building2, delay: 7000 },
-  { message: "Combining results from all sources...", icon: Sparkles, delay: 14000 },
-  { message: "Removing duplicate listings...", icon: Filter, delay: 18000 },
-  { message: "Classifying grants by type and relevance...", icon: Sparkles, delay: 22000 },
-  { message: "Filtering based on your organization's location...", icon: MapPin, delay: 28000 },
-  { message: "Ranking results by relevance to your search...", icon: Filter, delay: 34000 },
-  { message: "Finalizing results — almost there...", icon: CheckCheck, delay: 42000 },
+  { message: "Results streaming in from sources...", icon: Sparkles, delay: 14000 },
+  { message: "Searching additional databases...", icon: Filter, delay: 22000 },
+  { message: "Classifying grants by type and relevance...", icon: Sparkles, delay: 34000 },
+  { message: "Filtering based on your organization's location...", icon: MapPin, delay: 45000 },
+  { message: "Wrapping up remaining sources...", icon: Filter, delay: 60000 },
+  { message: "Finalizing results — almost there...", icon: CheckCheck, delay: 80000 },
 ];
 
 function useSearchStage(loading: boolean) {
@@ -58,7 +59,7 @@ function useSearchStage(loading: boolean) {
     setStageIndex(0);
     const timers: ReturnType<typeof setTimeout>[] = [];
     SEARCH_STAGES.forEach((stage, i) => {
-      if (i === 0) return; // already at 0
+      if (i === 0) return;
       timers.push(setTimeout(() => setStageIndex(i), stage.delay));
     });
     timersRef.current = timers;
@@ -199,78 +200,41 @@ export default function DiscoveryPage() {
   );
   const [addingToPipeline, setAddingToPipeline] = useState<string | null>(null);
   const [addedGrants, setAddedGrants] = useState<Set<string>>(new Set());
+  const [sourceCount, setSourceCount] = useState(0);
   const currentStage = useSearchStage(loading);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const channelRef = useRef<any>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const seenTitlesRef = useRef<Set<string>>(new Set());
 
-  async function triggerDiscovery() {
-    if (!query.trim()) return;
-    setLoading(true);
-    setResults([]);
-    setError(null);
-    setSearchComplete(false);
-    setAddedGrants(new Set());
-
-    try {
-      const response = await fetch("/api/webhook", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ service: "grant-discovery", searchQuery: query }),
-      });
-
-      const text = await response.text();
-      let result;
-      try {
-        result = JSON.parse(text);
-      } catch {
-        result = { success: response.ok, data: text };
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (channelRef.current) {
+        const supabase = createClient();
+        supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
       }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
-      if (!response.ok || result.success === false) {
-        setError(result.error || "Workflow failed");
-        return;
-      }
-
-      // Parse grants from n8n response
-      console.log("Full result from API:", JSON.stringify(result, null, 2));
-      console.log("result.data:", JSON.stringify(result.data, null, 2));
-      const grants = extractGrants(result.data);
-      console.log("Extracted grants:", grants.length, grants);
-      if (grants.length === 0) {
-        setError("No grants found for your search. Try different keywords.");
-      } else {
-        setResults(grants);
-        setSearchComplete(true);
-      }
-    } catch (err) {
-      console.error("Discovery error:", err);
-      setError("Failed to trigger discovery. Check your n8n connection.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function extractGrants(data: unknown): DiscoveredGrant[] {
+  const extractGrants = useCallback((data: unknown): DiscoveredGrant[] => {
     if (!data) return [];
 
-    // Handle array
     if (Array.isArray(data)) {
-      // Check if this is directly an array of grant objects
       if (data.length > 0 && data[0]?.title && data[0]?.funder_name) {
         return data as DiscoveredGrant[];
       }
-      // Otherwise recurse into each item and collect results
       return data.flatMap((item: unknown) => extractGrants(item));
     }
 
-    // Handle object
     if (typeof data === "object" && data !== null) {
       const obj = data as Record<string, unknown>;
 
-      // If this object looks like a grant itself, return it
       if (obj.title && obj.funder_name) {
         return [obj as unknown as DiscoveredGrant];
       }
 
-      // Dig into .data.grants, .grants, or .data
       if (Array.isArray(obj.grants)) {
         return extractGrants(obj.grants);
       }
@@ -280,6 +244,103 @@ export default function DiscoveryPage() {
     }
 
     return [];
+  }, []);
+
+  async function triggerDiscovery() {
+    if (!query.trim()) return;
+    setLoading(true);
+    setResults([]);
+    setError(null);
+    setSearchComplete(false);
+    setAddedGrants(new Set());
+    setSourceCount(0);
+    seenTitlesRef.current = new Set();
+
+    // Clean up previous subscription
+    if (channelRef.current) {
+      const supabase = createClient();
+      supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
+      channelRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    try {
+      const response = await fetch("/api/webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ service: "grant-discovery", searchQuery: query }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.error || "Failed to start search");
+        setLoading(false);
+        return;
+      }
+
+      const searchId = data.search_id;
+
+      // Subscribe to real-time search results
+      const supabase = createClient();
+      const channel = supabase
+        .channel(`search-${searchId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "search_results",
+            filter: `search_id=eq.${searchId}`,
+          },
+          (payload) => {
+            const row = payload.new as {
+              grant_data: unknown;
+              is_complete: boolean;
+              source_group: string;
+            };
+
+            if (row.is_complete) {
+              setSearchComplete(true);
+              setLoading(false);
+              return;
+            }
+
+            const grants = extractGrants(row.grant_data);
+            if (grants.length > 0) {
+              // Deduplicate by title
+              const newGrants = grants.filter((g) => {
+                if (seenTitlesRef.current.has(g.title)) return false;
+                seenTitlesRef.current.add(g.title);
+                return true;
+              });
+
+              if (newGrants.length > 0) {
+                setResults((prev) => [...prev, ...newGrants]);
+                setSourceCount((prev) => prev + 1);
+              }
+            }
+          }
+        )
+        .subscribe();
+
+      channelRef.current = channel;
+
+      // Safety timeout: stop loading after 3 minutes
+      timeoutRef.current = setTimeout(() => {
+        setLoading(false);
+        setSearchComplete(true);
+        supabase.removeChannel(channel);
+        channelRef.current = null;
+      }, 180000);
+    } catch (err) {
+      console.error("Discovery error:", err);
+      setError("Failed to trigger discovery. Check your n8n connection.");
+      setLoading(false);
+    }
   }
 
   async function addToPipeline(grant: DiscoveredGrant) {
@@ -357,17 +418,24 @@ export default function DiscoveryPage() {
           </div>
 
           {loading && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-              {(() => {
-                const StageIcon = currentStage.icon;
-                return (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                    <StageIcon className="h-4 w-4 shrink-0" />
-                    <span className="animate-pulse">{currentStage.message}</span>
-                  </>
-                );
-              })()}
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {(() => {
+                  const StageIcon = currentStage.icon;
+                  return (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                      <StageIcon className="h-4 w-4 shrink-0" />
+                      <span className="animate-pulse">{currentStage.message}</span>
+                    </>
+                  );
+                })()}
+              </div>
+              {results.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {results.length} grant{results.length !== 1 ? "s" : ""} found so far from {sourceCount} source{sourceCount !== 1 ? "s" : ""}...
+                </p>
+              )}
             </div>
           )}
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
@@ -381,12 +449,12 @@ export default function DiscoveryPage() {
             <h2 className="text-lg font-medium">
               Results{" "}
               <span className="text-muted-foreground font-normal">
-                ({results.length} found)
+                ({results.length} found{loading ? " so far" : ""})
               </span>
             </h2>
           </div>
 
-          {searchComplete && (
+          {searchComplete && !loading && (
             <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-4 py-2.5 text-sm text-green-700 dark:text-green-400">
               <CheckCheck className="h-4 w-4 shrink-0" />
               <span>

@@ -47,6 +47,41 @@ export async function POST(req: Request) {
 
   const agent = new https.Agent({ rejectUnauthorized: false });
 
+  // For grant-discovery, use progressive search: fire-and-forget to n8n,
+  // results come back via /api/search-results callback
+  if (service === "grant-discovery") {
+    const searchId = crypto.randomUUID();
+    const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+    const proto = req.headers.get("x-forwarded-proto") || "https";
+    const callbackUrl = `${proto}://${host}/api/search-results`;
+
+    const discoveryPayload = { ...payload, search_id: searchId, callback_url: callbackUrl };
+
+    try {
+      // n8n webhook is set to respond immediately (onReceived mode)
+      await fetch(fullUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET || "",
+        },
+        body: JSON.stringify(discoveryPayload),
+        agent,
+      });
+    } catch (err) {
+      console.error("[webhook/grant-discovery] Fetch error:", err);
+      return new Response(
+        JSON.stringify({ success: false, error: String(err) }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, search_id: searchId }),
+      { headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   try {
     const response = await fetch(fullUrl, {
       method: "POST",
