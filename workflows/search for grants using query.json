@@ -1025,7 +1025,7 @@
     },
     {
       "parameters": {
-        "respondWith": "firstInputItem",
+        "respondWith": "allInputItems",
         "options": {
           "responseCode": 200
         }
