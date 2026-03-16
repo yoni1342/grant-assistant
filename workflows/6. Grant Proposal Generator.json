@@ -3,563 +3,31 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "generate-proposal",
-        "responseMode": "responseNode",
-        "options": {}
+        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.body.org_id,\n    grant_id: items[0].json.body.grantId || items[0].json.body.grant_id,\n    type: 'proposal_started',\n    title: 'Proposal generation started for \"' + (items[0].json.body.grant_name || 'Unknown') + '\"'\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
       },
-      "id": "f8468277-fb76-4f82-aa72-dff38bbc413f",
-      "name": "Proposal Request1",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        -2048,
-        -1056
-      ],
-      "webhookId": "generate-proposal",
-      "disabled": true,
-      "notes": "POST: { grantId, rfpText, funderName, funderFocus, deadline, planeIssueId }"
-    },
-    {
-      "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4.1-mini",
-          "mode": "list",
-          "cachedResultName": "GPT-4.1-MINI"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "You are analyzing a grant RFP to identify required sections and questions.\n\nGRANT INFORMATION:\nTitle: {{ $json.grant_title }}\nFunder: {{ $json.funder_name }}\nDeadline: {{ $json.deadline }}\nAmount: {{ $json.amount }}\n\nBUDGET GENERATED:\n{{ $json.budget.narrative }}\n\n---\n\nBased on this grant opportunity, identify the typical sections and questions required for a proposal to this funder.\n\nReturn a JSON array of questions in this format:\n[\n  {\n    \"question_id\": 1,\n    \"question_text\": \"Describe your organization's mission and history\",\n    \"word_limit\": 500,\n    \"section_type\": \"mission\",\n    \"narrative_match\": \"mission_long\",\n    \"required_docs\": [\"501c3_letter\"]\n  }\n]\n\nIf you don't have specific RFP text, generate standard grant proposal sections based on the funder type (government, foundation, corporate).",
-              "role": "system"
-            },
-            {
-              "content": "=RFP TEXT:\n{{ $json.grant_description }}\n\nFUNDER: {{ $json.funder_name }}\nFOCUS AREAS: {{ $json.budget.markdown }}"
-            }
-          ]
-        },
-        "options": {
-          "temperature": 0.2
-        }
-      },
-      "id": "67d6998f-e3e6-4082-a2b1-d019aeb0a6ba",
-      "name": "Step 1: Analyze RFP1",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.8,
-      "position": [
-        -976,
-        -544
-      ],
-      "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Parse RFP analysis and prepare for processing\nconst mergedDataItems = $('Merge Budget Data1').all();\nconst aiResponse = $input.first().json;\n\n// Get the first merged data item\nconst mergedData = mergedDataItems[0]?.json || {};\n\nlet questions = [];\ntry {\n  const responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (jsonMatch) {\n    questions = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  questions = [{\n    question_id: 1,\n    question_text: 'Describe your organization and program',\n    word_limit: 500,\n    section_type: 'mission',\n    narrative_match: 'mission_long',\n    required_docs: ['501c3_letter']\n  }];\n}\n\nconst narrativesNeeded = [...new Set(questions.map(q => q.narrative_match).filter(n => n))];\nconst docsNeeded = [...new Set(questions.flatMap(q => q.required_docs || []).filter(d => d !== 'none'))];\n\nreturn [{\n  json: {\n    grantId: mergedData.grantId  || '',           // ← Now accessing object property\n    funderName: mergedData.funder_name || '',\n    funderFocus: mergedData.funder_focus || '',\n    deadline: mergedData.deadline,\n    rfpText: mergedData.rfp_text || '',\n    planeIssueId: mergedData.grantId,\n    questions: questions,\n    narrativesNeeded: narrativesNeeded,\n    docsNeeded: docsNeeded,\n    totalQuestions: questions.length,\n    budget: {\n      generated: mergedData.budget?.generated || false,\n      amount: mergedData.budget?.amount || 0,\n      markdown: mergedData.budget?.markdown || '',\n      narrative: mergedData.budget?.narrative || '',\n      lineItems: mergedData.budget?.line_items || [],\n      categoryTotals: mergedData.budget?.category_totals || {},\n      adminPercent: mergedData.budget?.admin_percent || 0,\n      warnings: mergedData.budget?.warnings || []\n    }\n  }\n}];"
-      },
-      "id": "76bee34b-de98-45b3-ad7e-68c68c043e4a",
-      "name": "Step 2: Parse Requirements1",
+      "id": "500a6f94-b2c9-434f-b4b9-681f60c2938c",
+      "name": "Notify Proposal Started",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -576,
-        -528
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.thebrownmine.com/webhook/customize-narrative",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ sections: $('Step 2: Parse Requirements1').first().json.narrativesNeeded.filter(n => n && n !=='null'), grantContext: { focus: ($('Step 2: Parse Requirements1').first().json.funderFocus || '').replace(/<[^>]*>/g, '').replace(/\\s+/g, ' ').substring(0, 500).trim(), funderName: $('Step 2: Parse Requirements1').first().json.funderName\n   || '' } }) }}",
-        "options": {
-          "allowUnauthorizedCerts": true
-        }
-      },
-      "id": "dba0371d-4198-4d65-b946-26731a45bb41",
-      "name": "Step 3: Get Narratives1",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -368,
-        -1056
+        -1872,
+        -4880
       ],
-      "notes": "Calls Workflow 5 - Narrative Library"
+      "continueOnFail": true
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://n8n.thebrownmine.com/webhook-test/get-documents",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"requiredDocs\": {{ JSON.stringify($('Step 2: Parse Requirements1').first().json.docsNeeded) }},\n\"org_id\": {{ JSON.stringify($('Merge Budget Data1').first().json.org_id) }}\n}",
-        "options": {
-          "allowUnauthorizedCerts": true
-        }
+        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: $('Step 5: Combine Content4').first().json.org_id,\n    grant_id: $('Step 5: Combine Content4').first().json.grantId,\n    type: 'proposal_generated',\n    title: 'Proposal generated for \"' + ($('Step 5: Combine Content4').first().json.grant_title || 'Unknown') + '\"',\n    message: 'Proposal is ready for review'\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
       },
-      "id": "b12a3b83-460f-4a66-8ea2-1d142c65d106",
-      "name": "Step 4: Get Documents1",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -144,
-        -1056
-      ],
-      "notes": "Calls Workflow 4 - Document Vault"
-    },
-    {
-      "parameters": {
-        "jsCode": "const requirements = $('Step 2: Parse Requirements1').first().json;\n  const narratives = $('Step 3: Get Narratives1').first().json;\n  const documents = $input.first().json;\n\n  const questionsWithContent = requirements.questions.map(q => {\n    const narrativeContent = narratives.narratives.error_no_match.content;\n    const docLinks = [];\n    if (q.required_docs && documents.documents) {\n      for (const docType of q.required_docs) {\n        if (documents.documents[docType] && documents.documents[docType].found) {\n          docLinks.push({\n            type: docType,\n            fileName: documents.documents[docType].fileName,\n            link: documents.documents[docType].driveLink\n          });\n        }\n      }\n    }\n\n    return {\n      ...q,\n      narrativeContent: narrativeContent,\n      documentLinks: docLinks\n    };\n  });\n\n  return [{\n    json: {\n      grantId: requirements.grantId,\n      funderName: requirements.funderName,\n      funderFocus: requirements.funderFocus,\n      deadline: requirements.deadline,\n      rfpText: requirements.rfpText,\n      planeIssueId: requirements.planeIssueId,\n      questions: questionsWithContent,\n      missingNarratives: narratives.missingSections || [],\n      missingDocs: documents.missingDocs || [],\n      // ✅ ADD THIS LINE - Pass through budget data\n      budget: requirements.budget || {}\n    }\n  }];"
-      },
-      "id": "ea4d8389-d136-4933-9d03-dc4b3dda71b4",
-      "name": "Step 5: Combine Content1",
+      "id": "97fbad1f-09ab-4ccf-b82a-8854f4e626d9",
+      "name": "Notify Proposal Generated",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        112,
-        -1056
-      ]
-    },
-    {
-      "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4.1-mini",
-          "mode": "list",
-          "cachedResultName": "GPT-4.1-MINI"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "You are a Grant Proposal Writer for The Virtuous House, a community-based nonprofit serving African American youth aging out of foster care and seniors in long-term care facilities.\n\nWrite complete, polished responses to each grant question using the provided narrative content.\n\nRULES:\n1. Stay within word limits\n2. Use the narrative content as your base - don't invent new facts\n3. Tailor tone to match funder's focus areas\n4. Be specific and compelling\n5. Reference programs: The Virtuous Closet, Senior Dignity Initiative, Rural Youth Camp Initiative (PA)\n6. Emphasize dignity-centered, trauma-informed, culturally responsive approach\n\nFor each question, output:\n- question_id\n- response (the written answer)\n- word_count\n- attachments_referenced (list document names to attach)\n#critical\navoid things like jargon,qotes special characters that might break a json when outputing\n\nReturn as JSON array.",
-              "role": "system"
-            },
-            {
-              "content": "=FUNDER: {{ $json.funderName }}\nFOCUS: {{ $json.funderFocus }}\n\nQUESTIONS TO ANSWER:\n{{ JSON.stringify($json.questions, null, 2) }}"
-            }
-          ]
-        },
-        "options": {
-          "temperature": 0.4
-        }
-      },
-      "id": "c1e80f72-475d-40b1-bc97-41d8023fea2c",
-      "name": "Step 6: Write Responses1",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.8,
-      "position": [
-        352,
-        -640
+        1520,
+        -4864
       ],
-      "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Capture draft responses and prepare WF9 call\nconst aiResponse = $input.first().json;\nconst draftText = aiResponse.message?.content || aiResponse.text || JSON.stringify(aiResponse);\nconst context = $('Step 5: Combine Content1').first().json;\n\nreturn [{\n  json: {\n    draftResponses: draftText,\n    funderName: context.funderName,\n    funderFocus: context.funderFocus,\n    rfpText: context.rfpText,\n    planeIssueId: context.planeIssueId\n  }\n}];"
-      },
-      "id": "68102bc8-a515-411b-b221-fb3bacefc488",
-      "name": "Capture Draft1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        672,
-        -624
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.thebrownmine.com/webhook/analyze-funder",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"funderName\": \"{{ $json.funderName }}\",\n  \"focusAreas\": {{ JSON.stringify(($json.funderFocus || '').split(',').map(s => s.trim()).filter(Boolean)) }}\n}",
-        "options": {
-          "allowUnauthorizedCerts": true,
-          "timeout": 60000
-        }
-      },
-      "id": "011743f0-0daf-4aa5-b448-db7450f982c6",
-      "name": "Step 7a: Call WF9 Funder Analysis1",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        864,
-        -1056
-      ],
-      "notesInFlow": true,
-      "continueOnFail": true,
-      "notes": "Calls WF9 - Peer Grant Analyzer for funder intelligence"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Enhanced Compliance Review (includes budget)\n  const context = $('Step 5: Combine Content1').first().json;\n  const alignmentResponse = $input.first().json;\n\n  let alignment = {};\n  try {\n    const text = alignmentResponse.message?.content || alignmentResponse.text || '';\n    const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) alignment = JSON.parse(jsonMatch[0]);\n  } catch (e) {\n    alignment = { alignedResponses: [], overall_alignment_score: 0 };\n  }\n\n  const alignedResponses = alignment.alignedResponses || [];\n\n  // Initialize warnings and sections as explicit string/object arrays\n  const warnings = [];\n  const sections = [];\n\n  let totalChecks = 0;\n  let passedChecks = 0;\n\n  for (const q of context.questions) {\n    const aligned = alignedResponses.find(a => a.question_id === q.question_id);\n    const response = aligned ? aligned.aligned_response : '';\n    const wordCount = aligned ? aligned.word_count : (response ? response.split(/\\s+/).length : 0);\n    const alignmentNotes = aligned ? aligned.alignment_notes : '';\n    const missionOverlap = aligned ? aligned.mission_overlap : '';\n\n    // Initialize issues as explicit array\n    const issues = [];\n\n    // Check response exists\n    totalChecks++;\n    if (response && response.length > 50) {\n      passedChecks++;\n    } else {\n      issues.push('Response missing or too short');\n      warnings.push('Section ' + q.question_id + ': Response missing or too short');\n    }\n\n    // Check word limit\n    if (q.word_limit) {\n      totalChecks++;\n      if (wordCount <= q.word_limit) {\n        passedChecks++;\n      } else {\n        issues.push('Over word limit: ' + wordCount + '/' + q.word_limit);\n        warnings.push('Section ' + q.question_id + ': ' + wordCount + ' words exceeds limit of ' + q.word_limit);\n      }\n    }\n\n    // Check required docs available\n    if (q.required_docs) {\n      for (const doc of q.required_docs) {\n        if (doc === 'none') continue;\n        totalChecks++;\n        const found = (q.documentLinks && q.documentLinks.some(d => d.type === doc));\n        if (found) {\n          passedChecks++;\n        } else {\n          issues.push('Missing attachment: ' + doc);\n        }\n      }\n    }\n\n    // Check for weak language\n    totalChecks++;\n    const weakPhrases = ['we hope to', 'we might', 'possibly', 'we think', 'maybe'];\n    const hasWeak = weakPhrases.some(p => (response || '').toLowerCase().includes(p));\n    if (!hasWeak) {\n      passedChecks++;\n    } else {\n      issues.push('Contains weak/uncertain language');\n      warnings.push('Section ' + q.question_id + ': Contains weak language - strengthen assertions');\n    }\n\n    sections.push({\n      questionId: q.question_id,\n      question: q.question_text,\n      response: response,\n      wordCount: wordCount,\n      wordLimit: q.word_limit || null,\n      sectionType: q.section_type,\n      attachments: q.required_docs || [],\n      alignmentNotes: alignmentNotes,\n      missionOverlap: missionOverlap,\n      issues: issues\n    });\n  }\n\n  if (context.missingNarratives && context.missingNarratives.length > 0) {\n    warnings.push('Missing narratives: ' + context.missingNarratives.join(', '));\n  }\n  if (context.missingDocs && context.missingDocs.length > 0) {\n    warnings.push('Missing documents: ' + context.missingDocs.join(', '));\n  }\n\n  // Check budget\n  if (context.budget && context.budget.generated) {\n    totalChecks++;\n    passedChecks++; // Budget was generated\n\n    if (context.budget.warnings && context.budget.warnings.length > 0) {\n      for (const warning of context.budget.warnings) {\n        warnings.push('Budget: ' + warning);\n      }\n    }\n  } else {\n    totalChecks++;\n    warnings.push('Budget not generated - run budget generator first');\n  }\n\n  totalChecks++;\n  const answeredCount = sections.filter(s => s.response && s.response.length > 50).length;\n  if (answeredCount === context.questions.length) {\n    passedChecks++;\n  } else {\n    warnings.push('Only ' + answeredCount + '/' + context.questions.length + ' questions fully answered');\n  }\n\n  const complianceScore = totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : 0;\n\n  const proposal = {\n    title: 'Grant Proposal - ' + context.funderName,\n    deadline: context.deadline,\n    funder: context.funderName,\n    focus: context.funderFocus,\n    planeIssueId: context.planeIssueId,\n    alignmentScore: alignment.overall_alignment_score || 0,\n    funderLanguageAdopted: alignment.funder_language_adopted || [],\n    missionOverlap: alignment.mission_overlap_summary || '',\n    sections: sections,\n    warnings: warnings,\n    complianceScore: complianceScore,\n    budget: context.budget || {}\n  };\n\n  return [{ json: proposal }];"
-      },
-      "id": "4b177996-5ca3-4f05-9f09-9d7224ee3471",
-      "name": "Step 8: Compliance Review1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1424,
-        -1056
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.thebrownmine.com/webhook/review-proposal",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={\n  \"funderName\": \"{{$json.funder}}\",\n  \"grantPurpose\": \"{{$json.focus}}\",\n  \"deadline\": \"{{$json.deadline}}\",\n  \"alignmentScore\": {{$json.alignmentScore}},\n  \"complianceScore\": {{$json.complianceScore}},\n  \"warnings\": \"{{$json.warnings}}\",\n  \"budget\": {{ JSON.stringify($json.budget || {}) }},\n  \"budgetAmount\": {{$json.budgetAmount || 0}},\n  \"googleDocUrl\": \"{{$json.googleDocUrl || ''}}\",\n  \"proposalText\": {{ JSON.stringify($json.proposalMarkdown || '') }}\n}",
-        "options": {
-          "allowUnauthorizedCerts": true
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        2208,
-        -1056
-      ],
-      "id": "7d2ad0f2-eb2e-4137-b709-d613062575fd",
-      "name": "HTTP Request1"
-    },
-    {
-      "parameters": {
-        "jsCode": "let grantItems = [];\n\n// Try the first node\ntry {\n  const fetchEligible = $('Fetch Eligible Grants1').all();\n  if (fetchEligible.length > 0) {\n    grantItems = fetchEligible;\n  } else {\n    // fallback to second node\n    const fetchEligible2 = $('Fetch Eligible Grants3').all();\n    grantItems = fetchEligible2;\n  }\n} catch (err) {\n  // If the node hasn't executed or doesn't exist, fallback\n  try {\n    grantItems = $('Fetch Eligible Grants3').all();\n  } catch {\n    grantItems = []; // nothing available\n  }\n}const budgetItems = $input.all();\n\nreturn grantItems.map((grantItem, index) => {\n  const grant = grantItem.json;\n  const budget = budgetItems[index]?.json || {};\n\n  return {\n    json: {\n      // Grant info\n      grantId: grant.id,\n      org_id: grant.org_id,\n      grant_title: grant.title,\n      grant_description: grant.description|| '', \n      funder_name: grant.funder_name,\n      deadline: grant.deadline,\n      amount: grant.amount,\n      \n      // Budget info\n      budget: {\n        generated: budget.success || false,\n        amount: budget.grantAmount || 0,\n        narrative: budget.narrative || '',\n        line_items: budget.lineItems || [],\n        category_totals: budget.categoryTotals || {},\n        admin_percent: budget.adminPercent || 0,\n        markdown: budget.markdownBudget || ''\n      }\n    }\n  };\n});"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -1168,
-        -1056
-      ],
-      "id": "b676d949-597a-4518-aae7-c95e3a603a47",
-      "name": "Merge Budget Data1"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.thebrownmine.com/webhook/generate-budget",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n\"org_id\": \"{{ $json.org_id }}\",\n  \"grantAmount\": \"{{ $json.amount ? $json.amount : '0' }}\",\n\n  \"grantAmountMin\": {{\n    $json.amount && ($json.amount.match(/\\$[\\d,]+/g) || []).length === 2\n      ? parseFloat($json.amount.match(/\\$[\\d,]+/g)[0].replace(/[^0-9.]/g, ''))\n      : 0\n  }},\n\n  \"grantAmountMax\": {{\n    $json.amount && ($json.amount.match(/\\$[\\d,]+/g) || []).length === 2\n      ? parseFloat($json.amount.match(/\\$[\\d,]+/g)[1].replace(/[^0-9.]/g, ''))\n      : 0\n  }},\n\n  \"amountType\": \"{{\n    !$json.amount\n      ? 'none'\n      : ($json.amount.match(/\\$[\\d,]+/g) || []).length === 2\n        ? 'range'\n        : ($json.amount.match(/\\$[\\d,]+/g) || []).length === 1\n          ? 'exact'\n          : 'none'\n  }}\",\n\n  \"programFocus\": \"{{ $json.programFocus ? $json.programFocus : 'balanced' }}\",\n  \"funderName\": \"{{ $json.funder_name ? $json.funder_name : '' }}\",\n  \"adminCap\": {{ $json.adminCap ? $json.adminCap : 15 }},\n  \"grantPurpose\": \"{{ $json.description ? $json.description : ($json.title ? $json.title : 'program support') }}\"\n}",
-        "options": {
-          "allowUnauthorizedCerts": true
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -1392,
-        -1056
-      ],
-      "id": "2b6c2621-2b4d-433f-900f-184c57ce612d",
-      "name": "Call Budget Generator1"
-    },
-    {
-      "parameters": {
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?screening_score=gt.60&stage=eq.screening&org_id=eq.{{ $json.body.org_id }}&select=*",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -1616,
-        -960
-      ],
-      "id": "61f59ee4-6252-446f-90f2-26a55d722320",
-      "name": "Fetch Eligible Grants1"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://89.58.28.152:3000/api/webhook",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n  action: \"update_grant\",\n  data: {\n    grantid: $('Step 2: Parse Requirements1').first().json.grantId,\n    stage: \"drafting\",\n    metadata: {\n      proposal: {\n        google_doc_url: $json.google_doc_url,\n        google_doc_id: $json.google_doc_url ? $json.google_doc_url.split('/')[5] : null,\n        alignment_score: $json.alignmentScore,\n        compliance_score: $json.complianceScore,\n        mission_overlap: $json.missionOverlap,\n        funder_language: $json.funderLanguageAdopted,\n        total_sections: $('Step 2: Parse Requirements1').first().json.totalQuestions,\n        warnings_count: $json.warningsCount,\n        warnings: $json.complianceWarnings || [],\n        budget: $('Step 2: Parse Requirements1').first().json.budget,\n        questions: $('Step 2: Parse Requirements1').first().json.questions,\n        drafted_at: new Date().toISOString(),\n        state: \"review_ready\"\n      }\n    }\n  }\n}) }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        2432,
-        -1056
-      ],
-      "id": "09d7c028-8485-487d-848f-843edacff7ce",
-      "name": "HTTP Request5",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://89.58.28.152:3000/api/webhook",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={\n  \"action\": \"{{$json.action}}\",\n  \"data\": {{JSON.stringify($json.data)}}\n}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        2880,
-        -1056
-      ],
-      "id": "75e62409-130b-4f9a-874d-607100bdc6b6",
-      "name": "HTTP Request6",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $json.body.grantId }}&org_id=eq.{{ $json.body.org_id }}&select=*",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -1616,
-        -1184
-      ],
-      "id": "134ff4cc-d7f3-492c-95c9-3da00edd3e64",
-      "name": "Fetch Eligible Grants3"
-    },
-    {
-      "parameters": {
-        "jsCode": " const proposalData = $('Format Proposal1').first().json.proposalData;\n\n\n  return [{\n    json: {\n      action: \"create_proposal\",\n      data: proposalData\n    }\n  }];"
-      },
-      "id": "7833cf61-8f06-4e4a-96f0-6a1d84a8362b",
-      "name": "Return Response",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2672,
-        -1056
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "is-update",
-              "leftValue": "={{ $json.body.grantId ? true : false }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "3b07d151-13b3-41d4-8007-3458f313f7ad",
-      "name": "has body?1",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -1808,
-        -1056
-      ]
-    },
-    {
-      "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4.1-mini",
-          "mode": "list",
-          "cachedResultName": "GPT-4.1-MINI"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "You are a Grant Funder Alignment Specialist. Your job is to review a draft grant proposal and improve it to better align with the funder's priorities, language, and values.\n\nYou will receive:\n- The original RFP text\n- The funder's name and focus areas\n- A WINNING STRATEGY BRIEF from funder research (990 data, grant patterns, recommended language)\n- The draft responses\n\nUsing the strategy brief's intelligence, for EACH response you must:\n1. Adopt the specific terminology and phrases recommended in the strategy brief\n2. Mirror language the funder uses in their RFP\n3. Highlight where The Virtuous House's mission overlaps with the funder's stated priorities\n4. Adjust emphasis to match what the funder cares about most\n5. Position The Virtuous House using the angles recommended in the strategy brief\n6. Ensure the tone matches the funder's style (formal foundation vs community-focused vs corporate)\n7. Stay within word limits\n\nReturn a JSON object with:\n{\n  \"alignedResponses\": [\n    {\n      \"question_id\": 1,\n      \"original_response\": \"...\",\n      \"aligned_response\": \"...\",\n      \"word_count\": 150,\n      \"alignment_notes\": \"Adopted funder's terminology: 'workforce readiness', positioned dignity model as equity strategy\",\n      \"mission_overlap\": \"Both prioritize equipping foster youth for independent living\"\n    }\n  ],\n  \"overall_alignment_score\": 85,\n  \"funder_language_adopted\": [\"workforce readiness\", \"systemic barriers\", \"racial equity\"],\n  \"mission_overlap_summary\": \"Strong alignment on youth empowerment and racial equity\"\n}",
-              "role": "system"
-            },
-            {
-              "content": "=FUNDER: {{ $('Capture Draft1').first().json.funderName }}\nFOCUS AREAS: {{ $('Capture Draft1').first().json.funderFocus }}\n\nORIGINAL RFP TEXT:\n{{ $('Capture Draft1').first().json.rfpText }}\n\nWINNING STRATEGY BRIEF FROM FUNDER RESEARCH (WF9):\n{{ $json.strategyBrief || $json.fullReport || 'No funder research available - use RFP text and focus areas only.' }}\n\nDRAFT RESPONSES TO ALIGN:\n{{ $('Capture Draft1').first().json.draftResponses }}"
-            }
-          ]
-        },
-        "options": {
-          "temperature": 0.3
-        }
-      },
-      "id": "e78266a1-5c5a-4732-b2f5-9221d16b8a04",
-      "name": "Step 7b: Funder Alignment Check",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.8,
-      "position": [
-        1040,
-        -1056
-      ],
-      "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "content": "## debugging required here\nespecially get doc node, there are no docs found in the vault",
-        "height": 384,
-        "width": 1984
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -976,
-        -1232
-      ],
-      "typeVersion": 1,
-      "id": "2bbb9ee5-d32e-461f-9513-dd3f7c05711b",
-      "name": "Sticky Note1"
-    },
-    {
-      "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4.1-mini",
-          "mode": "list",
-          "cachedResultName": "GPT-4.1-MINI"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "You are a Grant Funder Alignment Specialist. Your job is to take draft proposal content and transform it into a complete, professionally formatted, funder-aligned grant proposal.\n\nYou will receive TWO JSON arrays as input:\n\n1. Primary array (grant draft / alignment data) — usually length 1:\n   - Contains keys such as: title, funder, focus, alignmentScore, funderLanguageAdopted (array of recommended phrases), missionOverlap, sections (array of question-response objects), budget (object containing at least: amount, adminPercent, and possibly narrative/markdown/lineItems/categoryTotals)\n   - The sections array has objects with questionId, question, response (raw/partial draft text), alignmentNotes, missionOverlap notes, etc.\n   - Use the response fields as source material to synthesize each proposal section.\n\n2. Secondary array (funder profile / opportunity data) — usually length 1:\n   - Contains keys such as: id, title, funder_name, description, amount, deadline, stage, screening_notes, concerns, recommendations, eligibility, metadata (which may include proposal questions, budget examples, etc.)\n\nFrom this data, extract:\n- Funder name → use funder or funder_name\n- Requested funding amount → use budget.amount from the primary array (this is the total request — it will vary per input)\n- Administrative overhead percentage → use budget.adminPercent from the primary array (this will vary per input)\n- Key alignment language → funderLanguageAdopted array + alignmentNotes from sections + missionOverlap text + screening_notes / description from secondary array\n- All draft content → the \"response\" fields in the sections array\n\nUsing this extracted intelligence as your WINNING STRATEGY BRIEF, you MUST:\n1. Adopt every phrase from funderLanguageAdopted (and alignmentNotes) throughout the document\n2. Mirror language from the funder description, screening_notes, and RFP-style questions\n3. Explicitly highlight mission overlap using the provided missionOverlap text\n4. Adjust emphasis to match funder priorities (e.g. systemic change, racial equity, community resilience, dismantling barriers, social justice)\n5. Position The Virtuous House using angles from alignmentNotes, screening_notes, and concerns/recommendations\n6. Match the formal, justice-oriented tone of a major foundation\n7. Weave in relevant content from the \"response\" fields while keeping sections concise, compelling, and non-repetitive\n\nOutput ONLY a valid JSON object with this exact structure — do NOT output any explanations, markdown outside the JSON, or additional text:\n\n{\n  \"grant_proposal\": {\n    \"organization\": \"The Virtuous House\",\n    \"funder\": \"[Funder Name]\",\n    \"project_title\": \"[Strong, funder-aligned project title you create]\",\n    \"generated_date\": \"[Current date in format: Month DD, YYYY]\",\n    \"sections\": {\n      \"1_executive_summary\": \"[Full aligned Executive Summary content — preserve all bullets, sub-bullets, bolding via **text**, line breaks, etc. exactly as in sample]\",\n      \"2_organizational_overview\": \"[Full aligned content — include At a Glance bullets]\",\n      \"3_statement_of_need\": \"[Full aligned content — keep subheadings and bullets]\",\n      \"4_program_design_and_activities\": \"[Full aligned content — one subsection per program with bullets]\",\n      \"5_measurable_outcomes_and_evaluation\": \"[Full aligned content — outcomes by program + Evaluation Methodology bullets]\",\n      \"6_budget_summary_and_justification\": \"Category | Amount | % of Total\\nPersonnel ... | $XX,XXX | XX.X%\\nDirect Program Costs ... | $XX,XXX | XX.X%\\n... (use plain text table with pipes and newlines exactly like sample, followed by Budget Justification Highlights bullets)\",\n      \"7_organizational_capacity_and_fiscal_management\": \"[Full aligned content — Fiscal Management Practices and Organizational Infrastructure bullets]\",\n      \"8_sustainability_plan\": \"[Full aligned content — Sustainability Strategies bullets + targets]\",\n      \"9_conclusion_and_request\": \"[Full aligned content — ending with Request Summary bullets]\"\n    },\n    \"request_amount\": the requested fund amount pulled from budget.amount,\n    \"project_period\": \"[e.g. July 2026 – June 2027 (12 months)] — choose realistic period based on context\",\n    \"admin_overhead_percent\": the admin percentage pulled from budget.adminPercent\n  }\n}\n\nImportant rules:\n- the entire proposal should have minimum of 15000 characters\n- Preserve ALL original sample formatting INSIDE the string values:  bullet styles (• or -), subheadings, bold via **text** if needed, line breaks, pipe tables for budget, etc.\n- Do NOT escape newlines or special characters inside the strings — JSON allows literal newlines.\n- Create realistic budget line-item numbers that sum exactly to request_amount, respect admin_overhead_percent, and align naturally with program descriptions (do NOT copy $0 lines from sample data — synthesize appropriate allocations).\n- Create realistic targets, enrollment figures, and outcomes that flow naturally from the draft responses.\n- Make the project title strong, concise, and perfectly aligned with the funder’s stated priorities.\n- Use the current date (provided in the query) for generated_date.\n- Output ONLY the JSON — nothing else before or after.\n\nNow generate the full proposal JSON for the provided inputs using ONLY the structure above.",
-              "role": "system"
-            },
-            {
-              "content": "=PRIMARY ARRAY: {{ $json }}\n\nSECONDARY ARRAY:\n{{\n  $('Fetch Eligible Grants1').isExecuted\n    ? $('Fetch Eligible Grants1').first().json\n    : $('Fetch Eligible Grants3').isExecuted\n      ? $('Fetch Eligible Grants3').first().json\n      : {}\n}}"
-            }
-          ]
-        },
-        "options": {
-          "temperature": 0.3
-        }
-      },
-      "id": "63f04a78-7589-4b05-a562-03a6ef620be4",
-      "name": "Generate Proposal1",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.8,
-      "position": [
-        1648,
-        -1056
-      ],
-      "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const rawContent = $input.all()[0].json.message.content;\nconst funder = $('Step 8: Compliance Review1').first().json.funder;\nconst deadline = $('Step 8: Compliance Review1').first().json.deadline;\nconst focus = $('Step 8: Compliance Review1').first().json.focus;\nconst alignmentScore = $('Step 8: Compliance Review1').first().json.alignmentScore;\nconst complianceScore = $('Step 8: Compliance Review1').first().json.complianceScore;\nconst warnings = $('Step 8: Compliance Review1').first().json.warnings;\n\nconst grantData =\n  $('Fetch Eligible Grants1').isExecuted\n    ? $('Fetch Eligible Grants1').first().json\n    : $('Fetch Eligible Grants3').isExecuted\n      ? $('Fetch Eligible Grants3').first().json\n      : {};const id = grantData.id;\nconst org_id = grantData.org_id;\n\n// Parse AI response\nlet proposal;\ntry {\n  proposal = JSON.parse(rawContent).grant_proposal;\n} catch (e) {\n  throw new Error(\"Failed to parse AI response JSON: \" + e.message);\n}\n\n// Helper to extract markdown tables\nfunction extractTable(text) {\n  const lines = text.split('\\n');\n  const tableLines = [];\n  const remainingLines = [];\n\n  lines.forEach(line => {\n    if (line.includes('|')) tableLines.push(line);\n    else remainingLines.push(line);\n  });\n\n  return {\n    content: remainingLines.join('\\n').trim() || null,\n    tabulation: tableLines.length ? tableLines.join('\\n') : null\n  };\n}\n\nconst sections = [];\nlet sectionIndex = 1;\n\n// =============================\n// 1️⃣ TOP TITLE META SECTION\n// =============================\nsections.push({\n  title: funder + ' Proposal',\n  header1: null,\n  header2: null,\n  content: [\n    { chapter: 'Funder: ' + funder, sort_order: 1 },\n    { chapter: 'Deadline: ' + deadline, sort_order: 2 },\n    { chapter: 'Focus: ' + focus, sort_order: 3 },\n  ],\n  tabulation: null,\n  sort_order: sectionIndex++,\n});\n\n// =============================\n// 2️⃣ BUILD ACTUAL PROPOSAL SECTIONS FIRST (store separately)\n// =============================\nconst proposalSections = [];\nconst tocChapters = [];\n\nlet tocIndex = 1;\n\nfor (const [sectionKey, sectionContent] of Object.entries(proposal.sections)) {\n\n  let sortOrder = 1;\n  const header1Arr = [];\n  const header2Arr = [];\n  const contentArr = [];\n  const tabulationArr = [];\n\n  const sectionTitle = sectionKey\n    .replace(/^\\d+_/, '')\n    .replace(/_/g, ' ')\n    .replace(/\\b\\w/g, l => l.toUpperCase());\n\n  // Add to TOC (numbered dynamically)\n  tocChapters.push({\n    chapter: `${tocIndex}. ${sectionTitle}`,\n    sort_order: tocIndex\n  });\n\n  tocIndex++;\n\n  const { content: mainContent, tabulation } = extractTable(sectionContent);\n\n  if (mainContent) {\n    mainContent.split('\\n').forEach(line => {\n      const trimmed = line.trim();\n      if (!trimmed) return;\n\n      if (/:$/.test(trimmed)) {\n        header2Arr.push({ chapter: trimmed, sort_order: sortOrder++ });\n      } else {\n        contentArr.push({ chapter: trimmed, sort_order: sortOrder++ });\n      }\n    });\n  }\n\n  if (tabulation) {\n    tabulationArr.push({ chapter: tabulation, sort_order: sortOrder++ });\n  }\n\n  proposalSections.push({\n    title: sectionTitle,\n    header1: header1Arr.length ? header1Arr : null,\n    header2: header2Arr.length ? header2Arr : null,\n    content: contentArr.length ? contentArr : null,\n    tabulation: tabulationArr.length ? tabulationArr : null,\n  });\n}\n\n// =============================\n// 3️⃣ INSERT TABLE OF CONTENTS\n// =============================\nsections.push({\n  title: 'Table of Contents',\n  header1: null,\n  header2: null,\n  content: tocChapters,\n  tabulation: null,\n  sort_order: sectionIndex++,\n});\n\n// =============================\n// 4️⃣ APPEND REAL SECTIONS\n// =============================\nproposalSections.forEach(sec => {\n  sections.push({\n    ...sec,\n    sort_order: sectionIndex++,\n  });\n});\n\n// =============================\n// FINAL RETURN\n// =============================\nreturn [{\n  json: {\n    proposalData: {\n      org_id: org_id,\n      grant_id: id,\n      title: funder + ' Proposal',\n      status: 'draft',\n      sections: sections,\n    },\n    proposalMarkdown: rawContent,\n    funder: funder,\n    deadline: deadline,\n    focus: focus,\n    alignmentScore: alignmentScore,\n    complianceScore: complianceScore,\n    warnings: warnings,\n  }\n}];"
-      },
-      "id": "6adb2648-b1ca-4440-abbe-b8e75f2bb55f",
-      "name": "Format Proposal1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1968,
-        -1056
-      ],
-      "alwaysOutputData": false
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: false, message: $json.execution?.error?.message || \"Proposal generation failed\" }) }}",
-        "options": {
-          "responseCode": 500
-        }
-      },
-      "name": "Error Response1",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        -1840,
-        -608
-      ],
-      "id": "e2b1a2ea-9ba3-4b62-a792-421d364d8961"
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, message: \"Proposal generated successfully\" }) }}",
-        "options": {
-          "responseCode": 200
-        }
-      },
-      "name": "Success Response1",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        3120,
-        -1056
-      ],
-      "id": "a79f98db-5c19-4060-b70d-ab6fc5e80409"
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -568,13 +36,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "a0a40520-e95d-4619-8bdc-a0d06ba579f9",
-      "name": "Proposal Request",
+      "id": "f9c583a8-77db-4689-8d5e-9541b86247d3",
+      "name": "Proposal Request4",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -2576,
-        -3568
+        -2704,
+        -4864
       ],
       "webhookId": "generate-proposal",
       "notes": "POST: { grantId, rfpText, funderName, funderFocus, deadline, planeIssueId }"
@@ -590,13 +58,13 @@
           "allowUnauthorizedCerts": true
         }
       },
-      "id": "6f82545c-2de9-4ace-94bf-5bbef600853f",
-      "name": "Step 3: Get Narratives",
+      "id": "5910e0d3-26a6-4559-be9f-3a1401f68056",
+      "name": "Step 3: Get Narratives4",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -752,
-        -3568
+        -880,
+        -4864
       ],
       "notes": "Calls Workflow 5 - Narrative Library"
     },
@@ -611,13 +79,13 @@
           "allowUnauthorizedCerts": true
         }
       },
-      "id": "fc49c87e-7a93-47c4-96c6-6b71b4f21984",
-      "name": "Step 4: Get Documents",
+      "id": "4754b058-1176-422f-8c0f-686ec59d3d1c",
+      "name": "Step 4: Get Documents4",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -528,
-        -3568
+        -656,
+        -4864
       ],
       "notes": "Calls Workflow 4 - Document Vault"
     },
@@ -625,13 +93,13 @@
       "parameters": {
         "jsCode": " const item = $input.first().json;\n\n  // Combine all narrative sections into one string\n  const allNarratives = {};\n  let narrativeText = '';\n  if (item.narratives) {\n    for (const [sectionId, section] of Object.entries(item.narratives)) {\n      allNarratives[sectionId] = section;\n      narrativeText += `\\n\\n### ${section.section_name}\\n${section.content}`;\n    }\n  }\n\n  // Combine all relevant document content\n  const allDocuments = {};\n  let documentText = '';\n  if (item.documents) {\n    for (const [category, doc] of Object.entries(item.documents)) {\n      if (doc.found) {\n        allDocuments[category] = {\n          id: doc.id,\n          fileName: doc.fileName,\n          category: doc.category,\n          extractedText: doc.extractedText,\n        };\n        documentText += `\\n\\n### ${doc.fileName} (${doc.category})\\n${doc.extractedText}`;\n      }\n    }\n  }\n\n  return [{\n    json: {\n      grantId: item.grant_id || '',\n      org_id: item.org_id || '',\n      grant_title: item.grant_title || '',\n      grant_description: item.grant_description || '',\n      funder_name: item.funder_name,\n      deadline: item.deadline,\n      amount: item.amount,\n      narratives: allNarratives,\n      narrativeText: narrativeText.trim(),\n      sectionsReturned: item.sectionsReturned || 0,\n      documents: allDocuments,\n      documentText: documentText.trim(),\n      totalDocuments: item.totalDocuments || 0,\n      relevantDocuments: Object.keys(allDocuments).length,\n    }\n  }];"
       },
-      "id": "15e1f9e1-eedd-4cd2-b6d3-f2ca36000817",
-      "name": "Step 5: Combine Content",
+      "id": "b2e0ebd5-75ca-4488-80c7-07c511fa71c3",
+      "name": "Step 5: Combine Content4",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -256,
-        -3568
+        -384,
+        -4864
       ]
     },
     {
@@ -649,23 +117,23 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        624,
-        -3568
+        496,
+        -4864
       ],
-      "id": "387d45ff-8e42-45ac-bbda-18dfa903e7a4",
-      "name": "HTTP Request"
+      "id": "c4313c13-31e4-4bca-899b-8458d6f6a94c",
+      "name": "HTTP Request13"
     },
     {
       "parameters": {
-        "jsCode": "const { sections, ...proposal } = $('Format Proposal').first().json.proposalData;\n\n  return [{\n      json: { proposal, sections }\n  }];"
+        "jsCode": "const { sections, ...proposal } = $('Format Proposal4').first().json.proposalData;\n\n  return [{\n      json: { proposal, sections }\n  }];"
       },
-      "id": "9337b900-c3f7-4780-b83b-abd5c647a320",
-      "name": "Return Response1",
+      "id": "ba78e2b8-ffb7-4ca3-84a0-459b92f9553d",
+      "name": "Return Response4",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1072,
-        -3568
+        944,
+        -4864
       ]
     },
     {
@@ -691,13 +159,13 @@
           "temperature": 0.3
         }
       },
-      "id": "9568225f-d90c-4d3c-9590-fa34c1b1744d",
-      "name": "Generate Proposal",
+      "id": "2c86bf18-7ff3-4b81-84dc-9029d43467b9",
+      "name": "Generate Proposal4",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        0,
-        -3568
+        -128,
+        -4864
       ],
       "credentials": {
         "openAiApi": {
@@ -708,15 +176,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const rawContent = $input.all()[0].json.message.content;\n  const combinedData = $('Step 5: Combine Content').first().json;\n\n  const funder = combinedData.funder_name;\n  const deadline = combinedData.deadline;\n  const grantId = combinedData.grantId;\n  const org_id = combinedData.org_id;\n\n  // Parse AI response\n  let proposal;\n  try {\n    let cleaned = rawContent.trim();\n    cleaned = cleaned.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    proposal = JSON.parse(cleaned).grant_proposal;\n  } catch (e) {\n    throw new Error(\"Failed to parse AI response JSON: \" + e.message);\n  }\n\n  const orgName = proposal.organization || 'Organization';\n  const grantTitle = combinedData.grant_title || proposal.project_title || 'Grant Proposal';\n\n  // Helper to extract markdown tables\n  function extractTable(text) {\n    const lines = text.split('\\n');\n    const tableLines = [];\n    const remainingLines = [];\n\n    lines.forEach(line => {\n      if (line.includes('|')) tableLines.push(line);\n      else remainingLines.push(line);\n    });\n\n    return {\n      content: remainingLines.join('\\n').trim() || null,\n      tabulation: tableLines.length ? tableLines.join('\\n') : null\n    };\n  }\n\n  // Helper to detect if a line is a header\n  function isHeader2(line) {\n    if (/^\\*\\*.+:\\*\\*$/.test(line)) return true;\n    if (line.length < 60 && /:$/.test(line)) return true;\n    return false;\n  }\n\n  const sections = [];\n  let sectionIndex = 1;\n\n  // =============================\n  // 1️⃣ TOP TITLE META SECTION\n  // =============================\n  sections.push({\n    title: orgName + ' Proposal' ,\n    header1: null,\n    header2: null,\n    content: [\n    ...(funder ? [{ chapter: 'Funder: ' + funder, sort_order: 1 }] : []),\n    { chapter: 'Deadline: ' + (deadline || 'Not specified'), sort_order: 2 },\n    { chapter: 'Grant: ' + grantTitle, sort_order: 3 },\n  ],\n    tabulation: null,\n    sort_order: sectionIndex++,\n  });\n\n  // =============================\n  // 2️⃣ BUILD ACTUAL PROPOSAL SECTIONS FIRST\n  // =============================\n  const proposalSections = [];\n  const tocChapters = [];\n\n  let tocIndex = 1;\n\n  for (const [sectionKey, sectionContent] of Object.entries(proposal.sections)) {\n    // Skip duplicate sections\n    if (/_duplicate/.test(sectionKey)) continue;\n\n    let sortOrder = 1;\n    const header1Arr = [];\n    const header2Arr = [];\n    const contentArr = [];\n    const tabulationArr = [];\n\n    const sectionTitle = sectionKey\n      .replace(/^\\d+_/, '')\n      .replace(/_/g, ' ')\n      .replace(/\\b\\w/g, l => l.toUpperCase());\n\n    tocChapters.push({\n      chapter: `${tocIndex}. ${sectionTitle}`,\n      sort_order: tocIndex\n    });\n\n    tocIndex++;\n\n    const { content: mainContent, tabulation } = extractTable(sectionContent);\n\n    if (mainContent) {\n      mainContent.split('\\n').forEach(line => {\n        const trimmed = line.trim();\n        if (!trimmed) return;\n\n        if (isHeader2(trimmed)) {\n          header2Arr.push({ chapter: trimmed, sort_order: sortOrder++ });\n        } else {\n          contentArr.push({ chapter: trimmed, sort_order: sortOrder++ });\n        }\n      });\n    }\n\n    if (tabulation) {\n      tabulationArr.push({ chapter: tabulation, sort_order: sortOrder++ });\n    }\n\n    proposalSections.push({\n      title: sectionTitle,\n      header1: header1Arr.length ? header1Arr : null,\n      header2: header2Arr.length ? header2Arr : null,\n      content: contentArr.length ? contentArr : null,\n      tabulation: tabulationArr.length ? tabulationArr : null,\n    });\n  }\n\n  // =============================\n  // 3️⃣ INSERT TABLE OF CONTENTS\n  // =============================\n  sections.push({\n    title: 'Table of Contents',\n    header1: null,\n    header2: null,\n    content: tocChapters,\n    tabulation: null,\n    sort_order: sectionIndex++,\n  });\n\n  // =============================\n  // 4️⃣ APPEND REAL SECTIONS\n  // =============================\n  proposalSections.forEach(sec => {\n    sections.push({\n      ...sec,\n      sort_order: sectionIndex++,\n    });\n  });\n\n  // =============================\n  // FINAL RETURN\n  // =============================\n  return [{\n    json: {\n      proposalData: {\n        org_id: org_id,\n        grant_id: grantId,\n        title: orgName,\n        status: 'draft',\n        sections: sections,\n      },\n      proposalMarkdown: rawContent,\n      funder: funder,\n      deadline: deadline,\n      focus: combinedData.grant_description || '',\n      alignmentScore: null,\n      complianceScore: null,\n      warnings: [],\n    }\n  }];"
+        "jsCode": "const rawContent = $input.all()[0].json.message.content;\n  const combinedData = $('Step 5: Combine Content4').first().json;\n\n  const funder = combinedData.funder_name;\n  const deadline = combinedData.deadline;\n  const grantId = combinedData.grantId;\n  const org_id = combinedData.org_id;\n\n  // Parse AI response\n  let proposal;\n  try {\n    let cleaned = rawContent.trim();\n    cleaned = cleaned.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    proposal = JSON.parse(cleaned).grant_proposal;\n  } catch (e) {\n    throw new Error(\"Failed to parse AI response JSON: \" + e.message);\n  }\n\n  const orgName = proposal.organization || 'Organization';\n  const grantTitle = combinedData.grant_title || proposal.project_title || 'Grant Proposal';\n\n  // Helper to extract markdown tables\n  function extractTable(text) {\n    const lines = text.split('\\n');\n    const tableLines = [];\n    const remainingLines = [];\n\n    lines.forEach(line => {\n      if (line.includes('|')) tableLines.push(line);\n      else remainingLines.push(line);\n    });\n\n    return {\n      content: remainingLines.join('\\n').trim() || null,\n      tabulation: tableLines.length ? tableLines.join('\\n') : null\n    };\n  }\n\n  // Helper to detect if a line is a header\n  function isHeader2(line) {\n    if (/^\\*\\*.+:\\*\\*$/.test(line)) return true;\n    if (line.length < 60 && /:$/.test(line)) return true;\n    return false;\n  }\n\n  const sections = [];\n  let sectionIndex = 1;\n\n  // =============================\n  // 1️⃣ TOP TITLE META SECTION\n  // =============================\n  sections.push({\n    title: orgName + ' Proposal' ,\n    header1: null,\n    header2: null,\n    content: [\n    ...(funder ? [{ chapter: 'Funder: ' + funder, sort_order: 1 }] : []),\n    { chapter: 'Deadline: ' + (deadline || 'Not specified'), sort_order: 2 },\n    { chapter: 'Grant: ' + grantTitle, sort_order: 3 },\n  ],\n    tabulation: null,\n    sort_order: sectionIndex++,\n  });\n\n  // =============================\n  // 2️⃣ BUILD ACTUAL PROPOSAL SECTIONS FIRST\n  // =============================\n  const proposalSections = [];\n  const tocChapters = [];\n\n  let tocIndex = 1;\n\n  for (const [sectionKey, sectionContent] of Object.entries(proposal.sections)) {\n    // Skip duplicate sections\n    if (/_duplicate/.test(sectionKey)) continue;\n\n    let sortOrder = 1;\n    const header1Arr = [];\n    const header2Arr = [];\n    const contentArr = [];\n    const tabulationArr = [];\n\n    const sectionTitle = sectionKey\n      .replace(/^\\d+_/, '')\n      .replace(/_/g, ' ')\n      .replace(/\\b\\w/g, l => l.toUpperCase());\n\n    tocChapters.push({\n      chapter: `${tocIndex}. ${sectionTitle}`,\n      sort_order: tocIndex\n    });\n\n    tocIndex++;\n\n    const { content: mainContent, tabulation } = extractTable(sectionContent);\n\n    if (mainContent) {\n      mainContent.split('\\n').forEach(line => {\n        const trimmed = line.trim();\n        if (!trimmed) return;\n\n        if (isHeader2(trimmed)) {\n          header2Arr.push({ chapter: trimmed, sort_order: sortOrder++ });\n        } else {\n          contentArr.push({ chapter: trimmed, sort_order: sortOrder++ });\n        }\n      });\n    }\n\n    if (tabulation) {\n      tabulationArr.push({ chapter: tabulation, sort_order: sortOrder++ });\n    }\n\n    proposalSections.push({\n      title: sectionTitle,\n      header1: header1Arr.length ? header1Arr : null,\n      header2: header2Arr.length ? header2Arr : null,\n      content: contentArr.length ? contentArr : null,\n      tabulation: tabulationArr.length ? tabulationArr : null,\n    });\n  }\n\n  // =============================\n  // 3️⃣ INSERT TABLE OF CONTENTS\n  // =============================\n  sections.push({\n    title: 'Table of Contents',\n    header1: null,\n    header2: null,\n    content: tocChapters,\n    tabulation: null,\n    sort_order: sectionIndex++,\n  });\n\n  // =============================\n  // 4️⃣ APPEND REAL SECTIONS\n  // =============================\n  proposalSections.forEach(sec => {\n    sections.push({\n      ...sec,\n      sort_order: sectionIndex++,\n    });\n  });\n\n  // =============================\n  // FINAL RETURN\n  // =============================\n  return [{\n    json: {\n      proposalData: {\n        org_id: org_id,\n        grant_id: grantId,\n        title: orgName,\n        status: 'draft',\n        sections: sections,\n      },\n      proposalMarkdown: rawContent,\n      funder: funder,\n      deadline: deadline,\n      focus: combinedData.grant_description || '',\n      alignmentScore: null,\n      complianceScore: null,\n      warnings: [],\n    }\n  }];"
       },
-      "id": "e8f8e1fa-f365-4a44-b140-e64889895c9e",
-      "name": "Format Proposal",
+      "id": "24f57ede-ece0-4fb1-b517-cba1f6f21180",
+      "name": "Format Proposal4",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        384,
-        -3568
+        256,
+        -4864
       ],
       "alwaysOutputData": false
     },
@@ -728,14 +196,14 @@
           "responseCode": 200
         }
       },
-      "name": "Success Response",
+      "name": "Success Response5",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1616,
-        -3568
+        1744,
+        -4864
       ],
-      "id": "af94098c-d8e2-4e27-ba57-1b74b519f6c1"
+      "id": "23b6cd8f-3a07-4ad1-8cb0-112a639378f0"
     },
     {
       "parameters": {
@@ -761,36 +229,36 @@
         },
         "options": {}
       },
-      "id": "5e875c5e-841d-4292-bb1b-dd8f22e2ee5d",
-      "name": "is grant eligible?",
+      "id": "9e34cb8b-1deb-498e-91c5-26e1ce8281cb",
+      "name": "is grant eligible?1",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -2048,
-        -3600
+        -2176,
+        -4896
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({\n  success: false,\n  message: `grant: '${$('Proposal Request').first().json.body.grant_name}' is not eligible`\n}) }}",
+        "responseBody": "={{ JSON.stringify({\n  success: false,\n  message: `grant: '${$('Proposal Request4').first().json.body.grant_name}' is not eligible`\n}) }}",
         "options": {
           "responseCode": 200
         }
       },
-      "name": "Success Response2",
+      "name": "Success Response6",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -1360,
-        -3296
+        -1488,
+        -4592
       ],
-      "id": "ab63f13b-c862-413f-b7ce-fad680761574"
+      "id": "2e572d3c-8cd4-47ef-aa18-cf1f68a67c01"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, message: \"Proposal generation for grant: '\" + $(\"Proposal Request\").first().json.body.grant_name + \"' has started\" }) }}",
+        "responseBody": "={{ JSON.stringify({ success: true, message: \"Proposal generation for grant: '\" + $(\"Proposal Request4\").first().json.body.grant_name + \"' has started\" }) }}",
         "options": {
           "responseCode": 200
         }
@@ -798,21 +266,16 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -1440,
-        -3584
+        -1568,
+        -4880
       ],
-      "id": "bc47ce22-4551-46a3-852c-5404a4bf3dfa",
-      "name": "Notify Screening Started1"
+      "id": "d038e82a-5e99-4db1-bd72-75f3dd55ce60",
+      "name": "Notify Screening Started"
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ org_id: $(\"Proposal Request\").first().json.body.org_id, grant_id: $(\"Proposal Request\").first().json.body.grantId || $(\"Proposal Request\").first().json.body.grant_id, type: \"grant_not_eligible\", title: \"Grant \\\"\" + ($(\"Proposal Request\").first().json.body.grant_name || \"Unknown\") + \"\\\" is not eligible for proposal generation\", message: \"The grant did not pass eligibility check for proposal generation.\" }) }}",
-        "options": {},
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -829,21 +292,26 @@
               "value": "application/json"
             }
           ]
-        }
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ org_id: $(\"Proposal Request4\").first().json.body.org_id, grant_id: $(\"Proposal Request4\").first().json.body.grantId || $(\"Proposal Request4\").first().json.body.grant_id, type: \"grant_not_eligible\", title: \"Grant \\\"\" + ($(\"Proposal Request4\").first().json.body.grant_name || \"Unknown\") + \"\\\" is not eligible for proposal generation\", message: \"The grant did not pass eligibility check for proposal generation.\" }) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -1152,
-        -3296
+        -1280,
+        -4592
       ],
-      "id": "8a3954bb-63bc-4388-abc4-788abb55bcde",
-      "name": "Notify Proposal Ineligible"
+      "id": "f80db499-5906-4be5-92dd-7f823ceedb65",
+      "name": "Notify Proposal Ineligible1"
     },
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $('Step 5: Combine Content').first().json.grantId }}",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $('Step 5: Combine Content4').first().json.grantId }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -866,17 +334,17 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n    stage: \"drafting\",\n    metadata: {\n      proposal: {\n        alignment_score: null,\n        compliance_score: null,\n        total_sections: $('Format Proposal').first().json.proposalData.sections.length,\n        warnings_count: 0,\n        warnings: [],\n        budget: $('Step 5: Combine Content').first().json.budget,\n        drafted_at: new Date().toISOString(),\n        state: \"review_ready\"\n      }\n    }\n  }) }}",
+        "body": "={{ JSON.stringify({\n    stage: \"drafting\",\n    metadata: {\n      proposal: {\n        alignment_score: null,\n        compliance_score: null,\n        total_sections: $('Format Proposal4').first().json.proposalData.sections.length,\n        warnings_count: 0,\n        warnings: [],\n        budget: $('Step 5: Combine Content4').first().json.budget,\n        drafted_at: new Date().toISOString(),\n        state: \"review_ready\"\n      }\n    }\n  }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        848,
-        -3568
+        720,
+        -4864
       ],
-      "id": "2de7e20e-8086-423d-acb4-b1201cfe765b",
-      "name": "HTTP Request3",
+      "id": "3fde4cd0-d246-4c2e-b94b-9b0b17cd84f6",
+      "name": "HTTP Request14",
       "credentials": {
         "httpHeaderAuth": {
           "id": "58HU1FxffRqvjWUp",
@@ -916,11 +384,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1248,
-        -3568
+        1120,
+        -4864
       ],
-      "id": "e525f33d-e92d-46ec-affc-dbf566302025",
-      "name": "HTTP Request7",
+      "id": "418c45f6-dbbf-48bd-899b-8f401599d5e0",
+      "name": "HTTP Request15",
       "credentials": {
         "httpHeaderAuth": {
           "id": "58HU1FxffRqvjWUp",
@@ -954,470 +422,32 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "= {{ JSON.stringify(\n      $('Return Response1').first().json.sections.map(s => ({\n        proposal_id: $input.first().json.id,\n        title: s.title,\n        content: s.content,\n        sort_order: s.sort_order\n      }))\n    ) }}",
+        "body": "= {{ JSON.stringify(\n      $('Return Response4').first().json.sections.map(s => ({\n        proposal_id: $input.first().json.id,\n        title: s.title,\n        content: s.content,\n        sort_order: s.sort_order\n      }))\n    ) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1408,
-        -3568
+        1280,
+        -4864
       ],
-      "id": "1c8775d4-9442-4e51-94dc-94eca81d9305",
-      "name": "HTTP Request8",
+      "id": "c9e72d38-c15a-4186-ae31-4f46d342618f",
+      "name": "HTTP Request16",
       "credentials": {
         "httpHeaderAuth": {
           "id": "58HU1FxffRqvjWUp",
           "name": "x-webhook-secret"
         }
       }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.body.org_id,\n    grant_id: items[0].json.body.grantId || items[0].json.body.grant_id,\n    type: 'proposal_started',\n    title: 'Proposal generation started for \"' + (items[0].json.body.grant_name || 'Unknown') + '\"'\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
-      },
-      "id": "notif-proposal-started-001",
-      "name": "Notify Proposal Started",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -1744,
-        -3584
-      ],
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: $('Step 5: Combine Content').first().json.org_id,\n    grant_id: $('Step 5: Combine Content').first().json.grantId,\n    type: 'proposal_generated',\n    title: 'Proposal generated for \"' + ($('Step 5: Combine Content').first().json.grant_title || 'Unknown') + '\"',\n    message: 'Proposal is ready for review'\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
-      },
-      "id": "notif-proposal-generated-001",
-      "name": "Notify Proposal Generated",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1520,
-        -3568
-      ],
-      "continueOnFail": true
     }
   ],
   "pinData": {},
   "connections": {
-    "Proposal Request1": {
-      "main": [
-        [
-          {
-            "node": "has body?1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 1: Analyze RFP1": {
-      "main": [
-        [
-          {
-            "node": "Step 2: Parse Requirements1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 2: Parse Requirements1": {
-      "main": [
-        [
-          {
-            "node": "Step 3: Get Narratives1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 3: Get Narratives1": {
-      "main": [
-        [
-          {
-            "node": "Step 4: Get Documents1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 4: Get Documents1": {
-      "main": [
-        [
-          {
-            "node": "Step 5: Combine Content1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 5: Combine Content1": {
-      "main": [
-        [
-          {
-            "node": "Step 6: Write Responses1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 6: Write Responses1": {
-      "main": [
-        [
-          {
-            "node": "Capture Draft1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Capture Draft1": {
-      "main": [
-        [
-          {
-            "node": "Step 7a: Call WF9 Funder Analysis1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 7a: Call WF9 Funder Analysis1": {
-      "main": [
-        [
-          {
-            "node": "Step 7b: Funder Alignment Check",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 8: Compliance Review1": {
-      "main": [
-        [
-          {
-            "node": "Generate Proposal1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request1": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request5",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Merge Budget Data1": {
-      "main": [
-        [
-          {
-            "node": "Step 1: Analyze RFP1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call Budget Generator1": {
-      "main": [
-        [
-          {
-            "node": "Merge Budget Data1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch Eligible Grants1": {
-      "main": [
-        [
-          {
-            "node": "Call Budget Generator1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request5": {
-      "main": [
-        [
-          {
-            "node": "Return Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request6": {
-      "main": [
-        [
-          {
-            "node": "Success Response1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch Eligible Grants3": {
-      "main": [
-        [
-          {
-            "node": "Call Budget Generator1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Return Response": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request6",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "has body?1": {
-      "main": [
-        [
-          {
-            "node": "Fetch Eligible Grants3",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Fetch Eligible Grants1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 7b: Funder Alignment Check": {
-      "main": [
-        [
-          {
-            "node": "Step 8: Compliance Review1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Generate Proposal1": {
-      "main": [
-        [
-          {
-            "node": "Format Proposal1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Proposal1": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Proposal Request": {
-      "main": [
-        [
-          {
-            "node": "is grant eligible?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 3: Get Narratives": {
-      "main": [
-        [
-          {
-            "node": "Step 4: Get Documents",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 4: Get Documents": {
-      "main": [
-        [
-          {
-            "node": "Step 5: Combine Content",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Step 5: Combine Content": {
-      "main": [
-        [
-          {
-            "node": "Generate Proposal",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request3",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Return Response1": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request7",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Generate Proposal": {
-      "main": [
-        [
-          {
-            "node": "Format Proposal",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Proposal": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "is grant eligible?": {
-      "main": [
-        [
-          {
-            "node": "Notify Proposal Started",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Success Response2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Notify Screening Started1": {
-      "main": [
-        [
-          {
-            "node": "Step 3: Get Narratives",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Success Response2": {
-      "main": [
-        [
-          {
-            "node": "Notify Proposal Ineligible",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request3": {
-      "main": [
-        [
-          {
-            "node": "Return Response1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request7": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request8",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request8": {
-      "main": [
-        [
-          {
-            "node": "Notify Proposal Generated",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Notify Proposal Started": {
       "main": [
         [
           {
-            "node": "Notify Screening Started1",
+            "node": "Notify Screening Started",
             "type": "main",
             "index": 0
           }
@@ -1428,7 +458,168 @@
       "main": [
         [
           {
-            "node": "Success Response",
+            "node": "Success Response5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proposal Request4": {
+      "main": [
+        [
+          {
+            "node": "is grant eligible?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 3: Get Narratives4": {
+      "main": [
+        [
+          {
+            "node": "Step 4: Get Documents4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 4: Get Documents4": {
+      "main": [
+        [
+          {
+            "node": "Step 5: Combine Content4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step 5: Combine Content4": {
+      "main": [
+        [
+          {
+            "node": "Generate Proposal4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request13": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Response4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Proposal4": {
+      "main": [
+        [
+          {
+            "node": "Format Proposal4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Proposal4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "is grant eligible?1": {
+      "main": [
+        [
+          {
+            "node": "Notify Proposal Started",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Success Response6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Response6": {
+      "main": [
+        [
+          {
+            "node": "Notify Proposal Ineligible1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Screening Started": {
+      "main": [
+        [
+          {
+            "node": "Step 3: Get Narratives4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request14": {
+      "main": [
+        [
+          {
+            "node": "Return Response4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request15": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request16": {
+      "main": [
+        [
+          {
+            "node": "Notify Proposal Generated",
             "type": "main",
             "index": 0
           }
@@ -1441,7 +632,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "924ae0dd-fc3f-4622-af89-078fe5908db1",
+  "versionId": "b39cc3f5-7a84-41f3-a609-7a1e1965d4aa",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
