@@ -11,11 +11,178 @@
       "name": "Process Document Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        -4336,
-        2256
-      ],
+      "position": [-4336, 2256],
       "webhookId": "process-document"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?id=eq.{{ $json.body.document_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={ \"extraction_status\": \"processing\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [-4064, 2256],
+      "id": "e6fe6f42-501e-425a-8bfe-027d9682ff84",
+      "name": "Mark as Processing",
+      "credentials": {
+        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/storage/v1/object/documents/{{$json.file_path}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [-3840, 2256],
+      "id": "cd499ae3-66c3-4bb5-81f5-3eca055b08bc",
+      "name": "Download File",
+      "credentials": {
+        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
+                    "rightValue": "application/pdf",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PDF"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DOCX"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "XLSX"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
+                    "rightValue": "image/",
+                    "operator": { "type": "string", "operation": "startsWith" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "b1a2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Switch on File Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-3600, 2256]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [-3360, 2016],
+      "id": "c6365285-cdda-4f03-a356-7d5969d7e16c",
+      "name": "Extract PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "const zlib = require('zlib');\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n\nlet text = '';\ntry {\n  let offset = 0;\n  while (offset < buffer.length - 30) {\n    if (buffer.readUInt32LE(offset) === 0x04034b50) {\n      const compressionMethod = buffer.readUInt16LE(offset + 8);\n      const compressedSize = buffer.readUInt32LE(offset + 18);\n      const fileNameLength = buffer.readUInt16LE(offset + 26);\n      const extraFieldLength = buffer.readUInt16LE(offset + 28);\n      const fileName = buffer.toString('utf8', offset + 30, offset + 30 + fileNameLength);\n      const dataStart = offset + 30 + fileNameLength + extraFieldLength;\n      if (fileName === 'word/document.xml' && compressedSize > 0) {\n        const compressed = buffer.slice(dataStart, dataStart + compressedSize);\n        let xml;\n        if (compressionMethod === 8) {\n          xml = zlib.inflateRawSync(compressed).toString('utf8');\n        } else {\n          xml = compressed.toString('utf8');\n        }\n        const matches = xml.match(/<w:t[^>]*>([^<]*)<\\/w:t>/g);\n        if (matches) {\n          text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' ');\n        }\n        break;\n      }\n      offset = dataStart + compressedSize;\n    } else {\n      offset++;\n    }\n  }\n} catch (e) {\n  text = '';\n}\nreturn [{ json: { text: text || '' } }];"
+      },
+      "id": "d2e3f4a5-b6c7-8901-def0-123456789abc",
+      "name": "Extract DOCX Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3360, 2236]
+    },
+    {
+      "parameters": {
+        "jsCode": "const zlib = require('zlib');\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n\nlet text = '';\ntry {\n  let offset = 0;\n  const xmlContents = {};\n  const targets = ['xl/sharedStrings.xml', 'xl/worksheets/sheet1.xml'];\n  while (offset < buffer.length - 30) {\n    if (buffer.readUInt32LE(offset) === 0x04034b50) {\n      const compressionMethod = buffer.readUInt16LE(offset + 8);\n      const compressedSize = buffer.readUInt32LE(offset + 18);\n      const fileNameLength = buffer.readUInt16LE(offset + 26);\n      const extraFieldLength = buffer.readUInt16LE(offset + 28);\n      const fileName = buffer.toString('utf8', offset + 30, offset + 30 + fileNameLength);\n      const dataStart = offset + 30 + fileNameLength + extraFieldLength;\n      if (targets.includes(fileName) && compressedSize > 0) {\n        const compressed = buffer.slice(dataStart, dataStart + compressedSize);\n        let xml;\n        if (compressionMethod === 8) {\n          xml = zlib.inflateRawSync(compressed).toString('utf8');\n        } else {\n          xml = compressed.toString('utf8');\n        }\n        xmlContents[fileName] = xml;\n        if (Object.keys(xmlContents).length === targets.length) break;\n      }\n      offset = dataStart + compressedSize;\n    } else {\n      offset++;\n    }\n  }\n  if (xmlContents['xl/sharedStrings.xml']) {\n    const matches = xmlContents['xl/sharedStrings.xml'].match(/<t[^>]*>([^<]*)<\\/t>/g);\n    if (matches) {\n      text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' | ');\n    }\n  }\n  if (!text && xmlContents['xl/worksheets/sheet1.xml']) {\n    const matches = xmlContents['xl/worksheets/sheet1.xml'].match(/<v>([^<]*)<\\/v>/g);\n    if (matches) {\n      text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' | ');\n    }\n  }\n} catch (e) {\n  text = '';\n}\nreturn [{ json: { text: text || '' } }];"
+      },
+      "id": "e3f4a5b6-c7d8-9012-ef01-23456789abcd",
+      "name": "Extract XLSX Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3360, 2476]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Images cannot have text extracted without OCR.\n// Return empty text — AI will categorize based on filename.\nreturn [{ json: { text: '' } }];"
+      },
+      "id": "f4a5b6c7-d8e9-0123-f012-3456789abcde",
+      "name": "Extract Image Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3360, 2696]
     },
     {
       "parameters": {
@@ -44,104 +211,49 @@
       "name": "AI Categorize Upload",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
-      "position": [
-        -3312,
-        2256
-      ],
+      "position": [-3080, 2256],
       "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
+        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Parse AI response and update document record\n  const extractInfo = $('Extract from File').first().json;\n  const webhookData = $('Process Document Webhook').first().json.body;\n  const aiResponse = $input.first().json;\n\n  let metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\n  try {\n    let responseText = aiResponse.message?.content || aiResponse.text || '';\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      metadata = JSON.parse(jsonMatch[0]);\n    }\n  } catch (e) {\n    metadata.description = 'Failed to parse AI response';\n  }\n\n  return [{\n    json: {\n      documentId: webhookData.document_id,\n      orgId: webhookData.org_id || '',\n      extractedText: extractInfo.text || '',\n      aiCategory: metadata.category || 'other',\n      description: metadata.description || '',\n      fiscalPeriod: metadata.fiscalPeriod || null,\n      isTemplate: metadata.isTemplate || false\n    }\n  }];\n"
+        "jsCode": "const webhookData = $('Process Document Webhook').first().json.body;\nconst aiResponse = $input.first().json;\n\n// Get extracted text from whichever extraction path executed\nlet extractedText = '';\nconst nodes = ['Extract PDF', 'Extract DOCX Text', 'Extract XLSX Text', 'Extract Image Text'];\nfor (const name of nodes) {\n  try {\n    const r = $(name).first().json.text;\n    if (r !== undefined) { extractedText = r; break; }\n  } catch(e) {}\n}\n\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\ntry {\n  let responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    metadata = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  metadata.description = 'Failed to parse AI response';\n}\n\nreturn [{\n  json: {\n    documentId: webhookData.document_id,\n    orgId: webhookData.org_id || '',\n    extractedText: extractedText,\n    aiCategory: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || null,\n    isTemplate: metadata.isTemplate || false\n  }\n}];"
       },
       "id": "4fe43aaa-70f6-4fed-80c2-1614d1ee8244",
       "name": "Parse AI Category",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -2672,
-        2224
-      ]
+      "position": [-2672, 2224]
     },
     {
       "parameters": {
-        "jsCode": "// Extract context from the calling workflow's payload\nconst raw = $('Document Retrieval Webhook2').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grant_id || payload.grantId;\nconst org_id = payload.org_id;\nconst funder_name = payload.funder_name || 'Not specified';\nconst narratives = payload.narratives || {};\nconst sectionsReturned = payload.sectionsReturned || 0;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    funder_name,\n    narratives,\n    sectionsReturned,\n  }\n}];"
-      },
-      "id": "37562539-6a97-423d-af27-fbc22ac65ecf",
-      "name": "Extract Context",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -4192,
-        2896
-      ]
-    },
-    {
-      "parameters": {
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $json.grant_id }}&select=*",
+        "method": "PATCH",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?id=eq.{{ $json.documentId }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            }
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Prefer", "value": "return=representation" }
           ]
         },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n    \"ai_category\": \"{{ $json.aiCategory }}\",\n    \"description\": {{ JSON.stringify($json.description) }},\n    \"extracted_text\": {{ JSON.stringify($json.extractedText) }},\n    \"extraction_status\": \"completed\",\n    \"metadata\": {\n      \"fiscal_period\": \"{{ $json.fiscalPeriod }}\",\n      \"is_template\": {{ $json.isTemplate }}\n    }\n  }",
         "options": {}
       },
-      "id": "4c9febc9-e021-424b-bebe-186870069cc0",
-      "name": "Get Grant",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -3936,
-        2896
-      ],
-      "alwaysOutputData": true,
+      "typeVersion": 4.3,
+      "position": [-2464, 2224],
+      "id": "a43cbf28-1793-4c90-bd87-91a0424d618e",
+      "name": "Update Document Record",
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
+        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
       }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Build a summary of all documents for the AI to evaluate\nconst grant = $('Get Grant').first().json;\nconst allDocs = $('Get All Documents2').all().map(item => item.json);\nconst context = $('Extract Context').first().json;\n\nif (!allDocs || allDocs.length === 0 || !allDocs[0].id) {\n  return [{\n    json: {\n      error: true,\n      message: 'No documents found for this org',\n    }\n  }];\n}\n\n// Build a concise doc list for AI (avoid sending full extracted_text to save tokens)\nconst docSummaries = allDocs.map((d, i) => ({\n  index: i,\n  id: d.id,\n  name: d.name,\n  category: d.ai_category || d.category || 'uncategorized',\n  file_type: d.file_type,\n  has_content: !!(d.extracted_text && d.extracted_text.length > 0),\n  content_preview: (d.extracted_text || '').substring(0, 300),\n}));\n\nreturn [{\n  json: {\n    grant_title: grant.title || context.funder_name,\n    grant_description: grant.description || '',\n    funder_name: grant.funder_name || context.funder_name,\n    grant_amount: grant.amount || '',\n    grant_deadline: grant.deadline || '',\n    doc_summaries: docSummaries,\n    all_docs: allDocs,\n  }\n}];"
-      },
-      "id": "71502f8a-86da-45c1-aa00-6fed3e737302",
-      "name": "Prepare for AI Filter",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -3408,
-        2896
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": " // Build response - pass through all docs since AI filter is removed\n  const prepData = $input.first().json;\n  const context = $('Extract Context').first().json;\n  const allDocs = prepData.all_docs || [];\n\n  const documents = {};\n  for (const doc of allDocs) {\n    const category = doc.ai_category || doc.category || 'other';\n    // If multiple docs share a category, append index to avoid overwrite\n    const key = documents[category] ? `${category}_${doc.id.substring(0, 8)}` : category;\n    documents[key] = {\n      found: true,\n      id: doc.id,\n      fileName: doc.name,\n      category: category,\n      extractedText: doc.extracted_text || '',\n      extractionStatus: doc.extraction_status,\n      createdAt: doc.created_at,\n    };\n  }\n\n  return [{\n    json: {\n      success: true,\n      grant_id: context.grant_id,\n      org_id: context.org_id,\n      funder_name: context.funder_name,\n      grant_title: prepData.grant_title,\n      grant_description: prepData.grant_description,\n      totalDocuments: allDocs.length,\n      documents,\n      narratives: context.narratives,\n      sectionsReturned: context.sectionsReturned,\n      retrievedAt: new Date().toISOString()\n    }\n  }];"
-      },
-      "id": "f12c0b24-d744-4a80-afab-f2fe237ec632",
-      "name": "Build Response",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -2832,
-        2896
-      ]
     },
     {
       "parameters": {
@@ -154,11 +266,42 @@
       "name": "Document Retrieval Webhook2",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        -4432,
-        2896
-      ],
+      "position": [-4432, 2896],
       "webhookId": "get-documents"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract context from the calling workflow's payload\nconst raw = $('Document Retrieval Webhook2').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grant_id || payload.grantId;\nconst org_id = payload.org_id;\nconst funder_name = payload.funder_name || 'Not specified';\nconst narratives = payload.narratives || {};\nconst sectionsReturned = payload.sectionsReturned || 0;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    funder_name,\n    narratives,\n    sectionsReturned,\n  }\n}];"
+      },
+      "id": "37562539-6a97-423d-af27-fbc22ac65ecf",
+      "name": "Extract Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-4192, 2896]
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $json.grant_id }}&select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4c9febc9-e021-424b-bebe-186870069cc0",
+      "name": "Get Grant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-3936, 2896],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": { "id": "42Gs7Nuquctvpx8P", "name": "New Plane Production" }
+      }
     },
     {
       "parameters": {
@@ -168,14 +311,8 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            }
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" }
           ]
         },
         "options": {}
@@ -184,17 +321,31 @@
       "name": "Get All Documents2",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        -3680,
-        2896
-      ],
+      "position": [-3680, 2896],
       "alwaysOutputData": true,
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
+        "httpHeaderAuth": { "id": "42Gs7Nuquctvpx8P", "name": "New Plane Production" }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a summary of all documents for the AI to evaluate\nconst grant = $('Get Grant').first().json;\nconst allDocs = $('Get All Documents2').all().map(item => item.json);\nconst context = $('Extract Context').first().json;\n\nif (!allDocs || allDocs.length === 0 || !allDocs[0].id) {\n  return [{\n    json: {\n      error: true,\n      message: 'No documents found for this org',\n    }\n  }];\n}\n\n// Build a concise doc list for AI (avoid sending full extracted_text to save tokens)\nconst docSummaries = allDocs.map((d, i) => ({\n  index: i,\n  id: d.id,\n  name: d.name,\n  category: d.ai_category || d.category || 'uncategorized',\n  file_type: d.file_type,\n  has_content: !!(d.extracted_text && d.extracted_text.length > 0),\n  content_preview: (d.extracted_text || '').substring(0, 300),\n}));\n\nreturn [{\n  json: {\n    grant_title: grant.title || context.funder_name,\n    grant_description: grant.description || '',\n    funder_name: grant.funder_name || context.funder_name,\n    grant_amount: grant.amount || '',\n    grant_deadline: grant.deadline || '',\n    doc_summaries: docSummaries,\n    all_docs: allDocs,\n  }\n}];"
+      },
+      "id": "71502f8a-86da-45c1-aa00-6fed3e737302",
+      "name": "Prepare for AI Filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3408, 2896]
+    },
+    {
+      "parameters": {
+        "jsCode": " // Build response - pass through all docs since AI filter is removed\n  const prepData = $input.first().json;\n  const context = $('Extract Context').first().json;\n  const allDocs = prepData.all_docs || [];\n\n  const documents = {};\n  for (const doc of allDocs) {\n    const category = doc.ai_category || doc.category || 'other';\n    // If multiple docs share a category, append index to avoid overwrite\n    const key = documents[category] ? `${category}_${doc.id.substring(0, 8)}` : category;\n    documents[key] = {\n      found: true,\n      id: doc.id,\n      fileName: doc.name,\n      category: category,\n      extractedText: doc.extracted_text || '',\n      extractionStatus: doc.extraction_status,\n      createdAt: doc.created_at,\n    };\n  }\n\n  return [{\n    json: {\n      success: true,\n      grant_id: context.grant_id,\n      org_id: context.org_id,\n      funder_name: context.funder_name,\n      grant_title: prepData.grant_title,\n      grant_description: prepData.grant_description,\n      totalDocuments: allDocs.length,\n      documents,\n      narratives: context.narratives,\n      sectionsReturned: context.sectionsReturned,\n      retrievedAt: new Date().toISOString()\n    }\n  }];"
+      },
+      "id": "f12c0b24-d744-4a80-afab-f2fe237ec632",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-2832, 2896]
     },
     {
       "parameters": {
@@ -223,284 +374,103 @@
       "name": "AI Filter Documents",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
-      "position": [
-        -3152,
-        3024
-      ],
+      "position": [-3152, 3024],
       "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
+        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
       }
     },
     {
       "parameters": {
-        "method": "PATCH",
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?id=eq.{{ $json.body.document_id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={ \"extraction_status\": \"processing\" }",
-        "options": {}
+        "content": "## WF4: Document Vault Manager\n\n### Path 1: Process Document\nWebhook: POST /process-document\nReceives { document_id, org_id, file_name, file_type }\n1. Marks document as 'processing'\n2. Downloads file from Supabase Storage\n3. Routes by file_type (Switch):\n   - PDF → Extract from File (pdf)\n   - DOCX → Code (ZIP/XML parser)\n   - XLSX → Code (ZIP/XML shared strings)\n   - Image → Empty text (categorize by filename)\n4. AI categorizes the document\n5. Updates DB with ai_category + extracted_text\n\n### Path 2: Retrieve Documents\nWebhook: POST /get-documents\nFetches from Supabase DB (no re-download)",
+        "height": 380,
+        "width": 520
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -4064,
-        2256
-      ],
-      "id": "e6fe6f42-501e-425a-8bfe-027d9682ff84",
-      "name": "HTTP Request3",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/storage/v1/object/documents/{{$json.file_path}}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={ \"extraction_status\": \"processing\" }",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -3840,
-        2256
-      ],
-      "id": "cd499ae3-66c3-4bb5-81f5-3eca055b08bc",
-      "name": "HTTP Request",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "pdf",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.extractFromFile",
-      "typeVersion": 1.1,
-      "position": [
-        -3632,
-        2256
-      ],
-      "id": "c6365285-cdda-4f03-a356-7d5969d7e16c",
-      "name": "Extract from File"
-    },
-    {
-      "parameters": {
-        "method": "PATCH",
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?id=eq.{{ $json.documentId }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={\n    \"ai_category\": \"{{ $json.aiCategory }}\",\n    \"description\": {{ JSON.stringify($json.description) }},\n    \"extracted_text\": {{ JSON.stringify($json.extractedText) }},\n    \"extraction_status\": \"completed\",\n    \"metadata\": {\n      \"fiscal_period\": \"{{ $json.fiscalPeriod }}\",\n      \"is_template\": {{ $json.isTemplate }}\n    }\n  }",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -2464,
-        2224
-      ],
-      "id": "a43cbf28-1793-4c90-bd87-91a0424d618e",
-      "name": "HTTP Request4",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
+      "id": "aabb1122-3344-5566-7788-99aabbccddee",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-4600, 1780]
     }
   ],
   "pinData": {},
   "connections": {
     "Process Document Webhook": {
       "main": [
-        [
-          {
-            "node": "HTTP Request3",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Mark as Processing", "type": "main", "index": 0 }]
+      ]
+    },
+    "Mark as Processing": {
+      "main": [
+        [{ "node": "Download File", "type": "main", "index": 0 }]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [{ "node": "Switch on File Type", "type": "main", "index": 0 }]
+      ]
+    },
+    "Switch on File Type": {
+      "main": [
+        [{ "node": "Extract PDF", "type": "main", "index": 0 }],
+        [{ "node": "Extract DOCX Text", "type": "main", "index": 0 }],
+        [{ "node": "Extract XLSX Text", "type": "main", "index": 0 }],
+        [{ "node": "Extract Image Text", "type": "main", "index": 0 }],
+        [{ "node": "Extract Image Text", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract PDF": {
+      "main": [
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract DOCX Text": {
+      "main": [
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract XLSX Text": {
+      "main": [
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Image Text": {
+      "main": [
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
       ]
     },
     "AI Categorize Upload": {
       "main": [
-        [
-          {
-            "node": "Parse AI Category",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Parse AI Category", "type": "main", "index": 0 }]
       ]
     },
     "Parse AI Category": {
       "main": [
-        [
-          {
-            "node": "HTTP Request4",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Context": {
-      "main": [
-        [
-          {
-            "node": "Get Grant",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Grant": {
-      "main": [
-        [
-          {
-            "node": "Get All Documents2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare for AI Filter": {
-      "main": [
-        [
-          {
-            "node": "Build Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Update Document Record", "type": "main", "index": 0 }]
       ]
     },
     "Document Retrieval Webhook2": {
       "main": [
-        [
-          {
-            "node": "Extract Context",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Extract Context", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Context": {
+      "main": [
+        [{ "node": "Get Grant", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Grant": {
+      "main": [
+        [{ "node": "Get All Documents2", "type": "main", "index": 0 }]
       ]
     },
     "Get All Documents2": {
       "main": [
-        [
-          {
-            "node": "Prepare for AI Filter",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Prepare for AI Filter", "type": "main", "index": 0 }]
       ]
     },
-    "HTTP Request3": {
+    "Prepare for AI Filter": {
       "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request": {
-      "main": [
-        [
-          {
-            "node": "Extract from File",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract from File": {
-      "main": [
-        [
-          {
-            "node": "AI Categorize Upload",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Build Response", "type": "main", "index": 0 }]
       ]
     }
   },
