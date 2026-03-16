@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useMemo } from "react"
+import { useState, useTransition, useMemo, useRef, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -299,26 +299,95 @@ function ExtractedTextViewer({ document, signedUrl }: { document: Document; sign
     (categoryLabel ? `<p>${categoryLabel}</p>` : '') +
     `<p>Extracted Document Preview</p>`;
 
+  const pages = useMemo(() => [
+    { html: coverHtml, isCover: true },
+    { html: contentHtml, isCover: false },
+  ], [coverHtml, contentHtml]);
+
+  const contentRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const thumbRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
+  const [activePage, setActivePage] = useState(0);
+
+  useEffect(() => {
+    if (!contentRef.current || pages.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let bestIdx = 0;
+        let bestRatio = 0;
+        for (const entry of entries) {
+          const idx = Number(entry.target.getAttribute('data-page-idx'));
+          if (!isNaN(idx) && entry.intersectionRatio > bestRatio) {
+            bestRatio = entry.intersectionRatio;
+            bestIdx = idx;
+          }
+        }
+        if (bestRatio > 0) setActivePage(bestIdx);
+      },
+      { root: contentRef.current, threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+    pageRefs.current.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [pages.length]);
+
+  useEffect(() => {
+    const thumb = thumbRefs.current.get(activePage);
+    if (thumb && sidebarRef.current) {
+      thumb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [activePage]);
+
+  const scrollToPage = useCallback((idx: number) => {
+    pageRefs.current.get(idx)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   return (
     <div>
       <div className="doc-extracted-viewer">
-        <div className="doc-extracted-content">
-          {/* Cover page */}
-          <div className="doc-page doc-cover-page">
-            <div className="doc-page-content" dangerouslySetInnerHTML={{ __html: coverHtml }} />
-          </div>
-          {/* Content page */}
-          <div className="doc-page">
-            <div className="doc-page-header">
-              <span className="doc-page-header-title">{title}</span>
-            </div>
-            <div className="doc-page-content" dangerouslySetInnerHTML={{ __html: contentHtml }} />
-            <div className="doc-page-footer">
-              <span className="doc-page-footer-title">{title}</span>
-              <span className="doc-page-footer-number">{(document.extracted_text || '').length.toLocaleString()} characters</span>
-            </div>
-          </div>
+        {/* Thumbnail sidebar */}
+        <div className="doc-thumb-sidebar" ref={sidebarRef}>
+          {pages.map((page, i) => (
+            <button
+              key={i}
+              ref={(el) => { if (el) thumbRefs.current.set(i, el); else thumbRefs.current.delete(i); }}
+              className={`doc-thumb${activePage === i ? ' doc-thumb-active' : ''}`}
+              onClick={() => scrollToPage(i)}
+              aria-label={`Go to page ${i + 1}`}
+            >
+              <div className={`doc-thumb-page${page.isCover ? ' doc-cover-thumb' : ''}`}>
+                <div className="doc-page-content doc-thumb-content" dangerouslySetInnerHTML={{ __html: page.html }} />
+              </div>
+              <span className="doc-thumb-label">{i + 1}</span>
+            </button>
+          ))}
         </div>
+
+        {/* Main scrollable content */}
+        <div className="doc-extracted-content" ref={contentRef}>
+          {pages.map((page, i) => (
+            <div
+              key={i}
+              ref={(el) => { if (el) pageRefs.current.set(i, el); else pageRefs.current.delete(i); }}
+              data-page-idx={i}
+              className={`doc-page${page.isCover ? ' doc-cover-page' : ''}`}
+            >
+              {!page.isCover && (
+                <div className="doc-page-header">
+                  <span className="doc-page-header-title">{title}</span>
+                </div>
+              )}
+              <div className="doc-page-content" dangerouslySetInnerHTML={{ __html: page.html }} />
+              {!page.isCover && (
+                <div className="doc-page-footer">
+                  <span className="doc-page-footer-title">{title}</span>
+                  <span className="doc-page-footer-number">{(document.extracted_text || '').length.toLocaleString()} characters</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
         {signedUrl && (
           <div className="doc-extracted-download">
             <a href={signedUrl} target="_blank" rel="noopener noreferrer">
@@ -336,7 +405,7 @@ function ExtractedTextViewer({ document, signedUrl }: { document: Document; sign
 const docExtractedStyles = `
   .doc-extracted-viewer {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     border: 1px solid hsl(var(--border));
     border-radius: 8px;
     overflow: hidden;
@@ -344,6 +413,83 @@ const docExtractedStyles = `
     min-height: 500px;
     background: hsl(0 0% 75%);
     position: relative;
+  }
+
+  /* ── Thumbnail Sidebar ── */
+  .doc-thumb-sidebar {
+    width: 120px;
+    min-width: 120px;
+    background: hsl(0 0% 96%);
+    border-right: 1px solid hsl(var(--border));
+    overflow-y: auto;
+    padding: 12px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .doc-thumb-sidebar::-webkit-scrollbar { width: 4px; }
+  .doc-thumb-sidebar::-webkit-scrollbar-track { background: transparent; }
+  .doc-thumb-sidebar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 2px;
+  }
+  .doc-thumb {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    width: 100%;
+    flex-shrink: 0;
+  }
+  .doc-thumb-page {
+    width: 96px;
+    height: 136px;
+    background: white;
+    border: 2px solid hsl(var(--border));
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .doc-thumb:hover .doc-thumb-page {
+    border-color: hsl(var(--muted-foreground) / 0.5);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  .doc-thumb-active .doc-thumb-page {
+    border-color: hsl(0 72% 51%);
+    box-shadow: 0 0 0 1px hsl(0 72% 51%);
+  }
+  .doc-thumb-content {
+    transform: scale(0.12);
+    transform-origin: top left;
+    width: 794px;
+    min-height: 1123px;
+    padding: 96px 72px 100px;
+    pointer-events: none;
+  }
+  .doc-cover-thumb::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
+    z-index: 1;
+  }
+  .doc-thumb-label {
+    font-size: 0.65rem;
+    color: hsl(var(--muted-foreground));
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .doc-thumb-active .doc-thumb-label {
+    color: hsl(0 72% 51%);
+    font-weight: 600;
   }
 
   .doc-extracted-download {
