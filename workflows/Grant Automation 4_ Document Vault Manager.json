@@ -176,13 +176,34 @@
     },
     {
       "parameters": {
-        "jsCode": "// Images cannot have text extracted without OCR.\n// Return empty text — AI will categorize based on filename.\nreturn [{ json: { text: '' } }];"
+        "jsCode": "// Convert image binary to base64 data URL for OpenAI Vision\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\nconst base64 = buffer.toString('base64');\nconst fileType = $('Process Document Webhook').first().json.body.file_type || 'image/png';\nconst dataUrl = 'data:' + fileType + ';base64,' + base64;\nreturn [{ json: { dataUrl } }];"
       },
       "id": "f4a5b6c7-d8e9-0123-f012-3456789abcde",
-      "name": "Extract Image Text",
+      "name": "Prepare Image Base64",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [-3360, 2696]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"model\":\"gpt-4.1-mini\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Extract all visible text from this image exactly as it appears. If the image contains a document, table, chart, or form, preserve the structure. If there is no readable text, describe the image contents in detail.\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"{{ $json.dataUrl }}\"}}]}],\"max_tokens\":4000}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-ocr1-vis1-img1-567890abcdef",
+      "name": "OCR Image with AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [-3120, 2696],
+      "credentials": {
+        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
+      }
     },
     {
       "parameters": {
@@ -199,7 +220,7 @@
               "role": "system"
             },
             {
-              "content": "=Filename:  {{ $('Process Document Webhook').item.json.body.file_name }}\nDocument Content:\n {{ $json.text }}"
+              "content": "=Filename:  {{ $('Process Document Webhook').item.json.body.file_name }}\nDocument Content:\n {{ $json.text || $json.choices?.[0]?.message?.content || '' }}"
             }
           ]
         },
@@ -218,7 +239,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const webhookData = $('Process Document Webhook').first().json.body;\nconst aiResponse = $input.first().json;\n\n// Get extracted text from whichever extraction path executed\nlet extractedText = '';\nconst nodes = ['Extract PDF', 'Extract DOCX Text', 'Extract XLSX Text', 'Extract Image Text'];\nfor (const name of nodes) {\n  try {\n    const r = $(name).first().json.text;\n    if (r !== undefined) { extractedText = r; break; }\n  } catch(e) {}\n}\n\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\ntry {\n  let responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    metadata = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  metadata.description = 'Failed to parse AI response';\n}\n\nreturn [{\n  json: {\n    documentId: webhookData.document_id,\n    orgId: webhookData.org_id || '',\n    extractedText: extractedText,\n    aiCategory: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || null,\n    isTemplate: metadata.isTemplate || false\n  }\n}];"
+        "jsCode": "const webhookData = $('Process Document Webhook').first().json.body;\nconst aiResponse = $input.first().json;\n\n// Get extracted text from whichever extraction path executed\nlet extractedText = '';\nconst textNodes = ['Extract PDF', 'Extract DOCX Text', 'Extract XLSX Text'];\nfor (const name of textNodes) {\n  try {\n    const r = $(name).first().json.text;\n    if (r !== undefined && r !== '') { extractedText = r; break; }\n  } catch(e) {}\n}\n// Try OCR path (OpenAI Vision returns choices[0].message.content)\nif (!extractedText) {\n  try {\n    extractedText = $('OCR Image with AI').first().json.choices?.[0]?.message?.content || '';\n  } catch(e) {}\n}\n\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\ntry {\n  let responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    metadata = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  metadata.description = 'Failed to parse AI response';\n}\n\nreturn [{\n  json: {\n    documentId: webhookData.document_id,\n    orgId: webhookData.org_id || '',\n    extractedText: extractedText,\n    aiCategory: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || null,\n    isTemplate: metadata.isTemplate || false\n  }\n}];"
       },
       "id": "4fe43aaa-70f6-4fed-80c2-1614d1ee8244",
       "name": "Parse AI Category",
@@ -381,7 +402,7 @@
     },
     {
       "parameters": {
-        "content": "## WF4: Document Vault Manager\n\n### Path 1: Process Document\nWebhook: POST /process-document\nReceives { document_id, org_id, file_name, file_type }\n1. Marks document as 'processing'\n2. Downloads file from Supabase Storage\n3. Routes by file_type (Switch):\n   - PDF → Extract from File (pdf)\n   - DOCX → Code (ZIP/XML parser)\n   - XLSX → Code (ZIP/XML shared strings)\n   - Image → Empty text (categorize by filename)\n4. AI categorizes the document\n5. Updates DB with ai_category + extracted_text\n\n### Path 2: Retrieve Documents\nWebhook: POST /get-documents\nFetches from Supabase DB (no re-download)",
+        "content": "## WF4: Document Vault Manager\n\n### Path 1: Process Document\nWebhook: POST /process-document\nReceives { document_id, org_id, file_name, file_type }\n1. Marks document as 'processing'\n2. Downloads file from Supabase Storage\n3. Routes by file_type (Switch):\n   - PDF → Extract from File (pdf)\n   - DOCX → Code (ZIP/XML parser)\n   - XLSX → Code (ZIP/XML shared strings)\n   - Image → OCR via OpenAI Vision API\n4. AI categorizes the document\n5. Updates DB with ai_category + extracted_text\n\n### Path 2: Retrieve Documents\nWebhook: POST /get-documents\nFetches from Supabase DB (no re-download)",
         "height": 380,
         "width": 520
       },
@@ -414,8 +435,8 @@
         [{ "node": "Extract PDF", "type": "main", "index": 0 }],
         [{ "node": "Extract DOCX Text", "type": "main", "index": 0 }],
         [{ "node": "Extract XLSX Text", "type": "main", "index": 0 }],
-        [{ "node": "Extract Image Text", "type": "main", "index": 0 }],
-        [{ "node": "Extract Image Text", "type": "main", "index": 0 }]
+        [{ "node": "Prepare Image Base64", "type": "main", "index": 0 }],
+        [{ "node": "Prepare Image Base64", "type": "main", "index": 0 }]
       ]
     },
     "Extract PDF": {
@@ -433,7 +454,12 @@
         [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
       ]
     },
-    "Extract Image Text": {
+    "Prepare Image Base64": {
+      "main": [
+        [{ "node": "OCR Image with AI", "type": "main", "index": 0 }]
+      ]
+    },
+    "OCR Image with AI": {
       "main": [
         [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
       ]
