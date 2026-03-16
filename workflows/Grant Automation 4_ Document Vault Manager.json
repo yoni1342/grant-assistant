@@ -4,518 +4,231 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "get-documents",
-        "responseMode": "lastNode",
+        "path": "process-document",
         "options": {}
       },
-      "id": "461516ac-b2ad-4d5f-871b-72d635421e24",
-      "name": "Document Retrieval Webhook",
+      "id": "3271ca57-cb46-4afb-8822-e022e30fd724",
+      "name": "Process Document Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        -4544,
-        48
-      ],
-      "webhookId": "get-documents",
-      "disabled": true,
-      "notes": "POST: { requiredDocs: ['501c3_letter', 'budget_program', ...] }"
+      "position": [-4336, 2256],
+      "webhookId": "process-document"
     },
     {
       "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc",
-          "mode": "list",
-          "cachedResultName": "Tracker"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": 31011755,
-          "mode": "list",
-          "cachedResultName": "Document_index",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc/edit#gid=31011755"
-        },
-        "options": {}
-      },
-      "id": "edab16e7-aad9-4b79-8caf-23a55688273a",
-      "name": "Get All Documents",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        -4304,
-        48
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "uPzrzFu4mU5jwnGv",
-          "name": "Google Sheets account"
-        }
-      },
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Match requested document types to available documents\nconst requestBody = $('Document Retrieval Webhook').first().json.body;\nconst requiredDocs = requestBody.requiredDocs || [];\nconst grantContext = requestBody.grantContext || {}; // Optional: pass grant info for smart matching\n\nconst allDocs = $('Get All Documents').all().map(i => i.json);\n\n// Filter to only active documents\nconst activeDocs = allDocs.filter(d => d.status === 'Active');\n\n// Find matching documents for each required type\nconst matchedDocs = {};\nconst missingDocs = [];\n\nfor (const docType of requiredDocs) {\n  // Find all docs matching this category\n  const matches = activeDocs.filter(d => d.category === docType);\n  \n  if (matches.length > 0) {\n    // Get the most recent version (highest version number)\n    const latest = matches.reduce((a, b) => \n      parseInt(a.version || 0) > parseInt(b.version || 0) ? a : b\n    );\n    \n    matchedDocs[docType] = {\n      found: true,\n      fileName: latest.fileName,\n      driveLink: latest.driveLink,\n      fileId: latest.fileId,\n      version: latest.version,\n      description: latest.description,\n      fiscalPeriod: latest.fiscalPeriod,\n      lastUpdated: latest.lastUpdated,\n      isTemplate: latest.isTemplate === 'Yes'\n    };\n  } else {\n    missingDocs.push(docType);\n    matchedDocs[docType] = {\n      found: false,\n      message: `No ${docType} document found in vault`\n    };\n  }\n}\n\n// Return results\nreturn [{\n  json: {\n    success: missingDocs.length === 0,\n    requestedCount: requiredDocs.length,\n    foundCount: requiredDocs.length - missingDocs.length,\n    missingDocs: missingDocs,\n    documents: matchedDocs,\n    retrievedAt: new Date().toISOString()\n  }\n}];"
-      },
-      "id": "c57b1254-66e2-4b71-ba43-fde1401796f2",
-      "name": "Match Requested Documents",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -4048,
-        48
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Extract text from file for AI categorization\nconst item = $input.first();\nconst fileInfo = $('Watch Vault Folder').first().json;\n\n// Get file content - handle different formats\nlet textContent = '';\nif (item.json.data) {\n  textContent = typeof item.json.data === 'string' \n    ? item.json.data \n    : Buffer.from(item.json.data).toString('utf-8');\n}\n\n// Limit to first 3000 chars for AI\nif (textContent.length > 3000) {\n  textContent = textContent.substring(0, 3000) + '...';\n}\n\nreturn [{\n  json: {\n    fileId: fileInfo.id,\n    fileName: fileInfo.name,\n    mimeType: fileInfo.mimeType,\n    fileSize: fileInfo.size,\n    driveLink: `https://drive.google.com/file/d/${fileInfo.id}/view`,\n    createdTime: fileInfo.createdTime,\n    modifiedTime: fileInfo.modifiedTime,\n    textContent: textContent\n  }\n}];"
-      },
-      "id": "e9a8bc19-0078-4ec4-b9a5-2b6fe766aec0",
-      "name": "Extract File Info1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -4080,
-        -192
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4.1-mini",
-          "mode": "list",
-          "cachedResultName": "GPT-4.1-MINI"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "You are a Document Librarian for a nonprofit grant system.\n\nAnalyze the document and categorize it into ONE of these types:\n- 501c3_letter (IRS determination letter)\n- board_roster (list of board members with bios)\n- budget_program (program-specific budget)\n- budget_operating (annual operating budget)\n- financial_statement (audited financials, 990, etc.)\n- impact_metrics (outcomes data, statistics)\n- narrative_youth (program description for foster youth services)\n- narrative_senior (program description for senior services)\n- narrative_general (general org description)\n- other\n\nIMPORTANT: If document content is empty, categorize based on the FILENAME. Look for keywords like 501c3, budget, roster, board, 990, audit, narrative, impact, youth, senior.\n\nAlso extract:\n- A brief description (1 sentence)\n- The fiscal year or date range if mentioned\n- Whether this appears to be a template or a completed document\n\nReturn JSON:\n{\n  \"category\": \"category_name\",\n  \"description\": \"Brief description\",\n  \"fiscalPeriod\": \"FY2024 or date range or null\",\n  \"isTemplate\": true/false\n}",
-              "role": "system"
-            },
-            {
-              "content": "=Filename: {{ $json.fileName }}\n\nDocument Content:\n{{ $json.textContent }}"
-            }
+        "method": "PATCH",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?id=eq.{{ $json.body.document_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Prefer", "value": "return=representation" }
           ]
         },
-        "options": {
-          "temperature": 0.2
-        }
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={ \"extraction_status\": \"processing\" }",
+        "options": {}
       },
-      "id": "e7538668-f17c-4d22-ad08-aecf280c8c8d",
-      "name": "AI Categorize Document1",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 1.8,
-      "position": [
-        -3856,
-        -192
-      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [-4064, 2256],
+      "id": "e6fe6f42-501e-425a-8bfe-027d9682ff84",
+      "name": "Mark as Processing",
       "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
-      },
-      "disabled": true
+        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Parse AI response and prepare for storage\nconst fileInfo = $('Extract File Info1').first().json;\nconst aiResponse = $input.first().json;\n\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\ntry {\n  let responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    metadata = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  metadata.description = 'Failed to parse AI response';\n}\n\n// Determine version number (will be updated after checking existing docs)\nconst today = new Date().toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    // File info\n    fileId: fileInfo.fileId,\n    fileName: fileInfo.fileName,\n    driveLink: fileInfo.driveLink,\n    mimeType: fileInfo.mimeType,\n    \n    // AI-extracted metadata\n    category: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || '',\n    isTemplate: metadata.isTemplate ? 'Yes' : 'No',\n    \n    // Tracking\n    version: 1,\n    dateAdded: today,\n    lastUpdated: today,\n    status: 'Active'\n  }\n}];"
-      },
-      "id": "d287dfdb-206b-4a0b-ab6a-af6eb699378c",
-      "name": "Format Metadata1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -3504,
-        -192
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc",
-          "mode": "list",
-          "cachedResultName": "Tracker",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc/edit?usp=drivesdk"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": 31011755,
-          "mode": "list",
-          "cachedResultName": "Document_index",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc/edit#gid=31011755"
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/storage/v1/object/documents/{{$json.file_path}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
         },
         "options": {}
       },
-      "id": "6fa0b0ec-f9f5-402e-9f92-55f186dd0820",
-      "name": "Get Existing Docs1",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        -3280,
-        -192
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "uPzrzFu4mU5jwnGv",
-          "name": "Google Sheets account"
-        }
-      },
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Calculate version number - handle empty sheet case\nconst newDoc = $('Format Metadata1').first().json;\n\n// Safely get existing docs - handle empty sheet\nlet existingDocs = [];\ntry {\n  const existingItems = $('Get Existing Docs1').all();\n  if (existingItems && existingItems.length > 0) {\n    existingDocs = existingItems.map(i => i.json).filter(d => d && d.fileId);\n  }\n} catch (e) {\n  // Sheet is empty or has no data - that's fine\n  existingDocs = [];\n}\n\n// Find existing docs with same category\nconst sameCategoryDocs = existingDocs.filter(d => \n  d.category === newDoc.category && d.status === 'Active'\n);\n\n// Check if this exact file already exists\nconst existingFile = existingDocs.find(d => d.fileId === newDoc.fileId);\n\nif (existingFile) {\n  // File already indexed - update it\n  return [{\n    json: {\n      ...newDoc,\n      version: parseInt(existingFile.version || 1) + 1,\n      dateAdded: existingFile.dateAdded,\n      isUpdate: true,\n      rowNumber: existingDocs.indexOf(existingFile) + 2\n    }\n  }];\n}\n\n// New file - set version based on same category count\nconst newVersion = sameCategoryDocs.length + 1;\n\nreturn [{\n  json: {\n    ...newDoc,\n    version: newVersion,\n    isUpdate: false\n  }\n}];"
-      },
-      "id": "0a11391a-4944-433c-9cd4-488f91e5c7b9",
-      "name": "Calculate Version1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -3056,
-        -192
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "is-update",
-              "leftValue": "={{ $json.isUpdate }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "9937a0a9-6994-4019-b151-d6e401cf8166",
-      "name": "New or Update?1",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -2832,
-        -192
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc",
-          "mode": "list",
-          "cachedResultName": "Tracker"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": 31011755,
-          "mode": "list",
-          "cachedResultName": "Document_index",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc/edit#gid=31011755"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "fileId": "={{ $json.fileId }}",
-            "fileName": "={{ $json.fileName }}",
-            "driveLink": "={{ $json.driveLink }}",
-            "mimeType": "={{ $json.mimeType }}",
-            "category": "={{ $json.category }}",
-            "description": "={{ $json.description }}",
-            "fiscalPeriod": "={{ $json.fiscalPeriod }}",
-            "isTemplate": "={{ $json.isTemplate }}",
-            "version": "={{ $json.version }}",
-            "dateAdded": "={{ $json.dateAdded }}",
-            "lastUpdated": "={{ $json.lastUpdated }}",
-            "status": "={{ $json.status }}"
-          },
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "fileId",
-              "displayName": "fileId",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "fileName",
-              "displayName": "fileName",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "driveLink",
-              "displayName": "driveLink",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "mimeType",
-              "displayName": "mimeType",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "category",
-              "displayName": "category",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "description",
-              "displayName": "description",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "fiscalPeriod",
-              "displayName": "fiscalPeriod",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "isTemplate",
-              "displayName": "isTemplate",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "version",
-              "displayName": "version",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "dateAdded",
-              "displayName": "dateAdded",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "lastUpdated",
-              "displayName": "lastUpdated",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "status",
-              "displayName": "status",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "id": "f9541b99-b53c-42e0-977d-a7d83f16a82e",
-      "name": "Add New Document1",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        -2608,
-        -96
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "uPzrzFu4mU5jwnGv",
-          "name": "Google Sheets account"
-        }
-      },
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "value": "1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc",
-          "mode": "list",
-          "cachedResultName": "Tracker"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": 31011755,
-          "mode": "list",
-          "cachedResultName": "Document_index",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1P19naOZHbtpw6hjQNufShmCNdBdA_D6PVbeuVeoheCc/edit#gid=31011755"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "fileId": "={{ $json.fileId }}",
-            "description": "={{ $json.description }}",
-            "fiscalPeriod": "={{ $json.fiscalPeriod }}",
-            "version": "={{ $json.version }}",
-            "lastUpdated": "={{ $json.lastUpdated }}"
-          },
-          "matchingColumns": [
-            "fileId"
-          ],
-          "schema": [
-            {
-              "id": "fileId",
-              "displayName": "fileId",
-              "required": false,
-              "defaultMatch": true,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "description",
-              "displayName": "description",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "fiscalPeriod",
-              "displayName": "fiscalPeriod",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "version",
-              "displayName": "version",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "lastUpdated",
-              "displayName": "lastUpdated",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {
-          "cellFormat": "USER_ENTERED"
-        }
-      },
-      "id": "3084b1cf-22ba-4851-961e-f7a8a387debd",
-      "name": "Update Existing Document1",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        -2448,
-        -48
-      ],
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "uPzrzFu4mU5jwnGv",
-          "name": "Google Sheets account"
-        }
-      },
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "operation": "download",
-        "fileId": {
-          "__rl": true,
-          "value": "={{ $json.id }}",
-          "mode": "id"
-        },
-        "options": {}
-      },
-      "id": "4f761c3d-0096-47e2-8a31-d0db55338fa4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [-3840, 2256],
+      "id": "cd499ae3-66c3-4bb5-81f5-3eca055b08bc",
       "name": "Download File",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 2,
-      "position": [
-        -4304,
-        -192
-      ],
       "credentials": {
-        "googleDriveOAuth2Api": {
-          "id": "c8U1lxhGi7dqu4D4",
-          "name": "n8ndrivelead"
-        }
-      },
-      "disabled": true
+        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Extract text from file for AI categorization\nconst item = $input.first();\nconst fileInfo = $('Watch Vault Folder1').first().json;\n\n// Get file content - handle different formats\nlet textContent = '';\nif (item.json.data) {\n  textContent = typeof item.json.data === 'string' \n    ? item.json.data \n    : Buffer.from(item.json.data).toString('utf-8');\n}\n\n// Limit to first 3000 chars for AI\nif (textContent.length > 3000) {\n  textContent = textContent.substring(0, 3000) + '...';\n}\n\nreturn [{\n  json: {\n    fileId: fileInfo.id,\n    fileName: fileInfo.name,\n    mimeType: fileInfo.mimeType,\n    fileSize: fileInfo.size,\n    driveLink: `https://drive.google.com/file/d/${fileInfo.id}/view`,\n    createdTime: fileInfo.createdTime,\n    modifiedTime: fileInfo.modifiedTime,\n    textContent: textContent\n  }\n}];"
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
+                    "rightValue": "application/pdf",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PDF"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DOCX"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "XLSX"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PPTX"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
+                    "rightValue": "image/",
+                    "operator": { "type": "string", "operation": "startsWith" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
       },
-      "id": "a82ac3aa-2d61-438c-b3d6-bca9acfda20e",
-      "name": "Extract File Info",
+      "id": "b1a2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Switch on File Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-3600, 2256]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [-3360, 2016],
+      "id": "c6365285-cdda-4f03-a356-7d5969d7e16c",
+      "name": "Extract PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "const zlib = require('zlib');\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n\nlet text = '';\ntry {\n  let offset = 0;\n  while (offset < buffer.length - 30) {\n    if (buffer.readUInt32LE(offset) === 0x04034b50) {\n      const compressionMethod = buffer.readUInt16LE(offset + 8);\n      const compressedSize = buffer.readUInt32LE(offset + 18);\n      const fileNameLength = buffer.readUInt16LE(offset + 26);\n      const extraFieldLength = buffer.readUInt16LE(offset + 28);\n      const fileName = buffer.toString('utf8', offset + 30, offset + 30 + fileNameLength);\n      const dataStart = offset + 30 + fileNameLength + extraFieldLength;\n      if (fileName === 'word/document.xml' && compressedSize > 0) {\n        const compressed = buffer.slice(dataStart, dataStart + compressedSize);\n        let xml;\n        if (compressionMethod === 8) {\n          xml = zlib.inflateRawSync(compressed).toString('utf8');\n        } else {\n          xml = compressed.toString('utf8');\n        }\n        const matches = xml.match(/<w:t[^>]*>([^<]*)<\\/w:t>/g);\n        if (matches) {\n          text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' ');\n        }\n        break;\n      }\n      offset = dataStart + compressedSize;\n    } else {\n      offset++;\n    }\n  }\n} catch (e) {\n  text = '';\n}\nreturn [{ json: { text: text || '' } }];"
+      },
+      "id": "d2e3f4a5-b6c7-8901-def0-123456789abc",
+      "name": "Extract DOCX Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -3936,
-        672
-      ]
+      "position": [-3360, 2236]
+    },
+    {
+      "parameters": {
+        "jsCode": "const zlib = require('zlib');\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n\nlet text = '';\ntry {\n  let offset = 0;\n  const xmlContents = {};\n  const targets = ['xl/sharedStrings.xml', 'xl/worksheets/sheet1.xml'];\n  while (offset < buffer.length - 30) {\n    if (buffer.readUInt32LE(offset) === 0x04034b50) {\n      const compressionMethod = buffer.readUInt16LE(offset + 8);\n      const compressedSize = buffer.readUInt32LE(offset + 18);\n      const fileNameLength = buffer.readUInt16LE(offset + 26);\n      const extraFieldLength = buffer.readUInt16LE(offset + 28);\n      const fileName = buffer.toString('utf8', offset + 30, offset + 30 + fileNameLength);\n      const dataStart = offset + 30 + fileNameLength + extraFieldLength;\n      if (targets.includes(fileName) && compressedSize > 0) {\n        const compressed = buffer.slice(dataStart, dataStart + compressedSize);\n        let xml;\n        if (compressionMethod === 8) {\n          xml = zlib.inflateRawSync(compressed).toString('utf8');\n        } else {\n          xml = compressed.toString('utf8');\n        }\n        xmlContents[fileName] = xml;\n        if (Object.keys(xmlContents).length === targets.length) break;\n      }\n      offset = dataStart + compressedSize;\n    } else {\n      offset++;\n    }\n  }\n  if (xmlContents['xl/sharedStrings.xml']) {\n    const matches = xmlContents['xl/sharedStrings.xml'].match(/<t[^>]*>([^<]*)<\\/t>/g);\n    if (matches) {\n      text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' | ');\n    }\n  }\n  if (!text && xmlContents['xl/worksheets/sheet1.xml']) {\n    const matches = xmlContents['xl/worksheets/sheet1.xml'].match(/<v>([^<]*)<\\/v>/g);\n    if (matches) {\n      text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' | ');\n    }\n  }\n} catch (e) {\n  text = '';\n}\nreturn [{ json: { text: text || '' } }];"
+      },
+      "id": "e3f4a5b6-c7d8-9012-ef01-23456789abcd",
+      "name": "Extract XLSX Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3360, 2456]
+    },
+    {
+      "parameters": {
+        "jsCode": "function inflate(buf) {\n  let p = 0, bp = 0;\n  const out = [];\n  function bits(n) {\n    let v = 0;\n    for (let i = 0; i < n; i++) {\n      v |= ((buf[p] >> bp) & 1) << i;\n      bp++;\n      if (bp === 8) { bp = 0; p++; }\n    }\n    return v;\n  }\n  function buildTree(lengths) {\n    const max = Math.max(...lengths);\n    const bl_count = new Array(max + 1).fill(0);\n    for (const l of lengths) if (l) bl_count[l]++;\n    const next_code = new Array(max + 1).fill(0);\n    let code = 0;\n    for (let b = 1; b <= max; b++) {\n      code = (code + bl_count[b - 1]) << 1;\n      next_code[b] = code;\n    }\n    const tree = {};\n    for (let n = 0; n < lengths.length; n++) {\n      const len = lengths[n];\n      if (len) {\n        let c = next_code[len]++;\n        let key = '';\n        for (let i = len - 1; i >= 0; i--) key += ((c >> i) & 1);\n        tree[key] = n;\n      }\n    }\n    return tree;\n  }\n  function decode(tree) {\n    let key = '';\n    for (;;) {\n      key += bits(1);\n      if (tree.hasOwnProperty(key)) return tree[key];\n      if (key.length > 30) throw new Error('Bad Huffman code');\n    }\n  }\n  const CL_ORDER = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];\n  const LENS_BASE = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];\n  const LENS_EXTRA = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];\n  const DIST_BASE = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];\n  const DIST_EXTRA = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];\n  let bfinal = 0;\n  while (!bfinal) {\n    bfinal = bits(1);\n    const btype = bits(2);\n    if (btype === 0) {\n      if (bp) { bp = 0; p++; }\n      const len = buf[p] | (buf[p+1]<<8); p+=4;\n      for (let i = 0; i < len; i++) out.push(buf[p++]);\n    } else {\n      let litTree, distTree;\n      if (btype === 1) {\n        const ll = [];\n        for (let i = 0; i <= 143; i++) ll.push(8);\n        for (let i = 144; i <= 255; i++) ll.push(9);\n        for (let i = 256; i <= 279; i++) ll.push(7);\n        for (let i = 280; i <= 287; i++) ll.push(8);\n        litTree = buildTree(ll);\n        const dl = [];\n        for (let i = 0; i < 32; i++) dl.push(5);\n        distTree = buildTree(dl);\n      } else {\n        const hlit = bits(5) + 257;\n        const hdist = bits(5) + 1;\n        const hclen = bits(4) + 4;\n        const clLens = new Array(19).fill(0);\n        for (let i = 0; i < hclen; i++) clLens[CL_ORDER[i]] = bits(3);\n        const clTree = buildTree(clLens);\n        function readLengths(count) {\n          const lens = [];\n          while (lens.length < count) {\n            const sym = decode(clTree);\n            if (sym < 16) { lens.push(sym); }\n            else if (sym === 16) { const rep = bits(2)+3; const prev = lens[lens.length-1]||0; for (let i=0;i<rep;i++) lens.push(prev); }\n            else if (sym === 17) { const rep = bits(3)+3; for (let i=0;i<rep;i++) lens.push(0); }\n            else { const rep = bits(7)+11; for (let i=0;i<rep;i++) lens.push(0); }\n          }\n          return lens;\n        }\n        const allLens = readLengths(hlit + hdist);\n        litTree = buildTree(allLens.slice(0, hlit));\n        distTree = buildTree(allLens.slice(hlit));\n      }\n      for (;;) {\n        const sym = decode(litTree);\n        if (sym === 256) break;\n        if (sym < 256) { out.push(sym); }\n        else {\n          const li = sym - 257;\n          const length = LENS_BASE[li] + bits(LENS_EXTRA[li]);\n          const di = decode(distTree);\n          const dist = DIST_BASE[di] + bits(DIST_EXTRA[di]);\n          for (let i = 0; i < length; i++) out.push(out[out.length - dist]);\n        }\n      }\n    }\n  }\n  return Buffer.from(out);\n}\n\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n\nlet text = '';\ntry {\n  // Find End of Central Directory\n  let eocdOffset = -1;\n  for (let i = buffer.length - 22; i >= 0; i--) {\n    if (buffer.readUInt32LE(i) === 0x06054b50) { eocdOffset = i; break; }\n  }\n  if (eocdOffset === -1) throw new Error('Not a valid ZIP');\n\n  const cdOffset = buffer.readUInt32LE(eocdOffset + 16);\n  const cdEntries = buffer.readUInt16LE(eocdOffset + 10);\n\n  // PPTX slides are in ppt/slides/slide1.xml, slide2.xml, etc.\n  const slideContents = [];\n  let pos = cdOffset;\n  for (let i = 0; i < cdEntries; i++) {\n    if (buffer.readUInt32LE(pos) !== 0x02014b50) break;\n    const compressionMethod = buffer.readUInt16LE(pos + 10);\n    const compressedSize = buffer.readUInt32LE(pos + 20);\n    const fileNameLength = buffer.readUInt16LE(pos + 28);\n    const extraLength = buffer.readUInt16LE(pos + 30);\n    const commentLength = buffer.readUInt16LE(pos + 32);\n    const localHeaderOffset = buffer.readUInt32LE(pos + 42);\n    const fileName = buffer.toString('utf8', pos + 46, pos + 46 + fileNameLength);\n\n    // Match ppt/slides/slideN.xml\n    const slideMatch = fileName.match(/^ppt\\/slides\\/slide(\\d+)\\.xml$/);\n    if (slideMatch && compressedSize > 0) {\n      const slideNum = parseInt(slideMatch[1], 10);\n      const localFileNameLen = buffer.readUInt16LE(localHeaderOffset + 26);\n      const localExtraLen = buffer.readUInt16LE(localHeaderOffset + 28);\n      const dataStart = localHeaderOffset + 30 + localFileNameLen + localExtraLen;\n      const compressed = buffer.slice(dataStart, dataStart + compressedSize);\n\n      let xml;\n      if (compressionMethod === 8) {\n        xml = inflate(compressed).toString('utf8');\n      } else {\n        xml = compressed.toString('utf8');\n      }\n\n      // Extract text from <a:t> tags (PowerPoint text runs)\n      const matches = xml.match(/<a:t>([^<]*)<\\/a:t>/g);\n      if (matches) {\n        const slideText = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' ');\n        slideContents.push({ num: slideNum, text: slideText });\n      }\n    }\n    pos += 46 + fileNameLength + extraLength + commentLength;\n  }\n\n  // Sort by slide number and join\n  slideContents.sort((a, b) => a.num - b.num);\n  text = slideContents.map((s, i) => 'Slide ' + s.num + ':\\n' + s.text).join('\\n\\n');\n} catch (e) {\n  text = 'ERROR: ' + e.message;\n}\nreturn [{ json: { text: text || '' } }];"
+      },
+      "id": "a1b2c3d4-pptx-0001-abcd-ef1234567890",
+      "name": "Extract PPTX Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3360, 2676]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert image binary to base64 data URL for OpenAI Vision\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\nconst base64 = buffer.toString('base64');\nconst fileType = $('Process Document Webhook').first().json.body.file_type || 'image/png';\nconst dataUrl = 'data:' + fileType + ';base64,' + base64;\nreturn [{ json: { dataUrl } }];"
+      },
+      "id": "f4a5b6c7-d8e9-0123-f012-3456789abcde",
+      "name": "Prepare Image Base64",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3360, 2696]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"model\":\"gpt-4.1-mini\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a Document Librarian for a nonprofit grant system.\\n\\nYou will receive an image of a document. Do TWO things:\\n\\n1. EXTRACT all visible text from the image exactly as it appears. Preserve structure for tables, forms, lists.\\n\\n2. CATEGORIZE the document into ONE of these types:\\n- 501c3_letter (IRS determination letter)\\n- board_roster (list of board members with bios)\\n- budget_program (program-specific budget)\\n- budget_operating (annual operating budget)\\n- financial_statement (audited financials, 990, etc.)\\n- impact_metrics (outcomes data, statistics)\\n- narrative_youth (program description for foster youth services)\\n- narrative_senior (program description for senior services)\\n- narrative_general (general org description)\\n- other\\n\\nAlso extract a brief description (1 sentence), the fiscal year if mentioned, and whether it is a template.\\n\\nReturn ONLY valid JSON:\\n{\\n  \\\"extracted_text\\\": \\\"the full text from the image\\\",\\n  \\\"category\\\": \\\"category_name\\\",\\n  \\\"description\\\": \\\"Brief description\\\",\\n  \\\"fiscalPeriod\\\": \\\"FY2024 or null\\\",\\n  \\\"isTemplate\\\": false\\n}\"},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Filename: {{ $('Process Document Webhook').item.json.body.file_name }}\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"{{ $json.dataUrl }}\"}}]}],\"max_tokens\":4000}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-ocr1-vis1-img1-567890abcdef",
+      "name": "OCR Image with AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [-3120, 2696],
+      "credentials": {
+        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
+      }
     },
     {
       "parameters": {
@@ -532,7 +245,7 @@
               "role": "system"
             },
             {
-              "content": "=Filename: {{ $json.fileName }}\n\nDocument Content:\n{{ $json.textContent }}"
+              "content": "=Filename:  {{ $('Process Document Webhook').item.json.body.file_name }}\nDocument Content:\n {{ $json.text }}"
             }
           ]
         },
@@ -540,296 +253,52 @@
           "temperature": 0.2
         }
       },
-      "id": "b95a42ea-68df-4226-b4a5-b1542c97b5a3",
-      "name": "AI Categorize Document",
+      "id": "1b45b61d-14e5-4e35-9d77-3ca565fdb92b",
+      "name": "AI Categorize Upload",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
-      "position": [
-        -3712,
-        672
-      ],
+      "position": [-3080, 2256],
       "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
+        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Parse AI response and prepare for storage\nconst fileInfo = $('Extract File Info').first().json;\nconst aiResponse = $input.first().json;\n\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\ntry {\n  let responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    metadata = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  metadata.description = 'Failed to parse AI response';\n}\n\n// Determine version number (will be updated after checking existing docs)\nconst today = new Date().toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    // File info\n    fileId: fileInfo.fileId,\n    fileName: fileInfo.fileName,\n    driveLink: fileInfo.driveLink,\n    mimeType: fileInfo.mimeType,\n    \n    // AI-extracted metadata\n    category: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || '',\n    isTemplate: metadata.isTemplate ? 'Yes' : 'No',\n    \n    // Tracking\n    version: 1,\n    dateAdded: today,\n    lastUpdated: today,\n    status: 'Active'\n  }\n}];"
+        "jsCode": "const webhookData = $('Process Document Webhook').first().json.body;\nconst aiResponse = $input.first().json;\n\n// Detect if this came from the image OCR path (direct from OpenAI HTTP Request)\n// vs the text extraction path (through AI Categorize langchain node)\nconst isImagePath = !!aiResponse.choices;\n\nlet extractedText = '';\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\nif (isImagePath) {\n  // Image path: OCR + categorization done in one Vision API call\n  // Response is raw OpenAI API format: { choices: [{ message: { content: '...' } }] }\n  try {\n    const responseText = aiResponse.choices?.[0]?.message?.content || '';\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      extractedText = parsed.extracted_text || '';\n      metadata.category = parsed.category || 'other';\n      metadata.description = parsed.description || '';\n      metadata.fiscalPeriod = parsed.fiscalPeriod || null;\n      metadata.isTemplate = parsed.isTemplate || false;\n    }\n  } catch (e) {\n    metadata.description = 'Failed to parse Vision AI response';\n  }\n} else {\n  // Text path: came through AI Categorize langchain node\n  // Get extracted text from whichever extraction node ran\n  const textNodes = ['Extract PDF', 'Extract DOCX Text', 'Extract XLSX Text', 'Extract PPTX Text'];\n  for (const name of textNodes) {\n    try {\n      const r = $(name).first().json.text;\n      if (r !== undefined && r !== '') { extractedText = r; break; }\n    } catch(e) {}\n  }\n  // Parse AI categorization response\n  try {\n    const responseText = aiResponse.message?.content || aiResponse.text || '';\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      metadata = JSON.parse(jsonMatch[0]);\n    }\n  } catch (e) {\n    metadata.description = 'Failed to parse AI response';\n  }\n}\n\nreturn [{\n  json: {\n    documentId: webhookData.document_id,\n    orgId: webhookData.org_id || '',\n    extractedText: extractedText,\n    aiCategory: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || null,\n    isTemplate: metadata.isTemplate || false\n  }\n}];"
       },
-      "id": "b3ce6f36-627b-4e92-aae6-67095dfe9aab",
-      "name": "Format Metadata",
+      "id": "4fe43aaa-70f6-4fed-80c2-1614d1ee8244",
+      "name": "Parse AI Category",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -3360,
-        672
-      ]
+      "position": [-2672, 2224]
     },
     {
       "parameters": {
-        "jsCode": "// Calculate version number from Supabase documents\nconst newDoc = $('Format Metadata').first().json;\n\n// Get existing docs from Supabase (previous node)\nlet existingDocs = [];\ntry {\n  const supabaseResponse = $('Get Existing Docs2').all();\n  existingDocs = supabaseResponse.map(item => item.json);\n} catch (e) {\n  existingDocs = [];\n}\n\n// ← DEBUG: Log what we're comparing\nconsole.log(\"NEW DOC fileId:\", newDoc.fileId);\nconsole.log(\"NEW DOC category:\", newDoc.category);\nconsole.log(\"EXISTING DOCS:\", JSON.stringify(existingDocs, null, 2));\n\n// Find docs in same category\nconst sameCategoryDocs = existingDocs.filter(d => \n  d.category === newDoc.category\n);\n\nconsole.log(\"SAME CATEGORY DOCS:\", sameCategoryDocs.length);\n\n// Check if this exact file already exists\nconst existingFile = existingDocs.find(d => {\n  console.log(\n    \"Comparing:\",\n    d.source_file_id,\n    \"===\",\n    newDoc.fileId,\n    \"?\",\n    d.source_file_id === newDoc.fileId\n  );\n  return d.source_file_id === newDoc.fileId;\n});\n\nconsole.log(\"EXISTING FILE FOUND:\", existingFile);\n\nif (existingFile) {\n  // UPDATE existing document\n  return [{\n    json: {\n      docid: existingFile.id,\n      ...newDoc,\n      version: (existingFile.version || 1) + 1,\n      dateAdded: existingFile.created_at,\n      isUpdate: true,\n      supabaseDocId: existingFile.id\n    }\n  }];\n}\n\n// CREATE new document\nreturn [{\n  json: {\n    ...newDoc,\n    org_id: \"00000000-0000-0000-0000-000000000001\",\n    version: sameCategoryDocs.length + 1,\n    dateAdded: new Date().toISOString(),\n    isUpdate: false\n  }\n}];\n"
-      },
-      "id": "5f16679a-bf4f-45b3-b81b-c5e31f879fb1",
-      "name": "Calculate Version",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -2912,
-        672
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "is-update",
-              "leftValue": "={{ $json.isUpdate }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "a4e56208-0b08-4754-a20d-007b6daa768e",
-      "name": "New or Update?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -2688,
-        672
-      ]
-    },
-    {
-      "parameters": {
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyMinute"
-            }
-          ]
-        },
-        "triggerOn": "specificFolder",
-        "folderToWatch": {
-          "__rl": true,
-          "value": "1bIIcEHRnU_9wjry3vbbxAvAuhYWl0_sl",
-          "mode": "list",
-          "cachedResultName": "Valult",
-          "cachedResultUrl": "https://drive.google.com/drive/folders/1bIIcEHRnU_9wjry3vbbxAvAuhYWl0_sl"
-        },
-        "event": "fileCreated",
-        "options": {}
-      },
-      "id": "25f04a1a-225f-4cd4-a042-2243de57cbe8",
-      "name": "Watch Vault Folder1",
-      "type": "n8n-nodes-base.googleDriveTrigger",
-      "typeVersion": 1,
-      "position": [
-        -4384,
-        672
-      ],
-      "credentials": {
-        "googleDriveOAuth2Api": {
-          "id": "c8U1lxhGi7dqu4D4",
-          "name": "n8ndrivelead"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "download",
-        "fileId": {
-          "__rl": true,
-          "value": "={{ $json.id }}",
-          "mode": "id"
-        },
-        "options": {}
-      },
-      "id": "b6142368-8e25-4c34-a77b-7b2080702687",
-      "name": "Download File1",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 2,
-      "position": [
-        -4160,
-        672
-      ],
-      "credentials": {
-        "googleDriveOAuth2Api": {
-          "id": "c8U1lxhGi7dqu4D4",
-          "name": "n8ndrivelead"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://152.53.91.134:3000/api/webhook",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={   \"action\": \"update_document\",   \"data\": {     \"id\": \"{{ $json.docid }}\",     \"title\": \"{{ $json.fileName }}\",     \"category\": \"{{ $json.category }}\",     \"description\": \"{{ $json.description }}\",     \"source_url\": \"{{ $json.driveLink }}\",     \"source_file_id\": \"{{ $json.fileId }}\",     \"mime_type\": \"{{ $json.mimeType }}\",     \"version\": \"{{ $json.version }}\",     \"status\": \"{{ $json.status }}\",     \"metadata\": {       \"fiscal_period\": \"{{ $json.fiscalPeriod }}\",       \"is_template\": \"{{ $json.isTemplate }}\",             \"last_updated\": \"{{ $json.lastUpdated }}\"     }   } }",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -2464,
-        368
-      ],
-      "id": "cad47468-f280-4b51-b0c6-2ef63ab916b4",
-      "name": "Update Existing Document2",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://152.53.91.134:3000/api/webhook",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={   \"action\": \"insert_document\",   \"data\": {     \"org_id\": \"{{ $json.org_id }}\",     \"title\": \"{{ $json.fileName }}\",     \"category\": \"{{ $json.category }}\",     \"description\": \"{{ $json.description }}\",     \"source_url\": \"{{ $json.driveLink }}\",     \"source_file_id\": \"{{ $json.fileId }}\",     \"mime_type\": \"{{ $json.mimeType }}\",     \"version\": \"{{ $json.version }}\",     \"status\": \"{{ $json.status }}\",     \"metadata\": {       \"fiscal_period\": \"{{ $json.fiscalPeriod }}\",       \"is_template\": \"{{ $json.isTemplate }}\",       \"date_added\": \"{{ $json.dateAdded }}\",       \"last_updated\": \"{{ $json.lastUpdated }}\"     }   } }",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -2464,
-        1008
-      ],
-      "id": "34a099da-812d-46e2-93a8-2376afac7085",
-      "name": "Add new document",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyMinute"
-            }
-          ]
-        },
-        "triggerOn": "specificFolder",
-        "folderToWatch": {
-          "__rl": true,
-          "value": "1bIIcEHRnU_9wjry3vbbxAvAuhYWl0_sl",
-          "mode": "list",
-          "cachedResultName": "Valult",
-          "cachedResultUrl": "https://drive.google.com/drive/folders/1bIIcEHRnU_9wjry3vbbxAvAuhYWl0_sl"
-        },
-        "event": "fileCreated",
-        "options": {}
-      },
-      "id": "1558452a-88d3-4f67-b60e-3c21a8ed4440",
-      "name": "Watch Vault Folder",
-      "type": "n8n-nodes-base.googleDriveTrigger",
-      "typeVersion": 1,
-      "position": [
-        -4400,
-        512
-      ],
-      "credentials": {
-        "googleDriveOAuth2Api": {
-          "id": "c8U1lxhGi7dqu4D4",
-          "name": "n8ndrivelead"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?select=id,source_file_id,title,category,version,status,metadata",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "f66eb26e-faac-4d9b-b617-c0ad90ea80f3",
-      "name": "Get Existing Docs2",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -3120,
-        672
-      ],
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Match requested document types to Plane issues tagged [Doc]\nconst requestBody = $('Document Retrieval Webhook1').first().json.body;\nconst requiredDocs = requestBody.requiredDocs || [];\n\n// Plane returns issues in results array\nconst response = $('Get All Documents1').first().json;\nconst allIssues = response.results || response || [];\nconst issueList = Array.isArray(allIssues) ? allIssues : [];\n\n// Parse document metadata from issue names and descriptions\n// Issue name format: [Doc] category - fileName\nconst activeDocs = [];\nfor (const issue of issueList) {\n  const name = issue.name || '';\n  const match = name.match(/\\[Doc\\]\\s*(\\S+)\\s*-\\s*(.+)/);\n  if (!match) continue;\n  \n  // Extract metadata from description_html\n  const desc = issue.description_html || '';\n  const getField = (label) => {\n    const m = desc.match(new RegExp(label + ':</strong>\\\\s*([^<]+)'));\n    return m ? m[1].trim() : '';\n  };\n  \n  activeDocs.push({\n    category: match[1],\n    fileName: match[2].trim(),\n    fileId: getField('File ID'),\n    driveLink: getField('Drive Link'),\n    version: getField('Version') || '1',\n    description: getField('Description'),\n    fiscalPeriod: getField('Fiscal Period'),\n    lastUpdated: issue.updated_at || '',\n    isTemplate: getField('Template') === 'Yes',\n    planeIssueId: issue.id\n  });\n}\n\nconst matchedDocs = {};\nconst missingDocs = [];\n\nfor (const docType of requiredDocs) {\n  const matches = activeDocs.filter(d => d.category === docType);\n  if (matches.length > 0) {\n    const latest = matches.reduce((a, b) => parseInt(a.version || 0) > parseInt(b.version || 0) ? a : b);\n    matchedDocs[docType] = { found: true, ...latest };\n  } else {\n    missingDocs.push(docType);\n    matchedDocs[docType] = { found: false, message: 'No ' + docType + ' document found in vault' };\n  }\n}\n\nreturn [{\n  json: {\n    success: missingDocs.length === 0,\n    requestedCount: requiredDocs.length,\n    foundCount: requiredDocs.length - missingDocs.length,\n    missingDocs: missingDocs,\n    documents: matchedDocs,\n    retrievedAt: new Date().toISOString()\n  }\n}];"
-      },
-      "id": "51808bd8-f9b1-49a0-92fd-393fe602e6fb",
-      "name": "Match Requested Documents1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -3904,
-        912
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://plane.thebrownmine.com/api/v1/workspaces/grant-application-writer/projects/f65bffe2-ee6b-4647-9487-9b7dd73c0d19/issues/?search=%5BDoc%5D&per_page=100",
+        "method": "PATCH",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?id=eq.{{ $json.documentId }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {}
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Prefer", "value": "return=representation" }
           ]
         },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n    \"ai_category\": \"{{ $json.aiCategory }}\",\n    \"description\": {{ JSON.stringify($json.description) }},\n    \"extracted_text\": {{ JSON.stringify($json.extractedText) }},\n    \"extraction_status\": \"completed\",\n    \"metadata\": {\n      \"fiscal_period\": \"{{ $json.fiscalPeriod }}\",\n      \"is_template\": {{ $json.isTemplate }}\n    }\n  }",
         "options": {}
       },
-      "id": "462e604d-8639-4ba2-8246-6bd2be58bd36",
-      "name": "Get All Documents1",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -4160,
-        912
-      ],
+      "typeVersion": 4.3,
+      "position": [-2464, 2224],
+      "id": "a43cbf28-1793-4c90-bd87-91a0424d618e",
+      "name": "Update Document Record",
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
+        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
       }
     },
     {
@@ -839,273 +308,226 @@
         "responseMode": "lastNode",
         "options": {}
       },
-      "id": "c7ab12f7-89e2-41a4-bb76-9ccb22a1bf52",
-      "name": "Document Retrieval Webhook1",
+      "id": "ce8b2cae-5f87-45d7-93b5-3af8dac5a1df",
+      "name": "Document Retrieval Webhook2",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        -4400,
-        912
-      ],
-      "webhookId": "get-documents",
-      "notes": "POST: { requiredDocs: ['501c3_letter', 'budget_program', ...] }"
+      "position": [-4432, 2896],
+      "webhookId": "get-documents"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract context from the calling workflow's payload\nconst raw = $('Document Retrieval Webhook2').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grant_id || payload.grantId;\nconst org_id = payload.org_id;\nconst funder_name = payload.funder_name || 'Not specified';\nconst narratives = payload.narratives || {};\nconst sectionsReturned = payload.sectionsReturned || 0;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    funder_name,\n    narratives,\n    sectionsReturned,\n  }\n}];"
+      },
+      "id": "37562539-6a97-423d-af27-fbc22ac65ecf",
+      "name": "Extract Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-4192, 2896]
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $json.grant_id }}&select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4c9febc9-e021-424b-bebe-186870069cc0",
+      "name": "Get Grant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-3936, 2896],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": { "id": "42Gs7Nuquctvpx8P", "name": "New Plane Production" }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?org_id=eq.{{ $('Extract Context').first().json.org_id }}&select=id,name,file_type,category,ai_category,extraction_status,extracted_text,created_at&order=created_at.desc",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "490996d1-dfba-46c3-8e25-27866571c4e3",
+      "name": "Get All Documents2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-3680, 2896],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": { "id": "42Gs7Nuquctvpx8P", "name": "New Plane Production" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a summary of all documents for the AI to evaluate\nconst grant = $('Get Grant').first().json;\nconst allDocs = $('Get All Documents2').all().map(item => item.json);\nconst context = $('Extract Context').first().json;\n\nif (!allDocs || allDocs.length === 0 || !allDocs[0].id) {\n  return [{\n    json: {\n      error: true,\n      message: 'No documents found for this org',\n    }\n  }];\n}\n\n// Build a concise doc list for AI (avoid sending full extracted_text to save tokens)\nconst docSummaries = allDocs.map((d, i) => ({\n  index: i,\n  id: d.id,\n  name: d.name,\n  category: d.ai_category || d.category || 'uncategorized',\n  file_type: d.file_type,\n  has_content: !!(d.extracted_text && d.extracted_text.length > 0),\n  content_preview: (d.extracted_text || '').substring(0, 300),\n}));\n\nreturn [{\n  json: {\n    grant_title: grant.title || context.funder_name,\n    grant_description: grant.description || '',\n    funder_name: grant.funder_name || context.funder_name,\n    grant_amount: grant.amount || '',\n    grant_deadline: grant.deadline || '',\n    doc_summaries: docSummaries,\n    all_docs: allDocs,\n  }\n}];"
+      },
+      "id": "71502f8a-86da-45c1-aa00-6fed3e737302",
+      "name": "Prepare for AI Filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3408, 2896]
+    },
+    {
+      "parameters": {
+        "jsCode": " // Build response - pass through all docs since AI filter is removed\n  const prepData = $input.first().json;\n  const context = $('Extract Context').first().json;\n  const allDocs = prepData.all_docs || [];\n\n  const documents = {};\n  for (const doc of allDocs) {\n    const category = doc.ai_category || doc.category || 'other';\n    // If multiple docs share a category, append index to avoid overwrite\n    const key = documents[category] ? `${category}_${doc.id.substring(0, 8)}` : category;\n    documents[key] = {\n      found: true,\n      id: doc.id,\n      fileName: doc.name,\n      category: category,\n      extractedText: doc.extracted_text || '',\n      extractionStatus: doc.extraction_status,\n      createdAt: doc.created_at,\n    };\n  }\n\n  return [{\n    json: {\n      success: true,\n      grant_id: context.grant_id,\n      org_id: context.org_id,\n      funder_name: context.funder_name,\n      grant_title: prepData.grant_title,\n      grant_description: prepData.grant_description,\n      totalDocuments: allDocs.length,\n      documents,\n      narratives: context.narratives,\n      sectionsReturned: context.sectionsReturned,\n      retrievedAt: new Date().toISOString()\n    }\n  }];"
+      },
+      "id": "f12c0b24-d744-4a80-afab-f2fe237ec632",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-2832, 2896]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a Grant Application Document Specialist.\n\nYour job is to review a list of documents from a nonprofit's document vault and determine which ones are RELEVANT to a specific grant application.\n\nA document is relevant if it would typically be required or useful for the grant application. Common relevant documents include:\n- 501(c)(3) determination letter (almost always required)\n- Board roster / list of board members\n- Financial statements, audits, or IRS Form 990\n- Operating or program budgets\n- Impact metrics or outcomes data\n- Program narratives that relate to the grant's focus area\n- Organizational charts, bylaws, or governance docs\n- Letters of support or partnership agreements\n\nA document is IRRELEVANT if:\n- It's a template that hasn't been filled out\n- It's about a completely unrelated program or topic\n- It's outdated beyond usefulness (e.g. financials from 5+ years ago)\n- It's a duplicate of another document already selected\n\nReturn ONLY valid JSON — no markdown, no explanation:\n{\n  \"relevant_indices\": [0, 2, 5],\n  \"reasoning\": {\n    \"0\": \"501c3 letter - required for most grant applications\",\n    \"2\": \"Operating budget - needed for NIH application\",\n    \"5\": \"Impact data - supports program effectiveness\"\n  }\n}",
+              "role": "system"
+            },
+            {
+              "content": "=GRANT APPLICATION:\n- Title: {{ $json.grant_title }}\n- Funder: {{ $json.funder_name }}\n- Description: {{ $json.grant_description }}\n- Amount: {{ $json.grant_amount }}\n- Deadline: {{ $json.grant_deadline }}\n\nDOCUMENTS IN VAULT:\n{{ JSON.stringify($json.doc_summaries, null, 2) }}\n\nWhich documents are relevant for this grant application? Return the indices of relevant documents."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "cca0d410-c1f3-4b8d-a5a3-d83c7b5e75d7",
+      "name": "AI Filter Documents",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [-3152, 3024],
+      "credentials": {
+        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## WF4: Document Vault Manager\n\n### Path 1: Process Document\nWebhook: POST /process-document\nReceives { document_id, org_id, file_name, file_type }\n1. Marks document as 'processing'\n2. Downloads file from Supabase Storage\n3. Routes by file_type (Switch):\n   - PDF → Extract from File (pdf)\n   - DOCX → Code (ZIP/XML parser)\n   - XLSX → Code (ZIP/XML shared strings)\n   - PPTX → Code (ZIP/XML slide text)\n   - Image → OCR via OpenAI Vision API\n4. AI categorizes the document\n5. Updates DB with ai_category + extracted_text\n\n### Path 2: Retrieve Documents\nWebhook: POST /get-documents\nFetches from Supabase DB (no re-download)",
+        "height": 380,
+        "width": 520
+      },
+      "id": "aabb1122-3344-5566-7788-99aabbccddee",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-4600, 1780]
     }
   ],
-  "pinData": {
-    "Document Retrieval Webhook": [
-      {
-        "json": {
-          "headers": {
-            "host": "n8n.thebrownmine.com",
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-            "content-length": "33",
-            "accept": "*/*",
-            "accept-encoding": "deflate, gzip",
-            "content-type": "application/json",
-            "via": "1.1 Caddy",
-            "x-forwarded-for": "64.227.21.251",
-            "x-forwarded-host": "n8n.thebrownmine.com",
-            "x-forwarded-proto": "https",
-            "x-real-ip": "102.208.97.109"
-          },
-          "params": {},
-          "query": {},
-          "body": {
-            "requiredDocs": [
-              "501c3_letter"
-            ]
-          },
-          "webhookUrl": "https://n8n.thebrownmine.com/webhook-test/get-documents",
-          "executionMode": "test"
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      }
-    ]
-  },
+  "pinData": {},
   "connections": {
-    "Document Retrieval Webhook": {
+    "Process Document Webhook": {
       "main": [
-        [
-          {
-            "node": "Get All Documents",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Mark as Processing", "type": "main", "index": 0 }]
       ]
     },
-    "Get All Documents": {
+    "Mark as Processing": {
       "main": [
-        [
-          {
-            "node": "Match Requested Documents",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract File Info1": {
-      "main": [
-        [
-          {
-            "node": "AI Categorize Document1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Categorize Document1": {
-      "main": [
-        [
-          {
-            "node": "Format Metadata1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Metadata1": {
-      "main": [
-        [
-          {
-            "node": "Get Existing Docs1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Existing Docs1": {
-      "main": [
-        [
-          {
-            "node": "Calculate Version1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Calculate Version1": {
-      "main": [
-        [
-          {
-            "node": "New or Update?1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "New or Update?1": {
-      "main": [
-        [
-          {
-            "node": "Update Existing Document1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Add New Document1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Download File", "type": "main", "index": 0 }]
       ]
     },
     "Download File": {
       "main": [
-        [
-          {
-            "node": "Extract File Info1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Switch on File Type", "type": "main", "index": 0 }]
       ]
     },
-    "Extract File Info": {
+    "Switch on File Type": {
       "main": [
-        [
-          {
-            "node": "AI Categorize Document",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Extract PDF", "type": "main", "index": 0 }],
+        [{ "node": "Extract DOCX Text", "type": "main", "index": 0 }],
+        [{ "node": "Extract XLSX Text", "type": "main", "index": 0 }],
+        [{ "node": "Extract PPTX Text", "type": "main", "index": 0 }],
+        [{ "node": "Prepare Image Base64", "type": "main", "index": 0 }],
+        [{ "node": "Prepare Image Base64", "type": "main", "index": 0 }]
       ]
     },
-    "AI Categorize Document": {
+    "Extract PDF": {
       "main": [
-        [
-          {
-            "node": "Format Metadata",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
       ]
     },
-    "Format Metadata": {
+    "Extract DOCX Text": {
       "main": [
-        [
-          {
-            "node": "Get Existing Docs2",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
       ]
     },
-    "Calculate Version": {
+    "Extract XLSX Text": {
       "main": [
-        [
-          {
-            "node": "New or Update?",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
       ]
     },
-    "New or Update?": {
+    "Extract PPTX Text": {
       "main": [
-        [
-          {
-            "node": "Update Existing Document2",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Add new document",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
       ]
     },
-    "Watch Vault Folder1": {
+    "Prepare Image Base64": {
       "main": [
-        [
-          {
-            "node": "Download File1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "OCR Image with AI", "type": "main", "index": 0 }]
       ]
     },
-    "Download File1": {
+    "OCR Image with AI": {
       "main": [
-        [
-          {
-            "node": "Extract File Info",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Parse AI Category", "type": "main", "index": 0 }]
       ]
     },
-    "Get Existing Docs2": {
+    "AI Categorize Upload": {
       "main": [
-        [
-          {
-            "node": "Calculate Version",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Parse AI Category", "type": "main", "index": 0 }]
       ]
     },
-    "Get All Documents1": {
+    "Parse AI Category": {
       "main": [
-        [
-          {
-            "node": "Match Requested Documents1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Update Document Record", "type": "main", "index": 0 }]
       ]
     },
-    "Document Retrieval Webhook1": {
+    "Document Retrieval Webhook2": {
       "main": [
-        [
-          {
-            "node": "Get All Documents1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Extract Context", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Context": {
+      "main": [
+        [{ "node": "Get Grant", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Grant": {
+      "main": [
+        [{ "node": "Get All Documents2", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get All Documents2": {
+      "main": [
+        [{ "node": "Prepare for AI Filter", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare for AI Filter": {
+      "main": [
+        [{ "node": "Build Response", "type": "main", "index": 0 }]
       ]
     }
   },
@@ -1114,7 +536,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "774740de-c7d7-40d7-b05e-f904365d449f",
+  "versionId": "abaf0a63-6f72-4e09-8558-afc2de76a879",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"

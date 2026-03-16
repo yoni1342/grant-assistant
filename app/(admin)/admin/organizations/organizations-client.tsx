@@ -27,14 +27,14 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
-import { Eye } from "lucide-react";
-import { approveOrganization, rejectOrganization } from "./actions";
+import { Eye, Trash2, Ban, RotateCcw } from "lucide-react";
+import { approveOrganization, rejectOrganization, deleteOrganization, suspendOrganization, unsuspendOrganization } from "./actions";
 
 interface Organization {
   id: string;
   name: string;
   sector: string | null;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "suspended";
   rejection_reason: string | null;
   created_at: string | null;
   owner_email: string | null;
@@ -56,7 +56,7 @@ interface Organization {
   narratives: Record<string, unknown>[];
 }
 
-type Filter = "all" | "pending" | "approved" | "rejected";
+type Filter = "all" | "pending" | "approved" | "rejected" | "suspended";
 
 export function OrganizationsClient({
   organizations,
@@ -68,11 +68,21 @@ export function OrganizationsClient({
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    type: "delete" | "suspend" | "unsuspend";
+    orgId: string;
+    name: string;
+  } | null>(null);
+  const [errorDialog, setErrorDialog] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const counts = {
     pending: organizations.filter((o) => o.status === "pending").length,
     approved: organizations.filter((o) => o.status === "approved").length,
     rejected: organizations.filter((o) => o.status === "rejected").length,
+    suspended: organizations.filter((o) => o.status === "suspended").length,
   };
 
   const filtered =
@@ -101,6 +111,35 @@ export function OrganizationsClient({
     setLoading(null);
   }
 
+  async function handleConfirmAction() {
+    if (!confirmDialog) return;
+    setLoading(confirmDialog.orgId);
+
+    let result;
+    if (confirmDialog.type === "delete") {
+      result = await deleteOrganization(confirmDialog.orgId);
+    } else if (confirmDialog.type === "suspend") {
+      result = await suspendOrganization(confirmDialog.orgId);
+    } else {
+      result = await unsuspendOrganization(confirmDialog.orgId);
+    }
+
+    if (result.error) {
+      const action = confirmDialog.type === "delete"
+        ? "deleting"
+        : confirmDialog.type === "suspend"
+          ? "suspending"
+          : "unsuspending";
+      setErrorDialog({
+        title: `Failed to ${confirmDialog.type} organization`,
+        message: `Something went wrong while ${action} "${confirmDialog.name}". Please try again or contact support if the issue persists.`,
+      });
+    }
+
+    setConfirmDialog(null);
+    setLoading(null);
+  }
+
   const statusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -109,6 +148,8 @@ export function OrganizationsClient({
         return <Badge variant="outline" className="border-green-300 text-green-700 dark:text-green-400">Approved</Badge>;
       case "rejected":
         return <Badge variant="outline" className="border-red-300 text-red-700 dark:text-red-400">Rejected</Badge>;
+      case "suspended":
+        return <Badge variant="outline" className="border-orange-300 text-orange-700 dark:text-orange-400">Suspended</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -119,6 +160,7 @@ export function OrganizationsClient({
     { label: `Pending (${counts.pending})`, value: "pending" },
     { label: `Approved (${counts.approved})`, value: "approved" },
     { label: `Rejected (${counts.rejected})`, value: "rejected" },
+    { label: `Suspended (${counts.suspended})`, value: "suspended" },
   ];
 
   return (
@@ -126,7 +168,7 @@ export function OrganizationsClient({
       <h2 className="text-2xl font-semibold">Organizations</h2>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
@@ -149,6 +191,14 @@ export function OrganizationsClient({
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-red-600">{counts.rejected}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Suspended</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-orange-600">{counts.suspended}</p>
           </CardContent>
         </Card>
       </div>
@@ -242,6 +292,54 @@ export function OrganizationsClient({
                             </Button>
                           </>
                         )}
+                        {org.status === "suspended" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setConfirmDialog({
+                                type: "unsuspend",
+                                orgId: org.id,
+                                name: org.name,
+                              })
+                            }
+                            disabled={loading === org.id}
+                          >
+                            <RotateCcw className="mr-1 h-3 w-3" />
+                            Unsuspend
+                          </Button>
+                        ) : org.status !== "pending" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setConfirmDialog({
+                                type: "suspend",
+                                orgId: org.id,
+                                name: org.name,
+                              })
+                            }
+                            disabled={loading === org.id}
+                          >
+                            <Ban className="mr-1 h-3 w-3" />
+                            Suspend
+                          </Button>
+                        ) : null}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() =>
+                            setConfirmDialog({
+                              type: "delete",
+                              orgId: org.id,
+                              name: org.name,
+                            })
+                          }
+                          disabled={loading === org.id}
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" />
+                          Delete
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -279,6 +377,64 @@ export function OrganizationsClient({
             >
               {loading === selectedOrgId ? "Rejecting..." : "Reject"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Confirm dialog for delete/suspend/unsuspend */}
+      <Dialog
+        open={!!confirmDialog}
+        onOpenChange={(open) => !open && setConfirmDialog(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirmDialog?.type === "delete"
+                ? "Delete Organization"
+                : confirmDialog?.type === "suspend"
+                  ? "Suspend Organization"
+                  : "Unsuspend Organization"}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmDialog?.type === "delete"
+                ? `Are you sure you want to permanently delete "${confirmDialog?.name}"? All associated data and user accounts will be removed. This action cannot be undone.`
+                : confirmDialog?.type === "suspend"
+                  ? `Are you sure you want to suspend "${confirmDialog?.name}"? Members will no longer be able to access the platform.`
+                  : `Are you sure you want to unsuspend "${confirmDialog?.name}"? Members will regain access to the platform.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant={confirmDialog?.type === "unsuspend" ? "default" : "destructive"}
+              onClick={handleConfirmAction}
+              disabled={loading === confirmDialog?.orgId}
+            >
+              {loading === confirmDialog?.orgId
+                ? "..."
+                : confirmDialog?.type === "delete"
+                  ? "Delete"
+                  : confirmDialog?.type === "suspend"
+                    ? "Suspend"
+                    : "Unsuspend"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error dialog */}
+      <Dialog
+        open={!!errorDialog}
+        onOpenChange={(open) => !open && setErrorDialog(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{errorDialog?.title}</DialogTitle>
+            <DialogDescription>{errorDialog?.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setErrorDialog(null)}>OK</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

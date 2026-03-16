@@ -1,11 +1,46 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 const STAGE_WORKFLOWS: Record<string, string> = {
   screening: 'screen-grant',
   drafting: 'generate-proposal',
+}
+
+export async function triggerFetchGrants(orgId: string) {
+  const n8nUrl = process.env.N8N_WEBHOOK_URL
+  if (!n8nUrl) {
+    console.error('[auto-fetch-grants] N8N_WEBHOOK_URL not configured')
+    return
+  }
+
+  const adminClient = createAdminClient()
+
+  // Insert a fetch status row so the banner shows immediately
+  await adminClient
+    .from('grant_fetch_status')
+    .upsert(
+      {
+        org_id: orgId,
+        status: 'searching',
+        stage_message: 'Automatically fetching grants for your organization…',
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'org_id' },
+    )
+
+  // Fire-and-forget: trigger the n8n fetch-grants workflow
+  fetch(`${n8nUrl}/fetch-grants`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
+    },
+    body: JSON.stringify({ org_id: orgId }),
+  }).catch((err) => {
+    console.error('[auto-fetch-grants] Webhook failed:', err)
+  })
 }
 
 export async function triggerStageWorkflow(grantId: string, targetStage: string) {

@@ -8,6 +8,7 @@ const ALLOWED_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'image/png',
   'image/jpeg',
 ]
@@ -24,7 +25,7 @@ export async function uploadDocument(formData: FormData) {
 
   // Validate file type
   if (!ALLOWED_TYPES.includes(file.type)) {
-    return { error: 'Invalid file type. Only PDF, DOCX, XLSX, PNG, and JPG files are allowed.' }
+    return { error: 'Invalid file type. Only PDF, DOCX, XLSX, PPTX, PNG, and JPG files are allowed.' }
   }
 
   // Validate file size

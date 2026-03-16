@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { columns, Document } from "./columns"
-import { DOCUMENT_CATEGORIES } from "../constants"
+import { DOCUMENT_CATEGORIES, CATEGORY_LABELS } from "../constants"
 
 interface DocumentTableProps {
   initialData: Document[]
@@ -126,7 +126,7 @@ export function DocumentTable({ initialData }: DocumentTableProps) {
             <SelectItem value="uncategorized">Uncategorized</SelectItem>
             {DOCUMENT_CATEGORIES.map((cat) => (
               <SelectItem key={cat} value={cat}>
-                {cat}
+                {CATEGORY_LABELS[cat] || cat}
               </SelectItem>
             ))}
           </SelectContent>

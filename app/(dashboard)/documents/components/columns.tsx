@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { Database } from "@/lib/supabase/database.types"
 import { DocumentRowActions } from "./document-row-actions"
+import { CATEGORY_LABELS } from "../constants"
 
 export type Document = Database["public"]["Tables"]["documents"]["Row"]
 
@@ -27,6 +28,7 @@ export function getFileTypeLabel(mimeType: string | null): string {
   if (mimeType === "application/pdf") return "PDF"
   if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return "Word"
   if (mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") return "Excel"
+  if (mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation") return "PowerPoint"
   if (mimeType === "image/png") return "PNG"
   if (mimeType === "image/jpeg") return "JPEG"
   return "Document"
@@ -38,6 +40,7 @@ function getFileTypeIcon(mimeType: string | null) {
   if (mimeType === "application/pdf") return <FileText className="h-4 w-4 text-red-500" />
   if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return <FileIcon className="h-4 w-4 text-blue-500" />
   if (mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") return <FileSpreadsheet className="h-4 w-4 text-green-500" />
+  if (mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation") return <FileText className="h-4 w-4 text-orange-500" />
   if (mimeType.startsWith("image/")) return <FileImage className="h-4 w-4 text-purple-500" />
   return <FileIcon className="h-4 w-4 text-muted-foreground" />
 }
@@ -56,7 +59,7 @@ export const columns: ColumnDef<Document>[] = [
           <div className="min-w-0">
             <span className="font-medium block truncate">{name}</span>
             {aiCategory && (
-              <span className="text-xs text-muted-foreground truncate block">{aiCategory}</span>
+              <span className="text-xs text-muted-foreground truncate block">{CATEGORY_LABELS[aiCategory] || aiCategory}</span>
             )}
           </div>
         </div>
@@ -97,7 +100,8 @@ export const columns: ColumnDef<Document>[] = [
         return <span className="text-muted-foreground text-sm italic">Categorizing...</span>
       }
 
-      return <div className="capitalize">{aiCategory || category || "Uncategorized"}</div>
+      const displayCat = aiCategory || category || "Uncategorized"
+      return <div className="capitalize">{CATEGORY_LABELS[displayCat] || displayCat}</div>
     },
   },
   {

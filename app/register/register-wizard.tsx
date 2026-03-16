@@ -61,6 +61,7 @@ const ALLOWED_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "image/png",
   "image/jpeg",
 ];
@@ -186,7 +187,7 @@ export function RegisterWizard({
 
   function validateFile(file: File): string | null {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return `${file.name}: Invalid type. Only PDF, DOCX, XLSX, PNG, JPG allowed.`;
+      return `${file.name}: Invalid type. Only PDF, DOCX, XLSX, PPTX, PNG, JPG allowed.`;
     }
     if (file.size > MAX_FILE_SIZE) {
       return `${file.name}: File too large. Max 25MB.`;
@@ -637,12 +638,12 @@ export function RegisterWizard({
                   <label className="flex-1 cursor-pointer">
                     <div className="flex items-center gap-2 rounded-md border border-dashed border-muted-foreground/40 px-3 py-2 text-sm text-muted-foreground hover:border-primary transition-colors">
                       <Upload className="h-4 w-4" />
-                      {narrativeFile ? narrativeFile.name : "Choose narrative file (PDF, DOCX)"}
+                      {narrativeFile ? narrativeFile.name : "Choose narrative file (PDF, DOCX, XLSX, PNG, JPG)"}
                     </div>
                     <input
                       type="file"
                       className="hidden"
-                      accept=".pdf,.docx"
+                      accept=".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg"
                       onChange={handleNarrativeFile}
                     />
                   </label>
@@ -668,7 +669,7 @@ export function RegisterWizard({
                   <input
                     type="file"
                     className="hidden"
-                    accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg"
+                    accept=".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg"
                     multiple
                     onChange={handleAdditionalFiles}
                   />

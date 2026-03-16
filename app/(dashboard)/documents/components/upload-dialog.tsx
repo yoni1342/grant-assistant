@@ -21,12 +21,13 @@ import {
 } from "@/components/ui/select"
 import { Upload } from "lucide-react"
 import { uploadDocument } from "../actions"
-import { DOCUMENT_CATEGORIES } from "../constants"
+import { DOCUMENT_CATEGORIES, CATEGORY_LABELS } from "../constants"
 
 const ALLOWED_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "image/png",
   "image/jpeg",
 ]
@@ -42,7 +43,7 @@ export function UploadDialog() {
 
   function validateFile(file: File): string | null {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return "Invalid file type. Only PDF, DOCX, XLSX, PNG, and JPG files are allowed."
+      return "Invalid file type. Only PDF, DOCX, XLSX, PPTX, PNG, and JPG files are allowed."
     }
     if (file.size > MAX_FILE_SIZE) {
       return "File too large. Maximum size is 25MB."
@@ -102,7 +103,7 @@ export function UploadDialog() {
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
-            Upload a document to your organization&apos;s vault. Accepted formats: PDF, DOCX, XLSX, PNG, JPG (max 25MB).
+            Upload a document to your organization&apos;s vault. Accepted formats: PDF, DOCX, XLSX, PPTX, PNG, JPG (max 25MB).
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -113,7 +114,7 @@ export function UploadDialog() {
               id="file"
               name="file"
               type="file"
-              accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg"
+              accept=".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg"
               disabled={isPending}
               required
             />
@@ -127,7 +128,7 @@ export function UploadDialog() {
               <SelectContent>
                 {DOCUMENT_CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {cat}
+                    {CATEGORY_LABELS[cat] || cat}
                   </SelectItem>
                 ))}
               </SelectContent>
