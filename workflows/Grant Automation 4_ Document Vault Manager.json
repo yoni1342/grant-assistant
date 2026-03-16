@@ -3,58 +3,15 @@
   "nodes": [
     {
       "parameters": {
-        "jsCode": "// Convert image binary to base64 data URL for OpenAI Vision\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\nconst base64 = buffer.toString('base64');\nconst fileType = $('Process Document Webhook1').first().json.body.file_type || 'image/png';\nconst dataUrl = 'data:' + fileType + ';base64,' + base64;\nreturn [{ json: { dataUrl } }];"
-      },
-      "id": "f10eecad-d9a8-4b04-a57e-959139560605",
-      "name": "Prepare Image Base64",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2016,
-        5808
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={\"model\":\"gpt-4.1-mini\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Extract all visible text from this image exactly as it appears. If the image contains a document, table, chart, or form, preserve the structure. If there is no readable text, describe the image contents in detail.\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"{{ $json.dataUrl }}\"}}]}],\"max_tokens\":4000}",
-        "options": {}
-      },
-      "id": "c6f34255-d26e-47dd-b345-da8a47cc5667",
-      "name": "OCR Image with AI",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        2272,
-        5744
-      ],
-      "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
-      }
-    },
-    {
-      "parameters": {
         "httpMethod": "POST",
         "path": "process-document",
         "options": {}
       },
-      "id": "3e469b31-456e-4625-8518-5df2804202cf",
-      "name": "Process Document Webhook1",
+      "id": "3271ca57-cb46-4afb-8822-e022e30fd724",
+      "name": "Process Document Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        1040,
-        5360
-      ],
+      "position": [-4336, 2256],
       "webhookId": "process-document"
     },
     {
@@ -66,18 +23,9 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Prefer", "value": "return=representation" }
           ]
         },
         "sendBody": true,
@@ -88,17 +36,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [
-        1312,
-        5360
-      ],
-      "id": "d8264572-c466-49be-9208-943f027b6443",
-      "name": "Mark as Processing1",
+      "position": [-4064, 2256],
+      "id": "e6fe6f42-501e-425a-8bfe-027d9682ff84",
+      "name": "Mark as Processing",
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
+        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
       }
     },
     {
@@ -109,35 +51,20 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Prefer", "value": "return=representation" }
           ]
         },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [
-        1536,
-        5360
-      ],
-      "id": "f83cc981-9e12-4744-a72e-ec363478f345",
-      "name": "Download File1",
+      "position": [-3840, 2256],
+      "id": "cd499ae3-66c3-4bb5-81f5-3eca055b08bc",
+      "name": "Download File",
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
+        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
       }
     },
     {
@@ -146,18 +73,12 @@
           "values": [
             {
               "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": ""
-                },
+                "options": { "caseSensitive": true, "leftValue": "" },
                 "conditions": [
                   {
-                    "leftValue": "={{ $('Process Document Webhook1').item.json.body.file_type }}",
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
                     "rightValue": "application/pdf",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
+                    "operator": { "type": "string", "operation": "equals" }
                   }
                 ],
                 "combinator": "and"
@@ -167,18 +88,12 @@
             },
             {
               "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": ""
-                },
+                "options": { "caseSensitive": true, "leftValue": "" },
                 "conditions": [
                   {
-                    "leftValue": "={{ $('Process Document Webhook1').item.json.body.file_type }}",
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
                     "rightValue": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
+                    "operator": { "type": "string", "operation": "equals" }
                   }
                 ],
                 "combinator": "and"
@@ -188,18 +103,12 @@
             },
             {
               "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": ""
-                },
+                "options": { "caseSensitive": true, "leftValue": "" },
                 "conditions": [
                   {
-                    "leftValue": "={{ $('Process Document Webhook1').item.json.body.file_type }}",
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
                     "rightValue": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
+                    "operator": { "type": "string", "operation": "equals" }
                   }
                 ],
                 "combinator": "and"
@@ -209,18 +118,27 @@
             },
             {
               "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": ""
-                },
+                "options": { "caseSensitive": true, "leftValue": "" },
                 "conditions": [
                   {
-                    "leftValue": "={{ $('Process Document Webhook1').item.json.body.file_type }}",
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PPTX"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
                     "rightValue": "image/",
-                    "operator": {
-                      "type": "string",
-                      "operation": "startsWith"
-                    }
+                    "operator": { "type": "string", "operation": "startsWith" }
                   }
                 ],
                 "combinator": "and"
@@ -234,14 +152,83 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "65a2959b-a10f-4cd6-a1f2-3e1a379ad777",
-      "name": "Switch on File Type1",
+      "id": "b1a2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Switch on File Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
-      "position": [
-        1776,
-        5360
-      ]
+      "position": [-3600, 2256]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [-3360, 2016],
+      "id": "c6365285-cdda-4f03-a356-7d5969d7e16c",
+      "name": "Extract PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "const zlib = require('zlib');\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n\nlet text = '';\ntry {\n  let offset = 0;\n  while (offset < buffer.length - 30) {\n    if (buffer.readUInt32LE(offset) === 0x04034b50) {\n      const compressionMethod = buffer.readUInt16LE(offset + 8);\n      const compressedSize = buffer.readUInt32LE(offset + 18);\n      const fileNameLength = buffer.readUInt16LE(offset + 26);\n      const extraFieldLength = buffer.readUInt16LE(offset + 28);\n      const fileName = buffer.toString('utf8', offset + 30, offset + 30 + fileNameLength);\n      const dataStart = offset + 30 + fileNameLength + extraFieldLength;\n      if (fileName === 'word/document.xml' && compressedSize > 0) {\n        const compressed = buffer.slice(dataStart, dataStart + compressedSize);\n        let xml;\n        if (compressionMethod === 8) {\n          xml = zlib.inflateRawSync(compressed).toString('utf8');\n        } else {\n          xml = compressed.toString('utf8');\n        }\n        const matches = xml.match(/<w:t[^>]*>([^<]*)<\\/w:t>/g);\n        if (matches) {\n          text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' ');\n        }\n        break;\n      }\n      offset = dataStart + compressedSize;\n    } else {\n      offset++;\n    }\n  }\n} catch (e) {\n  text = '';\n}\nreturn [{ json: { text: text || '' } }];"
+      },
+      "id": "d2e3f4a5-b6c7-8901-def0-123456789abc",
+      "name": "Extract DOCX Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3360, 2236]
+    },
+    {
+      "parameters": {
+        "jsCode": "const zlib = require('zlib');\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n\nlet text = '';\ntry {\n  let offset = 0;\n  const xmlContents = {};\n  const targets = ['xl/sharedStrings.xml', 'xl/worksheets/sheet1.xml'];\n  while (offset < buffer.length - 30) {\n    if (buffer.readUInt32LE(offset) === 0x04034b50) {\n      const compressionMethod = buffer.readUInt16LE(offset + 8);\n      const compressedSize = buffer.readUInt32LE(offset + 18);\n      const fileNameLength = buffer.readUInt16LE(offset + 26);\n      const extraFieldLength = buffer.readUInt16LE(offset + 28);\n      const fileName = buffer.toString('utf8', offset + 30, offset + 30 + fileNameLength);\n      const dataStart = offset + 30 + fileNameLength + extraFieldLength;\n      if (targets.includes(fileName) && compressedSize > 0) {\n        const compressed = buffer.slice(dataStart, dataStart + compressedSize);\n        let xml;\n        if (compressionMethod === 8) {\n          xml = zlib.inflateRawSync(compressed).toString('utf8');\n        } else {\n          xml = compressed.toString('utf8');\n        }\n        xmlContents[fileName] = xml;\n        if (Object.keys(xmlContents).length === targets.length) break;\n      }\n      offset = dataStart + compressedSize;\n    } else {\n      offset++;\n    }\n  }\n  if (xmlContents['xl/sharedStrings.xml']) {\n    const matches = xmlContents['xl/sharedStrings.xml'].match(/<t[^>]*>([^<]*)<\\/t>/g);\n    if (matches) {\n      text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' | ');\n    }\n  }\n  if (!text && xmlContents['xl/worksheets/sheet1.xml']) {\n    const matches = xmlContents['xl/worksheets/sheet1.xml'].match(/<v>([^<]*)<\\/v>/g);\n    if (matches) {\n      text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' | ');\n    }\n  }\n} catch (e) {\n  text = '';\n}\nreturn [{ json: { text: text || '' } }];"
+      },
+      "id": "e3f4a5b6-c7d8-9012-ef01-23456789abcd",
+      "name": "Extract XLSX Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3360, 2456]
+    },
+    {
+      "parameters": {
+        "jsCode": "function inflate(buf) {\n  let p = 0, bp = 0;\n  const out = [];\n  function bits(n) {\n    let v = 0;\n    for (let i = 0; i < n; i++) {\n      v |= ((buf[p] >> bp) & 1) << i;\n      bp++;\n      if (bp === 8) { bp = 0; p++; }\n    }\n    return v;\n  }\n  function buildTree(lengths) {\n    const max = Math.max(...lengths);\n    const bl_count = new Array(max + 1).fill(0);\n    for (const l of lengths) if (l) bl_count[l]++;\n    const next_code = new Array(max + 1).fill(0);\n    let code = 0;\n    for (let b = 1; b <= max; b++) {\n      code = (code + bl_count[b - 1]) << 1;\n      next_code[b] = code;\n    }\n    const tree = {};\n    for (let n = 0; n < lengths.length; n++) {\n      const len = lengths[n];\n      if (len) {\n        let c = next_code[len]++;\n        let key = '';\n        for (let i = len - 1; i >= 0; i--) key += ((c >> i) & 1);\n        tree[key] = n;\n      }\n    }\n    return tree;\n  }\n  function decode(tree) {\n    let key = '';\n    for (;;) {\n      key += bits(1);\n      if (tree.hasOwnProperty(key)) return tree[key];\n      if (key.length > 30) throw new Error('Bad Huffman code');\n    }\n  }\n  const CL_ORDER = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];\n  const LENS_BASE = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];\n  const LENS_EXTRA = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];\n  const DIST_BASE = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];\n  const DIST_EXTRA = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];\n  let bfinal = 0;\n  while (!bfinal) {\n    bfinal = bits(1);\n    const btype = bits(2);\n    if (btype === 0) {\n      if (bp) { bp = 0; p++; }\n      const len = buf[p] | (buf[p+1]<<8); p+=4;\n      for (let i = 0; i < len; i++) out.push(buf[p++]);\n    } else {\n      let litTree, distTree;\n      if (btype === 1) {\n        const ll = [];\n        for (let i = 0; i <= 143; i++) ll.push(8);\n        for (let i = 144; i <= 255; i++) ll.push(9);\n        for (let i = 256; i <= 279; i++) ll.push(7);\n        for (let i = 280; i <= 287; i++) ll.push(8);\n        litTree = buildTree(ll);\n        const dl = [];\n        for (let i = 0; i < 32; i++) dl.push(5);\n        distTree = buildTree(dl);\n      } else {\n        const hlit = bits(5) + 257;\n        const hdist = bits(5) + 1;\n        const hclen = bits(4) + 4;\n        const clLens = new Array(19).fill(0);\n        for (let i = 0; i < hclen; i++) clLens[CL_ORDER[i]] = bits(3);\n        const clTree = buildTree(clLens);\n        function readLengths(count) {\n          const lens = [];\n          while (lens.length < count) {\n            const sym = decode(clTree);\n            if (sym < 16) { lens.push(sym); }\n            else if (sym === 16) { const rep = bits(2)+3; const prev = lens[lens.length-1]||0; for (let i=0;i<rep;i++) lens.push(prev); }\n            else if (sym === 17) { const rep = bits(3)+3; for (let i=0;i<rep;i++) lens.push(0); }\n            else { const rep = bits(7)+11; for (let i=0;i<rep;i++) lens.push(0); }\n          }\n          return lens;\n        }\n        const allLens = readLengths(hlit + hdist);\n        litTree = buildTree(allLens.slice(0, hlit));\n        distTree = buildTree(allLens.slice(hlit));\n      }\n      for (;;) {\n        const sym = decode(litTree);\n        if (sym === 256) break;\n        if (sym < 256) { out.push(sym); }\n        else {\n          const li = sym - 257;\n          const length = LENS_BASE[li] + bits(LENS_EXTRA[li]);\n          const di = decode(distTree);\n          const dist = DIST_BASE[di] + bits(DIST_EXTRA[di]);\n          for (let i = 0; i < length; i++) out.push(out[out.length - dist]);\n        }\n      }\n    }\n  }\n  return Buffer.from(out);\n}\n\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n\nlet text = '';\ntry {\n  // Find End of Central Directory\n  let eocdOffset = -1;\n  for (let i = buffer.length - 22; i >= 0; i--) {\n    if (buffer.readUInt32LE(i) === 0x06054b50) { eocdOffset = i; break; }\n  }\n  if (eocdOffset === -1) throw new Error('Not a valid ZIP');\n\n  const cdOffset = buffer.readUInt32LE(eocdOffset + 16);\n  const cdEntries = buffer.readUInt16LE(eocdOffset + 10);\n\n  // PPTX slides are in ppt/slides/slide1.xml, slide2.xml, etc.\n  const slideContents = [];\n  let pos = cdOffset;\n  for (let i = 0; i < cdEntries; i++) {\n    if (buffer.readUInt32LE(pos) !== 0x02014b50) break;\n    const compressionMethod = buffer.readUInt16LE(pos + 10);\n    const compressedSize = buffer.readUInt32LE(pos + 20);\n    const fileNameLength = buffer.readUInt16LE(pos + 28);\n    const extraLength = buffer.readUInt16LE(pos + 30);\n    const commentLength = buffer.readUInt16LE(pos + 32);\n    const localHeaderOffset = buffer.readUInt32LE(pos + 42);\n    const fileName = buffer.toString('utf8', pos + 46, pos + 46 + fileNameLength);\n\n    // Match ppt/slides/slideN.xml\n    const slideMatch = fileName.match(/^ppt\\/slides\\/slide(\\d+)\\.xml$/);\n    if (slideMatch && compressedSize > 0) {\n      const slideNum = parseInt(slideMatch[1], 10);\n      const localFileNameLen = buffer.readUInt16LE(localHeaderOffset + 26);\n      const localExtraLen = buffer.readUInt16LE(localHeaderOffset + 28);\n      const dataStart = localHeaderOffset + 30 + localFileNameLen + localExtraLen;\n      const compressed = buffer.slice(dataStart, dataStart + compressedSize);\n\n      let xml;\n      if (compressionMethod === 8) {\n        xml = inflate(compressed).toString('utf8');\n      } else {\n        xml = compressed.toString('utf8');\n      }\n\n      // Extract text from <a:t> tags (PowerPoint text runs)\n      const matches = xml.match(/<a:t>([^<]*)<\\/a:t>/g);\n      if (matches) {\n        const slideText = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' ');\n        slideContents.push({ num: slideNum, text: slideText });\n      }\n    }\n    pos += 46 + fileNameLength + extraLength + commentLength;\n  }\n\n  // Sort by slide number and join\n  slideContents.sort((a, b) => a.num - b.num);\n  text = slideContents.map((s, i) => 'Slide ' + s.num + ':\\n' + s.text).join('\\n\\n');\n} catch (e) {\n  text = 'ERROR: ' + e.message;\n}\nreturn [{ json: { text: text || '' } }];"
+      },
+      "id": "a1b2c3d4-pptx-0001-abcd-ef1234567890",
+      "name": "Extract PPTX Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3360, 2676]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert image binary to base64 data URL for OpenAI Vision\nconst item = $input.first();\nconst binaryKey = Object.keys(item.binary || {})[0] || 'data';\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\nconst base64 = buffer.toString('base64');\nconst fileType = $('Process Document Webhook').first().json.body.file_type || 'image/png';\nconst dataUrl = 'data:' + fileType + ';base64,' + base64;\nreturn [{ json: { dataUrl } }];"
+      },
+      "id": "f4a5b6c7-d8e9-0123-f012-3456789abcde",
+      "name": "Prepare Image Base64",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3360, 2696]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"model\":\"gpt-4.1-mini\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a Document Librarian for a nonprofit grant system.\\n\\nYou will receive an image of a document. Do TWO things:\\n\\n1. EXTRACT all visible text from the image exactly as it appears. Preserve structure for tables, forms, lists.\\n\\n2. CATEGORIZE the document into ONE of these types:\\n- 501c3_letter (IRS determination letter)\\n- board_roster (list of board members with bios)\\n- budget_program (program-specific budget)\\n- budget_operating (annual operating budget)\\n- financial_statement (audited financials, 990, etc.)\\n- impact_metrics (outcomes data, statistics)\\n- narrative_youth (program description for foster youth services)\\n- narrative_senior (program description for senior services)\\n- narrative_general (general org description)\\n- other\\n\\nAlso extract a brief description (1 sentence), the fiscal year if mentioned, and whether it is a template.\\n\\nReturn ONLY valid JSON:\\n{\\n  \\\"extracted_text\\\": \\\"the full text from the image\\\",\\n  \\\"category\\\": \\\"category_name\\\",\\n  \\\"description\\\": \\\"Brief description\\\",\\n  \\\"fiscalPeriod\\\": \\\"FY2024 or null\\\",\\n  \\\"isTemplate\\\": false\\n}\"},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Filename: {{ $('Process Document Webhook').item.json.body.file_name }}\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"{{ $json.dataUrl }}\"}}]}],\"max_tokens\":4000}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-ocr1-vis1-img1-567890abcdef",
+      "name": "OCR Image with AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [-3120, 2696],
+      "credentials": {
+        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
+      }
     },
     {
       "parameters": {
@@ -258,7 +245,7 @@
               "role": "system"
             },
             {
-              "content": "=Filename:  {{ $('Process Document Webhook1').item.json.body.file_name }}\nDocument Content:\n {{ $json.text || $json.choices?.[0]?.message?.content || '' }}"
+              "content": "=Filename:  {{ $('Process Document Webhook').item.json.body.file_name }}\nDocument Content:\n {{ $json.text }}"
             }
           ]
         },
@@ -266,33 +253,24 @@
           "temperature": 0.2
         }
       },
-      "id": "a5ac5b20-c6e0-4d47-926c-bd181ae891f1",
-      "name": "AI Categorize Upload1",
+      "id": "1b45b61d-14e5-4e35-9d77-3ca565fdb92b",
+      "name": "AI Categorize Upload",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
-      "position": [
-        2288,
-        5360
-      ],
+      "position": [-3080, 2256],
       "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
+        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
       }
     },
     {
       "parameters": {
-        "jsCode": "const webhookData = $('Process Document Webhook1').first().json.body;\nconst aiResponse = $input.first().json;\n\n// Get extracted text from whichever extraction path executed\nlet extractedText = '';\nconst textNodes = ['Extract PDF', 'Extract DOCX Text', 'Extract XLSX Text'];\nfor (const name of textNodes) {\n  try {\n    const r = $(name).first().json.text;\n    if (r !== undefined && r !== '') { extractedText = r; break; }\n  } catch(e) {}\n}\n// Try OCR path (OpenAI Vision returns choices[0].message.content)\nif (!extractedText) {\n  try {\n    extractedText = $('OCR Image with AI').first().json.choices?.[0]?.message?.content || '';\n  } catch(e) {}\n}\n\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\ntry {\n  let responseText = aiResponse.message?.content || aiResponse.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    metadata = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  metadata.description = 'Failed to parse AI response';\n}\n\nreturn [{\n  json: {\n    documentId: webhookData.document_id,\n    orgId: webhookData.org_id || '',\n    extractedText: extractedText,\n    aiCategory: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || null,\n    isTemplate: metadata.isTemplate || false\n  }\n}];"
+        "jsCode": "const webhookData = $('Process Document Webhook').first().json.body;\nconst aiResponse = $input.first().json;\n\n// Detect if this came from the image OCR path (direct from OpenAI HTTP Request)\n// vs the text extraction path (through AI Categorize langchain node)\nconst isImagePath = !!aiResponse.choices;\n\nlet extractedText = '';\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\nif (isImagePath) {\n  // Image path: OCR + categorization done in one Vision API call\n  // Response is raw OpenAI API format: { choices: [{ message: { content: '...' } }] }\n  try {\n    const responseText = aiResponse.choices?.[0]?.message?.content || '';\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      extractedText = parsed.extracted_text || '';\n      metadata.category = parsed.category || 'other';\n      metadata.description = parsed.description || '';\n      metadata.fiscalPeriod = parsed.fiscalPeriod || null;\n      metadata.isTemplate = parsed.isTemplate || false;\n    }\n  } catch (e) {\n    metadata.description = 'Failed to parse Vision AI response';\n  }\n} else {\n  // Text path: came through AI Categorize langchain node\n  // Get extracted text from whichever extraction node ran\n  const textNodes = ['Extract PDF', 'Extract DOCX Text', 'Extract XLSX Text', 'Extract PPTX Text'];\n  for (const name of textNodes) {\n    try {\n      const r = $(name).first().json.text;\n      if (r !== undefined && r !== '') { extractedText = r; break; }\n    } catch(e) {}\n  }\n  // Parse AI categorization response\n  try {\n    const responseText = aiResponse.message?.content || aiResponse.text || '';\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      metadata = JSON.parse(jsonMatch[0]);\n    }\n  } catch (e) {\n    metadata.description = 'Failed to parse AI response';\n  }\n}\n\nreturn [{\n  json: {\n    documentId: webhookData.document_id,\n    orgId: webhookData.org_id || '',\n    extractedText: extractedText,\n    aiCategory: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || null,\n    isTemplate: metadata.isTemplate || false\n  }\n}];"
       },
-      "id": "90153130-895b-41fd-85aa-7eadf1874191",
-      "name": "Parse AI Category1",
+      "id": "4fe43aaa-70f6-4fed-80c2-1614d1ee8244",
+      "name": "Parse AI Category",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2704,
-        5328
-      ]
+      "position": [-2672, 2224]
     },
     {
       "parameters": {
@@ -303,18 +281,9 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Prefer", "value": "return=representation" }
           ]
         },
         "sendBody": true,
@@ -325,17 +294,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [
-        2912,
-        5328
-      ],
-      "id": "88e12a18-fce8-4172-a4ea-85947d750da8",
-      "name": "Update Document Record1",
+      "position": [-2464, 2224],
+      "id": "a43cbf28-1793-4c90-bd87-91a0424d618e",
+      "name": "Update Document Record",
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
+        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
       }
     },
     {
@@ -345,28 +308,22 @@
         "responseMode": "lastNode",
         "options": {}
       },
-      "id": "b5a022d3-4aab-4120-97ec-f2a92b8c8789",
-      "name": "Document Retrieval Webhook",
+      "id": "ce8b2cae-5f87-45d7-93b5-3af8dac5a1df",
+      "name": "Document Retrieval Webhook2",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        944,
-        6000
-      ],
+      "position": [-4432, 2896],
       "webhookId": "get-documents"
     },
     {
       "parameters": {
-        "jsCode": "// Extract context from the calling workflow's payload\nconst raw = $('Document Retrieval Webhook').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grant_id || payload.grantId;\nconst org_id = payload.org_id;\nconst funder_name = payload.funder_name || 'Not specified';\nconst narratives = payload.narratives || {};\nconst sectionsReturned = payload.sectionsReturned || 0;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    funder_name,\n    narratives,\n    sectionsReturned,\n  }\n}];"
+        "jsCode": "// Extract context from the calling workflow's payload\nconst raw = $('Document Retrieval Webhook2').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grant_id || payload.grantId;\nconst org_id = payload.org_id;\nconst funder_name = payload.funder_name || 'Not specified';\nconst narratives = payload.narratives || {};\nconst sectionsReturned = payload.sectionsReturned || 0;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    funder_name,\n    narratives,\n    sectionsReturned,\n  }\n}];"
       },
-      "id": "9a2047dd-eb84-43cf-ae0c-f1e05e976063",
-      "name": "Extract Context1",
+      "id": "37562539-6a97-423d-af27-fbc22ac65ecf",
+      "name": "Extract Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1184,
-        6000
-      ]
+      "position": [-4192, 2896]
     },
     {
       "parameters": {
@@ -376,95 +333,65 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            }
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" }
           ]
         },
         "options": {}
       },
-      "id": "ea078ffb-c7de-4c0e-a8a4-27a7a0ddf1e1",
-      "name": "Get Grant1",
+      "id": "4c9febc9-e021-424b-bebe-186870069cc0",
+      "name": "Get Grant",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1440,
-        6000
-      ],
+      "position": [-3936, 2896],
       "alwaysOutputData": true,
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
+        "httpHeaderAuth": { "id": "42Gs7Nuquctvpx8P", "name": "New Plane Production" }
       }
     },
     {
       "parameters": {
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?org_id=eq.{{ $('Extract Context1').first().json.org_id }}&select=id,name,file_type,category,ai_category,extraction_status,extracted_text,created_at&order=created_at.desc",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?org_id=eq.{{ $('Extract Context').first().json.org_id }}&select=id,name,file_type,category,ai_category,extraction_status,extracted_text,created_at&order=created_at.desc",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            }
+            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" }
           ]
         },
         "options": {}
       },
-      "id": "946e697f-380a-4524-bebe-414d4a40e453",
-      "name": "Get All Documents",
+      "id": "490996d1-dfba-46c3-8e25-27866571c4e3",
+      "name": "Get All Documents2",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1696,
-        6000
-      ],
+      "position": [-3680, 2896],
       "alwaysOutputData": true,
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "42Gs7Nuquctvpx8P",
-          "name": "New Plane Production"
-        }
+        "httpHeaderAuth": { "id": "42Gs7Nuquctvpx8P", "name": "New Plane Production" }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Build a summary of all documents for the AI to evaluate\nconst grant = $('Get Grant1').first().json;\nconst allDocs = $('Get All Documents').all().map(item => item.json);\nconst context = $('Extract Context1').first().json;\n\nif (!allDocs || allDocs.length === 0 || !allDocs[0].id) {\n  return [{\n    json: {\n      error: true,\n      message: 'No documents found for this org',\n    }\n  }];\n}\n\n// Build a concise doc list for AI (avoid sending full extracted_text to save tokens)\nconst docSummaries = allDocs.map((d, i) => ({\n  index: i,\n  id: d.id,\n  name: d.name,\n  category: d.ai_category || d.category || 'uncategorized',\n  file_type: d.file_type,\n  has_content: !!(d.extracted_text && d.extracted_text.length > 0),\n  content_preview: (d.extracted_text || '').substring(0, 300),\n}));\n\nreturn [{\n  json: {\n    grant_title: grant.title || context.funder_name,\n    grant_description: grant.description || '',\n    funder_name: grant.funder_name || context.funder_name,\n    grant_amount: grant.amount || '',\n    grant_deadline: grant.deadline || '',\n    doc_summaries: docSummaries,\n    all_docs: allDocs,\n  }\n}];"
+        "jsCode": "// Build a summary of all documents for the AI to evaluate\nconst grant = $('Get Grant').first().json;\nconst allDocs = $('Get All Documents2').all().map(item => item.json);\nconst context = $('Extract Context').first().json;\n\nif (!allDocs || allDocs.length === 0 || !allDocs[0].id) {\n  return [{\n    json: {\n      error: true,\n      message: 'No documents found for this org',\n    }\n  }];\n}\n\n// Build a concise doc list for AI (avoid sending full extracted_text to save tokens)\nconst docSummaries = allDocs.map((d, i) => ({\n  index: i,\n  id: d.id,\n  name: d.name,\n  category: d.ai_category || d.category || 'uncategorized',\n  file_type: d.file_type,\n  has_content: !!(d.extracted_text && d.extracted_text.length > 0),\n  content_preview: (d.extracted_text || '').substring(0, 300),\n}));\n\nreturn [{\n  json: {\n    grant_title: grant.title || context.funder_name,\n    grant_description: grant.description || '',\n    funder_name: grant.funder_name || context.funder_name,\n    grant_amount: grant.amount || '',\n    grant_deadline: grant.deadline || '',\n    doc_summaries: docSummaries,\n    all_docs: allDocs,\n  }\n}];"
       },
-      "id": "4ae716f2-301c-40a7-bbf3-6ebac968622f",
-      "name": "Prepare for AI Filter1",
+      "id": "71502f8a-86da-45c1-aa00-6fed3e737302",
+      "name": "Prepare for AI Filter",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1968,
-        6000
-      ]
+      "position": [-3408, 2896]
     },
     {
       "parameters": {
-        "jsCode": " // Build response - pass through all docs since AI filter is removed\n  const prepData = $input.first().json;\n  const context = $('Extract Context1').first().json;\n  const allDocs = prepData.all_docs || [];\n\n  const documents = {};\n  for (const doc of allDocs) {\n    const category = doc.ai_category || doc.category || 'other';\n    // If multiple docs share a category, append index to avoid overwrite\n    const key = documents[category] ? `${category}_${doc.id.substring(0, 8)}` : category;\n    documents[key] = {\n      found: true,\n      id: doc.id,\n      fileName: doc.name,\n      category: category,\n      extractedText: doc.extracted_text || '',\n      extractionStatus: doc.extraction_status,\n      createdAt: doc.created_at,\n    };\n  }\n\n  return [{\n    json: {\n      success: true,\n      grant_id: context.grant_id,\n      org_id: context.org_id,\n      funder_name: context.funder_name,\n      grant_title: prepData.grant_title,\n      grant_description: prepData.grant_description,\n      totalDocuments: allDocs.length,\n      documents,\n      narratives: context.narratives,\n      sectionsReturned: context.sectionsReturned,\n      retrievedAt: new Date().toISOString()\n    }\n  }];"
+        "jsCode": " // Build response - pass through all docs since AI filter is removed\n  const prepData = $input.first().json;\n  const context = $('Extract Context').first().json;\n  const allDocs = prepData.all_docs || [];\n\n  const documents = {};\n  for (const doc of allDocs) {\n    const category = doc.ai_category || doc.category || 'other';\n    // If multiple docs share a category, append index to avoid overwrite\n    const key = documents[category] ? `${category}_${doc.id.substring(0, 8)}` : category;\n    documents[key] = {\n      found: true,\n      id: doc.id,\n      fileName: doc.name,\n      category: category,\n      extractedText: doc.extracted_text || '',\n      extractionStatus: doc.extraction_status,\n      createdAt: doc.created_at,\n    };\n  }\n\n  return [{\n    json: {\n      success: true,\n      grant_id: context.grant_id,\n      org_id: context.org_id,\n      funder_name: context.funder_name,\n      grant_title: prepData.grant_title,\n      grant_description: prepData.grant_description,\n      totalDocuments: allDocs.length,\n      documents,\n      narratives: context.narratives,\n      sectionsReturned: context.sectionsReturned,\n      retrievedAt: new Date().toISOString()\n    }\n  }];"
       },
-      "id": "cde288ae-2b69-409f-9bd8-5480e8e9e1a8",
-      "name": "Build Response1",
+      "id": "f12c0b24-d744-4a80-afab-f2fe237ec632",
+      "name": "Build Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2544,
-        6000
-      ]
+      "position": [-2832, 2896]
     },
     {
       "parameters": {
@@ -489,314 +416,118 @@
           "temperature": 0.2
         }
       },
-      "id": "4ce954f8-cb9f-4e7b-922c-2c233331e2c3",
-      "name": "AI Filter Documents1",
+      "id": "cca0d410-c1f3-4b8d-a5a3-d83c7b5e75d7",
+      "name": "AI Filter Documents",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
-      "position": [
-        2224,
-        6128
-      ],
+      "position": [-3152, 3024],
       "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
+        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
       }
     },
     {
       "parameters": {
-        "content": "## WF4: Document Vault Manager\n\n### Path 1: Process Document\nWebhook: POST /process-document\nReceives { document_id, org_id, file_name, file_type }\n1. Marks document as 'processing'\n2. Downloads file from Supabase Storage\n3. Routes by file_type (Switch):\n   - PDF → Extract from File (pdf)\n   - DOCX → Code (ZIP/XML parser)\n   - XLSX → Code (ZIP/XML shared strings)\n   - Image → OCR via OpenAI Vision API\n4. AI categorizes the document\n5. Updates DB with ai_category + extracted_text\n\n### Path 2: Retrieve Documents\nWebhook: POST /get-documents\nFetches from Supabase DB (no re-download)",
+        "content": "## WF4: Document Vault Manager\n\n### Path 1: Process Document\nWebhook: POST /process-document\nReceives { document_id, org_id, file_name, file_type }\n1. Marks document as 'processing'\n2. Downloads file from Supabase Storage\n3. Routes by file_type (Switch):\n   - PDF → Extract from File (pdf)\n   - DOCX → Code (ZIP/XML parser)\n   - XLSX → Code (ZIP/XML shared strings)\n   - PPTX → Code (ZIP/XML slide text)\n   - Image → OCR via OpenAI Vision API\n4. AI categorizes the document\n5. Updates DB with ai_category + extracted_text\n\n### Path 2: Retrieve Documents\nWebhook: POST /get-documents\nFetches from Supabase DB (no re-download)",
         "height": 380,
         "width": 520
       },
-      "id": "5e71e4f1-c19f-4aec-80ce-c902c08f3604",
-      "name": "Sticky Note1",
+      "id": "aabb1122-3344-5566-7788-99aabbccddee",
+      "name": "Sticky Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [
-        768,
-        4880
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "pdf",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.extractFromFile",
-      "typeVersion": 1.1,
-      "position": [
-        2016,
-        5120
-      ],
-      "id": "87871d5a-a411-426f-9492-c7bf9bfa7b4a",
-      "name": "Extract PDF"
-    },
-    {
-      "parameters": {
-        "jsCode": "  // Minimal pure-JS DEFLATE inflater (RFC 1951)\n  function inflate(buf) {\n    let p = 0, bp = 0;\n    const out = [];\n    function bits(n) {\n      let v = 0;\n      for (let i = 0; i < n; i++) {\n        v |= ((buf[p] >> bp) & 1) << i;\n        bp++;\n        if (bp === 8) { bp = 0; p++; }\n      }\n      return v;\n    }\n    function buildTree(lengths) {\n      const max = Math.max(...lengths);\n      const bl_count = new Array(max + 1).fill(0);\n      for (const l of lengths) if (l) bl_count[l]++;\n      const next_code = new Array(max + 1).fill(0);\n      let code = 0;\n      for (let b = 1; b <= max; b++) {\n        code = (code + bl_count[b - 1]) << 1;\n        next_code[b] = code;\n      }\n      const tree = {};\n      for (let n = 0; n < lengths.length; n++) {\n        const len = lengths[n];\n        if (len) {\n          let c = next_code[len]++;\n          let key = '';\n          for (let i = len - 1; i >= 0; i--) key += ((c >> i) & 1);\n          tree[key] = n;\n        }\n      }\n      return tree;\n    }\n    function decode(tree) {\n      let key = '';\n      for (;;) {\n        key += bits(1);\n        if (tree.hasOwnProperty(key)) return tree[key];\n        if (key.length > 30) throw new Error('Bad Huffman code');\n      }\n    }\n    const CL_ORDER = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];\n    const LENS_BASE = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];\n    const LENS_EXTRA = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];\n    const DIST_BASE = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];\n    const DIST_EXTRA = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];\n\n    let bfinal = 0;\n    while (!bfinal) {\n      bfinal = bits(1);\n      const btype = bits(2);\n      if (btype === 0) {\n        // Stored\n        if (bp) { bp = 0; p++; }\n        const len = buf[p] | (buf[p+1]<<8); p+=4;\n        for (let i = 0; i < len; i++) out.push(buf[p++]);\n      } else {\n        let litTree, distTree;\n        if (btype === 1) {\n          // Fixed Huffman\n          const ll = [];\n          for (let i = 0; i <= 143; i++) ll.push(8);\n          for (let i = 144; i <= 255; i++) ll.push(9);\n          for (let i = 256; i <= 279; i++) ll.push(7);\n          for (let i = 280; i <= 287; i++) ll.push(8);\n          litTree = buildTree(ll);\n          const dl = [];\n          for (let i = 0; i < 32; i++) dl.push(5);\n          distTree = buildTree(dl);\n        } else {\n          // Dynamic Huffman\n          const hlit = bits(5) + 257;\n          const hdist = bits(5) + 1;\n          const hclen = bits(4) + 4;\n          const clLens = new Array(19).fill(0);\n          for (let i = 0; i < hclen; i++) clLens[CL_ORDER[i]] = bits(3);\n          const clTree = buildTree(clLens);\n          function readLengths(count) {\n            const lens = [];\n            while (lens.length < count) {\n              const sym = decode(clTree);\n              if (sym < 16) { lens.push(sym); }\n              else if (sym === 16) {\n                const rep = bits(2) + 3;\n                const prev = lens[lens.length - 1] || 0;\n                for (let i = 0; i < rep; i++) lens.push(prev);\n              } else if (sym === 17) {\n                const rep = bits(3) + 3;\n                for (let i = 0; i < rep; i++) lens.push(0);\n              } else {\n                const rep = bits(7) + 11;\n                for (let i = 0; i < rep; i++) lens.push(0);\n              }\n            }\n            return lens;\n          }\n          const allLens = readLengths(hlit + hdist);\n          litTree = buildTree(allLens.slice(0, hlit));\n          distTree = buildTree(allLens.slice(hlit));\n        }\n        // Decode symbols\n        for (;;) {\n          const sym = decode(litTree);\n          if (sym === 256) break;\n          if (sym < 256) { out.push(sym); }\n          else {\n            const li = sym - 257;\n            const length = LENS_BASE[li] + bits(LENS_EXTRA[li]);\n            const di = decode(distTree);\n            const dist = DIST_BASE[di] + bits(DIST_EXTRA[di]);\n            for (let i = 0; i < length; i++) out.push(out[out.length - dist]);\n          }\n        }\n      }\n    }\n    return Buffer.from(out);\n  }\n\n  const item = $input.first();\n  const binaryKey = Object.keys(item.binary || {})[0] || 'data';\n  const buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n\n  let text = '';\n  try {\n    // Find End of Central Directory\n    let eocdOffset = -1;\n    for (let i = buffer.length - 22; i >= 0; i--) {\n      if (buffer.readUInt32LE(i) === 0x06054b50) { eocdOffset = i; break; }\n    }\n    if (eocdOffset === -1) throw new Error('Not a valid ZIP');\n\n    const cdOffset = buffer.readUInt32LE(eocdOffset + 16);\n    const cdEntries = buffer.readUInt16LE(eocdOffset + 10);\n\n    let pos = cdOffset;\n    for (let i = 0; i < cdEntries; i++) {\n      if (buffer.readUInt32LE(pos) !== 0x02014b50) break;\n      const compressionMethod = buffer.readUInt16LE(pos + 10);\n      const compressedSize = buffer.readUInt32LE(pos + 20);\n      const fileNameLength = buffer.readUInt16LE(pos + 28);\n      const extraLength = buffer.readUInt16LE(pos + 30);\n      const commentLength = buffer.readUInt16LE(pos + 32);\n      const localHeaderOffset = buffer.readUInt32LE(pos + 42);\n      const fileName = buffer.toString('utf8', pos + 46, pos + 46 + fileNameLength);\n\n      if (fileName === 'word/document.xml') {\n        const localFileNameLen = buffer.readUInt16LE(localHeaderOffset + 26);\n        const localExtraLen = buffer.readUInt16LE(localHeaderOffset + 28);\n        const dataStart = localHeaderOffset + 30 + localFileNameLen + localExtraLen;\n        const compressed = buffer.slice(dataStart, dataStart + compressedSize);\n\n        let xml;\n        if (compressionMethod === 8) {\n          xml = inflate(compressed).toString('utf8');\n        } else {\n          xml = compressed.toString('utf8');\n        }\n\n        const matches = xml.match(/<w:t[^>]*>([^<]*)<\\/w:t>/g);\n        if (matches) {\n          text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' ');\n        }\n        break;\n      }\n      pos += 46 + fileNameLength + extraLength + commentLength;\n    }\n  } catch (e) {\n    text = 'ERROR: ' + e.message;\n  }\n  return [{ json: { text: text || '' } }];"
-      },
-      "id": "efeeabc8-e82f-411c-8e1c-990e31dc5f95",
-      "name": "Extract DOCX Text",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2016,
-        5344
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": " // Minimal pure-JS DEFLATE inflater (RFC 1951)\n  function inflate(buf) {\n    let p = 0, bp = 0;\n    const out = [];\n    function bits(n) {\n      let v = 0;\n      for (let i = 0; i < n; i++) {\n        v |= ((buf[p] >> bp) & 1) << i;\n        bp++;\n        if (bp === 8) { bp = 0; p++; }\n      }\n      return v;\n    }\n    function buildTree(lengths) {\n      const max = Math.max(...lengths);\n      const bl_count = new Array(max + 1).fill(0);\n      for (const l of lengths) if (l) bl_count[l]++;\n      const next_code = new Array(max + 1).fill(0);\n      let code = 0;\n      for (let b = 1; b <= max; b++) {\n        code = (code + bl_count[b - 1]) << 1;\n        next_code[b] = code;\n      }\n      const tree = {};\n      for (let n = 0; n < lengths.length; n++) {\n        const len = lengths[n];\n        if (len) {\n          let c = next_code[len]++;\n          let key = '';\n          for (let i = len - 1; i >= 0; i--) key += ((c >> i) & 1);\n          tree[key] = n;\n        }\n      }\n      return tree;\n    }\n    function decode(tree) {\n      let key = '';\n      for (;;) {\n        key += bits(1);\n        if (tree.hasOwnProperty(key)) return tree[key];\n        if (key.length > 30) throw new Error('Bad Huffman code');\n      }\n    }\n    const CL_ORDER = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];\n    const LENS_BASE = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];\n    const LENS_EXTRA = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];\n    const DIST_BASE = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];\n    const DIST_EXTRA = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];\n\n    let bfinal = 0;\n    while (!bfinal) {\n      bfinal = bits(1);\n      const btype = bits(2);\n      if (btype === 0) {\n        if (bp) { bp = 0; p++; }\n        const len = buf[p] | (buf[p+1]<<8); p+=4;\n        for (let i = 0; i < len; i++) out.push(buf[p++]);\n      } else {\n        let litTree, distTree;\n        if (btype === 1) {\n          const ll = [];\n          for (let i = 0; i <= 143; i++) ll.push(8);\n          for (let i = 144; i <= 255; i++) ll.push(9);\n          for (let i = 256; i <= 279; i++) ll.push(7);\n          for (let i = 280; i <= 287; i++) ll.push(8);\n          litTree = buildTree(ll);\n          const dl = [];\n          for (let i = 0; i < 32; i++) dl.push(5);\n          distTree = buildTree(dl);\n        } else {\n          const hlit = bits(5) + 257;\n          const hdist = bits(5) + 1;\n          const hclen = bits(4) + 4;\n          const clLens = new Array(19).fill(0);\n          for (let i = 0; i < hclen; i++) clLens[CL_ORDER[i]] = bits(3);\n          const clTree = buildTree(clLens);\n          function readLengths(count) {\n            const lens = [];\n            while (lens.length < count) {\n              const sym = decode(clTree);\n              if (sym < 16) { lens.push(sym); }\n              else if (sym === 16) {\n                const rep = bits(2) + 3;\n                const prev = lens[lens.length - 1] || 0;\n                for (let i = 0; i < rep; i++) lens.push(prev);\n              } else if (sym === 17) {\n                const rep = bits(3) + 3;\n                for (let i = 0; i < rep; i++) lens.push(0);\n              } else {\n                const rep = bits(7) + 11;\n                for (let i = 0; i < rep; i++) lens.push(0);\n              }\n            }\n            return lens;\n          }\n          const allLens = readLengths(hlit + hdist);\n          litTree = buildTree(allLens.slice(0, hlit));\n          distTree = buildTree(allLens.slice(hlit));\n        }\n        for (;;) {\n          const sym = decode(litTree);\n          if (sym === 256) break;\n          if (sym < 256) { out.push(sym); }\n          else {\n            const li = sym - 257;\n            const length = LENS_BASE[li] + bits(LENS_EXTRA[li]);\n            const di = decode(distTree);\n            const dist = DIST_BASE[di] + bits(DIST_EXTRA[di]);\n            for (let i = 0; i < length; i++) out.push(out[out.length - dist]);\n          }\n        }\n      }\n    }\n    return Buffer.from(out);\n  }\n\n  const item = $input.first();\n  const binaryKey = Object.keys(item.binary || {})[0] || 'data';\n  const buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n\n  let text = '';\n  try {\n    let eocdOffset = -1;\n    for (let i = buffer.length - 22; i >= 0; i--) {\n      if (buffer.readUInt32LE(i) === 0x06054b50) { eocdOffset = i; break; }\n    }\n    if (eocdOffset === -1) throw new Error('Not a valid ZIP');\n\n    const cdOffset = buffer.readUInt32LE(eocdOffset + 16);\n    const cdEntries = buffer.readUInt16LE(eocdOffset + 10);\n    const targets = ['xl/sharedStrings.xml', 'xl/worksheets/sheet1.xml'];\n    const xmlContents = {};\n\n    let pos = cdOffset;\n    for (let i = 0; i < cdEntries; i++) {\n      if (buffer.readUInt32LE(pos) !== 0x02014b50) break;\n      const compressionMethod = buffer.readUInt16LE(pos + 10);\n      const compressedSize = buffer.readUInt32LE(pos + 20);\n      const fileNameLength = buffer.readUInt16LE(pos + 28);\n      const extraLength = buffer.readUInt16LE(pos + 30);\n      const commentLength = buffer.readUInt16LE(pos + 32);\n      const localHeaderOffset = buffer.readUInt32LE(pos + 42);\n      const fileName = buffer.toString('utf8', pos + 46, pos + 46 + fileNameLength);\n\n      if (targets.includes(fileName)) {\n        const localFileNameLen = buffer.readUInt16LE(localHeaderOffset + 26);\n        const localExtraLen = buffer.readUInt16LE(localHeaderOffset + 28);\n        const dataStart = localHeaderOffset + 30 + localFileNameLen + localExtraLen;\n        const compressed = buffer.slice(dataStart, dataStart + compressedSize);\n\n        let xml;\n        if (compressionMethod === 8) {\n          xml = inflate(compressed).toString('utf8');\n        } else {\n          xml = compressed.toString('utf8');\n        }\n        xmlContents[fileName] = xml;\n        if (Object.keys(xmlContents).length === targets.length) break;\n      }\n      pos += 46 + fileNameLength + extraLength + commentLength;\n    }\n\n    if (xmlContents['xl/sharedStrings.xml']) {\n      const matches = xmlContents['xl/sharedStrings.xml'].match(/<t[^>]*>([^<]*)<\\/t>/g);\n      if (matches) {\n        text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' | ');\n      }\n    }\n    if (!text && xmlContents['xl/worksheets/sheet1.xml']) {\n      const matches = xmlContents['xl/worksheets/sheet1.xml'].match(/<v>([^<]*)<\\/v>/g);\n      if (matches) {\n        text = matches.map(m => m.replace(/<[^>]*>/g, '')).join(' | ');\n      }\n    }\n  } catch (e) {\n    text = 'ERROR: ' + e.message;\n  }\n  return [{ json: { text: text || '' } }];"
-      },
-      "id": "1a10734d-5b08-46cf-8610-d95c9da346f8",
-      "name": "Extract XLSX Text",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2016,
-        5584
-      ]
+      "position": [-4600, 1780]
     }
   ],
-  "pinData": {
-    "Process Document Webhook1": [
-      {
-        "json": {
-          "headers": {
-            "host": "n8n.thebrownmine.com",
-            "user-agent": "node",
-            "content-length": "213",
-            "accept": "*/*",
-            "accept-encoding": "br, gzip, deflate",
-            "accept-language": "*",
-            "content-type": "application/json",
-            "sec-fetch-mode": "cors",
-            "via": "1.1 Caddy",
-            "x-forwarded-for": "152.53.91.134",
-            "x-forwarded-host": "n8n.thebrownmine.com",
-            "x-forwarded-proto": "https",
-            "x-webhook-secret": "t+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk="
-          },
-          "params": {},
-          "query": {},
-          "body": {
-            "document_id": "30cdd01b-106e-4226-9561-bc6ecfdabbf0",
-            "org_id": "67deffef-0d98-4e7d-a1f0-59cdc50a4261",
-            "file_name": "Texas Healthcare Collective  Operating Budget.docx",
-            "file_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "category": "supporting"
-          },
-          "webhookUrl": "https://n8n.thebrownmine.com/webhook-test/process-document",
-          "executionMode": "test"
-        }
-      }
-    ]
-  },
+  "pinData": {},
   "connections": {
-    "Prepare Image Base64": {
+    "Process Document Webhook": {
       "main": [
-        [
-          {
-            "node": "OCR Image with AI",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Mark as Processing", "type": "main", "index": 0 }]
       ]
     },
-    "OCR Image with AI": {
+    "Mark as Processing": {
       "main": [
-        [
-          {
-            "node": "AI Categorize Upload1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Download File", "type": "main", "index": 0 }]
       ]
     },
-    "Process Document Webhook1": {
+    "Download File": {
       "main": [
-        [
-          {
-            "node": "Mark as Processing1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Switch on File Type", "type": "main", "index": 0 }]
       ]
     },
-    "Mark as Processing1": {
+    "Switch on File Type": {
       "main": [
-        [
-          {
-            "node": "Download File1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Download File1": {
-      "main": [
-        [
-          {
-            "node": "Switch on File Type1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Switch on File Type1": {
-      "main": [
-        [
-          {
-            "node": "Extract PDF",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Extract DOCX Text",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Extract XLSX Text",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Prepare Image Base64",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Prepare Image Base64",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Categorize Upload1": {
-      "main": [
-        [
-          {
-            "node": "Parse AI Category1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse AI Category1": {
-      "main": [
-        [
-          {
-            "node": "Update Document Record1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Document Retrieval Webhook": {
-      "main": [
-        [
-          {
-            "node": "Extract Context1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Context1": {
-      "main": [
-        [
-          {
-            "node": "Get Grant1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Grant1": {
-      "main": [
-        [
-          {
-            "node": "Get All Documents",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get All Documents": {
-      "main": [
-        [
-          {
-            "node": "Prepare for AI Filter1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare for AI Filter1": {
-      "main": [
-        [
-          {
-            "node": "Build Response1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Extract PDF", "type": "main", "index": 0 }],
+        [{ "node": "Extract DOCX Text", "type": "main", "index": 0 }],
+        [{ "node": "Extract XLSX Text", "type": "main", "index": 0 }],
+        [{ "node": "Extract PPTX Text", "type": "main", "index": 0 }],
+        [{ "node": "Prepare Image Base64", "type": "main", "index": 0 }],
+        [{ "node": "Prepare Image Base64", "type": "main", "index": 0 }]
       ]
     },
     "Extract PDF": {
       "main": [
-        [
-          {
-            "node": "AI Categorize Upload1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
       ]
     },
     "Extract DOCX Text": {
       "main": [
-        [
-          {
-            "node": "AI Categorize Upload1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
       ]
     },
     "Extract XLSX Text": {
       "main": [
-        [
-          {
-            "node": "AI Categorize Upload1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract PPTX Text": {
+      "main": [
+        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Image Base64": {
+      "main": [
+        [{ "node": "OCR Image with AI", "type": "main", "index": 0 }]
+      ]
+    },
+    "OCR Image with AI": {
+      "main": [
+        [{ "node": "Parse AI Category", "type": "main", "index": 0 }]
+      ]
+    },
+    "AI Categorize Upload": {
+      "main": [
+        [{ "node": "Parse AI Category", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse AI Category": {
+      "main": [
+        [{ "node": "Update Document Record", "type": "main", "index": 0 }]
+      ]
+    },
+    "Document Retrieval Webhook2": {
+      "main": [
+        [{ "node": "Extract Context", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Context": {
+      "main": [
+        [{ "node": "Get Grant", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Grant": {
+      "main": [
+        [{ "node": "Get All Documents2", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get All Documents2": {
+      "main": [
+        [{ "node": "Prepare for AI Filter", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare for AI Filter": {
+      "main": [
+        [{ "node": "Build Response", "type": "main", "index": 0 }]
       ]
     }
   },
@@ -805,7 +536,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "c0e07596-4f08-4783-b7ef-59697fac25de",
+  "versionId": "abaf0a63-6f72-4e09-8558-afc2de76a879",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"

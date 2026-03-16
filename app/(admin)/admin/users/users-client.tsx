@@ -56,6 +56,12 @@ export function UsersClient({
     name: string;
   } | null>(null);
 
+  // Error dialog
+  const [errorDialog, setErrorDialog] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
+
   // Add admin dialog
   const [showAddAdmin, setShowAddAdmin] = useState(false);
   const [adminForm, setAdminForm] = useState({ email: "", password: "", fullName: "" });
@@ -90,7 +96,15 @@ export function UsersClient({
     }
 
     if (result.error) {
-      alert(result.error);
+      const action = confirmDialog.type === "delete"
+        ? "deleting"
+        : confirmDialog.type === "deactivate"
+          ? "deactivating"
+          : "activating";
+      setErrorDialog({
+        title: `Failed to ${confirmDialog.type} user`,
+        message: result.error || `Something went wrong while ${action} ${confirmDialog.name}. Please try again or contact support if the issue persists.`,
+      });
     }
 
     setConfirmDialog(null);
@@ -283,6 +297,22 @@ export function UsersClient({
                     ? "Deactivate"
                     : "Activate"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Dialog */}
+      <Dialog
+        open={!!errorDialog}
+        onOpenChange={(open) => !open && setErrorDialog(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{errorDialog?.title}</DialogTitle>
+            <DialogDescription>{errorDialog?.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setErrorDialog(null)}>OK</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

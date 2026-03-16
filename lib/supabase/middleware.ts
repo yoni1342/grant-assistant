@@ -106,6 +106,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(getRedirectUrl(request, "/rejected"));
   }
 
+  // --- Has org, status = suspended ---
+  if (hasOrg && orgStatus === "suspended") {
+    if (
+      pathname.startsWith("/suspended") ||
+      pathname.startsWith("/auth")
+    ) {
+      return supabaseResponse;
+    }
+    return NextResponse.redirect(getRedirectUrl(request, "/suspended"));
+  }
+
   // --- Has org, status = approved ---
   if (hasOrg && orgStatus === "approved") {
     if (pathname.startsWith("/admin")) {

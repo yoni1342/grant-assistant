@@ -173,23 +173,562 @@ function formatFileSize(bytes: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function normalizeCategory(cat: string): string {
+  if (cat.startsWith("narrative")) return "narrative";
+  if (cat.startsWith("budget")) return "budget";
+  return cat;
+}
+
 function categoryBadge(category: string | null, aiCategory?: string | null) {
-  const label = aiCategory || category || "other";
+  const raw = aiCategory || category || "other";
+  const label = normalizeCategory(raw);
   const colorMap: Record<string, string> = {
     budget: "border-emerald-300 text-emerald-700 dark:text-emerald-400",
     narrative: "border-blue-300 text-blue-700 dark:text-blue-400",
     supporting: "border-gray-300 text-gray-700 dark:text-gray-400",
-    mission: "border-blue-300 text-blue-700",
-    impact: "border-green-300 text-green-700",
-    methods: "border-purple-300 text-purple-700",
-    budget_narrative: "border-pink-300 text-pink-700",
+    impact_metrics: "border-green-300 text-green-700",
+    "501c3_letter": "border-amber-300 text-amber-700",
+    board_roster: "border-purple-300 text-purple-700",
+    financial_statement: "border-orange-300 text-orange-700",
   };
   return (
     <Badge variant="outline" className={`text-xs ${colorMap[label] || ""}`}>
-      {label.replace("_", " ")}
+      {label.replace(/_/g, " ")}
     </Badge>
   );
 }
+
+// Build HTML from extracted text — handles both structured (tabs/newlines) and flat text
+function buildExtractedHtml(text: string): string {
+  // If text has tabs or newlines, use structured parsing
+  if (text.includes('\t') || text.includes('\n')) {
+    return buildStructuredHtml(text);
+  }
+  // Otherwise, parse the flat space-separated text
+  return buildFlatHtml(text);
+}
+
+// Parse text that has tabs and newlines preserving table structure
+function buildStructuredHtml(text: string): string {
+  const lines = text.split('\n');
+  const htmlParts: string[] = [];
+  let inTable = false;
+  let tableHtml = '';
+  let isFirstTableRow = true;
+
+  function flushTable() {
+    if (tableHtml) {
+      htmlParts.push(`<table>${tableHtml}</table>`);
+      tableHtml = '';
+    }
+    inTable = false;
+    isFirstTableRow = true;
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (inTable) flushTable();
+      continue;
+    }
+
+    const hasTabs = trimmed.includes('\t');
+    const cells = hasTabs ? trimmed.split('\t').map(c => c.trim()).filter(c => c) : null;
+
+    if (cells && cells.length >= 2) {
+      if (!inTable) { inTable = true; isFirstTableRow = true; }
+
+      const hasValues = /\$[\d,]|\d+%/.test(trimmed);
+      if (isFirstTableRow && !hasValues) {
+        const ths = cells.map(c => `<th>${c}</th>`).join('');
+        tableHtml += `<thead><tr>${ths}</tr></thead><tbody>`;
+        isFirstTableRow = false;
+        continue;
+      }
+
+      isFirstTableRow = false;
+      const tds = cells.map(c => `<td>${c}</td>`).join('');
+      tableHtml += `<tr>${tds}</tr>`;
+      continue;
+    }
+
+    if (inTable) flushTable();
+
+    const isHeader = /^[A-Z][A-Za-z\s&/()—–,.-]+$/.test(trimmed) && trimmed.length < 80 && !/\$[\d,]|\d+%/.test(trimmed);
+    if (isHeader) {
+      htmlParts.push(`<h2>${trimmed}</h2>`);
+    } else {
+      htmlParts.push(`<p>${trimmed}</p>`);
+    }
+  }
+
+  if (inTable) flushTable();
+  return htmlParts.join('\n').replace(/<tbody>([^]*?)<\/table>/g, '<tbody>$1</tbody></table>');
+}
+
+// Parse flat text (no tabs/newlines) by detecting $amounts, %values, and section headers
+function buildFlatHtml(text: string): string {
+  // Tokenize: split before known section headers and before table header patterns
+  // Strategy: use regex to find all the "tokens" — amounts, headers, labels
+  const htmlParts: string[] = [];
+
+  // Split into segments at section-header boundaries
+  // A section header is a capitalized phrase right before a known table-header pattern
+  // Known table headers: "Category Annual Budget", "Position Type Annual Cost", "Item Annual Cost", "Source Amount % of Budget"
+  const sectionPattern = /(?=(?:Budget Overview|Personnel|Clinical Supplies|Mobile Clinic|Revenue Sources|Maternal Health|Rural Health|Marketing|General Administration)[^$]*(?:\$|$))/g;
+
+  // First extract the document title (everything before first section)
+  const titleMatch = text.match(/^(.*?)(?=Budget Overview|Personnel|Clinical Supplies|Mobile Clinic|Revenue Sources)/);
+  const titleText = titleMatch ? titleMatch[1].trim() : '';
+
+  if (titleText) {
+    // Split title into main title and subtitle parts
+    const dashMatch = titleText.match(/^(.+?)\s+—\s+(.+?)(?:\s+(FY\S+))?$/);
+    if (dashMatch) {
+      htmlParts.push(`<h1>${dashMatch[1].trim()}</h1>`);
+      htmlParts.push(`<h2>${dashMatch[2].trim()}</h2>`);
+      if (dashMatch[3]) htmlParts.push(`<p>${dashMatch[3]}</p>`);
+    } else {
+      htmlParts.push(`<h1>${titleText}</h1>`);
+    }
+  }
+
+  // Extract the rest after title
+  const bodyText = titleText ? text.slice(titleText.length).trim() : text;
+
+  // Split body by section headers — a section header is a short capitalized phrase
+  // that appears before table data. We detect them by finding text between $amount sequences.
+  // New approach: scan through and classify each segment
+
+  // Regex to find all $amounts and %amounts with their preceding text
+  const rowPattern = /([A-Za-z][A-Za-z&;/() ,.\u2014\u2013-]+?)\s+\$([\d,]+(?:\.\d+)?)/g;
+  const pctRowPattern = /([A-Za-z][A-Za-z&;/() ,.\u2014\u2013-]+?)\s+\$([\d,]+(?:\.\d+)?)\s+(\d+(?:\.\d+)?%)/g;
+
+  // Find all matches with their positions to figure out what's between them
+  interface RowMatch { label: string; values: string[]; start: number; end: number }
+  const rows: RowMatch[] = [];
+
+  // First try 3-column matches (label $amount percentage)
+  let m: RegExpExecArray | null;
+  const usedRanges: Array<[number, number]> = [];
+  const pctRegex = new RegExp(pctRowPattern.source, 'g');
+  while ((m = pctRegex.exec(bodyText)) !== null) {
+    rows.push({ label: m[1].trim(), values: ['$' + m[2], m[3]], start: m.index, end: m.index + m[0].length });
+    usedRanges.push([m.index, m.index + m[0].length]);
+  }
+
+  // Then 2-column matches (label $amount) — skip already matched ranges
+  const dollarRegex = new RegExp(rowPattern.source, 'g');
+  while ((m = dollarRegex.exec(bodyText)) !== null) {
+    const overlaps = usedRanges.some(([s, e]) => m!.index >= s && m!.index < e);
+    if (!overlaps) {
+      rows.push({ label: m[1].trim(), values: ['$' + m[2]], start: m.index, end: m.index + m[0].length });
+    }
+  }
+
+  // Sort by position
+  rows.sort((a, b) => a.start - b.start);
+
+  // Now build HTML by walking through the text
+  let lastEnd = 0;
+  let currentTableColCount = 0;
+  let tableHtml = '';
+
+  function flushTable() {
+    if (tableHtml) {
+      htmlParts.push(`<table><tbody>${tableHtml}</tbody></table>`);
+      tableHtml = '';
+      currentTableColCount = 0;
+    }
+  }
+
+  for (const row of rows) {
+    // Text between last row end and this row start = potential header/section
+    const between = bodyText.substring(lastEnd, row.start).trim();
+
+    if (between) {
+      // Check if this gap text contains a section header
+      // Split the between text to separate headers from table column headers
+      const colCount = row.values.length + 1;
+
+      // Check if between text ends with table column headers
+      // e.g. "Budget Overview Category Annual Budget" → section="Budget Overview", headers=["Category", "Annual Budget"]
+      // e.g. "Personnel Position Type Annual Cost" → section="Personnel", headers=["Position", "Type", "Annual Cost"]
+      const words = between.split(/\s+/);
+
+      // Detect known column header words at the end
+      const headerWords: string[] = [];
+      const headerKeywords = ['Category', 'Annual', 'Budget', 'Position', 'Type', 'Cost', 'Item', 'Source', 'Amount'];
+      let wi = words.length - 1;
+
+      // Walk backwards collecting header words
+      let headerColsFound = 0;
+      const tempHeaders: string[] = [];
+      while (wi >= 0 && headerColsFound < colCount) {
+        const w = words[wi];
+        if (headerKeywords.includes(w) || /^[A-Z][a-z]+$/.test(w) || w === '%' || w === 'of') {
+          tempHeaders.unshift(w);
+          wi--;
+        } else {
+          break;
+        }
+      }
+
+      // Group consecutive header words into column names
+      // We need `colCount` columns from these words
+      if (tempHeaders.length > 0) {
+        // The section name is everything before the header words
+        const sectionName = words.slice(0, wi + 1).join(' ');
+        const headerText = tempHeaders.join(' ');
+
+        if (sectionName) {
+          flushTable();
+          htmlParts.push(`<h2>${sectionName.replace(/&amp;/g, '&')}</h2>`);
+        }
+
+        // Build smart column headers based on data column count
+        if (colCount === 2) {
+          // 2-col table: split header into 2 parts at the middle-ish word boundary
+          const midIdx = Math.ceil(tempHeaders.length / 2);
+          const h1 = tempHeaders.slice(0, midIdx).join(' ');
+          const h2 = tempHeaders.slice(midIdx).join(' ');
+          tableHtml += `<thead><tr><th>${h1}</th><th>${h2}</th></tr></thead>`;
+        } else if (colCount === 3) {
+          // 3-col: try known patterns
+          if (headerText.includes('Type')) {
+            tableHtml += `<thead><tr><th>Position</th><th>Type</th><th>Annual Cost</th></tr></thead>`;
+          } else if (headerText.includes('Amount')) {
+            tableHtml += `<thead><tr><th>Source</th><th>Amount</th><th>% of Budget</th></tr></thead>`;
+          } else {
+            const perCol = Math.ceil(tempHeaders.length / colCount);
+            const cols: string[] = [];
+            for (let c = 0; c < colCount; c++) {
+              cols.push(tempHeaders.slice(c * perCol, (c + 1) * perCol).join(' '));
+            }
+            tableHtml += `<thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>`;
+          }
+        }
+        currentTableColCount = colCount;
+      } else {
+        flushTable();
+        htmlParts.push(`<h2>${between.replace(/&amp;/g, '&')}</h2>`);
+      }
+    }
+
+    // Check if column count changed (different table)
+    if (currentTableColCount > 0 && row.values.length + 1 !== currentTableColCount) {
+      flushTable();
+    }
+
+    // Handle multi-word labels that contain a middle column (like "Full-time", "Part-time", "Contract")
+    const label = row.label.replace(/&amp;/g, '&');
+    if (row.values.length === 1 && currentTableColCount === 3) {
+      // 3-col table but only got $amount — the label probably contains the middle column
+      const typeMatch = label.match(/^(.+?)\s+(Full-time|Part-time|Contract|Permanent|Temporary)\s*$/i);
+      if (typeMatch) {
+        tableHtml += `<tr><td>${typeMatch[1]}</td><td>${typeMatch[2]}</td><td>${row.values[0]}</td></tr>`;
+      } else {
+        tableHtml += `<tr><td>${label}</td><td></td><td>${row.values[0]}</td></tr>`;
+      }
+    } else {
+      const tds = [label, ...row.values].map(v => `<td>${v}</td>`).join('');
+      tableHtml += `<tr>${tds}</tr>`;
+    }
+    currentTableColCount = row.values.length + 1;
+    lastEnd = row.end;
+  }
+
+  // Flush final table
+  flushTable();
+
+  // Any remaining text after the last row
+  const remaining = bodyText.substring(lastEnd).trim();
+  if (remaining) {
+    htmlParts.push(`<p>${remaining.replace(/&amp;/g, '&')}</p>`);
+  }
+
+  return htmlParts.join('\n');
+}
+
+function ExtractedTextViewer({
+  text,
+  title,
+  category,
+  signedUrl,
+}: {
+  text: string;
+  title: string;
+  category: string | null;
+  signedUrl: string | null;
+}) {
+  const contentHtml = useMemo(() => buildExtractedHtml(text), [text]);
+  const categoryLabel = category ? category.replace(/_/g, " ") : null;
+
+  // Strip file extension from title for cover page
+  const displayTitle = title.replace(/\.\w{2,5}$/, '');
+
+  // Cover page HTML
+  const coverHtml = `<h1>${displayTitle}</h1>` +
+    (categoryLabel ? `<p>${categoryLabel.charAt(0).toUpperCase() + categoryLabel.slice(1)}</p>` : '') +
+    `<p>Extracted Document Preview</p>`;
+
+  return (
+    <div>
+      <div className="extracted-viewer">
+        {/* Main scrollable content */}
+        <div className="extracted-content">
+          {/* Cover page */}
+          <div className="doc-page doc-cover-page">
+            <div
+              className="doc-page-content"
+              dangerouslySetInnerHTML={{ __html: coverHtml }}
+            />
+          </div>
+
+          {/* Content page */}
+          <div className="doc-page">
+            <div className="doc-page-header">
+              <span className="doc-page-header-title">{title}</span>
+            </div>
+            <div
+              className="doc-page-content"
+              dangerouslySetInnerHTML={{ __html: contentHtml }}
+            />
+            <div className="doc-page-footer">
+              <span className="doc-page-footer-title">{title}</span>
+              <span className="doc-page-footer-number">{text.length.toLocaleString()} characters</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style jsx global>{extractedViewerStyles}</style>
+    </div>
+  );
+}
+
+const extractedViewerStyles = `
+  .extracted-viewer {
+    display: flex;
+    border: 1px solid hsl(var(--border));
+    border-radius: 8px;
+    overflow: hidden;
+    height: 100%;
+    min-height: 500px;
+    background: hsl(0 0% 75%);
+    position: relative;
+  }
+
+  .extracted-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    background: hsl(0 0% 75%);
+  }
+
+  .extracted-content::-webkit-scrollbar { width: 8px; }
+  .extracted-content::-webkit-scrollbar-track { background: transparent; }
+  .extracted-content::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.25);
+    border-radius: 4px;
+  }
+
+  .extracted-content .doc-page {
+    background: white;
+    width: 100%;
+    max-width: 794px;
+    min-height: 1123px;
+    padding: 96px 72px 100px;
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.08),
+      0 4px 16px rgba(0, 0, 0, 0.06);
+    border: 1px solid hsl(var(--border) / 0.5);
+    position: relative;
+    overflow-wrap: break-word;
+  }
+
+  .extracted-content .doc-cover-page {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .extracted-content .doc-cover-page::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 8px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
+    flex-shrink: 0;
+  }
+
+  .extracted-content .doc-cover-page .doc-page-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 80px 72px 100px;
+  }
+
+  .extracted-content .doc-cover-page .doc-page-content h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1a2b42;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0 0 1.5rem 0;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  .extracted-content .doc-cover-page .doc-page-content h1::after {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
+    margin: 1.25rem auto 0;
+    border-radius: 2px;
+  }
+
+  .extracted-content .doc-cover-page .doc-page-content p {
+    font-size: 0.95rem;
+    color: #5a6a7a;
+    margin: 0.35rem 0;
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+  }
+
+  .extracted-content .doc-page-header {
+    position: absolute;
+    top: 32px;
+    left: 72px;
+    right: 72px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e4e8;
+  }
+
+  .extracted-content .doc-page-header-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #8a95a5;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .extracted-content .doc-page-footer {
+    position: absolute;
+    bottom: 32px;
+    left: 72px;
+    right: 72px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid #e0e4e8;
+  }
+
+  .extracted-content .doc-page-footer-title {
+    font-size: 0.65rem;
+    color: #a0a8b4;
+    letter-spacing: 0.02em;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .extracted-content .doc-page-footer-number {
+    font-size: 0.65rem;
+    color: #a0a8b4;
+    letter-spacing: 0.02em;
+  }
+
+  .extracted-content .doc-page-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .extracted-content .doc-page-content h1 {
+    font-size: 1.45rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.5rem 0;
+    color: #1a2b42;
+    border-bottom: 2px solid #e0e4e8;
+    padding-bottom: 0.4rem;
+    line-height: 1.3;
+  }
+  .extracted-content .doc-page-content h1:first-child {
+    margin-top: 0;
+  }
+
+  .extracted-content .doc-page-content h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 1rem 0 0.2rem 0;
+    color: #1a2b42;
+    line-height: 1.35;
+  }
+
+  .extracted-content .doc-page-content h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0.6rem 0 0.1rem 0;
+    color: #4a5568;
+    line-height: 1.4;
+  }
+
+  .extracted-content .doc-page-content p {
+    font-size: 0.875rem;
+    margin: 0.25rem 0;
+    line-height: 1.85;
+    color: #1a1a1a;
+  }
+
+  .extracted-content .doc-page-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.5rem 0 0.3rem 0;
+    font-size: 0.8rem;
+  }
+
+  .extracted-content .doc-page-content table th {
+    background-color: #f0f3f7;
+    font-weight: 600;
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d8dde4;
+    color: #1a2b42;
+  }
+
+  .extracted-content .doc-page-content table td {
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #d8dde4;
+    color: #1a1a1a;
+  }
+
+  .extracted-content .doc-page-content table td:not(:first-child) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .extracted-content .doc-page-content table th:not(:first-child) {
+    text-align: right;
+  }
+
+  .extracted-content .doc-page-content table tr:nth-child(even) td {
+    background-color: #f8f9fb;
+  }
+`;
 
 // Document Viewer component with side panel
 function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
@@ -345,11 +884,12 @@ function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
                   />
                 </div>
               ) : selectedDoc.extracted_text ? (
-                <div className="p-4">
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                    {selectedDoc.extracted_text}
-                  </p>
-                </div>
+                <ExtractedTextViewer
+                  text={selectedDoc.extracted_text}
+                  title={selectedDoc.title || selectedDoc.name || "Document"}
+                  category={selectedDoc.ai_category || selectedDoc.category}
+                  signedUrl={signedUrl}
+                />
               ) : !selectedDoc.file_path ? (
                 <div className="p-4">
                   <p className="text-sm text-muted-foreground italic">

@@ -1,7 +1,13 @@
 export const DOCUMENT_CATEGORIES = [
+  "501c3_letter",
+  "board_roster",
+  "budget",
+  "financial_statement",
+  "impact_metrics",
+  "narrative",
+  "supporting",
   "Past Proposal",
   "Tax Documents / 990",
-  "Financial Statements",
   "Letters of Support",
   "Bylaws / Governance",
   "Annual Report",
@@ -9,3 +15,28 @@ export const DOCUMENT_CATEGORIES = [
   "Program Report",
   "Other",
 ] as const
+
+// Human-readable labels for categories
+export const CATEGORY_LABELS: Record<string, string> = {
+  "501c3_letter": "501(c)(3) Letter",
+  "board_roster": "Board Roster",
+  "budget": "Budget",
+  "budget_program": "Budget",
+  "budget_operating": "Budget",
+  "financial_statement": "Financial Statement",
+  "impact_metrics": "Impact Metrics",
+  "narrative": "Narrative",
+  "narrative_youth": "Narrative",
+  "narrative_senior": "Narrative",
+  "narrative_general": "Narrative",
+  "supporting": "Supporting",
+  "Past Proposal": "Past Proposal",
+  "Tax Documents / 990": "Tax Documents / 990",
+  "Financial Statements": "Financial Statements",
+  "Letters of Support": "Letters of Support",
+  "Bylaws / Governance": "Bylaws / Governance",
+  "Annual Report": "Annual Report",
+  "Board Minutes": "Board Minutes",
+  "Program Report": "Program Report",
+  "Other": "Other",
+}

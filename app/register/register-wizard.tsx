@@ -637,12 +637,12 @@ export function RegisterWizard({
                   <label className="flex-1 cursor-pointer">
                     <div className="flex items-center gap-2 rounded-md border border-dashed border-muted-foreground/40 px-3 py-2 text-sm text-muted-foreground hover:border-primary transition-colors">
                       <Upload className="h-4 w-4" />
-                      {narrativeFile ? narrativeFile.name : "Choose narrative file (PDF, DOCX)"}
+                      {narrativeFile ? narrativeFile.name : "Choose narrative file (PDF, DOCX, XLSX, PNG, JPG)"}
                     </div>
                     <input
                       type="file"
                       className="hidden"
-                      accept=".pdf,.docx"
+                      accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg"
                       onChange={handleNarrativeFile}
                     />
                   </label>

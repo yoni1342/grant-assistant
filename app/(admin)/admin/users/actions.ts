@@ -43,7 +43,7 @@ export async function deleteUser(userId: string) {
   if (authError || !user) return { error: authError || 'Unauthorized' }
 
   if (userId === user.id) {
-    return { error: 'Cannot delete your own account' }
+    return { error: 'You cannot delete your own account.' }
   }
 
   const adminClient = createAdminClient()
@@ -57,11 +57,18 @@ export async function deleteUser(userId: string) {
 
   // Delete the user's organization if they are the owner
   if (profile?.org_id && profile.role === 'owner') {
-    await adminClient.from('organizations').delete().eq('id', profile.org_id)
+    const { error: orgError } = await adminClient.from('organizations').delete().eq('id', profile.org_id)
+    if (orgError) {
+      console.error('Delete user organization error:', orgError.message)
+      return { error: 'Unable to delete this user. Their organization has related data that prevents removal. Please try again later.' }
+    }
   }
 
   const { error } = await adminClient.auth.admin.deleteUser(userId)
-  if (error) return { error: error.message }
+  if (error) {
+    console.error('Delete user error:', error.message)
+    return { error: 'Unable to delete this user. Please try again later or contact support if the issue persists.' }
+  }
 
   revalidatePath('/admin/users')
   revalidatePath('/admin/organizations')
@@ -73,14 +80,17 @@ export async function deactivateUser(userId: string) {
   if (authError || !user) return { error: authError || 'Unauthorized' }
 
   if (userId === user.id) {
-    return { error: 'Cannot deactivate your own account' }
+    return { error: 'You cannot deactivate your own account.' }
   }
 
   const adminClient = createAdminClient()
   const { error } = await adminClient.auth.admin.updateUserById(userId, {
     ban_duration: '876600h', // ~100 years
   })
-  if (error) return { error: error.message }
+  if (error) {
+    console.error('Deactivate user error:', error.message)
+    return { error: 'Unable to deactivate this user. Please try again later or contact support if the issue persists.' }
+  }
 
   revalidatePath('/admin/users')
   return { success: true }
@@ -94,7 +104,10 @@ export async function activateUser(userId: string) {
   const { error } = await adminClient.auth.admin.updateUserById(userId, {
     ban_duration: 'none',
   })
-  if (error) return { error: error.message }
+  if (error) {
+    console.error('Activate user error:', error.message)
+    return { error: 'Unable to activate this user. Please try again later or contact support if the issue persists.' }
+  }
 
   revalidatePath('/admin/users')
   return { success: true }
