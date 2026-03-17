@@ -112,14 +112,34 @@ export function useExportPdf() {
     }
 
     .cover-content h1 {
+      font-size: 13pt;
+      font-weight: 600;
+      color: #5a6a7a;
+      margin: 0 0 0.4rem 0;
+      line-height: 1.3;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .cover-content p:first-of-type {
       font-size: 24pt;
       font-weight: 800;
       color: #1a2b42;
       margin: 0 0 1.5rem 0;
       line-height: 1.25;
       letter-spacing: -0.02em;
-      border-bottom: none;
-      padding-bottom: 0;
+    }
+
+    .cover-content p:first-of-type::after {
+      content: '';
+      display: block;
+      width: 80px;
+      height: 3px;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
+      margin: 1.25rem auto 0;
+      border-radius: 2px;
     }
 
     .cover-content p {

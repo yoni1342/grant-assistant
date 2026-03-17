@@ -16,7 +16,7 @@
             },
             {
               "role": "system",
-              "content": "You are a grant-to-organization location matcher. Given a grant and a list of organizations with their locations, determine which organizations are eligible to receive this grant.\n\nRULES:\n- Federal grants: ALL organizations are eligible. Return all org IDs.\n- Philanthropic grants: ALL organizations are eligible. Return all org IDs.\n- State grants: ONLY organizations located in or serving that state are eligible. Match using geographic_focus array and address. Be flexible with matching - abbreviations (NJ = New Jersey), typos, and partial matches should still count. If an org has no location data, include them (benefit of the doubt).\n\nReturn ONLY valid JSON (no markdown, no code fences):\n{\n  \"eligible_org_ids\": [\"org-id-1\", \"org-id-2\"],\n  \"reason\": \"brief explanation of filtering logic applied\"\n}"
+              "content": "You are a grant-to-organization location matcher. Given a grant and a list of organizations with their locations, determine which organizations are\n  eligible to receive this grant.\n\n  RULES:\n  - Federal grants: ALL organizations are eligible. Return all org IDs.\n  - Philanthropic grants: ALL organizations are eligible. Return all org IDs.\n  - State grants: ONLY organizations located in or serving that state are eligible. Follow this process:\n    1. First check the geographic_focus array. If it contains the grant's state (or a matching abbreviation), the org is eligible.\n    2. If geographic_focus is not set, infer the organization's location from their address. Look for state names, abbreviations, city names, or zip codes\n  that indicate a specific state.\n    3. If the inferred state does not match the grant's state, EXCLUDE the org.\n    4. If an org has NEITHER geographic_focus NOR a recognizable address, EXCLUDE them — do not assume eligibility without location evidence.\n    5. Be flexible with matching — abbreviations (NJ = New Jersey), typos, and partial matches should still count.\n\n  Return ONLY valid JSON (no markdown, no code fences):\n  {\n    \"eligible_org_ids\": [\"org-id-1\", \"org-id-2\"],\n    \"reason\": \"brief explanation of filtering logic applied\"\n  }"
             }
           ]
         },
@@ -2271,7 +2271,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "acfa3cca-68ab-49bd-84a2-d0398f8a9bfb",
+  "versionId": "1b27035d-d2ad-4748-a751-2387829d4a6e",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { toast } from "sonner"
-import { Loader2, Trash2 } from "lucide-react"
+import { Loader2, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -61,6 +61,19 @@ const SECTORS = [
   "Other",
 ]
 
+const US_STATES = [
+  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+  "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
+  "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana",
+  "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+  "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
+  "New Hampshire", "New Jersey", "New Mexico", "New York",
+  "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon",
+  "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+  "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
+  "West Virginia", "Wisconsin", "Wyoming", "National",
+]
+
 interface OrganizationTabProps {
   profile: Profile
   organization: Organization | null
@@ -84,6 +97,34 @@ export function OrganizationTab({ profile, organization, members }: Organization
     organization?.founding_year?.toString() || ""
   )
   const [sector, setSector] = useState(organization?.sector || "")
+  const [geographicFocus, setGeographicFocus] = useState<string[]>(
+    organization?.geographic_focus || []
+  )
+  const [stateSearch, setStateSearch] = useState("")
+  const [stateDropdownOpen, setStateDropdownOpen] = useState(false)
+  const stateDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (stateDropdownRef.current && !stateDropdownRef.current.contains(event.target as Node)) {
+        setStateDropdownOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const filteredStates = US_STATES.filter(
+    (s) =>
+      s.toLowerCase().includes(stateSearch.toLowerCase()) &&
+      !geographicFocus.includes(s)
+  )
+
+  function toggleState(state: string) {
+    setGeographicFocus((prev) =>
+      prev.includes(state) ? prev.filter((s) => s !== state) : [...prev, state]
+    )
+  }
 
   async function handleSaveOrg() {
     if (!orgName.trim()) {
@@ -102,6 +143,7 @@ export function OrganizationTab({ profile, organization, members }: Organization
       website: website || undefined,
       founding_year: foundingYear ? parseInt(foundingYear) : null,
       sector: sector || undefined,
+      geographic_focus: geographicFocus.length > 0 ? geographicFocus : null,
     })
     setSaving(false)
     if (result.error) {
@@ -224,6 +266,62 @@ export function OrganizationTab({ profile, organization, members }: Organization
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>Geographic Focus</Label>
+            <p className="text-xs text-muted-foreground">
+              Select the states/regions your organization serves. This is used for grant matching and filtering.
+            </p>
+            {geographicFocus.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {geographicFocus.map((state) => (
+                  <Badge
+                    key={state}
+                    variant="secondary"
+                    className="flex items-center gap-1 pr-1"
+                  >
+                    {state}
+                    <button
+                      type="button"
+                      onClick={() => toggleState(state)}
+                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+            <div className="relative" ref={stateDropdownRef}>
+              <Input
+                type="text"
+                placeholder="Search states..."
+                value={stateSearch}
+                onChange={(e) => {
+                  setStateSearch(e.target.value)
+                  setStateDropdownOpen(true)
+                }}
+                onFocus={() => setStateDropdownOpen(true)}
+              />
+              {stateDropdownOpen && filteredStates.length > 0 && (
+                <div className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-md border bg-popover shadow-md">
+                  {filteredStates.map((state) => (
+                    <button
+                      key={state}
+                      type="button"
+                      className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent"
+                      onClick={() => {
+                        toggleState(state)
+                        setStateSearch("")
+                      }}
+                    >
+                      {state}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="org-website">Website</Label>
@@ -271,7 +369,8 @@ export function OrganizationTab({ profile, organization, members }: Organization
               orgEmail === (organization?.email || "") &&
               website === (organization?.website || "") &&
               foundingYear === (organization?.founding_year?.toString() || "") &&
-              sector === (organization?.sector || "")
+              sector === (organization?.sector || "") &&
+              JSON.stringify(geographicFocus) === JSON.stringify(organization?.geographic_focus || [])
             )}
           >
             {saving && <Loader2 className="size-4 animate-spin mr-2" />}
