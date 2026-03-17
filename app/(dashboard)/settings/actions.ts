@@ -106,6 +106,7 @@ export async function updateOrganization(data: {
   website?: string
   founding_year?: number | null
   sector?: string
+  geographic_focus?: string[] | null
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
