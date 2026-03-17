@@ -723,20 +723,35 @@ const viewerStyles = `
     padding: 80px 72px 100px;
   }
 
-  /* Cover title */
+  /* Cover label (e.g. "Proposal for Grant") */
   .doc-cover-page .doc-page-content h1 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #5a6a7a;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0 0 0.4rem 0;
+    line-height: 1.3;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .doc-cover-page .doc-page-content h1::after {
+    display: none;
+  }
+
+  /* Grant name — first paragraph on cover is the prominent title */
+  .doc-cover-page .doc-page-content p:first-of-type {
     font-size: 2rem;
     font-weight: 800;
     color: #1a2b42;
-    border-bottom: none;
-    padding-bottom: 0;
     margin: 0 0 1.5rem 0;
     line-height: 1.25;
     letter-spacing: -0.02em;
   }
 
-  /* Decorative rule under cover title */
-  .doc-cover-page .doc-page-content h1::after {
+  /* Decorative rule under grant name */
+  .doc-cover-page .doc-page-content p:first-of-type::after {
     content: '';
     display: block;
     width: 80px;
@@ -746,7 +761,7 @@ const viewerStyles = `
     border-radius: 2px;
   }
 
-  /* Cover meta info (Funder, Deadline, Focus) */
+  /* Cover meta info (Submitted to, Prepared by, Date) */
   .doc-cover-page .doc-page-content p {
     font-size: 0.95rem;
     color: #5a6a7a;

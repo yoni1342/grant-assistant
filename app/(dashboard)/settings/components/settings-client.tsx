@@ -20,6 +20,8 @@ export interface SettingsData {
 }
 
 export function SettingsClient({ data }: { data: SettingsData }) {
+  const isAdmin = data.profile.role === "admin"
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="space-y-2 mb-8">
@@ -33,7 +35,7 @@ export function SettingsClient({ data }: { data: SettingsData }) {
         <TabsList variant="line">
           <TabsTrigger value="profile">Profile & Account</TabsTrigger>
           <TabsTrigger value="organization">Organization</TabsTrigger>
-          <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          {isAdmin && <TabsTrigger value="integrations">Integrations</TabsTrigger>}
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
         </TabsList>
 
@@ -49,9 +51,11 @@ export function SettingsClient({ data }: { data: SettingsData }) {
           />
         </TabsContent>
 
-        <TabsContent value="integrations">
-          <IntegrationsTab workflows={data.workflows} />
-        </TabsContent>
+        {isAdmin && (
+          <TabsContent value="integrations">
+            <IntegrationsTab workflows={data.workflows} />
+          </TabsContent>
+        )}
 
         <TabsContent value="appearance">
           <AppearanceTab
