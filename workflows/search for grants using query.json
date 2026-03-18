@@ -1084,6 +1084,57 @@
         33584,
         23920
       ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Search Query: {{ $('search for proposal with query').first().json.body.searchQuery }}\n\nGrants to evaluate:\n{{ JSON.stringify($input.all().map(i => ({ title: i.json.title, funder: i.json.funder_name, description: i.json.description, source: i.json.source, deadline: i.json.deadline, amount: i.json.amount, source_id: i.json.source_id })), null, 2) }}\n\nFilter these grants by relevance to the search query and return a JSON array of source_id values for grants that match.\n"
+            },
+            {
+              "role": "system",
+              "content": "You are a grant discovery assistant. Given a search query and a list of grants, identify which grants are relevant.\n\nFiltering Rules:\n- Identify the broad domain of the search query (e.g., \"foster care\" \u2192 social services, youth, child welfare, family services)\n- Keep grants that are DIRECTLY or PARTIALLY relevant to the query domain\n- Keep grants a nonprofit could reasonably apply to for programs related to the search query\n- ONLY discard grants clearly unrelated (pure biomedical research, military, foreign diplomacy)\n- When in doubt, KEEP the grant \u2014 false negatives are worse than false positives\n- Do NOT require exact keyword matches\n\nReturn ONLY a valid JSON array of source_id strings for grants that pass the filter. Example: [\"PD-09-5761\", \"HHS-2024-001\"]\nIf no grants match, return: []"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -4800,
+        32096
+      ],
+      "id": "query-filter-node-001",
+      "name": "Filter by Search Query",
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "Brownmine"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiItems = $input.all();\nconst locationGrants = $('Build Location Payload').all();\nconst aiText = aiItems[0]?.json?.output?.[0]?.content?.[0]?.text || '[]';\n\nlet keepIds;\ntry {\n  const cleaned = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  keepIds = JSON.parse(cleaned);\n} catch (e) {\n  // If AI parse fails, keep all grants\n  return locationGrants.map(item => ({ json: item.json }));\n}\n\nif (!Array.isArray(keepIds) || keepIds.length === 0) {\n  return [{ json: { noRelevantGrants: true, message: 'No grants matched your search query' } }];\n}\n\nconst keepSet = new Set(keepIds.map(id => String(id)));\nconst filtered = locationGrants.filter(item => {\n  const sid = item.json.source_id || '';\n  return keepSet.has(String(sid));\n});\n\nif (filtered.length === 0) {\n  return [{ json: { noRelevantGrants: true, message: 'No grants matched your search query' } }];\n}\n\nreturn filtered.map(item => ({ json: item.json }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4500,
+        32096
+      ],
+      "id": "apply-query-filter-001",
+      "name": "Apply Query Filter"
     }
   ],
   "pinData": {},
@@ -1219,7 +1270,7 @@
       "main": [
         [
           {
-            "node": "Has New Grants?1",
+            "node": "Filter by Search Query",
             "type": "main",
             "index": 0
           }
@@ -1885,7 +1936,7 @@
       "main": [
         [
           {
-            "node": "Filter based on search query1",
+            "node": "Save Filtered Grant",
             "type": "main",
             "index": 0
           }
@@ -1904,6 +1955,28 @@
         [
           {
             "node": "Has Results?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter by Search Query": {
+      "main": [
+        [
+          {
+            "node": "Apply Query Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Query Filter": {
+      "main": [
+        [
+          {
+            "node": "Has New Grants?1",
             "type": "main",
             "index": 0
           }
