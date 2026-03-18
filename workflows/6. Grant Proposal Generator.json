@@ -91,7 +91,7 @@
     },
     {
       "parameters": {
-        "jsCode": " const item = $input.first().json;\n\n  // Combine all narrative sections into one string\n  const allNarratives = {};\n  let narrativeText = '';\n  if (item.narratives) {\n    for (const [sectionId, section] of Object.entries(item.narratives)) {\n      allNarratives[sectionId] = section;\n      narrativeText += `\\n\\n### ${section.section_name}\\n${section.content}`;\n    }\n  }\n\n  // Combine all relevant document content\n  const allDocuments = {};\n  let documentText = '';\n  if (item.documents) {\n    for (const [category, doc] of Object.entries(item.documents)) {\n      if (doc.found) {\n        allDocuments[category] = {\n          id: doc.id,\n          fileName: doc.fileName,\n          category: doc.category,\n          extractedText: doc.extractedText,\n        };\n        documentText += `\\n\\n### ${doc.fileName} (${doc.category})\\n${doc.extractedText}`;\n      }\n    }\n  }\n\n  return [{\n    json: {\n      grantId: item.grant_id || '',\n      org_id: item.org_id || '',\n      grant_title: item.grant_title || '',\n      grant_description: item.grant_description || '',\n      funder_name: item.funder_name,\n      deadline: item.deadline,\n      amount: item.amount,\n      narratives: allNarratives,\n      narrativeText: narrativeText.trim(),\n      sectionsReturned: item.sectionsReturned || 0,\n      documents: allDocuments,\n      documentText: documentText.trim(),\n      totalDocuments: item.totalDocuments || 0,\n      relevantDocuments: Object.keys(allDocuments).length,\n    }\n  }];"
+        "jsCode": " const item = $input.first().json;\n\n  // Combine all narrative sections into one string\n  const allNarratives = {};\n  let narrativeText = '';\n  if (item.narratives) {\n    for (const [sectionId, section] of Object.entries(item.narratives)) {\n      allNarratives[sectionId] = section;\n      narrativeText += `\\n\\n### ${section.section_name}\\n${section.content}`;\n    }\n  }\n\n  // Combine all relevant document content\n  const allDocuments = {};\n  let documentText = '';\n  if (item.documents) {\n    for (const [category, doc] of Object.entries(item.documents)) {\n      if (doc.found) {\n        allDocuments[category] = {\n          id: doc.id,\n          fileName: doc.fileName,\n          category: doc.category,\n          extractedText: doc.extractedText,\n        };\n        documentText += `\\n\\n### ${doc.fileName} (${doc.category})\\n${doc.extractedText}`;\n      }\n    }\n  }\n\n  // Get scraped website text from the parallel branch\n  let websiteText = '';\n  let websiteScraped = false;\n  try {\n    const websiteData = $('Extract Website Text').first().json;\n    websiteText = websiteData.websiteText || '';\n    websiteScraped = websiteData.websiteScraped || false;\n  } catch (e) {\n    // Website scrape may have failed — continue without it\n  }\n\n  return [{\n    json: {\n      grantId: item.grant_id || '',\n      org_id: item.org_id || '',\n      grant_title: item.grant_title || '',\n      grant_description: item.grant_description || '',\n      funder_name: item.funder_name,\n      deadline: item.deadline,\n      amount: item.amount,\n      narratives: allNarratives,\n      narrativeText: narrativeText.trim(),\n      sectionsReturned: item.sectionsReturned || 0,\n      documents: allDocuments,\n      documentText: documentText.trim(),\n      totalDocuments: item.totalDocuments || 0,\n      relevantDocuments: Object.keys(allDocuments).length,\n      websiteText: websiteText,\n      websiteScraped: websiteScraped,\n    }\n  }];"
       },
       "id": "b2e0ebd5-75ca-4488-80c7-07c511fa71c3",
       "name": "Step 5: Combine Content4",
@@ -147,7 +147,7 @@
         "messages": {
           "values": [
             {
-              "content": "You are a Grant Proposal Writer. Your job is to take organizational narratives, supporting documents, and grant details to produce a complete,\n  professionally formatted, funder-aligned grant proposal.\n\n    You will receive a single JSON object with these fields:\n\n    - grantId, grant_title, grant_description — the grant opportunity details\n    - funder_name — the funder to align the proposal toward\n    - deadline — submission deadline\n    - amount — requested funding amount\n    - narratives — object keyed by section_id (e.g. \"mission\"), each with section_name and content (AI-customized for this grant)\n    - narrativeText — all narrative sections concatenated as text\n    - documents — object keyed by category, each with fileName, extractedText (organizational documents like program descriptions, case for support,\n    partnership letters, etc.)\n    - documentText — all document content concatenated as text\n    - sectionsReturned — number of narrative sections available\n    - totalDocuments, relevantDocuments — document counts\n\n    STRATEGY:\n    1. Read the grant_title, grant_description, and funder_name to understand what the funder cares about\n    2. Use narrativeText as the primary source for organizational mission, programs, and impact language\n    3. Use documentText as supporting evidence — pull specific facts, program details, statistics, quotes, and organizational capabilities from the\n  extracted\n    documents\n    4. Generate a realistic budget breakdown based on the grant amount, the org's programs described in narratives and documents, and standard nonprofit\n  budget conventions (e.g., ~40% personnel, ~15% materials, ~3% admin). If amount is not specified, suggest a reasonable amount based on the program scope\n    5. Mirror the funder's language and priorities throughout — if the grant focuses on aging/dementia, emphasize senior programs; if youth development,\n    emphasize foster youth programs\n    6. Do NOT invent facts — only use information found in the narratives and documents provided. Budget allocations are the exception: generate realistic\n  line items based on the described programs and standard nonprofit cost structures\n\n    Output ONLY a valid JSON object with this exact structure — do NOT output any explanations, markdown outside the JSON, or additional text:\n\n    {\n      \"grant_proposal\": {\n        \"organization\": \"[Organization name extracted from narratives or documents]\",\n        \"funder\": \"[Funder Name from funder_name]\",\n        \"project_title\": \"[Strong, funder-aligned project title you create based on grant_description and org programs]\",\n        \"generated_date\": \"[Current date in format: Month DD, YYYY]\",\n        \"sections\": {\n          \"1_executive_summary\": \"[Full Executive Summary — introduce the org, the problem, the proposed solution, and the ask. Use bullets and bold via\n    **text** for key points]\",\n          \"2_organizational_overview\": \"[Full org overview — draw from narratives and documents. Include At a Glance bullets: founded, mission, programs,\n    populations served, geography]\",\n          \"3_statement_of_need\": \"[Full statement of need — use statistics and evidence from documents. Explain the problem this grant will address, tied to\n    funder priorities]\",\n          \"4_program_design_and_activities\": \"[Full program design — one subsection per relevant program with bullets describing activities, participants,\n  and\n     methods. Draw from document extractedText for specifics]\",\n          \"5_measurable_outcomes_and_evaluation\": \"[Full outcomes section — realistic targets per program + Evaluation Methodology bullets]\",\n          \"6_budget_summary_and_justification\": \"Category | Description | Amount | % of Total\\nProgram Staff & Coordination | Personnel costs for program\n  director, coordinators, and part-time staff | $XX,XXX | XX.X%\\nEducational Resources & Materials | Curriculum, books, technology tools, and learning\n  supplies | $XX,XXX | XX.X%\\nProgram Operations | Program delivery, recruitment, training, and retention activities | $XX,XXX | XX.X%\\nCollege & Career\n  Readiness Activities | College tours, career workshops, test prep, and scholarship guidance | $XX,XXX | XX.X%\\nCommunity Events & Family Engagement |\n  Summits, family nights, recognition ceremonies, and community outreach | $XX,XXX | XX.X%\\nEvaluation & Data Management | Program evaluation tools, data\n  tracking systems, and reporting | $XX,XXX | XX.X%\\nAdministrative & Indirect Costs | Essential administrative overhead to support program delivery |\n  $XX,XXX | XX.X%\\nTOTAL | | $XXX,XXX | 100%\\n\\nBudget Justification Highlights:\\n• [bullet for each major category explaining the allocation]\",\n          \"7_organizational_capacity_and_fiscal_management\": \"[Full capacity section — draw from documents for org structure, leadership, track record.\n    Include Fiscal Management Practices bullets]\",\n          \"8_sustainability_plan\": \"[Full sustainability plan — strategies for continuing beyond the grant period, with specific targets]\",\n          \"9_conclusion_and_request\": \"[Full conclusion — restate alignment with funder, summarize impact, end with Request Summary bullets including amount\n    and project period]\"\n        },\n        \"request_amount\": \"[amount from grant details, or a suggested realistic amount if not specified]\",\n        \"project_period\": \"[e.g. July 2026 – June 2027 (12 months)] — choose realistic period based on deadline\",\n        \"admin_overhead_percent\": \"[calculated admin/indirect cost percentage, typically 3-15% depending on funder norms]\"\n      }\n    }\n\n    Important rules:\n    - The entire proposal should have a minimum of 15000 characters\n    - Preserve ALL formatting INSIDE the string values: bullet styles (• or -), subheadings, bold via **text**, line breaks, pipe tables for budget\n    - Do NOT escape newlines or special characters inside the strings\n    - Generate realistic budget line items based on the org's programs described in narratives and documents. Line items should sum exactly to\n  request_amount and keep admin/indirect costs within standard funder expectations (typically 3-15%)\n    - Budget categories should follow the standard format from the Section VIII template: Program Staff & Coordination, Educational Resources & Materials,\n  Program Operations, College & Career Readiness Activities, Community Events & Family Engagement, Evaluation & Data Management, Administrative & Indirect\n  Costs\n    - Create realistic targets, enrollment figures, and outcomes drawn from document content\n    - Make the project title strong, concise, and aligned with the funder's stated priorities\n    - Use the current date for generated_date\n    - Output ONLY the JSON — nothing else before or after\n\n  ADDITIONAL WRITING REQUIREMENTS:\n\n  - Use **active voice** throughout the proposal. Write as if the organization is directly describing its work and impact (e.g., \"We provide workforce\n  training to youth aging out of foster care\"), rather than passive or third-party phrasing (e.g., avoid \"The organization provides...\" or \"Services are\n  provided...\").\n\n  - Keep language **clear, direct, and free of unnecessary jargon**. Write in a professional but accessible style so that non-technical reviewers can easily\n   understand the proposal.\n\n  - When introducing any **acronym**, always write out the full name the first time followed by the acronym in parentheses. Example:\n    International Business Machines (IBM).\n\n  - After introducing the acronym once, it may be used alone for the remainder of the proposal.\n\n  - Avoid introducing acronyms that are not necessary. Prefer plain language when possible.",
+              "content": "You are a Grant Proposal Writer. Your job is to take organizational narratives, supporting documents, and grant details to produce a complete,\n  professionally formatted, funder-aligned grant proposal.\n\n    You will receive a single JSON object with these fields:\n\n    - grantId, grant_title, grant_description — the grant opportunity details\n    - funder_name — the funder to align the proposal toward\n    - deadline — submission deadline\n    - amount — requested funding amount\n    - narratives — object keyed by section_id (e.g. \"mission\"), each with section_name and content (AI-customized for this grant)\n    - narrativeText — all narrative sections concatenated as text\n    - documents — object keyed by category, each with fileName, extractedText (organizational documents like program descriptions, case for support,\n    partnership letters, etc.)\n    - documentText — all document content concatenated as text\n    - sectionsReturned — number of narrative sections available\n    - totalDocuments, relevantDocuments — document counts\n    - websiteText — scraped text content from the organization's website (may be empty if unavailable)\n    - websiteScraped — boolean indicating whether the website was successfully scraped\n\n    STRATEGY:\n    1. Read the grant_title, grant_description, and funder_name to understand what the funder cares about\n    2. Use narrativeText as the primary source for organizational mission, programs, and impact language\n    3. Use documentText as supporting evidence — pull specific facts, program details, statistics, quotes, and organizational capabilities from the\n  extracted\n    documents\n    3b. Use websiteText as additional context — pull any relevant details about the organization's programs, services, impact, history, leadership, or\n  partnerships that are mentioned on the website but not covered in narratives or documents\n    4. Generate a realistic budget breakdown based on the grant amount, the org's programs described in narratives and documents, and standard nonprofit\n  budget conventions (e.g., ~40% personnel, ~15% materials, ~3% admin). If amount is not specified, suggest a reasonable amount based on the program scope\n    5. Mirror the funder's language and priorities throughout — if the grant focuses on aging/dementia, emphasize senior programs; if youth development,\n    emphasize foster youth programs\n    6. Do NOT invent facts — only use information found in the narratives and documents provided. Budget allocations are the exception: generate realistic\n  line items based on the described programs and standard nonprofit cost structures\n\n    Output ONLY a valid JSON object with this exact structure — do NOT output any explanations, markdown outside the JSON, or additional text:\n\n    {\n      \"grant_proposal\": {\n        \"organization\": \"[Organization name extracted from narratives or documents]\",\n        \"funder\": \"[Funder Name from funder_name]\",\n        \"project_title\": \"[Strong, funder-aligned project title you create based on grant_description and org programs]\",\n        \"generated_date\": \"[Current date in format: Month DD, YYYY]\",\n        \"sections\": {\n          \"1_executive_summary\": \"[Full Executive Summary — introduce the org, the problem, the proposed solution, and the ask. Use bullets and bold via\n    **text** for key points]\",\n          \"2_organizational_overview\": \"[Full org overview — draw from narratives and documents. Include At a Glance bullets: founded, mission, programs,\n    populations served, geography]\",\n          \"3_statement_of_need\": \"[Full statement of need — use statistics and evidence from documents. Explain the problem this grant will address, tied to\n    funder priorities]\",\n          \"4_program_design_and_activities\": \"[Full program design — one subsection per relevant program with bullets describing activities, participants,\n  and\n     methods. Draw from document extractedText for specifics]\",\n          \"5_measurable_outcomes_and_evaluation\": \"[Full outcomes section — realistic targets per program + Evaluation Methodology bullets]\",\n          \"6_budget_summary_and_justification\": \"Category | Description | Amount | % of Total\\nProgram Staff & Coordination | Personnel costs for program\n  director, coordinators, and part-time staff | $XX,XXX | XX.X%\\nEducational Resources & Materials | Curriculum, books, technology tools, and learning\n  supplies | $XX,XXX | XX.X%\\nProgram Operations | Program delivery, recruitment, training, and retention activities | $XX,XXX | XX.X%\\nCollege & Career\n  Readiness Activities | College tours, career workshops, test prep, and scholarship guidance | $XX,XXX | XX.X%\\nCommunity Events & Family Engagement |\n  Summits, family nights, recognition ceremonies, and community outreach | $XX,XXX | XX.X%\\nEvaluation & Data Management | Program evaluation tools, data\n  tracking systems, and reporting | $XX,XXX | XX.X%\\nAdministrative & Indirect Costs | Essential administrative overhead to support program delivery |\n  $XX,XXX | XX.X%\\nTOTAL | | $XXX,XXX | 100%\\n\\nBudget Justification Highlights:\\n• [bullet for each major category explaining the allocation]\",\n          \"7_organizational_capacity_and_fiscal_management\": \"[Full capacity section — draw from documents for org structure, leadership, track record.\n    Include Fiscal Management Practices bullets]\",\n          \"8_sustainability_plan\": \"[Full sustainability plan — strategies for continuing beyond the grant period, with specific targets]\",\n          \"9_conclusion_and_request\": \"[Full conclusion — restate alignment with funder, summarize impact, end with Request Summary bullets including amount\n    and project period]\"\n        },\n        \"request_amount\": \"[amount from grant details, or a suggested realistic amount if not specified]\",\n        \"project_period\": \"[e.g. July 2026 – June 2027 (12 months)] — choose realistic period based on deadline\",\n        \"admin_overhead_percent\": \"[calculated admin/indirect cost percentage, typically 3-15% depending on funder norms]\"\n      }\n    }\n\n    Important rules:\n    - The entire proposal should have a minimum of 15000 characters\n    - Preserve ALL formatting INSIDE the string values: bullet styles (• or -), subheadings, bold via **text**, line breaks, pipe tables for budget\n    - Do NOT escape newlines or special characters inside the strings\n    - Generate realistic budget line items based on the org's programs described in narratives and documents. Line items should sum exactly to\n  request_amount and keep admin/indirect costs within standard funder expectations (typically 3-15%)\n    - Budget categories should follow the standard format from the Section VIII template: Program Staff & Coordination, Educational Resources & Materials,\n  Program Operations, College & Career Readiness Activities, Community Events & Family Engagement, Evaluation & Data Management, Administrative & Indirect\n  Costs\n    - Create realistic targets, enrollment figures, and outcomes drawn from document content\n    - Make the project title strong, concise, and aligned with the funder's stated priorities\n    - Use the current date for generated_date\n    - Output ONLY the JSON — nothing else before or after\n\n  ADDITIONAL WRITING REQUIREMENTS:\n\n  - Use **active voice** throughout the proposal. Write as if the organization is directly describing its work and impact (e.g., \"We provide workforce\n  training to youth aging out of foster care\"), rather than passive or third-party phrasing (e.g., avoid \"The organization provides...\" or \"Services are\n  provided...\").\n\n  - Keep language **clear, direct, and free of unnecessary jargon**. Write in a professional but accessible style so that non-technical reviewers can easily\n   understand the proposal.\n\n  - When introducing any **acronym**, always write out the full name the first time followed by the acronym in parentheses. Example:\n    International Business Machines (IBM).\n\n  - After introducing the acronym once, it may be used alone for the remainder of the proposal.\n\n  - Avoid introducing acronyms that are not necessary. Prefer plain language when possible.",
               "role": "system"
             },
             {
@@ -398,6 +398,86 @@
     },
     {
       "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/organizations?id=eq.{{ $('Proposal Request4').first().json.body.org_id }}&select=website,name",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Fetch Org Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1100,
+        -4560
+      ],
+      "notes": "Fetches org website URL from Supabase"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json[0].website }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Scrape Org Website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -880,
+        -4560
+      ],
+      "continueOnFail": true,
+      "notes": "HTTP GET the org website HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst html = items[0].json.data || items[0].json.body || '';\n\nif (!html || typeof html !== 'string') {\n  return [{ json: { websiteText: '', websiteScraped: false } }];\n}\n\n// Strip script and style tags with their content\nlet text = html\n  .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n  .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n  .replace(/<nav[^>]*>[\\s\\S]*?<\\/nav>/gi, '')\n  .replace(/<footer[^>]*>[\\s\\S]*?<\\/footer>/gi, '')\n  .replace(/<header[^>]*>[\\s\\S]*?<\\/header>/gi, '');\n\n// Strip all HTML tags\ntext = text.replace(/<[^>]+>/g, ' ');\n\n// Decode common HTML entities\ntext = text\n  .replace(/&amp;/g, '&')\n  .replace(/&lt;/g, '<')\n  .replace(/&gt;/g, '>')\n  .replace(/&quot;/g, '\"')\n  .replace(/&#39;/g, \"'\")\n  .replace(/&nbsp;/g, ' ');\n\n// Clean up whitespace\ntext = text\n  .replace(/\\s+/g, ' ')\n  .replace(/\\n\\s*\\n/g, '\\n')\n  .trim();\n\n// Truncate to ~8000 chars to avoid overwhelming the AI prompt\nif (text.length > 8000) {\n  text = text.substring(0, 8000) + '\\n[...truncated]';\n}\n\nreturn [{ json: { websiteText: text, websiteScraped: true } }];"
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "Extract Website Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        -4560
+      ],
+      "continueOnFail": true,
+      "notes": "Strips HTML tags and extracts meaningful text from the org website"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "input1"
+      },
+      "id": "d4e5f6a7-b8c9-0123-defa-234567890123",
+      "name": "Merge Docs + Website",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -480,
+        -4760
+      ],
+      "notes": "Waits for both document fetch and website scrape to complete"
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/proposal_sections",
         "authentication": "genericCredentialType",
@@ -488,6 +568,50 @@
       ]
     },
     "Step 4: Get Documents4": {
+      "main": [
+        [
+          {
+            "node": "Merge Docs + Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Org Info": {
+      "main": [
+        [
+          {
+            "node": "Scrape Org Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Org Website": {
+      "main": [
+        [
+          {
+            "node": "Extract Website Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Website Text": {
+      "main": [
+        [
+          {
+            "node": "Merge Docs + Website",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Docs + Website": {
       "main": [
         [
           {
@@ -587,6 +711,11 @@
         [
           {
             "node": "Step 3: Get Narratives4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Org Info",
             "type": "main",
             "index": 0
           }
