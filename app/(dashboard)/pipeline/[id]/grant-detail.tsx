@@ -319,6 +319,7 @@ export function GrantDetail({
                             className={`h-full rounded-full ${color} transition-all`}
                             style={{ width: `${pct}%` }}
                           />
+                        </div>
                       </div>
                     );
                   })}

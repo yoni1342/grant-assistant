@@ -1026,13 +1026,6 @@ function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
                     className="max-w-full max-h-[500px] rounded-md"
                   />
                 </div>
-              ) : selectedDoc.extracted_text ? (
-                <ExtractedTextViewer
-                  text={selectedDoc.extracted_text}
-                  title={selectedDoc.title || selectedDoc.name || "Document"}
-                  category={selectedDoc.ai_category || selectedDoc.category}
-                  signedUrl={signedUrl}
-                />
               ) : !selectedDoc.file_path ? (
                 <div className="p-4">
                   <p className="text-sm text-muted-foreground italic">
@@ -1044,6 +1037,14 @@ function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
                     </p>
                   )}
                 </div>
+              ) : selectedDoc.extracted_text ? (
+                <ExtractedTextViewer
+                  text={selectedDoc.extracted_text}
+                  title={selectedDoc.title || selectedDoc.name || "Document"}
+                  category={selectedDoc.ai_category || selectedDoc.category}
+                  signedUrl={signedUrl}
+                />
+
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <p className="text-sm">Unable to preview this file type. Use download button.</p>
