@@ -268,9 +268,9 @@ export function GrantDetail({
                 <span className="text-sm font-medium">Score:</span>
                 <Badge
                   variant={
-                    grant.screening_score >= 70
+                    grant.screening_score >= 80
                       ? "default"
-                      : grant.screening_score >= 40
+                      : grant.screening_score >= 50
                         ? "secondary"
                         : "destructive"
                   }
@@ -319,7 +319,6 @@ export function GrantDetail({
                             className={`h-full rounded-full ${color} transition-all`}
                             style={{ width: `${pct}%` }}
                           />
-                        </div>
                       </div>
                     );
                   })}
