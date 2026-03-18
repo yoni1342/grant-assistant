@@ -65,40 +65,38 @@ export async function POST(req: Request) {
       is_complete: false,
     });
 
-    try {
-      // n8n webhook responds immediately (onReceived mode).
-      // Workflow writes results directly to search_results table when done.
-      await fetch(fullUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET || "",
-        },
-        body: JSON.stringify(discoveryPayload),
-        agent,
-      });
-    } catch (err) {
+    // Fire-and-forget: trigger n8n webhook without awaiting.
+    // The workflow writes results directly to search_results table.
+    // We must NOT await this — if n8n uses responseNode mode, the fetch
+    // would block until the entire workflow completes, preventing the
+    // API from returning the search_id to the frontend.
+    fetch(fullUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET || "",
+      },
+      body: JSON.stringify(discoveryPayload),
+      agent,
+    }).catch((err) => {
       console.error("[webhook/grant-discovery] Fetch error:", err);
       // Write error completion marker so frontend stops loading
-      await adminSupabase.from("search_results").insert({
+      adminSupabase.from("search_results").insert({
         search_id: searchId,
         org_id: orgId,
         source_group: "__status__:no_results",
         grant_data: { status: "no_results", stage_message: "Failed to connect to search workflow. Please try again." },
         is_complete: false,
-      });
-      await adminSupabase.from("search_results").insert({
-        search_id: searchId,
-        org_id: orgId,
-        source_group: "__done__",
-        grant_data: [],
-        is_complete: true,
-      });
-      return new Response(
-        JSON.stringify({ success: false, error: String(err) }),
-        { status: 500, headers: { "Content-Type": "application/json" } },
+      }).then(() =>
+        adminSupabase.from("search_results").insert({
+          search_id: searchId,
+          org_id: orgId,
+          source_group: "__done__",
+          grant_data: [],
+          is_complete: true,
+        })
       );
-    }
+    });
 
     return new Response(
       JSON.stringify({ success: true, search_id: searchId }),
