@@ -32,45 +32,16 @@ import {
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 
-const SEARCH_STAGES = [
-  { message: "Connecting to grant databases...", icon: Globe, delay: 0 },
-  { message: "Searching Grants.gov, ProPublica, and federal sources...", icon: Search, delay: 3000 },
-  { message: "Querying foundation directories and philanthropy feeds...", icon: Building2, delay: 7000 },
-  { message: "Results streaming in from sources...", icon: Sparkles, delay: 14000 },
-  { message: "Searching additional databases...", icon: Filter, delay: 22000 },
-  { message: "Classifying grants by type and relevance...", icon: Sparkles, delay: 34000 },
-  { message: "Filtering based on your organization's location...", icon: MapPin, delay: 45000 },
-  { message: "Wrapping up remaining sources...", icon: Filter, delay: 60000 },
-  { message: "Finalizing results — almost done...", icon: CheckCheck, delay: 80000 },
-];
+const STAGE_ICONS: Record<string, typeof Globe> = {
+  searching: Search,
+  deduplicating: Filter,
+  checking: Globe,
+  filtering: MapPin,
+  matching: Sparkles,
+  saving: CheckCheck,
+};
 
-function useSearchStage(loading: boolean) {
-  const [stageIndex, setStageIndex] = useState(0);
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  useEffect(() => {
-    if (!loading) {
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current = [];
-      setStageIndex(0);
-      return;
-    }
-
-    setStageIndex(0);
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    SEARCH_STAGES.forEach((stage, i) => {
-      if (i === 0) return;
-      timers.push(setTimeout(() => setStageIndex(i), stage.delay));
-    });
-    timersRef.current = timers;
-
-    return () => {
-      timers.forEach(clearTimeout);
-    };
-  }, [loading]);
-
-  return SEARCH_STAGES[stageIndex];
-}
+const DEFAULT_STAGE = { message: "Connecting to grant databases...", icon: Globe };
 
 interface DiscoveredGrant {
   org_id: string;
@@ -201,7 +172,7 @@ export default function DiscoveryPage() {
   const [addingToPipeline, setAddingToPipeline] = useState<string | null>(null);
   const [addedGrants, setAddedGrants] = useState<Set<string>>(new Set());
   const [sourceCount, setSourceCount] = useState(0);
-  const currentStage = useSearchStage(loading);
+  const [stageMessage, setStageMessage] = useState(DEFAULT_STAGE);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const channelRef = useRef<any>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -254,6 +225,7 @@ export default function DiscoveryPage() {
     setSearchComplete(false);
     setAddedGrants(new Set());
     setSourceCount(0);
+    setStageMessage(DEFAULT_STAGE);
     seenTitlesRef.current = new Set();
 
     // Clean up previous subscription
@@ -306,6 +278,16 @@ export default function DiscoveryPage() {
             if (row.is_complete) {
               setSearchComplete(true);
               setLoading(false);
+              return;
+            }
+
+            // Handle status updates from workflow
+            if (row.source_group?.startsWith("__status__:")) {
+              const data = row.grant_data as { status?: string; stage_message?: string };
+              if (data?.stage_message) {
+                const icon = STAGE_ICONS[data.status || ""] || Sparkles;
+                setStageMessage({ message: data.stage_message, icon });
+              }
               return;
             }
 
@@ -421,12 +403,12 @@ export default function DiscoveryPage() {
             <div className="mt-3 space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {(() => {
-                  const StageIcon = currentStage.icon;
+                  const StageIcon = stageMessage.icon;
                   return (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                       <StageIcon className="h-4 w-4 shrink-0" />
-                      <span className="animate-pulse">{currentStage.message}</span>
+                      <span className="animate-pulse">{stageMessage.message}</span>
                     </>
                   );
                 })()}

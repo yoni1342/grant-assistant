@@ -1135,6 +1135,90 @@
       ],
       "id": "apply-query-filter-001",
       "name": "Apply Query Filter"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'searching',\n      stage_message: 'Searching Grants.gov, ProPublica, and federal sources...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -12000,
+        31500
+      ],
+      "id": "status-searching-001",
+      "name": "Status: Searching",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'deduplicating',\n      stage_message: 'Removing duplicates and prioritizing results...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9500,
+        31500
+      ],
+      "id": "status-deduplicating-001",
+      "name": "Status: Deduplicating",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'checking',\n      stage_message: 'Checking for new grants not yet in your pipeline...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8500,
+        31500
+      ],
+      "id": "status-checking-001",
+      "name": "Status: Checking DB",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'filtering',\n      stage_message: 'Filtering grants based on your organization's location...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7500,
+        31500
+      ],
+      "id": "status-filtering-001",
+      "name": "Status: Location Filter",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'matching',\n      stage_message: 'Matching grants to your search query...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5000,
+        31500
+      ],
+      "id": "status-matching-001",
+      "name": "Status: Query Matching",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'saving',\n      stage_message: 'Saving matched grants...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4000,
+        31500
+      ],
+      "id": "status-saving-001",
+      "name": "Status: Saving",
+      "continueOnFail": true
     }
   ],
   "pinData": {},
@@ -1270,7 +1354,7 @@
       "main": [
         [
           {
-            "node": "Filter by Search Query",
+            "node": "Status: Query Matching",
             "type": "main",
             "index": 0
           }
@@ -1281,7 +1365,7 @@
       "main": [
         [
           {
-            "node": "Limit & Prioritize Grants",
+            "node": "Status: Deduplicating",
             "type": "main",
             "index": 0
           }
@@ -1292,7 +1376,7 @@
       "main": [
         [
           {
-            "node": "Check Already Tracked3",
+            "node": "Status: Checking DB",
             "type": "main",
             "index": 0
           }
@@ -1339,7 +1423,7 @@
       "main": [
         [
           {
-            "node": "AI Location Filter",
+            "node": "Status: Location Filter",
             "type": "main",
             "index": 0
           }
@@ -1350,132 +1434,7 @@
       "main": [
         [
           {
-            "node": "ProPublica Rockefeller Foundation1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Kellogg Foundation1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica RWJF1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Bloomberg Philanthropies1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Walton Family Foundation1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Philanthropy News Digest RFPs5",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Gates Foundation Grants Page1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Ford Foundation Grants Page1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Yield Giving (MacKenzie Scott)1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "PA DCED Programs1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Youth Orgs PA1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Additional Major Foundations5",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Foster Care3",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "reporter1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "rwjf1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Ford Foundation1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Gates Foundation1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica PA Foundations1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Child Welfare1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Capacity Building1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Minority/Equity1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Senior Services1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Grants.gov Foster Care2",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "usa spending1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Fetch Grantivia Grants5",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "ProPublica Senior Orgs PA1",
+            "node": "Status: Searching",
             "type": "main",
             "index": 0
           }
@@ -1973,6 +1932,197 @@
       ]
     },
     "Apply Query Filter": {
+      "main": [
+        [
+          {
+            "node": "Status: Saving",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Searching": {
+      "main": [
+        [
+          {
+            "node": "ProPublica Rockefeller Foundation1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Kellogg Foundation1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica RWJF1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Bloomberg Philanthropies1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Walton Family Foundation1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Philanthropy News Digest RFPs5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gates Foundation Grants Page1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Ford Foundation Grants Page1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Yield Giving (MacKenzie Scott)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PA DCED Programs1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Youth Orgs PA1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Additional Major Foundations5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Foster Care3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "reporter1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "rwjf1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Ford Foundation1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Gates Foundation1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica PA Foundations1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Child Welfare1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Capacity Building1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Minority/Equity1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Senior Services1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Grants.gov Foster Care2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "usa spending1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Grantivia Grants5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Senior Orgs PA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Deduplicating": {
+      "main": [
+        [
+          {
+            "node": "Limit & Prioritize Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Checking DB": {
+      "main": [
+        [
+          {
+            "node": "Check Already Tracked3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Location Filter": {
+      "main": [
+        [
+          {
+            "node": "AI Location Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Query Matching": {
+      "main": [
+        [
+          {
+            "node": "Filter by Search Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: Saving": {
       "main": [
         [
           {

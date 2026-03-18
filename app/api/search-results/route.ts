@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { search_id, org_id, grants, source_group, done } = body;
+  const { search_id, org_id, grants, source_group, done, status, stage_message } = body;
 
   if (!search_id || !org_id) {
     return new Response(
@@ -28,6 +28,21 @@ export async function POST(req: Request) {
       source_group: "__done__",
       grant_data: [],
       is_complete: true,
+    });
+
+    if (error) {
+      return new Response(
+        JSON.stringify({ success: false, error: error.message }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
+  } else if (status && stage_message) {
+    // Status update from workflow — store as a status row
+    const { error } = await supabase.from("search_results").insert({
+      search_id,
+      org_id,
+      source_group: `__status__:${status}`,
+      grant_data: { status, stage_message },
     });
 
     if (error) {
