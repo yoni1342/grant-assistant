@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { NarrativeList } from './narrative-list'
 import { NarrativeDialog } from './narrative-dialog'
-import { AICustomizeButton } from './ai-customize-button'
+import { NarrativeDocumentViewer } from './narrative-document-viewer'
 
 type Narrative = {
   id: string
@@ -34,9 +34,9 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
   const [selectedNarrative, setSelectedNarrative] = useState<Narrative | undefined>()
-
-  const [aiDialogOpen, setAiDialogOpen] = useState(false)
-  const [aiNarrative, setAiNarrative] = useState<Narrative | undefined>()
+  const [viewingNarrative, setViewingNarrative] = useState<Narrative | undefined>(
+    narratives.length > 0 ? narratives[0] : undefined
+  )
 
   const handleCreateClick = () => {
     setDialogMode('create')
@@ -50,13 +50,12 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
     setDialogOpen(true)
   }
 
-  const handleAICustomizeClick = (narrative: Narrative) => {
-    setAiNarrative(narrative)
-    setAiDialogOpen(true)
+  const handleSelectNarrative = (narrative: Narrative) => {
+    setViewingNarrative(narrative)
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Page header */}
       <div className="flex items-start justify-between">
         <div>
@@ -71,29 +70,43 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
         </Button>
       </div>
 
-      {/* List with search/filter */}
-      <NarrativeList
-        initialData={narratives}
-        onEditClick={handleEditClick}
-        onAICustomizeClick={handleAICustomizeClick}
-      />
+      {/* Split layout: list + document viewer */}
+      <div className="flex gap-4" style={{ height: '82vh' }}>
+        {/* Left panel: narrative list */}
+        <div className="w-[320px] min-w-[320px] overflow-y-auto pr-1">
+          <NarrativeList
+            initialData={narratives}
+            onEditClick={handleEditClick}
+            onSelectNarrative={handleSelectNarrative}
+            selectedNarrativeId={viewingNarrative?.id}
+          />
+        </div>
 
-      {/* Dialogs */}
+        {/* Right panel: document viewer */}
+        <div className="flex-1 min-w-0">
+          {viewingNarrative ? (
+            <NarrativeDocumentViewer
+              title={viewingNarrative.title}
+              content={viewingNarrative.content}
+              category={viewingNarrative.category}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full rounded-lg border border-dashed border-border bg-muted/20">
+              <p className="text-muted-foreground text-sm">
+                Select a narrative to view its content
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Dialog */}
       <NarrativeDialog
         mode={dialogMode}
         narrative={selectedNarrative}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
       />
-
-      {aiNarrative && (
-        <AICustomizeButton
-          narrativeId={aiNarrative.id}
-          grants={grants}
-          open={aiDialogOpen}
-          onOpenChange={setAiDialogOpen}
-        />
-      )}
     </div>
   )
 }

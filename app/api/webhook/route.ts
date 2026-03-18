@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import https from "https";
-import { createClient, getUserOrgId } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/server";
 
 // Map service names to n8n webhook paths
 const SERVICE_MAP: Record<string, string> = {
@@ -47,18 +47,27 @@ export async function POST(req: Request) {
 
   const agent = new https.Agent({ rejectUnauthorized: false });
 
-  // For grant-discovery, use progressive search: fire-and-forget to n8n,
-  // results come back via /api/search-results callback
+  // For grant-discovery, fire-and-forget to n8n.
+  // n8n writes status updates and results directly to Supabase search_results table.
+  // Frontend picks them up via Supabase Realtime subscription.
   if (service === "grant-discovery") {
     const searchId = crypto.randomUUID();
-    const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
-    const proto = req.headers.get("x-forwarded-proto") || "https";
-    const callbackUrl = `${proto}://${host}/api/search-results`;
 
-    const discoveryPayload = { ...payload, search_id: searchId, callback_url: callbackUrl };
+    const discoveryPayload = { ...payload, search_id: searchId };
+
+    // Write initial status update so frontend shows "Searching..."
+    const adminSupabase = createAdminClient();
+    await adminSupabase.from("search_results").insert({
+      search_id: searchId,
+      org_id: orgId,
+      source_group: "__status__:searching",
+      grant_data: { status: "searching", stage_message: "Searching grant databases..." },
+      is_complete: false,
+    });
 
     try {
-      // n8n webhook is set to respond immediately (onReceived mode)
+      // n8n webhook responds immediately (onReceived mode).
+      // Workflow writes results directly to search_results table when done.
       await fetch(fullUrl, {
         method: "POST",
         headers: {
@@ -70,6 +79,21 @@ export async function POST(req: Request) {
       });
     } catch (err) {
       console.error("[webhook/grant-discovery] Fetch error:", err);
+      // Write error completion marker so frontend stops loading
+      await adminSupabase.from("search_results").insert({
+        search_id: searchId,
+        org_id: orgId,
+        source_group: "__status__:no_results",
+        grant_data: { status: "no_results", stage_message: "Failed to connect to search workflow. Please try again." },
+        is_complete: false,
+      });
+      await adminSupabase.from("search_results").insert({
+        search_id: searchId,
+        org_id: orgId,
+        source_group: "__done__",
+        grant_data: [],
+        is_complete: true,
+      });
       return new Response(
         JSON.stringify({ success: false, error: String(err) }),
         { status: 500, headers: { "Content-Type": "application/json" } },

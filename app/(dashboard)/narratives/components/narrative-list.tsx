@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-// Narrative shape mapped from documents table
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Pencil, Trash2, Sparkles, Search } from 'lucide-react'
+import { Pencil, Trash2, Search } from 'lucide-react'
 import { deleteNarrative } from '../actions'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -28,7 +26,8 @@ type Narrative = {
 interface NarrativeListProps {
   initialData: Narrative[]
   onEditClick: (narrative: Narrative) => void
-  onAICustomizeClick: (narrative: Narrative) => void
+  onSelectNarrative: (narrative: Narrative) => void
+  selectedNarrativeId?: string
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -53,7 +52,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   other: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
 }
 
-export function NarrativeList({ initialData, onEditClick, onAICustomizeClick }: NarrativeListProps) {
+export function NarrativeList({ initialData, onEditClick, onSelectNarrative, selectedNarrativeId }: NarrativeListProps) {
   const [narratives, setNarratives] = useState<Narrative[]>(initialData)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -123,7 +122,8 @@ export function NarrativeList({ initialData, onEditClick, onAICustomizeClick }: 
     }
   }, [])
 
-  const handleDelete = async (id: string, title: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string, title: string) => {
+    e.stopPropagation()
     if (!confirm(`Are you sure you want to delete "${title}"?`)) return
 
     const result = await deleteNarrative(id)
@@ -155,20 +155,20 @@ export function NarrativeList({ initialData, onEditClick, onAICustomizeClick }: 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Search and Filter */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-2">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search narratives..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9 text-sm"
           />
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger className="h-9 text-sm">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -182,91 +182,75 @@ export function NarrativeList({ initialData, onEditClick, onAICustomizeClick }: 
         </Select>
       </div>
 
-      {/* Cards */}
+      {/* Narrative Items */}
       {filteredNarratives.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No narratives match your search.</p>
+        <div className="text-center py-8">
+          <p className="text-sm text-muted-foreground">No narratives match your search.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col gap-1">
           {filteredNarratives.map((narrative) => {
             const plainText = stripHtml(narrative.content)
-            const preview = plainText.slice(0, 150)
-            const hasMore = plainText.length > 150
+            const preview = plainText.slice(0, 80)
+            const isSelected = selectedNarrativeId === narrative.id
 
             return (
-              <Card key={narrative.id} className="flex flex-col">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold leading-snug line-clamp-1 flex-1">
-                      {narrative.title}
-                    </h3>
-                    {narrative.category && (
-                      <Badge
-                        variant="secondary"
-                        className={`shrink-0 ${CATEGORY_COLORS[narrative.category]}`}
-                      >
-                        {CATEGORY_LABELS[narrative.category]}
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-
-                <CardContent className="flex-1 pb-2">
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {preview}
-                    {hasMore && '...'}
-                  </p>
-
-                  {narrative.tags && narrative.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {narrative.tags.map((tag, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
-                          {tag}
+              <button
+                key={narrative.id}
+                onClick={() => onSelectNarrative(narrative)}
+                className={`w-full text-left px-3 py-3 rounded-lg border transition-colors ${
+                  isSelected
+                    ? 'bg-primary/5 border-primary/30 shadow-sm'
+                    : 'bg-card border-transparent hover:bg-muted/50 hover:border-border'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-sm leading-snug truncate">
+                        {narrative.title}
+                      </h3>
+                      {narrative.category && (
+                        <Badge
+                          variant="secondary"
+                          className={`shrink-0 text-[10px] px-1.5 py-0 ${CATEGORY_COLORS[narrative.category]}`}
+                        >
+                          {CATEGORY_LABELS[narrative.category]}
                         </Badge>
-                      ))}
+                      )}
                     </div>
-                  )}
-                </CardContent>
-
-                <CardFooter className="border-t pt-3 flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(
-                      new Date(narrative.updated_at || narrative.created_at || ''),
-                      { addSuffix: true }
-                    )}
-                  </p>
-                  <div className="flex gap-1">
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {preview}{plainText.length > 80 && '...'}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-1">
+                      {formatDistanceToNow(
+                        new Date(narrative.updated_at || narrative.created_at || ''),
+                        { addSuffix: true }
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex gap-0.5 shrink-0">
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => onEditClick(narrative)}
+                      className="h-7 w-7"
+                      onClick={(e) => { e.stopPropagation(); onEditClick(narrative) }}
                       title="Edit"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil className="h-3 w-3" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => onAICustomizeClick(narrative)}
-                      title="AI Customize"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                      onClick={() => handleDelete(narrative.id, narrative.title)}
+                      className="h-7 w-7 text-muted-foreground hover:text-red-600"
+                      onClick={(e) => handleDelete(e, narrative.id, narrative.title)}
                       title="Delete"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
-                </CardFooter>
-              </Card>
+                </div>
+              </button>
             )
           })}
         </div>

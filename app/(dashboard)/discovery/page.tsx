@@ -28,6 +28,7 @@ import {
   MapPin,
   Sparkles,
   CheckCheck,
+  SearchX,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -39,6 +40,7 @@ const STAGE_ICONS: Record<string, typeof Globe> = {
   filtering: MapPin,
   matching: Sparkles,
   saving: CheckCheck,
+  no_results: SearchX,
 };
 
 const DEFAULT_STAGE = { message: "Connecting to grant databases...", icon: Globe };
@@ -277,7 +279,8 @@ export default function DiscoveryPage() {
 
             if (row.is_complete) {
               setSearchComplete(true);
-              setLoading(false);
+              // Small delay so the last status message is visible before loading hides it
+              setTimeout(() => setLoading(false), 600);
               return;
             }
 
@@ -423,6 +426,14 @@ export default function DiscoveryPage() {
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
         </CardContent>
       </Card>
+
+      {/* No results message */}
+      {searchComplete && !loading && results.length === 0 && (
+        <div className="flex items-center gap-2 rounded-md border border-muted px-4 py-3 text-sm text-muted-foreground">
+          <SearchX className="h-4 w-4 shrink-0" />
+          <span>{stageMessage.message !== DEFAULT_STAGE.message ? stageMessage.message : "No grants found matching your search. Try broadening your query."}</span>
+        </div>
+      )}
 
       {/* Search Results */}
       {results.length > 0 && (

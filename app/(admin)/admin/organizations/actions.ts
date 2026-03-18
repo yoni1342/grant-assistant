@@ -167,13 +167,46 @@ export async function deleteOrganization(orgId: string) {
 
   const adminClient = createAdminClient()
 
-  // Find all users belonging to this org
-  const { data: members } = await adminClient
-    .from('profiles')
+  // Delete all associated data in dependency order, keeping user accounts.
+
+  // 1. Delete proposal_sections (depends on proposals)
+  const { data: proposals } = await adminClient
+    .from('proposals')
     .select('id')
     .eq('org_id', orgId)
 
-  // Delete the organization (cascading deletes should handle related data)
+  if (proposals && proposals.length > 0) {
+    const proposalIds = proposals.map((p) => p.id)
+    await adminClient
+      .from('proposal_sections')
+      .delete()
+      .in('proposal_id', proposalIds)
+  }
+
+  // 2. Delete reports (depends on awards)
+  await adminClient.from('reports').delete().eq('org_id', orgId)
+
+  // 3. Delete remaining org-owned tables (no child dependencies)
+  await adminClient.from('proposals').delete().eq('org_id', orgId)
+  await adminClient.from('awards').delete().eq('org_id', orgId)
+  await adminClient.from('submissions').delete().eq('org_id', orgId)
+  await adminClient.from('submission_checklists').delete().eq('org_id', orgId)
+  await adminClient.from('workflow_executions').delete().eq('org_id', orgId)
+  await adminClient.from('activity_log').delete().eq('org_id', orgId)
+  await adminClient.from('notifications').delete().eq('org_id', orgId)
+  await adminClient.from('documents').delete().eq('org_id', orgId)
+  await adminClient.from('funders').delete().eq('org_id', orgId)
+  await adminClient.from('search_results').delete().eq('org_id', orgId)
+  await adminClient.from('grant_fetch_status').delete().eq('org_id', orgId)
+  await adminClient.from('grants').delete().eq('org_id', orgId)
+
+  // 4. Disassociate users from the org (keep their accounts)
+  await adminClient
+    .from('profiles')
+    .update({ org_id: null })
+    .eq('org_id', orgId)
+
+  // 5. Delete the organization itself
   const { error } = await adminClient
     .from('organizations')
     .delete()
@@ -181,17 +214,7 @@ export async function deleteOrganization(orgId: string) {
 
   if (error) {
     console.error('Delete organization error:', error.message)
-    return { error: 'Unable to delete this organization. It may have related data that prevents removal. Please try again later.' }
-  }
-
-  // Delete all member auth accounts
-  if (members) {
-    for (const member of members) {
-      const { error: userError } = await adminClient.auth.admin.deleteUser(member.id)
-      if (userError) {
-        console.error(`Failed to delete user ${member.id}:`, userError.message)
-      }
-    }
+    return { error: 'Unable to delete this organization. Please try again later.' }
   }
 
   revalidatePath('/admin/organizations')

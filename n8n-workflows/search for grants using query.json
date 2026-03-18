@@ -971,7 +971,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "search-grant-with-query",
-        "responseMode": "responseNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "id": "0a936e8c-a6e7-442d-a175-ff5137eb72b4",
@@ -983,7 +983,7 @@
         2272
       ],
       "webhookId": "generate-proposal",
-      "notes": "POST: { grantId, rfpText, funderName, funderFocus, deadline, planeIssueId }"
+      "notes": "POST: { searchQuery, org_id, search_id }. Responds immediately, writes results to search_results table."
     },
     {
       "parameters": {
@@ -1024,15 +1024,11 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify([{ action: \"insert_grants\", data: { grants: $input.all().map(i => i.json) } }]) }}",
-        "options": {
-          "responseCode": 200
-        }
+        "jsCode": "const items = $input.all();\nconst webhookData = $('search for proposal with query test').first().json.body;\nconst searchId = webhookData.search_id;\nconst orgId = webhookData.org_id;\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/search_results';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst headers = {\n  'apikey': supabaseKey,\n  'Authorization': 'Bearer ' + supabaseKey,\n  'Content-Type': 'application/json',\n  'Prefer': 'return=minimal',\n};\n\nconst allGrants = [];\nfor (const item of items) {\n  const d = item.json;\n  if (d.data && Array.isArray(d.data.grants)) {\n    allGrants.push(...d.data.grants);\n  } else if (d.title && d.funder_name) {\n    allGrants.push(d);\n  }\n}\n\nif (allGrants.length > 0) {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl,\n    headers,\n    body: JSON.stringify({\n      search_id: searchId,\n      org_id: orgId,\n      source_group: 'grant_search',\n      grant_data: allGrants,\n      is_complete: false,\n    }),\n  });\n}\n\nawait this.helpers.httpRequest({\n  method: 'POST',\n  url: supabaseUrl,\n  headers,\n  body: JSON.stringify({\n    search_id: searchId,\n    org_id: orgId,\n    source_group: '__done__',\n    grant_data: [],\n    is_complete: true,\n  }),\n});\n\nreturn [{ json: { success: true, grants_saved: allGrants.length } }];"
       },
-      "name": "Success Response2",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
+      "name": "Save Search Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         3400,
         2672
@@ -1132,6 +1128,19 @@
       "id": "b2c3d4e5-f6a7-8901-2345-678901bcdef0",
       "name": "Process Classify Results",
       "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookData = $('search for proposal with query test').first().json.body;\nconst searchId = webhookData.search_id;\nconst orgId = webhookData.org_id;\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/search_results';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst headers = {\n  'apikey': supabaseKey,\n  'Authorization': 'Bearer ' + supabaseKey,\n  'Content-Type': 'application/json',\n  'Prefer': 'return=minimal',\n};\n\nconst msg = $input.first()?.json?.message || 'No matching grants found for your search query.';\n\nawait this.helpers.httpRequest({\n  method: 'POST',\n  url: supabaseUrl,\n  headers,\n  body: JSON.stringify({\n    search_id: searchId,\n    org_id: orgId,\n    source_group: '__status__:no_results',\n    grant_data: { status: 'no_results', stage_message: msg },\n    is_complete: false,\n  }),\n});\n\nawait this.helpers.httpRequest({\n  method: 'POST',\n  url: supabaseUrl,\n  headers,\n  body: JSON.stringify({\n    search_id: searchId,\n    org_id: orgId,\n    source_group: '__done__',\n    grant_data: [],\n    is_complete: true,\n  }),\n});\n\nreturn [{ json: { success: true, message: msg } }];"
+      },
+      "name": "Write Search Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1888,
+        3400
+      ],
+      "id": "f1a2b3c4-d5e6-7890-abcd-ef0123456789"
     }
   ],
   "pinData": {},
@@ -1649,7 +1658,7 @@
       "main": [
         [
           {
-            "node": "Success Response2",
+            "node": "Save Search Results",
             "type": "main",
             "index": 0
           }
@@ -1842,6 +1851,28 @@
         [
           {
             "node": "Filter based on search query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Results Found1": {
+      "main": [
+        [
+          {
+            "node": "Write Search Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Already Tracked1": {
+      "main": [
+        [
+          {
+            "node": "Write Search Complete",
             "type": "main",
             "index": 0
           }

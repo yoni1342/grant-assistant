@@ -4,13 +4,10 @@ import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ArrowLeft, ClipboardCheck, Building2, Download, Loader2 } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Pencil, Save, RotateCcw } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { ProposalSections, ProposalSectionsHandle } from "./proposal-sections"
-import { QualityReview } from "./quality-review"
-import { FunderAnalysis } from "./funder-analysis"
 import { useRef } from "react"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -32,6 +29,10 @@ export function ProposalDetailClient({
   const [sections, setSections] = useState(initialSections)
   const sectionsRef = useRef<ProposalSectionsHandle>(null)
   const [isExporting, setIsExporting] = useState(false)
+  const [, forceRender] = useState(0)
+
+  // Force re-render when edit state changes so we pick up isEditing/isSaving from the ref
+  const triggerRender = useCallback(() => forceRender(n => n + 1), [])
 
   const handleExportPdf = useCallback(async () => {
     if (!sectionsRef.current) return
@@ -138,6 +139,46 @@ export function ProposalDetailClient({
             For: {grant?.title || 'Unknown Grant'}
           </p>
           <div className="flex items-center gap-2 ml-auto">
+            {/* Edit / Save / Reset */}
+            {sectionsRef.current?.isEditing ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={sectionsRef.current?.isSaving}
+                  onClick={() => { sectionsRef.current?.resetEdit(); triggerRender() }}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset
+                </Button>
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  disabled={sectionsRef.current?.isSaving}
+                  onClick={async () => { await sectionsRef.current?.saveEdit(); triggerRender() }}
+                >
+                  {sectionsRef.current?.isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {sectionsRef.current?.isSaving ? 'Saving...' : 'Save'}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={sections.length === 0}
+                onClick={() => { sectionsRef.current?.startEdit(); triggerRender() }}
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Button>
+            )}
+
             {/* Export PDF */}
             <Button
               variant="outline"
@@ -153,58 +194,6 @@ export function ProposalDetailClient({
               )}
               {isExporting ? 'Exporting...' : 'Export PDF'}
             </Button>
-
-            {/* Quality Review Dialog */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <ClipboardCheck className="h-4 w-4" />
-                  Quality Review
-                  {proposal.quality_score != null && (
-                    <Badge variant={proposal.quality_score >= 80 ? 'default' : proposal.quality_score >= 60 ? 'secondary' : 'destructive'} className="ml-1 text-xs">
-                      {proposal.quality_score}
-                    </Badge>
-                  )}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Quality Review</DialogTitle>
-                </DialogHeader>
-                <QualityReview
-                  proposalId={proposal.id}
-                  qualityScore={proposal.quality_score}
-                  qualityReview={proposal.quality_review}
-                  embedded
-                />
-              </DialogContent>
-            </Dialog>
-
-            {/* Funder Analysis Dialog */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Funder Analysis
-                  {funder && (
-                    <Badge variant="secondary" className="ml-1 text-xs">
-                      Available
-                    </Badge>
-                  )}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Funder Analysis</DialogTitle>
-                </DialogHeader>
-                <FunderAnalysis
-                  grantId={grant?.id}
-                  funderName={grant?.funder_name}
-                  funder={funder}
-                  embedded
-                />
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
       </div>
