@@ -40,6 +40,15 @@ module "acm" {
   route53_zone_id = var.route53_zone_id
 }
 
+module "ses" {
+  source          = "../../modules/ses"
+  app_name        = var.app_name
+  environment     = var.environment
+  domain_name     = var.domain_name
+  sender_email    = "noreply@fundory.ai"
+  route53_zone_id = var.route53_zone_id
+}
+
 module "alb" {
   source             = "../../modules/alb"
   app_name           = var.app_name
@@ -66,6 +75,7 @@ module "ecs" {
   max_tasks           = var.max_tasks
   next_public_supabase_url      = var.next_public_supabase_url
   next_public_supabase_anon_key = var.next_public_supabase_anon_key
+  ses_policy_arn      = module.ses.ses_send_policy_arn
 }
 
 module "cloudfront" {
@@ -90,3 +100,10 @@ output "cloudfront_domain" { value = module.cloudfront.cloudfront_domain_name }
 output "alb_dns" { value = module.alb.alb_dns_name }
 output "ecr_repository_url" { value = module.ecr.repository_url }
 output "ecs_cluster_name" { value = module.ecs.cluster_name }
+output "ses_identity_arn" { value = module.ses.ses_identity_arn }
+output "ses_region" { value = module.ses.ses_region }
+output "ses_sender_email" { value = module.ses.verified_sender_email }
+output "ses_dkim_tokens" {
+  value       = module.ses.dkim_tokens
+  description = "Add these as CNAME records in Route53: token1._domainkey, token2._domainkey, token3._domainkey -> token.dkim.amazonses.com"
+}

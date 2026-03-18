@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sendOrganizationApprovedEmail, sendOrganizationRejectedEmail } from '@/lib/email/service'
 
 export async function approveOrganization(orgId: string) {
   const supabase = await createClient()
@@ -17,11 +18,13 @@ export async function approveOrganization(orgId: string) {
 
   if (!profile?.is_platform_admin) return { error: 'Unauthorized' }
 
+  const approvedAt = new Date().toISOString()
+
   const { error } = await supabase
     .from('organizations')
     .update({
       status: 'approved',
-      approved_at: new Date().toISOString(),
+      approved_at: approvedAt,
       approved_by: user.id,
       rejection_reason: null,
     })
@@ -56,6 +59,35 @@ export async function approveOrganization(orgId: string) {
     })
   }
 
+  // Send approval email
+  try {
+    // Fetch org and owner details for email
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', orgId)
+      .single()
+
+    const { data: ownerProfile } = await supabase
+      .from('profiles')
+      .select('full_name, email')
+      .eq('org_id', orgId)
+      .eq('role', 'owner')
+      .single()
+
+    if (org && ownerProfile) {
+      await sendOrganizationApprovedEmail({
+        toEmail: ownerProfile.email,
+        fullName: ownerProfile.full_name,
+        organizationName: org.name,
+        approvedAt,
+      })
+    }
+  } catch (error) {
+    console.error('[approveOrganization] Failed to send approval email:', error)
+    // Don't fail approval if email fails
+  }
+
   revalidatePath('/admin/organizations')
   return { success: true }
 }
@@ -74,6 +106,8 @@ export async function rejectOrganization(orgId: string, reason?: string) {
 
   if (!profile?.is_platform_admin) return { error: 'Unauthorized' }
 
+  const rejectedAt = new Date().toISOString()
+
   const { error } = await supabase
     .from('organizations')
     .update({
@@ -83,6 +117,36 @@ export async function rejectOrganization(orgId: string, reason?: string) {
     .eq('id', orgId)
 
   if (error) return { error: error.message }
+
+  // Send rejection email
+  try {
+    // Fetch org and owner details for email
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', orgId)
+      .single()
+
+    const { data: ownerProfile } = await supabase
+      .from('profiles')
+      .select('full_name, email')
+      .eq('org_id', orgId)
+      .eq('role', 'owner')
+      .single()
+
+    if (org && ownerProfile) {
+      await sendOrganizationRejectedEmail({
+        toEmail: ownerProfile.email,
+        fullName: ownerProfile.full_name,
+        organizationName: org.name,
+        rejectionReason: reason,
+        rejectedAt,
+      })
+    }
+  } catch (error) {
+    console.error('[rejectOrganization] Failed to send rejection email:', error)
+    // Don't fail rejection if email fails
+  }
 
   revalidatePath('/admin/organizations')
   return { success: true }

@@ -12,6 +12,11 @@ variable "min_tasks" { type = number }
 variable "max_tasks" { type = number }
 variable "next_public_supabase_url" {}
 variable "next_public_supabase_anon_key" {}
+variable "ses_policy_arn" {
+  description = "ARN of the SES IAM policy to attach to the task role"
+  type        = string
+  default     = ""
+}
 
 locals { name = "${var.app_name}-${var.environment}" }
 
@@ -48,6 +53,13 @@ resource "aws_iam_role" "task" {
       Principal = { Service = "ecs-tasks.amazonaws.com" }
     }]
   })
+}
+
+# Attach SES policy to task role if provided
+resource "aws_iam_role_policy_attachment" "ses_send" {
+  count      = var.ses_policy_arn != "" ? 1 : 0
+  role       = aws_iam_role.task.name
+  policy_arn = var.ses_policy_arn
 }
 
 resource "aws_ecs_cluster" "main" {
