@@ -75,10 +75,19 @@ export function GrantDetail({
   const [proposalStatus, setProposalStatus] = useState<"generating" | "done" | "error">("generating");
   const [proposalError, setProposalError] = useState<string | null>(null);
 
-  const eligibility = grant.eligibility as {
+  const eligibility = (typeof grant.eligibility === "string"
+    ? JSON.parse(grant.eligibility)
+    : grant.eligibility) as {
     score?: string;
     indicator?: string;
     confidence?: number;
+    dimension_scores?: {
+      mission_alignment?: number;
+      target_population?: number;
+      service_fit?: number;
+      geographic_alignment?: number;
+      organizational_capacity?: number;
+    };
   } | null;
   const concerns = grant.concerns as string[] | null;
   const recommendations = grant.recommendations as { text?: string }[] | string[] | null;
@@ -274,6 +283,47 @@ export function GrantDetail({
                     ({eligibility.score})
                   </span>
                 )}
+              </div>
+            )}
+
+            {/* Dimension Scores */}
+            {eligibility?.dimension_scores && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Scoring Breakdown</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { key: "mission_alignment" as const, label: "Mission Alignment" },
+                    { key: "target_population" as const, label: "Target Population" },
+                    { key: "service_fit" as const, label: "Service/Program Fit" },
+                    { key: "geographic_alignment" as const, label: "Geographic Alignment" },
+                    { key: "organizational_capacity" as const, label: "Org Capacity" },
+                  ].map(({ key, label }) => {
+                    const value = eligibility.dimension_scores?.[key] ?? 0;
+                    const pct = (value / 20) * 100;
+                    const color =
+                      value >= 16
+                        ? "bg-green-500"
+                        : value >= 11
+                          ? "bg-yellow-500"
+                          : value >= 6
+                            ? "bg-orange-500"
+                            : "bg-red-500";
+                    return (
+                      <div key={key} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{label}</span>
+                          <span className="font-medium">{value}/20</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${color} transition-all`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

@@ -9,6 +9,8 @@ export default async function PipelinePage() {
   const { orgId } = await getUserOrgId(supabase);
   if (!orgId) redirect("/login");
 
+  const staleThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
   const [{ data: grants }, { data: fetchStatus }] = await Promise.all([
     supabase
       .from("grants")
@@ -20,6 +22,7 @@ export default async function PipelinePage() {
       .select("*")
       .eq("org_id", orgId)
       .neq("status", "complete")
+      .gte("updated_at", staleThreshold)
       .single(),
   ]);
 
@@ -39,6 +42,7 @@ export default async function PipelinePage() {
           .select("*")
           .eq("org_id", orgId)
           .neq("status", "complete")
+          .gte("updated_at", staleThreshold)
           .single()).data
       : null;
 

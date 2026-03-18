@@ -49,12 +49,18 @@ export interface Proposal {
   title: string
   status: 'draft' | 'generating' | 'review' | 'final'
   quality_score: number | null
+  quality_review: { overall_score?: number } | null
   created_at: string
   updated_at: string
   grant: {
     id: string
     title: string
     funder_name: string | null
+    eligibility: {
+      score?: string
+      indicator?: string
+      confidence?: number
+    } | null
   } | null
 }
 
@@ -149,23 +155,23 @@ export function ProposalTable({ initialData }: ProposalTableProps) {
       },
     },
     {
-      accessorKey: "quality_score",
-      header: "Quality Score",
+      id: "confidence_score",
+      header: "Confidence Score",
       cell: ({ row }) => {
-        const score = row.getValue("quality_score") as number | null
+        const confidence = row.original.grant?.eligibility?.confidence ?? null
 
-        if (score === null) {
+        if (confidence === null) {
           return <span className="text-muted-foreground">—</span>
         }
 
         const colorClass =
-          score >= 80
+          confidence >= 80
             ? "text-green-600"
-            : score >= 60
+            : confidence >= 60
               ? "text-yellow-600"
               : "text-red-600"
 
-        return <span className={colorClass}>{score}/100</span>
+        return <span className={colorClass}>{confidence}%</span>
       },
     },
     {
