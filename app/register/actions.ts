@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceRoleClient } from '@supabase/supabase-js'
+import { sendWelcomeEmail } from '@/lib/email/service'
 
 interface OrgData {
   name: string
@@ -174,6 +175,18 @@ export async function registerOrganization(data: {
     await processQuestionnaire(serviceClient, org.id, data.questionnaire)
   }
 
+  // 5. Send welcome email (fire-and-forget)
+  try {
+    await sendWelcomeEmail({
+      toEmail: data.email,
+      fullName: data.fullName,
+      organizationName: data.org.name,
+    })
+  } catch (error) {
+    console.error('[registerOrganization] Failed to send welcome email:', error)
+    // Don't fail registration if email fails
+  }
+
   return { success: true, orgId: org.id, userId }
 }
 
@@ -212,6 +225,27 @@ export async function registerOrganizationForExistingUser(data: {
   // Process questionnaire if provided
   if (data.questionnaire) {
     await processQuestionnaire(serviceClient, org.id, data.questionnaire)
+  }
+
+  // Send welcome email (fire-and-forget)
+  try {
+    // Get user's profile info
+    const { data: profile } = await serviceClient
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', user.id)
+      .single()
+
+    if (profile) {
+      await sendWelcomeEmail({
+        toEmail: profile.email,
+        fullName: profile.full_name,
+        organizationName: data.org.name,
+      })
+    }
+  } catch (error) {
+    console.error('[registerOrganizationForExistingUser] Failed to send welcome email:', error)
+    // Don't fail registration if email fails
   }
 
   return { success: true, orgId: org.id, userId: user.id }
