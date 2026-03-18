@@ -75,7 +75,9 @@ export function GrantDetail({
   const [proposalStatus, setProposalStatus] = useState<"generating" | "done" | "error">("generating");
   const [proposalError, setProposalError] = useState<string | null>(null);
 
-  const eligibility = grant.eligibility as {
+  const eligibility = (typeof grant.eligibility === "string"
+    ? JSON.parse(grant.eligibility)
+    : grant.eligibility) as {
     score?: string;
     indicator?: string;
     confidence?: number;
