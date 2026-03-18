@@ -1,170 +1,20 @@
 'use client'
 
-import { useMemo, useState, useLayoutEffect, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
-import { Button } from "@/components/ui/button"
-import { Pencil, Save, RotateCcw, Loader2 } from "lucide-react"
-import { updateProposalSections } from '../../actions'
-import { useExportPdf } from './use-export-pdf'
+import { useMemo, useState, useLayoutEffect, useRef, useCallback, useEffect } from 'react'
 
-interface ChapterItem {
-  chapter: string
-  sort_order: number
-}
-
-interface Section {
-  id: string
+interface NarrativeDocumentViewerProps {
   title: string
-  created_at: string
-  sort_order: number
-  content: ChapterItem[] | null
-  header1: ChapterItem[] | null
-  header2: ChapterItem[] | null
-  tabulation: ChapterItem[] | null
+  content: string
+  category?: string | null
 }
 
-export interface ProposalSectionsHandle {
-  exportPdf: () => Promise<void>
-  startEdit: () => void
-  resetEdit: () => void
-  saveEdit: () => Promise<void>
-  isEditing: boolean
-  isSaving: boolean
-}
-
-interface ProposalSectionsProps {
-  sections: Section[]
-  proposalId: string
-  proposalTitle?: string
-}
-
-// A4 page content area: 1123px total − 96px top pad − 100px bottom pad
 const PAGE_CONTENT_HEIGHT = 927
-
-function parseTabulation(text: string): string {
-  const lines = text.split('\n').filter((l) => l.trim())
-  if (lines.length === 0) return ''
-
-  const rows = lines.map((line) =>
-    line.split('|').map((cell) => cell.trim())
-  )
-
-  const headerCells = rows[0]
-    .map((cell) => `<th>${cell}</th>`)
-    .join('')
-  const headerRow = `<tr>${headerCells}</tr>`
-
-  const bodyRows = rows
-    .slice(1)
-    .map((row) => {
-      const cells = row.map((cell) => `<td>${cell}</td>`).join('')
-      return `<tr>${cells}</tr>`
-    })
-    .join('')
-
-  return `<table><thead>${headerRow}</thead><tbody>${bodyRows}</tbody></table>`
-}
 
 function formatInlineMarkdown(text: string): string {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
 }
 
-function buildSectionHtml(section: Section): string {
-  type TaggedItem = ChapterItem & { type: 'header1' | 'header2' | 'content' | 'tabulation' }
-  const tagged: TaggedItem[] = []
-
-  const add = (arr: ChapterItem[] | null, type: TaggedItem['type']) => {
-    if (!Array.isArray(arr)) return
-    arr.forEach((item) => tagged.push({ ...item, type }))
-  }
-
-  add(section.header1, 'header1')
-  add(section.header2, 'header2')
-  add(section.content, 'content')
-  add(section.tabulation, 'tabulation')
-  tagged.sort((a, b) => a.sort_order - b.sort_order)
-
-  return tagged
-    .map((item) => {
-      const attrs = `data-section-id="${section.id}" data-type="${item.type}" data-sort-order="${item.sort_order}"`
-      switch (item.type) {
-        case 'header1': return `<h2 ${attrs}>${formatInlineMarkdown(item.chapter)}</h2>`
-        case 'header2': return `<h3 ${attrs}>${formatInlineMarkdown(item.chapter)}</h3>`
-        case 'content': return `<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`
-        case 'tabulation': return `<div ${attrs}>${parseTabulation(item.chapter)}</div>`
-        default: return `<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`
-      }
-    })
-    .join('')
-}
-
-function extractEditedSections(
-  container: HTMLDivElement,
-  originalSections: Section[]
-): { id: string; title: string; content: ChapterItem[] | null; header1: ChapterItem[] | null; header2: ChapterItem[] | null; tabulation: ChapterItem[] | null }[] {
-  const sectionMap = new Map<string, {
-    title: string
-    content: ChapterItem[]
-    header1: ChapterItem[]
-    header2: ChapterItem[]
-    tabulation: ChapterItem[]
-  }>()
-
-  for (const s of originalSections) {
-    sectionMap.set(s.id, {
-      title: s.title,
-      content: [],
-      header1: [],
-      header2: [],
-      tabulation: [],
-    })
-  }
-
-  const elements = container.querySelectorAll('[data-section-id]')
-
-  for (const el of elements) {
-    const sectionId = el.getAttribute('data-section-id')
-    const type = el.getAttribute('data-type')
-    const sortOrder = parseInt(el.getAttribute('data-sort-order') || '0', 10)
-
-    if (!sectionId || !type) continue
-
-    if (!sectionMap.has(sectionId)) {
-      sectionMap.set(sectionId, { title: '', content: [], header1: [], header2: [], tabulation: [] })
-    }
-
-    const section = sectionMap.get(sectionId)!
-
-    if (type === 'title') {
-      section.title = el.textContent?.trim() || section.title
-    } else if (type === 'tabulation') {
-      const table = el.querySelector('table')
-      if (table) {
-        const rows = Array.from(table.rows)
-        const pipeText = rows
-          .map(row => Array.from(row.cells).map(cell => cell.textContent?.trim() || '').join(' | '))
-          .join('\n')
-        section.tabulation.push({ chapter: pipeText, sort_order: sortOrder })
-      }
-    } else if (type === 'content') {
-      section.content.push({ chapter: el.textContent?.trim() || '', sort_order: sortOrder })
-    } else if (type === 'header1') {
-      section.header1.push({ chapter: el.textContent?.trim() || '', sort_order: sortOrder })
-    } else if (type === 'header2') {
-      section.header2.push({ chapter: el.textContent?.trim() || '', sort_order: sortOrder })
-    }
-  }
-
-  return Array.from(sectionMap.entries()).map(([id, data]) => ({
-    id,
-    title: data.title,
-    content: data.content.length > 0 ? data.content : null,
-    header1: data.header1.length > 0 ? data.header1 : null,
-    header2: data.header2.length > 0 ? data.header2 : null,
-    tabulation: data.tabulation.length > 0 ? data.tabulation : null,
-  }))
-}
-
-export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSectionsProps>(function ProposalSections({ sections, proposalId, proposalTitle }, ref) {
+export function NarrativeDocumentViewer({ title, content, category }: NarrativeDocumentViewerProps) {
   const measureRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -172,76 +22,63 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
   const thumbRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
   const [contentPages, setContentPages] = useState<string[][]>([])
   const [activePage, setActivePage] = useState(0)
-  const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [renderKey, setRenderKey] = useState(0)
-  const { exportPdf } = useExportPdf()
 
-  // Store latest values in a ref so the imperative handle always has current data
-  const exportDataRef = useRef({ allPages: [] as string[], coverTitle: '', totalPages: 0, proposalTitle: '' })
+  // Build cover page HTML
+  const coverHtml = useMemo(() => {
+    const categoryLabel = category
+      ? `<p>${category.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>`
+      : ''
+    return `<h1>Organization Narrative</h1><p>${title}</p>${categoryLabel}`
+  }, [title, category])
 
-  useImperativeHandle(ref, () => ({
-    exportPdf: () => exportPdf(exportDataRef.current),
-    startEdit: handleEdit,
-    resetEdit: handleReset,
-    saveEdit: handleSave,
-    isEditing,
-    isSaving,
-  }), [exportPdf, isEditing, isSaving])
+  // Parse content into individual elements for pagination
+  const contentItems = useMemo(() => {
+    if (!content) return []
 
-  const { standalonePages, contentItems } = useMemo(() => {
-    if (sections.length === 0) return { standalonePages: [] as string[], contentItems: [] as string[] }
+    // If content is HTML, parse it into individual block elements
+    const tmp = document.createElement('div')
+    tmp.innerHTML = content
 
-    const sorted = [...sections].sort((a, b) => a.sort_order - b.sort_order)
+    const items: string[] = []
 
-    const standalonePages: string[] = []
-    const contentSections: Section[] = []
+    // Walk through child nodes
+    const walk = (node: Node) => {
+      for (const child of Array.from(node.childNodes)) {
+        if (child.nodeType === Node.ELEMENT_NODE) {
+          const el = child as HTMLElement
+          const tag = el.tagName.toLowerCase()
 
-    for (let idx = 0; idx < sorted.length; idx++) {
-      const section = sorted[idx]
-      // First section (cover page) and Table of Contents are standalone pages
-      const isStandalone =
-        idx === 0 || /table of contents/i.test(section.title)
-
-      if (isStandalone) {
-        standalonePages.push(
-          `<h1 data-section-id="${section.id}" data-type="title">${section.title}</h1>` +
-          buildSectionHtml(section)
-        )
-      } else {
-        contentSections.push(section)
-      }
-    }
-
-    const contentItems: string[] = []
-    for (const section of contentSections) {
-      contentItems.push(`<h1 data-section-id="${section.id}" data-type="title">${section.title}</h1>`)
-
-      type TaggedItem = ChapterItem & { type: 'header1' | 'header2' | 'content' | 'tabulation' }
-      const tagged: TaggedItem[] = []
-      const add = (arr: ChapterItem[] | null, type: TaggedItem['type']) => {
-        if (!Array.isArray(arr)) return
-        arr.forEach((item) => tagged.push({ ...item, type }))
-      }
-      add(section.header1, 'header1')
-      add(section.header2, 'header2')
-      add(section.content, 'content')
-      add(section.tabulation, 'tabulation')
-      tagged.sort((a, b) => a.sort_order - b.sort_order)
-
-      for (const item of tagged) {
-        const attrs = `data-section-id="${section.id}" data-type="${item.type}" data-sort-order="${item.sort_order}"`
-        switch (item.type) {
-          case 'header1': contentItems.push(`<h2 ${attrs}>${formatInlineMarkdown(item.chapter)}</h2>`); break
-          case 'header2': contentItems.push(`<h3 ${attrs}>${formatInlineMarkdown(item.chapter)}</h3>`); break
-          case 'content': contentItems.push(`<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`); break
-          case 'tabulation': contentItems.push(`<div ${attrs}>${parseTabulation(item.chapter)}</div>`); break
+          if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'ul', 'ol', 'table', 'blockquote', 'pre'].includes(tag)) {
+            items.push(el.outerHTML)
+          } else if (tag === 'br') {
+            // skip standalone br
+          } else {
+            items.push(el.outerHTML)
+          }
+        } else if (child.nodeType === Node.TEXT_NODE) {
+          const text = child.textContent?.trim()
+          if (text) {
+            items.push(`<p>${formatInlineMarkdown(text)}</p>`)
+          }
         }
       }
     }
 
-    return { standalonePages, contentItems }
-  }, [sections])
+    walk(tmp)
+
+    // If no block elements were found, treat the whole content as paragraphs
+    if (items.length === 0 && content.trim()) {
+      const paragraphs = content.split(/\n\n+/).filter(p => p.trim())
+      for (const p of paragraphs) {
+        const lines = p.split(/\n/).filter(l => l.trim())
+        for (const line of lines) {
+          items.push(`<p>${formatInlineMarkdown(line)}</p>`)
+        }
+      }
+    }
+
+    return items
+  }, [content])
 
   // Measure actual rendered heights and paginate
   useLayoutEffect(() => {
@@ -269,11 +106,9 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
       const mb = parseFloat(style.marginBottom) || 0
       const totalHeight = mt + el.offsetHeight + mb
 
-      // Add the element to the current page first
       currentPage.push(contentItems[i])
       currentHeight += totalHeight
 
-      // Break AFTER adding — so every closed page is full (no bottom whitespace)
       if (currentHeight >= PAGE_CONTENT_HEIGHT && i < children.length - 1) {
         pages.push(currentPage)
         currentPage = []
@@ -288,14 +123,16 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
     setContentPages(pages)
   }, [contentItems])
 
-  const totalPages = standalonePages.length + contentPages.length
+  // Build all page HTML arrays
+  const allPages = useMemo(() => {
+    const pages: string[] = [coverHtml]
+    for (const pageHtml of contentPages) {
+      pages.push(pageHtml.join(''))
+    }
+    return pages
+  }, [coverHtml, contentPages])
 
-  // Extract cover page title for use in content page headers
-  const coverTitle = useMemo(() => {
-    if (sections.length === 0) return ''
-    const sorted = [...sections].sort((a, b) => a.sort_order - b.sort_order)
-    return sorted[0]?.title || ''
-  }, [sections])
+  const totalPages = allPages.length
 
   // Track which page is in view using IntersectionObserver
   useEffect(() => {
@@ -327,7 +164,7 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
     return () => observer.disconnect()
   }, [totalPages, contentPages.length, activePage])
 
-  // Scroll the active thumbnail into view in the sidebar
+  // Scroll the active thumbnail into view
   useEffect(() => {
     const thumb = thumbRefs.current.get(activePage)
     if (thumb && sidebarRef.current) {
@@ -352,111 +189,16 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
     else thumbRefs.current.delete(idx)
   }, [])
 
-  // Build all page HTML arrays for rendering
-  const allPages = useMemo(() => {
-    const pages: string[] = []
-    for (const html of standalonePages) {
-      pages.push(html)
-    }
-    for (const pageHtml of contentPages) {
-      pages.push(pageHtml.join(''))
-    }
-    return pages
-  }, [standalonePages, contentPages])
-
-  // Keep export data ref in sync for imperative handle
-  exportDataRef.current = {
-    allPages,
-    coverTitle,
-    totalPages,
-    proposalTitle: proposalTitle || coverTitle || 'Proposal',
-  }
-
-  // Toggle contenteditable on elements when edit mode changes
-  useEffect(() => {
-    if (!contentRef.current) return
-    const elements = contentRef.current.querySelectorAll('[data-section-id]')
-    elements.forEach(el => {
-      const type = el.getAttribute('data-type')
-      if (isEditing) {
-        if (type === 'tabulation') {
-          el.querySelectorAll('td, th').forEach(cell => {
-            cell.setAttribute('contenteditable', 'true')
-          })
-        } else {
-          el.setAttribute('contenteditable', 'true')
-        }
-      } else {
-        el.removeAttribute('contenteditable')
-        if (type === 'tabulation') {
-          el.querySelectorAll('td, th').forEach(cell => {
-            cell.removeAttribute('contenteditable')
-          })
-        }
-      }
-    })
-  }, [isEditing, allPages, renderKey])
-
-  const handleEdit = () => {
-    setIsEditing(true)
-  }
-
-  const handleReset = () => {
-    setRenderKey(k => k + 1)
-    setIsEditing(false)
-  }
-
-  const handleSave = async () => {
-    if (!contentRef.current) return
-    setIsSaving(true)
-    try {
-      const updated = extractEditedSections(contentRef.current, sections)
-
-      // Find the cover page title (first non-numbered section) to update proposals table
-      const coverSection = updated.find(s => !/^\d+\./.test(s.title))
-      const proposalTitle = coverSection?.title || undefined
-
-      const result = await updateProposalSections(proposalId, updated, proposalTitle)
-      if (result.error) {
-        console.error('Save failed:', result.error)
-      }
-      setIsEditing(false)
-      window.location.reload()
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  if (sections.length === 0) {
+  if (!content) {
     return (
-      <div>
-        <div className="pdf-browser">
-          <div className="pdf-content">
-            <div className="doc-page">
-              <div className="doc-page-content">
-                <p style={{ textAlign: 'center', color: 'hsl(var(--muted-foreground))' }}>
-                  No sections yet. Proposal sections will appear here after generation completes.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <style jsx global>{viewerStyles}</style>
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        <p>Select a narrative to view its content.</p>
       </div>
     )
   }
 
   return (
     <div>
-      {/* Editing mode banner */}
-      {isEditing && (
-        <div className="flex items-center gap-2 px-4 py-2.5 mb-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <Pencil className="h-4 w-4 text-amber-600 shrink-0" />
-          <span className="text-sm font-medium text-amber-800">Editing Mode</span>
-          <span className="text-sm text-amber-600">— Click on any text to edit. Save when done or Reset to discard changes.</span>
-        </div>
-      )}
-
       <div className="pdf-browser">
         {/* Hidden measuring container */}
         <div
@@ -493,7 +235,7 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
         </div>
 
         {/* Main content area */}
-        <div className="pdf-content" ref={contentRef} key={renderKey}>
+        <div className="pdf-content" ref={contentRef}>
           {allPages.map((html, i) => {
             const isCover = i === 0
             return (
@@ -505,17 +247,16 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
               >
                 {!isCover && (
                   <div className="doc-page-header">
-                    <span className="doc-page-header-title">{coverTitle}</span>
+                    <span className="doc-page-header-title">{title}</span>
                   </div>
                 )}
                 <div
                   className="doc-page-content"
-                  suppressContentEditableWarning
                   dangerouslySetInnerHTML={{ __html: html }}
                 />
                 {!isCover && (
                   <div className="doc-page-footer">
-                    <span className="doc-page-footer-title">{coverTitle}</span>
+                    <span className="doc-page-footer-title">{title}</span>
                     <span className="doc-page-footer-number">Page {i + 1} of {totalPages}</span>
                   </div>
                 )}
@@ -528,7 +269,7 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
       </div>
     </div>
   )
-})
+}
 
 const viewerStyles = `
   /* ── PDF Browser Shell ── */
@@ -540,17 +281,6 @@ const viewerStyles = `
     height: 82vh;
     background: hsl(0 0% 92%);
     position: relative;
-  }
-
-  /* ── Toolbar ── */
-  .pdf-toolbar {
-    position: absolute;
-    top: 8px;
-    right: 12px;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   /* ── Sidebar ── */
@@ -619,7 +349,6 @@ const viewerStyles = `
     pointer-events: none;
   }
 
-  /* Cover page thumbnail accent bar */
   .doc-cover-thumb::before {
     content: '';
     position: absolute;
@@ -692,7 +421,6 @@ const viewerStyles = `
     overflow: hidden;
   }
 
-  /* Top accent bar */
   .doc-cover-page::before {
     content: '';
     display: block;
@@ -712,7 +440,6 @@ const viewerStyles = `
     padding: 80px 72px 100px;
   }
 
-  /* Cover label (e.g. "Proposal for Grant") */
   .doc-cover-page .doc-page-content h1 {
     font-size: 1.15rem;
     font-weight: 600;
@@ -729,7 +456,6 @@ const viewerStyles = `
     display: none;
   }
 
-  /* Grant name — first paragraph on cover is the prominent title */
   .doc-cover-page .doc-page-content p:first-of-type {
     font-size: 2rem;
     font-weight: 800;
@@ -739,7 +465,6 @@ const viewerStyles = `
     letter-spacing: -0.02em;
   }
 
-  /* Decorative rule under grant name */
   .doc-cover-page .doc-page-content p:first-of-type::after {
     content: '';
     display: block;
@@ -750,7 +475,6 @@ const viewerStyles = `
     border-radius: 2px;
   }
 
-  /* Cover meta info (Submitted to, Prepared by, Date) */
   .doc-cover-page .doc-page-content p {
     font-size: 0.95rem;
     color: #5a6a7a;
@@ -759,7 +483,6 @@ const viewerStyles = `
     letter-spacing: 0.01em;
   }
 
-  /* Cover h2/h3 if present */
   .doc-cover-page .doc-page-content h2 {
     font-size: 1.2rem;
     font-weight: 600;
@@ -829,7 +552,6 @@ const viewerStyles = `
     font-variant-numeric: tabular-nums;
   }
 
-  /* Remove old page number since footer replaces it */
   .doc-page-number {
     display: none;
   }
@@ -904,20 +626,17 @@ const viewerStyles = `
     background-color: #f8f9fb;
   }
 
-  /* ── Editable Elements ── */
-  .doc-page-content [contenteditable="true"] {
-    outline: none;
-    cursor: text;
-    transition: background 0.15s ease, box-shadow 0.15s ease;
-    border-radius: 2px;
+  /* ── Lists ── */
+  .doc-page-content ul,
+  .doc-page-content ol {
+    font-size: 0.875rem;
+    margin: 0.25rem 0;
+    padding-left: 1.5rem;
+    line-height: 1.85;
+    color: #1a1a1a;
   }
 
-  .doc-page-content [contenteditable="true"]:hover:not(:focus) {
-    background: hsl(45 100% 97%);
-  }
-
-  .doc-page-content [contenteditable="true"]:focus {
-    background: hsl(45 100% 95%);
-    box-shadow: inset 0 0 0 1px hsl(45 80% 70%);
+  .doc-page-content li {
+    margin: 0.15rem 0;
   }
 `

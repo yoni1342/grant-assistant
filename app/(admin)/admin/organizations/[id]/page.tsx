@@ -36,12 +36,12 @@ export default async function OrgDetailPage({
       .order("created_at", { ascending: true }),
     adminClient
       .from("grants")
-      .select("id, title, funder_name, stage, amount, created_at")
+      .select("*")
       .eq("org_id", id)
       .order("created_at", { ascending: false }),
     adminClient
       .from("proposals")
-      .select("id, title, status, quality_score, created_at")
+      .select("*, grant:grants(id, title, funder_name, deadline), proposal_sections(*)")
       .eq("org_id", id)
       .order("created_at", { ascending: false }),
     adminClient

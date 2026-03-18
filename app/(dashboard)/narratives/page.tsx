@@ -11,13 +11,6 @@ export default async function NarrativesPage() {
   // Fetch narratives
   const { data: narratives, error: narrativesError } = await getNarratives()
 
-  // Fetch grants for AI customization dropdown
-  const { data: grants } = await supabase
-    .from('grants')
-    .select('id, title')
-    .eq('org_id', orgId)
-    .order('title', { ascending: true })
-
   return (
     <div className="p-6 space-y-6">
       {narrativesError && (
@@ -30,7 +23,7 @@ export default async function NarrativesPage() {
 
       <NarrativePageClient
         narratives={narratives || []}
-        grants={grants || []}
+        grants={[]}
       />
     </div>
   )

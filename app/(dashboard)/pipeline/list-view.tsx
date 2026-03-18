@@ -69,9 +69,9 @@ export function ListView({ grants }: { grants: Grant[] }) {
                 {g.screening_score != null ? (
                   <Badge
                     variant={
-                      g.screening_score >= 70
+                      g.screening_score >= 80
                         ? "default"
-                        : g.screening_score >= 40
+                        : g.screening_score >= 50
                           ? "secondary"
                           : "destructive"
                     }

@@ -27,6 +27,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   ChartContainer,
   ChartTooltip,
@@ -34,12 +36,28 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
-import { ArrowLeft, FileText, Download, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  FileText,
+  Download,
+  Loader2,
+  ExternalLink,
+  AlertTriangle,
+  CheckCircle2,
+  Eye,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  Users,
+  BarChart3,
+  FolderOpen,
+} from "lucide-react";
 import {
   approveOrganization,
   rejectOrganization,
   getAdminDocumentUrl,
 } from "../actions";
+import { ProposalSections } from "@/app/(dashboard)/proposals/[id]/components/proposal-sections";
 
 interface DocumentItem {
   id: string;
@@ -81,21 +99,10 @@ interface OrgDetailClientProps {
     role: string | null;
     created_at: string | null;
   }>;
-  grants: Array<{
-    id: string;
-    title: string;
-    funder_name: string | null;
-    stage: string | null;
-    amount: string | null;
-    created_at: string | null;
-  }>;
-  proposals: Array<{
-    id: string;
-    title: string | null;
-    status: string | null;
-    quality_score: number | null;
-    created_at: string | null;
-  }>;
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  grants: Array<any>;
+  proposals: Array<any>;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   workflowExecutions: Array<{
     id: string;
     workflow_name: string;
@@ -1054,6 +1061,220 @@ function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
   );
 }
 
+// Read-only grant detail dialog content
+function GrantDetailView({ grant }: { grant: any }) { /* eslint-disable-line @typescript-eslint/no-explicit-any */
+  const eligibility = grant.eligibility as {
+    score?: string;
+    indicator?: string;
+    dimension_scores?: {
+      mission_alignment?: number;
+      target_population?: number;
+      service_fit?: number;
+      geographic_alignment?: number;
+      organizational_capacity?: number;
+    };
+  } | null;
+  const concerns = grant.concerns as string[] | null;
+  const recommendations = grant.recommendations as { text?: string }[] | string[] | null;
+
+  return (
+    <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+      {/* Grant Details */}
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-muted-foreground">Funder</p>
+            <p className="font-medium">{grant.funder_name || "-"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Stage</p>
+            <Badge variant="outline">{grant.stage || "-"}</Badge>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Amount</p>
+            <p className="font-medium">{grant.amount || "-"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Deadline</p>
+            <p className="font-medium">
+              {grant.deadline ? new Date(grant.deadline).toLocaleDateString() : "-"}
+            </p>
+          </div>
+        </div>
+
+        {grant.description && (
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Description</p>
+            <p className="text-sm leading-relaxed rounded-lg border p-3 bg-muted/30">
+              {grant.description}
+            </p>
+          </div>
+        )}
+
+        {grant.source_url && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Source:</span>
+            <a
+              href={grant.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline inline-flex items-center gap-1"
+            >
+              {grant.source_url.length > 60
+                ? grant.source_url.slice(0, 60) + "..."
+                : grant.source_url}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        )}
+      </div>
+
+      {/* Screening Report */}
+      {(grant.screening_score != null || grant.screening_notes || eligibility || concerns?.length || recommendations?.length) && (
+        <div className="space-y-4 border-t pt-4">
+          <h3 className="text-sm font-semibold">Screening Report</h3>
+
+          {grant.screening_score != null && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">Score:</span>
+              <Badge
+                variant={
+                  grant.screening_score >= 80
+                    ? "default"
+                    : grant.screening_score >= 50
+                      ? "secondary"
+                      : "destructive"
+                }
+                className="text-sm"
+              >
+                {grant.screening_score}%
+              </Badge>
+              {eligibility?.score && (
+                <span className="text-sm text-muted-foreground">
+                  ({eligibility.score})
+                </span>
+              )}
+            </div>
+          )}
+
+          {eligibility?.dimension_scores && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Dimension Breakdown</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  { label: "Mission Alignment", key: "mission_alignment" as const, max: 40 },
+                  { label: "Target Population", key: "target_population" as const, max: 15 },
+                  { label: "Service Fit", key: "service_fit" as const, max: 25 },
+                  { label: "Geographic Alignment", key: "geographic_alignment" as const, max: 10 },
+                  { label: "Org Capacity", key: "organizational_capacity" as const, max: 10 },
+                ].map(({ label, key, max }) => {
+                  const val = eligibility.dimension_scores?.[key] ?? 0;
+                  const pct = Math.round((val / max) * 100);
+                  return (
+                    <div key={key} className="flex items-center gap-2 text-sm">
+                      <span className="w-36 text-muted-foreground truncate">{label}</span>
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            pct >= 75 ? "bg-green-500" : pct >= 40 ? "bg-yellow-500" : "bg-red-500"
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="w-10 text-right text-muted-foreground">{val}/{max}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {grant.screening_notes && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Assessment</p>
+              <p className="text-sm text-muted-foreground leading-relaxed rounded-lg border p-3 bg-muted/30">
+                {grant.screening_notes}
+              </p>
+            </div>
+          )}
+
+          {concerns && concerns.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                Concerns
+              </p>
+              <ul className="space-y-1">
+                {concerns.map((concern: string, i: number) => (
+                  <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                    <span className="text-yellow-500 mt-0.5">-</span>
+                    {concern}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {recommendations && recommendations.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                Recommendations
+              </p>
+              <ul className="space-y-1">
+                {recommendations.map((rec: string | { text?: string }, i: number) => (
+                  <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">-</span>
+                    {typeof rec === "string" ? rec : rec.text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Read-only proposal detail dialog content
+function ProposalDetailView({ proposal }: { proposal: any }) { /* eslint-disable-line @typescript-eslint/no-explicit-any */
+  const sections = proposal.proposal_sections
+    ? [...proposal.proposal_sections].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) /* eslint-disable-line @typescript-eslint/no-explicit-any */
+    : [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 text-sm">
+        <div>
+          <span className="text-muted-foreground">Grant: </span>
+          <span className="font-medium">{proposal.grant?.title || "-"}</span>
+        </div>
+        {proposal.quality_score != null && (
+          <Badge
+            variant={
+              proposal.quality_score >= 80
+                ? "default"
+                : proposal.quality_score >= 60
+                  ? "secondary"
+                  : "destructive"
+            }
+          >
+            Quality: {proposal.quality_score}%
+          </Badge>
+        )}
+      </div>
+      <div className="h-[70vh]">
+        <ProposalSections
+          sections={sections}
+          proposalId={proposal.id}
+          proposalTitle={proposal.title}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function OrgDetailClient({
   organization,
   profiles,
@@ -1066,6 +1287,24 @@ export function OrgDetailClient({
   const [loading, setLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedGrant, setSelectedGrant] = useState<any | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedProposal, setSelectedProposal] = useState<any | null>(null);
+
+  // Grants filtering & pagination
+  const [grantSearch, setGrantSearch] = useState("");
+  const [grantStageFilter, setGrantStageFilter] = useState<string>("all");
+  const [grantSortField, setGrantSortField] = useState<"title" | "screening_score" | "created_at">("created_at");
+  const [grantSortAsc, setGrantSortAsc] = useState(false);
+  const [grantsVisible, setGrantsVisible] = useState(5);
+
+  // Proposals filtering & pagination
+  const [proposalSearch, setProposalSearch] = useState("");
+  const [proposalStatusFilter, setProposalStatusFilter] = useState<string>("all");
+  const [proposalSortField, setProposalSortField] = useState<"title" | "quality_score" | "created_at">("created_at");
+  const [proposalSortAsc, setProposalSortAsc] = useState(false);
+  const [proposalsVisible, setProposalsVisible] = useState(5);
 
   const owner = profiles.find((p) => p.role === "owner") || profiles[0];
 
@@ -1113,6 +1352,62 @@ export function OrgDetailClient({
     count: { label: "Grants", color: "hsl(220, 70%, 50%)" },
   };
 
+  const grantStages = useMemo(() => {
+    const stages = new Set<string>();
+    for (const g of grants) if (g.stage) stages.add(g.stage);
+    return Array.from(stages).sort();
+  }, [grants]);
+
+  const filteredGrants = useMemo(() => {
+    let result = [...grants];
+    if (grantSearch) {
+      const q = grantSearch.toLowerCase();
+      result = result.filter(
+        (g) =>
+          g.title?.toLowerCase().includes(q) ||
+          g.funder_name?.toLowerCase().includes(q)
+      );
+    }
+    if (grantStageFilter !== "all") {
+      result = result.filter((g) => g.stage === grantStageFilter);
+    }
+    result.sort((a, b) => {
+      const av = a[grantSortField] ?? "";
+      const bv = b[grantSortField] ?? "";
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      return grantSortAsc ? cmp : -cmp;
+    });
+    return result;
+  }, [grants, grantSearch, grantStageFilter, grantSortField, grantSortAsc]);
+
+  const proposalStatuses = useMemo(() => {
+    const statuses = new Set<string>();
+    for (const p of proposals) if (p.status) statuses.add(p.status);
+    return Array.from(statuses).sort();
+  }, [proposals]);
+
+  const filteredProposals = useMemo(() => {
+    let result = [...proposals];
+    if (proposalSearch) {
+      const q = proposalSearch.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.title?.toLowerCase().includes(q) ||
+          p.grant?.title?.toLowerCase().includes(q)
+      );
+    }
+    if (proposalStatusFilter !== "all") {
+      result = result.filter((p) => p.status === proposalStatusFilter);
+    }
+    result.sort((a, b) => {
+      const av = a[proposalSortField] ?? "";
+      const bv = b[proposalSortField] ?? "";
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      return proposalSortAsc ? cmp : -cmp;
+    });
+    return result;
+  }, [proposals, proposalSearch, proposalStatusFilter, proposalSortField, proposalSortAsc]);
+
   async function handleApprove() {
     setLoading(true);
     await approveOrganization(organization.id);
@@ -1139,6 +1434,22 @@ export function OrgDetailClient({
     { label: "Description", value: organization.description },
   ];
 
+  function toggleGrantSort(field: typeof grantSortField) {
+    if (grantSortField === field) setGrantSortAsc(!grantSortAsc);
+    else { setGrantSortField(field); setGrantSortAsc(false); }
+  }
+
+  function toggleProposalSort(field: typeof proposalSortField) {
+    if (proposalSortField === field) setProposalSortAsc(!proposalSortAsc);
+    else { setProposalSortField(field); setProposalSortAsc(false); }
+  }
+
+  const SortIcon = ({ field, currentField, asc }: { field: string; currentField: string; asc: boolean }) => (
+    field === currentField
+      ? asc ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />
+      : null
+  );
+
   return (
     <div className="space-y-6">
       {/* Back link */}
@@ -1152,7 +1463,7 @@ export function OrgDetailClient({
 
       {/* Header */}
       <Card>
-        <CardContent className="flex items-center justify-between py-4">
+        <CardContent className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-semibold">{organization.name}</h2>
             {statusBadge(organization.status)}
@@ -1197,285 +1508,604 @@ export function OrgDetailClient({
         </CardContent>
       </Card>
 
-      {/* Organization Profile */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Organization Profile
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-            {orgFields.map(
-              (field) =>
-                field.value && (
-                  <div key={field.label}>
-                    <p className="text-muted-foreground">{field.label}</p>
-                    <p className="font-medium">{field.value}</p>
-                  </div>
-                )
-            )}
-          </div>
-          {orgFields.every((f) => !f.value) && (
-            <p className="text-sm text-muted-foreground">
-              No profile details available
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Documents Viewer */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Documents ({documents.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DocumentViewer documents={documents} />
-        </CardContent>
-      </Card>
-
-      {/* Usage Graphs */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Summary stats row */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Grants Over Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={grantsChartConfig} className="h-[200px] w-full">
-              <BarChart data={grantsData}>
-                <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+          <CardContent className="py-3">
+            <p className="text-xs text-muted-foreground">Grants</p>
+            <p className="text-2xl font-bold">{grants.length}</p>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Proposals Over Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={proposalsChartConfig} className="h-[200px] w-full">
-              <BarChart data={proposalsData}>
-                <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
+          <CardContent className="py-3">
+            <p className="text-xs text-muted-foreground">Proposals</p>
+            <p className="text-2xl font-bold">{proposals.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-3">
+            <p className="text-xs text-muted-foreground">Documents</p>
+            <p className="text-2xl font-bold">{documents.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-3">
+            <p className="text-xs text-muted-foreground">Team Members</p>
+            <p className="text-2xl font-bold">{profiles.length}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Grants Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Grants Overview ({grants.length} total)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {stageCounts.length > 0 && (
-            <ChartContainer config={stageChartConfig} className="h-[150px] w-full">
-              <BarChart data={stageCounts} layout="vertical">
-                <XAxis type="number" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                <YAxis dataKey="stage" type="category" fontSize={12} tickLine={false} axisLine={false} width={100} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ChartContainer>
-          )}
-          {grants.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Funder</TableHead>
-                  <TableHead>Stage</TableHead>
-                  <TableHead>Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {grants.slice(0, 10).map((g) => (
-                  <TableRow key={g.id}>
-                    <TableCell className="font-medium">{g.title}</TableCell>
-                    <TableCell>{g.funder_name || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{g.stage || "-"}</Badge>
-                    </TableCell>
-                    <TableCell>{g.amount || "-"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-          {grants.length === 0 && (
-            <p className="text-sm text-muted-foreground">No grants</p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Tabbed content */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview" className="gap-1.5">
+            <BarChart3 className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="grants" className="gap-1.5">
+            <FolderOpen className="h-4 w-4" />
+            Grants
+            <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">{grants.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="proposals" className="gap-1.5">
+            <FileText className="h-4 w-4" />
+            Proposals
+            <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">{proposals.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="gap-1.5">
+            <Download className="h-4 w-4" />
+            Documents
+          </TabsTrigger>
+          <TabsTrigger value="team" className="gap-1.5">
+            <Users className="h-4 w-4" />
+            Team & Activity
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Proposals Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Proposals Summary ({proposals.length} total)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
-            <div>
-              <p className="text-muted-foreground">Avg Quality Score</p>
-              <p className="text-lg font-semibold">
-                {avgQualityScore || "-"}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Pending</p>
-              <p className="text-lg font-semibold text-amber-600">
-                {proposalStatusCounts.pending}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Approved</p>
-              <p className="text-lg font-semibold text-green-600">
-                {proposalStatusCounts.approved}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Rejected</p>
-              <p className="text-lg font-semibold text-red-600">
-                {proposalStatusCounts.rejected}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Integration Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Integration Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
-            <div>
-              <p className="text-muted-foreground">Running</p>
-              <p className="text-lg font-semibold text-blue-600">
-                {workflowStats.running}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Completed</p>
-              <p className="text-lg font-semibold text-green-600">
-                {workflowStats.completed}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Failed</p>
-              <p className="text-lg font-semibold text-red-600">
-                {workflowStats.failed}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Last Execution</p>
-              <p className="text-sm font-medium">
-                {workflowStats.lastExecution
-                  ? new Date(workflowStats.lastExecution).toLocaleString()
-                  : "-"}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Team Members */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Team Members ({profiles.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Joined</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {profiles.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
-                    No team members
-                  </TableCell>
-                </TableRow>
-              ) : (
-                profiles.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">
-                      {p.full_name || "-"}
-                    </TableCell>
-                    <TableCell>{p.email || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{p.role || "-"}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {p.created_at
-                        ? new Date(p.created_at).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
-                  </TableRow>
-                ))
+        {/* ===== OVERVIEW TAB ===== */}
+        <TabsContent value="overview" className="space-y-4">
+          {/* Organization Profile */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">
+                Organization Profile
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+                {orgFields.map(
+                  (field) =>
+                    field.value && (
+                      <div key={field.label}>
+                        <p className="text-muted-foreground">{field.label}</p>
+                        <p className="font-medium">{field.value}</p>
+                      </div>
+                    )
+                )}
+              </div>
+              {orgFields.every((f) => !f.value) && (
+                <p className="text-sm text-muted-foreground">
+                  No profile details available
+                </p>
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Activity Log */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Recent Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {activityLog.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recent activity</p>
-          ) : (
-            <div className="space-y-2">
-              {activityLog.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span className="truncate">{entry.action}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {entry.created_at
-                      ? new Date(entry.created_at).toLocaleDateString()
-                      : ""}
-                  </span>
+          {/* Usage Graphs */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Grants Over Time
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={grantsChartConfig} className="h-[200px] w-full">
+                  <BarChart data={grantsData}>
+                    <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Proposals Over Time
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={proposalsChartConfig} className="h-[200px] w-full">
+                  <BarChart data={proposalsData}>
+                    <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Integration Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">
+                Integration Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+                <div>
+                  <p className="text-muted-foreground">Running</p>
+                  <p className="text-lg font-semibold text-blue-600">
+                    {workflowStats.running}
+                  </p>
                 </div>
-              ))}
-            </div>
+                <div>
+                  <p className="text-muted-foreground">Completed</p>
+                  <p className="text-lg font-semibold text-green-600">
+                    {workflowStats.completed}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Failed</p>
+                  <p className="text-lg font-semibold text-red-600">
+                    {workflowStats.failed}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Last Execution</p>
+                  <p className="text-sm font-medium">
+                    {workflowStats.lastExecution
+                      ? new Date(workflowStats.lastExecution).toLocaleString()
+                      : "-"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== GRANTS TAB ===== */}
+        <TabsContent value="grants" className="space-y-4">
+          {/* Stage breakdown chart */}
+          {stageCounts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Grants by Stage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={stageChartConfig} className="h-[150px] w-full">
+                  <BarChart data={stageCounts} layout="vertical">
+                    <XAxis type="number" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <YAxis dataKey="stage" type="category" fontSize={12} tickLine={false} axisLine={false} width={100} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+
+          {/* Search and filter bar */}
+          <Card>
+            <CardContent className="py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search grants..."
+                    value={grantSearch}
+                    onChange={(e) => { setGrantSearch(e.target.value); setGrantsVisible(5); }}
+                    className="pl-9 h-9"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Stage:</span>
+                  <div className="flex gap-1 flex-wrap">
+                    <Button
+                      variant={grantStageFilter === "all" ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => { setGrantStageFilter("all"); setGrantsVisible(5); }}
+                    >
+                      All
+                    </Button>
+                    {grantStages.map((stage) => (
+                      <Button
+                        key={stage}
+                        variant={grantStageFilter === stage ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => { setGrantStageFilter(stage); setGrantsVisible(5); }}
+                      >
+                        {stage}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {(grantSearch || grantStageFilter !== "all") && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Showing {filteredGrants.length} of {grants.length} grants
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Grants table */}
+          <Card>
+            <CardContent className="p-0">
+              {filteredGrants.length > 0 ? (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="cursor-pointer select-none" onClick={() => toggleGrantSort("title")}>
+                          Title <SortIcon field="title" currentField={grantSortField} asc={grantSortAsc} />
+                        </TableHead>
+                        <TableHead>Funder</TableHead>
+                        <TableHead>Stage</TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => toggleGrantSort("screening_score")}>
+                          Score <SortIcon field="screening_score" currentField={grantSortField} asc={grantSortAsc} />
+                        </TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Deadline</TableHead>
+                        <TableHead className="w-[60px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredGrants.slice(0, grantsVisible).map((g) => (
+                        <TableRow key={g.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedGrant(g)}>
+                          <TableCell className="font-medium max-w-[200px] truncate">{g.title}</TableCell>
+                          <TableCell className="text-muted-foreground">{g.funder_name || "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={
+                              g.stage === "screened" ? "border-blue-300 text-blue-700 dark:text-blue-400" :
+                              g.stage === "applied" ? "border-green-300 text-green-700 dark:text-green-400" :
+                              g.stage === "discovered" ? "border-amber-300 text-amber-700 dark:text-amber-400" :
+                              ""
+                            }>
+                              {g.stage || "-"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {g.screening_score != null ? (
+                              <Badge
+                                variant={
+                                  g.screening_score >= 80 ? "default" :
+                                  g.screening_score >= 50 ? "secondary" : "destructive"
+                                }
+                                className="text-xs"
+                              >
+                                {g.screening_score}%
+                              </Badge>
+                            ) : <span className="text-muted-foreground">-</span>}
+                          </TableCell>
+                          <TableCell>{g.amount || "-"}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {g.deadline ? new Date(g.deadline).toLocaleDateString() : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {filteredGrants.length > grantsVisible && (
+                    <div className="flex justify-center py-3 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setGrantsVisible((v) => v + 10)}
+                        className="text-xs"
+                      >
+                        Show more ({filteredGrants.length - grantsVisible} remaining)
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <FolderOpen className="h-8 w-8 mb-2 opacity-50" />
+                  <p className="text-sm">
+                    {grants.length === 0 ? "No grants yet" : "No grants match your filters"}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== PROPOSALS TAB ===== */}
+        <TabsContent value="proposals" className="space-y-4">
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <Card>
+              <CardContent className="py-3">
+                <p className="text-xs text-muted-foreground">Avg Quality Score</p>
+                <p className="text-2xl font-bold">{avgQualityScore || "-"}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-3">
+                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold text-amber-600">{proposalStatusCounts.pending}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-3">
+                <p className="text-xs text-muted-foreground">Approved</p>
+                <p className="text-2xl font-bold text-green-600">{proposalStatusCounts.approved}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-3">
+                <p className="text-xs text-muted-foreground">Rejected</p>
+                <p className="text-2xl font-bold text-red-600">{proposalStatusCounts.rejected}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search and filter bar */}
+          <Card>
+            <CardContent className="py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search proposals..."
+                    value={proposalSearch}
+                    onChange={(e) => { setProposalSearch(e.target.value); setProposalsVisible(5); }}
+                    className="pl-9 h-9"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Status:</span>
+                  <div className="flex gap-1 flex-wrap">
+                    <Button
+                      variant={proposalStatusFilter === "all" ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => { setProposalStatusFilter("all"); setProposalsVisible(5); }}
+                    >
+                      All
+                    </Button>
+                    {proposalStatuses.map((status) => (
+                      <Button
+                        key={status}
+                        variant={proposalStatusFilter === status ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => { setProposalStatusFilter(status); setProposalsVisible(5); }}
+                      >
+                        {status}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {(proposalSearch || proposalStatusFilter !== "all") && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Showing {filteredProposals.length} of {proposals.length} proposals
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Proposals table */}
+          <Card>
+            <CardContent className="p-0">
+              {filteredProposals.length > 0 ? (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="cursor-pointer select-none" onClick={() => toggleProposalSort("title")}>
+                          Title <SortIcon field="title" currentField={proposalSortField} asc={proposalSortAsc} />
+                        </TableHead>
+                        <TableHead>Grant</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => toggleProposalSort("quality_score")}>
+                          Quality <SortIcon field="quality_score" currentField={proposalSortField} asc={proposalSortAsc} />
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => toggleProposalSort("created_at")}>
+                          Created <SortIcon field="created_at" currentField={proposalSortField} asc={proposalSortAsc} />
+                        </TableHead>
+                        <TableHead className="w-[60px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredProposals.slice(0, proposalsVisible).map((p) => (
+                        <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedProposal(p)}>
+                          <TableCell className="font-medium max-w-[200px] truncate">{p.title || "Untitled"}</TableCell>
+                          <TableCell className="text-muted-foreground max-w-[150px] truncate">{p.grant?.title || "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={
+                              p.status === "approved" ? "border-green-300 text-green-700 dark:text-green-400" :
+                              p.status === "rejected" ? "border-red-300 text-red-700 dark:text-red-400" :
+                              p.status === "pending" ? "border-amber-300 text-amber-700 dark:text-amber-400" :
+                              p.status === "draft" ? "border-gray-300 text-gray-600 dark:text-gray-400" :
+                              ""
+                            }>
+                              {p.status || "-"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {p.quality_score != null ? (
+                              <Badge
+                                variant={
+                                  p.quality_score >= 80 ? "default" :
+                                  p.quality_score >= 60 ? "secondary" : "destructive"
+                                }
+                                className="text-xs"
+                              >
+                                {p.quality_score}%
+                              </Badge>
+                            ) : <span className="text-muted-foreground">-</span>}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {p.created_at ? new Date(p.created_at).toLocaleDateString() : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {filteredProposals.length > proposalsVisible && (
+                    <div className="flex justify-center py-3 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setProposalsVisible((v) => v + 10)}
+                        className="text-xs"
+                      >
+                        Show more ({filteredProposals.length - proposalsVisible} remaining)
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <FileText className="h-8 w-8 mb-2 opacity-50" />
+                  <p className="text-sm">
+                    {proposals.length === 0 ? "No proposals yet" : "No proposals match your filters"}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== DOCUMENTS TAB ===== */}
+        <TabsContent value="documents">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Documents ({documents.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DocumentViewer documents={documents} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== TEAM & ACTIVITY TAB ===== */}
+        <TabsContent value="team" className="space-y-4">
+          {/* Team Members */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">
+                Team Members ({profiles.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Joined</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {profiles.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
+                        No team members
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    profiles.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-medium">
+                          {p.full_name || "-"}
+                        </TableCell>
+                        <TableCell>{p.email || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{p.role || "-"}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {p.created_at
+                            ? new Date(p.created_at).toLocaleDateString()
+                            : "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Activity Log */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {activityLog.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No recent activity</p>
+              ) : (
+                <div className="space-y-2">
+                  {activityLog.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="truncate">{entry.action}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {entry.created_at
+                          ? new Date(entry.created_at).toLocaleDateString()
+                          : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Grant Detail Dialog (read-only) */}
+      <Dialog open={!!selectedGrant} onOpenChange={(open) => !open && setSelectedGrant(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedGrant?.title || "Grant Details"}</DialogTitle>
+            <DialogDescription>Read-only view of grant details</DialogDescription>
+          </DialogHeader>
+          {selectedGrant && <GrantDetailView grant={selectedGrant} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Proposal Detail Dialog (read-only) */}
+      <Dialog open={!!selectedProposal} onOpenChange={(open) => !open && setSelectedProposal(null)}>
+        <DialogContent className="max-w-5xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{selectedProposal?.title || "Proposal"}</DialogTitle>
+            <DialogDescription>Read-only view of proposal</DialogDescription>
+          </DialogHeader>
+          {selectedProposal && <ProposalDetailView proposal={selectedProposal} />}
+        </DialogContent>
+      </Dialog>
 
       {/* Reject Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
