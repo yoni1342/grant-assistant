@@ -1152,7 +1152,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'deduplicating',\n      stage_message: 'Removing duplicates and prioritizing results...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'deduplicating',\n      stage_message: 'Processing and prioritizing results...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1166,7 +1166,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'checking',\n      stage_message: 'Checking for new grants not yet in your pipeline...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'checking',\n      stage_message: 'Identifying new grant opportunities...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1180,7 +1180,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'filtering',\n      stage_message: 'Filtering grants based on your organization's location...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'filtering',\n      stage_message: 'Checking geographic eligibility for your organization...'s location...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1194,7 +1194,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'matching',\n      stage_message: 'Matching grants to your search query...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'matching',\n      stage_message: 'Matching results to your search query...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1208,7 +1208,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'saving',\n      stage_message: 'Saving matched grants...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'saving',\n      stage_message: 'Finalizing results...'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
