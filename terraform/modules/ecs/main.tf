@@ -55,9 +55,8 @@ resource "aws_iam_role" "task" {
   })
 }
 
-# Attach SES policy to task role if provided
+# Attach SES policy to task role (always attach, idempotent)
 resource "aws_iam_role_policy_attachment" "ses_send" {
-  count      = var.ses_policy_arn != "" ? 1 : 0
   role       = aws_iam_role.task.name
   policy_arn = var.ses_policy_arn
 }
