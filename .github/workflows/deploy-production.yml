@@ -58,6 +58,10 @@ jobs:
             --build-arg SUPABASE_SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             --build-arg N8N_WEBHOOK_URL="${{ secrets.N8N_WEBHOOK_URL }}" \
             --build-arg N8N_WEBHOOK_SECRET="${{ secrets.N8N_WEBHOOK_SECRET }}" \
+            --build-arg AWS_SES_REGION="${{ secrets.AWS_SES_REGION }}" \
+            --build-arg AWS_SES_FROM_EMAIL="${{ secrets.AWS_SES_FROM_EMAIL }}" \
+            --build-arg AWS_SES_FROM_NAME="${{ secrets.AWS_SES_FROM_NAME }}" \
+            --build-arg AWS_SES_REPLY_TO_EMAIL="${{ secrets.AWS_SES_REPLY_TO_EMAIL }}" \
             --cache-from ${{ steps.tags.outputs.image_latest }} \
             -t ${{ steps.tags.outputs.image_sha }} \
             -t ${{ steps.tags.outputs.image_short }} \
