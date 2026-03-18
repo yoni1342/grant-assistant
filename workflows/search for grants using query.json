@@ -12,7 +12,7 @@
         "responses": {
           "values": [
             {
-              "content": "=Grant:\n  - Title: {{ $json.grant.title }}\n  - Agency: {{ $json.grant.agency }}\n  - Type: {{ $json.grant.grant_type }}\n  - State (if state grant): {{ $json.grant.grant_state || 'N/A' }}\n  - Source: {{ $json.grant.source }}\n\n  Organization:\n  - ID: {{ $json.org.id }}\n  - Location: {{ $json.org.geographic_focus ? $json.org.geographic_focus.join(', ') : 'Not set' }}\n  - Address: {{ $json.org.address || 'Not set' }}\n\n  Is this organization eligible for this grant? Return JSON."
+              "content": "=Grant:\n- Title: {{ $json.grant.title }}\n- Agency: {{ $json.grant.agency }}\n- Source: {{ $json.grant.source }}\n- Description: {{ $json.grant.description }}\n\nOrganization:\n- ID: {{ $json.org.id }}\n- Location: {{ $json.org.geographic_focus ? $json.org.geographic_focus.join(', ') : 'Not set' }}\n- Address: {{ $json.org.address || 'Not set' }}\n\nClassify this grant type and determine if this organization is eligible. Return JSON."
             },
             {
               "role": "system",
@@ -40,7 +40,7 @@
     },
     {
       "parameters": {
-        "jsCode": " const items = $input.all();\n  const codeItems = $('Code in JavaScript').all();\n  let allGrants = [];\n\n  items.forEach((item, index) => {\n    const grant = codeItems[index]?.json.grant || {};\n    const org = codeItems[index]?.json.org || {};\n    const aiText = item.json?.output?.[0]?.content?.[0]?.text || '';\n\n    let result = { eligible: false, reason: '' };\n    try {\n      const cleaned = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n      result = JSON.parse(cleaned);\n    } catch (e) {\n      // Parse failed — skip this grant\n      return;\n    }\n\n    // Drop ineligible grants\n    if (!result.eligible) return;\n\n    const description = grant.description || '';\n\n    const descriptionHtml = `<div><h3>Grant Opportunity</h3>` +\n      `<p><strong>Source:</strong> ${grant.source}</p>` +\n      `<p><strong>Agency:</strong> ${grant.agency}</p>` +\n      `<p><strong>Type:</strong> ${grant.grant_type || 'unknown'}</p>` +\n      (grant.grant_state ? `<p><strong>State:</strong> ${grant.grant_state}</p>` : '') +\n      `<p><strong>Award Range:</strong> ${grant.awardFloor || 0} - ${grant.awardCeiling || 0}</p>` +\n      `<p><strong>Open Date:</strong> ${grant.openDate}</p>` +\n      `<p><strong>Deadline:</strong> ${grant.closeDate}</p>` +\n      `<hr><h4>Description:</h4>` +\n      `<p>${description}</p>` +\n      `<p><em>Relevance: ${grant.relevance_reason || 'N/A'}</em></p>` +\n      `<hr>` +\n      `<p><strong>Matched Keywords:</strong> ${Array.isArray(grant.matchedKeywords) ? grant.matchedKeywords.join(', ') : (grant.matchedKeywords || '')}</p>`\n   +\n      `<p><a href=\\\"${grant.source_url}\\\">View Original Listing</a></p>` +\n      `</div>`;\n\n    let deadlineValue = null;\n    if (grant.closeDate && grant.closeDate !== 'See listing' && grant.closeDate !== 'Not specified') {\n      const parsed = new Date(grant.closeDate);\n      if (!isNaN(parsed.getTime())) {\n        const yyyy = parsed.getUTCFullYear();\n        const mm = String(parsed.getUTCMonth() + 1).padStart(2, '0');\n        const dd = String(parsed.getUTCDate()).padStart(2, '0');\n        deadlineValue = `${yyyy}-${mm}-${dd}T00:00:00.000Z`;\n      } else {\n        deadlineValue = grant.closeDate;\n      }\n    }\n\n    allGrants.push({\n      org_id: org.id,\n      title: grant.title || '',\n      funder_name: grant.agency || null,\n      description: description,\n      amount: grant.awardCeiling > 0 ? grant.awardCeiling : null,\n      deadline: deadlineValue,\n      stage: 'discovery',\n      source: grant.source || 'Grant Scanner',\n      source_id: grant.source_id,\n      source_url: grant.source_url,\n      metadata: {\n        grants_gov_id: grant.id,\n        agency_code: grant.agencyCode,\n        open_date: grant.openDate,\n        award_floor: grant.awardFloor,\n        award_ceiling: grant.awardCeiling,\n        matched_keywords: grant.matchedKeywords,\n        relevance_score: grant.relevanceScore,\n        grant_type: grant.grant_type || 'unknown',\n        grant_state: grant.grant_state || null,\n        relevance_reason: grant.relevance_reason || '',\n        location_filter_reason: result.reason || '',\n        priority: 'medium',\n        description_html: descriptionHtml\n      }\n    });\n  });\n\n\n  if (allGrants.length === 0) {\n    return {\n    json: {\n      action: 'insert_grants',\n      data: {\n        grants: []\n      }\n    }\n  };\n  }\n\n  return {\n    json: {\n      action: 'insert_grants',\n      data: {\n        grants: allGrants\n      }\n    }\n  };\n\n  To:\n\n  return {\n    json: {\n      action: 'insert_grants',\n      data: {\n        grants: allGrants\n      }\n    }\n  };"
+        "jsCode": " const items = $input.all();\n  const codeItems = $('Code in JavaScript').all();\n  const results = [];\n\n  items.forEach((item, index) => {\n    const origData = codeItems[index]?.json || {};\n    const grant = origData.grant || {};\n    const org = origData.org || {};\n    const aiText = item.json?.output?.[0]?.content?.[0]?.text || '';\n\n    let parsed = { grant_type: 'federal', grant_state: null, eligible: true, reason: '' };\n    try {\n      const cleaned = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n      parsed = JSON.parse(cleaned);\n    } catch (e) {\n      parsed.reason = 'AI parse failed, defaulting to eligible';\n    }\n\n    if (parsed.eligible === false) return;\n\n    const description = grant.description || '';\n\n    const descriptionHtml = '<div><h3>Grant Opportunity</h3>' +\n      '<p><strong>Source:</strong> ' + (grant.source || '') + '</p>' +\n      '<p><strong>Agency:</strong> ' + (grant.agency || '') + '</p>' +\n      '<p><strong>Type:</strong> ' + (parsed.grant_type || 'unknown') + '</p>' +\n      (parsed.grant_state ? '<p><strong>State:</strong> ' + parsed.grant_state + '</p>' : '') +\n      '<p><strong>Award Range:</strong> $' + (grant.awardFloor || 0) + ' - $' + (grant.awardCeiling || 0) + '</p>' +\n      '<p><strong>Open Date:</strong> ' + (grant.openDate || '') + '</p>' +\n      '<p><strong>Deadline:</strong> ' + (grant.closeDate || '') + '</p>' +\n      '<hr><h4>Description:</h4>' +\n      '<p>' + description + '</p>' +\n      '<p><em>Location Filter: ' + (parsed.reason || 'N/A') + '</em></p>' +\n      '<hr>' +\n      '<p><a href=\"' + (grant.source_url || grant.link || '') + '\">View Original Listing</a></p>' +\n      '</div>';\n\n    let deadlineValue = null;\n    if (grant.closeDate && grant.closeDate !== 'See listing' && grant.closeDate !== 'Not specified' && grant.closeDate !== 'Rolling') {\n      const d = new Date(grant.closeDate);\n      if (!isNaN(d.getTime())) {\n        const yyyy = d.getUTCFullYear();\n        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');\n        const dd = String(d.getUTCDate()).padStart(2, '0');\n        deadlineValue = yyyy + '-' + mm + '-' + dd + 'T00:00:00.000Z';\n      } else {\n        deadlineValue = grant.closeDate;\n      }\n    }\n\n    results.push({\n      json: {\n        org_id: org.id,\n        title: grant.title || '',\n        funder_name: grant.agency || null,\n        description: description,\n        amount: grant.awardCeiling > 0 ? grant.awardCeiling : null,\n        deadline: deadlineValue,\n        stage: 'discovery',\n        source: grant.source || 'Grant Scanner',\n        source_id: grant.source_id || grant.oppNum,\n        source_url: grant.source_url || grant.link,\n        metadata: {\n          grants_gov_id: grant.id,\n          agency_code: grant.agencyCode,\n          open_date: grant.openDate,\n          award_floor: grant.awardFloor,\n          award_ceiling: grant.awardCeiling,\n          grant_type: parsed.grant_type || 'unknown',\n          grant_state: parsed.grant_state || null,\n          location_filter_reason: parsed.reason || '',\n          priority: 'medium',\n          description_html: descriptionHtml\n        }\n      }\n    });\n  });\n\n  if (results.length === 0) {\n    return [{ json: { noRelevantGrants: true, message: 'No eligible grants after location filtering' } }];\n  }\n\n  return results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -54,47 +54,10 @@
     },
     {
       "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4.1-mini",
-          "mode": "list",
-          "cachedResultName": "GPT-4.1-MINI"
-        },
-        "responses": {
-          "values": [
-            {
-              "content": "=Grant Details:\n- Title: {{ $json.grant.title }}\n- Agency: {{ $json.grant.agency }}\n- Award Range: ${{ $json.grant.awardFloor || 0 }} - ${{ $json.grant.awardCeiling || 0 }}\n- Open Date: {{ $json.grant.openDate }}\n- Deadline: {{ $json.grant.closeDate }}\n- Status: {{ $json.grant.status }}\n- Description: {{ $json.grant.description }}\n- Source: {{ $json.grant.source }}\n- Matched Keywords: {{ $json.grant.matchedKeywords ? $json.grant.matchedKeywords.join(', ') : 'None' }}\n\nClassify this grant and return JSON.\n"
-            },
-            {
-              "role": "system",
-              "content": "You are a grant classification assistant. Analyze the grant and return ONLY valid JSON (no markdown, no code fences).\n\nReturn this exact structure:\n{\n  \"grant_type\": \"federal\" or \"state\" or \"philanthropic\",\n  \"grant_state\": \"Full state name if state grant, otherwise null\",\n  \"summary\": \"2-3 sentence description of what the grant funds and who qualifies\",\n  \"relevant\": true or false,\n  \"reason\": \"brief explanation of relevance\"\n}\n\nCLASSIFICATION RULES:\n- Federal grants: Funded by federal agencies (HHS, SAMHSA, ACF, DOL, ED, HUD, USDA, etc.) or listed on Grants.gov. Available nationwide. grant_state = null.\n- State grants: Funded by a specific state government, state agency, or state program (e.g. PA DCED, NJ DHS). Set grant_state to the full state name (e.g. \"Pennsylvania\", \"New Jersey\").\n- Philanthropic grants: From private foundations, trusts, corporate giving programs, or nonprofits (e.g. Gates Foundation, Ford Foundation). Available to anyone. grant_state = null.\n\nRELEVANCE: Mark relevant if the grant funds foster care, youth transition/aging out, seniors/aging/elderly, child welfare, social services, minority communities, nonprofit capacity building, community development, workforce readiness, trauma-informed care, racial equity, or human services.\n\nMark NOT relevant if about: pure agriculture, clinical/medical research only, infrastructure/construction only, foreign affairs, defense/military, highly specialized STEM with no social service component.\n\nIf award amounts are 0, say 'Amount not specified' in the summary.\nRemove jargon, quotes, newlines, or special characters from the summary."
-            }
-          ]
-        },
-        "builtInTools": {},
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 2.1,
-      "position": [
-        32128,
-        23696
-      ],
-      "id": "de4f6236-b0f3-45ec-9000-b5073807d4df",
-      "name": "AI Classify & Filter1",
-      "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Filter grants by amount range ($5K - $100K) and add relevance scoring\nconst items = $input.all();\nconst qualifiedGrants = [];\n\nif (items.length === 1 && items[0].json.noResults) {\n  return items;\n}\n\nconst keywords = [\n  'foster care',\n  'foster youth',\n  'youth transition',\n  'aging out',\n  'senior',\n  'elderly',\n  'aging',\n  'older adults',\n  'african american',\n  'black community',\n  'minority',\n  'underserved',\n  'nonprofit capacity',\n  'organizational development',\n  'capacity building',\n  'pennsylvania',\n  'philadelphia',\n  'pittsburgh',\n  'community development',\n  'social services',\n  'human services',\n  'family services',\n  'youth development',\n  'community foundation',\n  'health and human services',\n  'child welfare',\n  'independent living',\n  'equity',\n  'dignity',\n  'trauma-informed'\n];\n\nfor (const item of items) {\n  const grant = item.json;\n  \n  // For major foundations, always include\n  const isMajorFoundation = grant.source && (\n    grant.source.includes('Major') || \n    grant.source.includes('Foundation') ||\n    grant.source.includes('Yield') ||\n    grant.source.includes('Gates') ||\n    grant.source.includes('Ford')\n  );\n  \n  // Filter by amount range for government grants: $5,000 - $100,000\n  const meetsAmountCriteria = \n    isMajorFoundation ||\n    grant.awardCeiling === 0 || \n    (grant.awardCeiling >= 5000 && grant.awardFloor <= 100000);\n  \n  if (!meetsAmountCriteria) continue;\n  \n  const searchText = (grant.title + ' ' + grant.description + ' ' + grant.category + ' ' + grant.agency).toLowerCase();\n  \n  const matchedKeywords = keywords.filter(function(kw) { return searchText.includes(kw); });\n  \n  if (matchedKeywords.length > 0 || isMajorFoundation || grant.source === 'ProPublica 990') {\n    qualifiedGrants.push({\n      json: {\n        id: grant.id,\n        oppNum: grant.oppNum,\n        title: grant.title,\n        description: grant.description,\n        link: grant.link,\n        openDate: grant.openDate,\n        closeDate: grant.closeDate,\n        agency: grant.agency,\n        agencyCode: grant.agencyCode,\n        category: grant.category,\n        source: grant.source,\n        awardFloor: grant.awardFloor,\n        awardCeiling: grant.awardCeiling,\n        status: grant.status,\n        relevanceScore: matchedKeywords.length + (isMajorFoundation ? 5 : 0),\n        matchedKeywords: matchedKeywords.length > 0 ? matchedKeywords : ['foundation']\n      }\n    });\n  }\n}\n\n// Sort by relevance and limit to top 25\nqualifiedGrants.sort(function(a, b) { return b.json.relevanceScore - a.json.relevanceScore; });\nconst topGrants = qualifiedGrants.slice(0, 25);\n\nif (topGrants.length === 0) {\n  return [{ json: { noResults: true, message: 'No grants matched criteria' } }];\n}\n\nreturn topGrants;"
+        "jsCode": "const items = $input.all();\n\nif (items.length === 1 && (items[0].json.noResults || items[0].json.noNewGrants)) {\n  return items;\n}\n\nfunction extractDate(grant) {\n  const candidates = [\n    grant.closeDate,\n    grant.deadline,\n    grant.dueDate,\n    grant.due_date,\n    grant.endDate,\n    grant.end_date,\n    grant.applicationDeadline,\n    grant.application_deadline,\n  ];\n\n  for (const val of candidates) {\n    if (!val || typeof val !== 'string') continue;\n    const parsed = new Date(val);\n    if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {\n      return parsed;\n    }\n  }\n\n  if (grant.description) {\n    const match = grant.description.match(/(\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4})|(\\w+ \\d{1,2},? \\d{4})/);\n    if (match) {\n      const parsed = new Date(match[0]);\n      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {\n        return parsed;\n      }\n    }\n  }\n\n  return null;\n}\n\nconst withDeadline = [];\nconst noDeadline = [];\n\nfor (const item of items) {\n  const date = extractDate(item.json);\n  if (date) {\n    item._sortDate = date;\n    withDeadline.push(item);\n  } else {\n    noDeadline.push(item);\n  }\n}\n\nwithDeadline.sort((a, b) => a._sortDate - b._sortDate);\n\nconst combined = [...withDeadline, ...noDeadline];\nreturn combined.slice(0, 50).map(item => ({ json: item.json }));"
       },
       "id": "99f70098-5e18-4e3f-b87c-210b3d2c2040",
-      "name": "Filter Amount & Keywords",
+      "name": "Limit & Prioritize Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -198,7 +161,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n  const results = [];\n\n  const supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants';\n  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\n  for (const item of items) {\n    const grant = item.json;\n    const oppNum = (grant.oppNum || '').trim();\n\n    if (!oppNum) {\n      results.push({\n        json: {\n          grant,\n          status: 'new',\n          message: 'Missing oppNum, will attempt insert',\n        },\n      });\n      continue;\n    }\n\n    let response;\n    try {\n      response = await this.helpers.httpRequest({\n        method: 'GET',\n        url: `${supabaseUrl}?source_id=eq.${encodeURIComponent(oppNum)}&select=id,source_id,title`,\n        headers: {\n          'apikey': supabaseKey,\n          'Authorization': 'Bearer ' + supabaseKey,\n        },\n      });\n    } catch (e) {\n      results.push({\n        json: {\n          grant,\n          status: 'error',\n          message: e.message,\n        },\n      });\n      continue;\n    }\n\n    if (!Array.isArray(response)) {\n      results.push({\n        json: {\n          grant,\n          status: 'invalid response',\n          message: 'Unexpected Supabase response',\n          rawResponse: response,\n        },\n      });\n      continue;\n    }\n\n    if (response.length === 0) {\n      results.push({\n        json: {\n          grant,\n          status: 'new',\n          message: 'Grant not found in Supabase, will be added',\n        },\n      });\n    }\n    // Existing grants are silently filtered out\n  }\n\n  if (results.length === 0) {\n    return [{ json: { noNewGrants: true, message: 'All grants already tracked' } }];\n  }\n\n  return results;"
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\n// Step 1: Collect all oppNums from input\nconst oppNums = items\n  .map(item => (item.json.oppNum || '').trim())\n  .filter(id => id.length > 0);\n\n// Step 2: Batch-fetch existing grants from Supabase in chunks of 500\nconst existingOppNums = new Set();\n\nfor (let i = 0; i < oppNums.length; i += 500) {\n  const chunk = oppNums.slice(i, i + 500);\n  const filter = chunk.map(id => `\"${id}\"`).join(',');\n\n  try {\n    const response = await this.helpers.httpRequest({\n      method: 'GET',\n      url: `${supabaseUrl}?source_id=in.(${filter})&select=source_id`,\n      headers: {\n        'apikey': supabaseKey,\n        'Authorization': 'Bearer ' + supabaseKey,\n      },\n    });\n\n    if (Array.isArray(response)) {\n      response.forEach(r => existingOppNums.add(r.source_id));\n    }\n  } catch (e) {\n    // If batch check fails, grants will be treated as new\n  }\n}\n\n// Step 3: Filter to only new grants\nfor (const item of items) {\n  const grant = item.json;\n  const oppNum = (grant.oppNum || '').trim();\n\n  if (!oppNum || existingOppNums.has(oppNum)) continue;\n\n  results.push({\n    json: {\n      grant,\n      status: 'new',\n      message: 'Grant not found in Supabase, will be added',\n    },\n  });\n}\n\nif (results.length === 0) {\n  return [{ json: { noNewGrants: true, message: 'All grants already tracked' } }];\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -211,7 +174,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const aiItems = $input.all();\n  const origItems = $('Has New Grants?').all();\n\n  // Get the requesting org's ID from the trigger\n  const orgId = $('search for proposal with query').first().json.body.org_id;\n\n  // Fetch ONLY this org's location data\n  const supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/organizations';\n  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I'; // your key\n\n  const orgs = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${supabaseUrl}?select=id,geographic_focus,address&id=eq.${orgId}`,\n    headers: {\n      'apikey': supabaseKey,\n      'Authorization': 'Bearer ' + supabaseKey,\n    },\n  });\n\n  const org = orgs?.[0];\n  if (!org) {\n    return [{ json: { error: true, message: 'Organization not found' } }];\n  }\n\n  const results = [];\n\n  aiItems.forEach((aiItem, index) => {\n    const orig = origItems[index]?.json.grant || {};\n    const aiText = aiItem.json?.output?.[0]?.content?.[0]?.text || '';\n\n    let classification = { grant_type: 'federal', grant_state: null, summary: aiText, relevant: true, reason: '' };\n    try {\n      const cleaned = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n      classification = JSON.parse(cleaned);\n    } catch (e) {}\n\n    if (classification.relevant === false) return;\n\n    results.push({\n      json: {\n        grant: {\n          title: orig.title || '',\n          agency: orig.agency || null,\n          agencyCode: orig.agencyCode || '',\n          description: classification.summary || aiText,\n          amount: orig.awardCeiling > 0 ? orig.awardCeiling : null,\n          awardFloor: orig.awardFloor || 0,\n          awardCeiling: orig.awardCeiling || 0,\n          openDate: orig.openDate || '',\n          closeDate: orig.closeDate || '',\n          source: orig.source || 'Grant Scanner',\n          source_id: orig.oppNum,\n          source_url: orig.link,\n          id: orig.id,\n          matchedKeywords: orig.matchedKeywords,\n          relevanceScore: orig.relevanceScore,\n          grant_type: classification.grant_type || 'federal',\n          grant_state: classification.grant_state || null,\n          relevance_reason: classification.reason || ''\n        },\n        org: org  // single org, not array\n      }\n    });\n  });\n\n  if (results.length === 0) {\n    return [{ json: { noRelevantGrants: true, message: 'No relevant grants after filtering' } }];\n  }\n\n  return results;"
+        "jsCode": "const items = $input.all();\n\n// Get the org_id from the webhook trigger\nlet orgId;\ntry {\n  orgId = $('search for proposal with query').first().json.body.org_id;\n} catch (e) {}\n\nif (!orgId) {\n  return [{ json: { error: true, message: 'No org_id provided' } }];\n}\n\n// Fetch ONLY the triggering org's data from Supabase\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/organizations';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\nconst orgs = await this.helpers.httpRequest({\n  method: 'GET',\n  url: supabaseUrl + '?id=eq.' + encodeURIComponent(orgId) + '&select=id,geographic_focus,address',\n  headers: {\n    'apikey': supabaseKey,\n    'Authorization': 'Bearer ' + supabaseKey,\n  },\n});\n\nif (!Array.isArray(orgs) || orgs.length === 0) {\n  return [{ json: { error: true, message: 'Organization not found: ' + orgId } }];\n}\n\nconst org = orgs[0];\n\nconst results = [];\nfor (const item of items) {\n  const grant = item.json.grant || item.json;\n  results.push({\n    json: {\n      grant: {\n        title: grant.title || '',\n        agency: grant.agency || null,\n        agencyCode: grant.agencyCode || '',\n        description: grant.description || '',\n        awardFloor: grant.awardFloor || 0,\n        awardCeiling: grant.awardCeiling || 0,\n        openDate: grant.openDate || '',\n        closeDate: grant.closeDate || '',\n        status: grant.status || '',\n        source: grant.source || 'Grant Scanner',\n        source_id: grant.oppNum || grant.source_id,\n        source_url: grant.link || grant.source_url,\n        id: grant.id,\n        matchedKeywords: grant.matchedKeywords,\n        relevanceScore: grant.relevanceScore,\n      },\n      org: org\n    }\n  });\n}\n\nif (results.length === 0) {\n  return [{ json: { noRelevantGrants: true, message: 'No grants to process' } }];\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -222,57 +185,6 @@
       "id": "e94897c6-d6c8-4b43-b8b6-084a43cbf9c4",
       "name": "Code in JavaScript",
       "alwaysOutputData": false
-    },
-    {
-      "parameters": {
-        "jsCode": " const aiItems = $input.all();\n  const aiText = aiItems[0]?.json?.output?.[0]?.content?.[0]?.text || '[]';\n\n  let filteredGrants;\n  try {\n    filteredGrants = JSON.parse(aiText);\n  } catch (e) {\n    filteredGrants = [];\n  }\n\n  if (!Array.isArray(filteredGrants) || filteredGrants.length === 0) {\n    return { json: { success: true, data: { grants: [] } } };\n  }\n\n  const allGrants = filteredGrants.map(grant => {\n    const descriptionHtml = `<div><h3>Grant Opportunity</h3>\n      <p><strong>Source:</strong> ${grant.source || ''}</p>\n      <p><strong>Funder:</strong> ${grant.funder_name || ''}</p>\n      <p><strong>Award Range:</strong> $${grant.metadata?.award_floor || 0} - $${grant.metadata?.award_ceiling || 0}</p>\n      <p><strong>Open Date:</strong> ${grant.metadata?.open_date || ''}</p>\n      <p><strong>Deadline:</strong> ${grant.deadline || ''}</p>\n      <hr>\n      <h4>Description:</h4>\n      <p>${grant.description || ''}</p>\n      <hr>\n      <p><strong>Matched Keywords:</strong> ${Array.isArray(grant.metadata?.matched_keywords) ? grant.metadata.matched_keywords.join(', ') : ''}</p>\n      <p><a href=\"${grant.source_url || ''}\">View Original Listing</a></p>\n    </div>`;\n\n    let deadlineValue = null;\n    if (grant.deadline && grant.deadline !== 'See state portal' && grant.deadline !== 'Not specified') {\n      const parsed = new Date(grant.deadline);\n      if (!isNaN(parsed.getTime())) {\n        const yyyy = parsed.getUTCFullYear();\n        const mm = String(parsed.getUTCMonth() + 1).padStart(2, '0');\n        const dd = String(parsed.getUTCDate()).padStart(2, '0');\n        deadlineValue = `${yyyy}-${mm}-${dd}T00:00:00.000Z`;\n      } else {\n        deadlineValue = grant.deadline;\n      }\n    }\n\n    return {\n org_id: grant.org_id || $('search for proposal with query').first().json.body.org_id,      title: grant.title || '',\n      funder_name: grant.funder_name || null,\n      description: grant.description || '',\n      amount: grant.amount || null,\n      deadline: deadlineValue,\n      stage: \"discovery\",\n      source: grant.source || 'Grant Scanner',\n      source_id: grant.source_id || null,\n      source_url: grant.source_url || null,\n      metadata: {\n        ...grant.metadata,\n        priority: \"medium\",\n        description_html: descriptionHtml\n      }\n    };\n  });\n\n  return {\n    json: {\n      action: \"insert_grants\",\n      data: {\n        grants: allGrants\n      }\n    }\n  };"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        33824,
-        23440
-      ],
-      "id": "9d4e5098-9e1a-4cdf-b058-fb35543058f4",
-      "name": "Code in JavaScript4",
-      "alwaysOutputData": false
-    },
-    {
-      "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4.1-mini",
-          "mode": "list",
-          "cachedResultName": "GPT-4.1-MINI"
-        },
-        "responses": {
-          "values": [
-            {
-              "content": "= Task 1: Intent-Aware Filtering\n\n  Search Query: {{ $('search for proposal with query').first().json.body.searchQuery }}\n\n  Filtering Rules:\n  - Identify the broad domain of the search query (e.g., \"foster care\" → social services, youth, child welfare, family services, housing, workforce)\n  - Keep grants that are DIRECTLY relevant OR PARTIALLY relevant to the query domain\n  - Keep grants that a nonprofit could reasonably apply to for programs related to the search query\n  - ONLY discard grants that are clearly unrelated (e.g., pure biomedical lab research, military equipment, foreign diplomacy)\n  - When in doubt, KEEP the grant — false negatives are worse than false positives\n  - Do NOT require exact keyword matches. A grant for \"youth workforce development\" is relevant to \"foster care youth transition\"\n\n  Task 2: Description Rewrite\n  For each kept grant, rewrite the description as one paragraph (2-3 sentences):\n  - Sentence 1: What this grant funds and who offers it\n  - Sentence 2: Who is eligible to apply\n  - Sentence 3: Deadline and timing info\n  - If award amount is $0 - $0, say \"Amount not specified\"\n  - Remove all jargon, quotes, newlines, and special characters\n\n  Task 3: Output Format\n  - Return ONLY a valid JSON array of grants that pass the filter\n  - Preserve all original object keys (id, title, funder, etc.) — only replace the description\n  - If fewer than 3 grants match, relax your filtering criteria and re-evaluate\n  - If truly no grants match after relaxed filtering, return: []\n\n  Input Data:\n  {{ JSON.stringify($json.data.grants, null, 2) }}\n\n  System message:\n\n  You are a grant discovery assistant. Your job is to help nonprofits find relevant funding opportunities. Be INCLUSIVE in your filtering — it is better to\n  show a slightly tangential grant than to return empty results. Only remove grants that are clearly irrelevant to the search query's broad domain. Consider\n   that nonprofits often serve multiple populations and can creatively apply to grants across related fields.\n\n  Key changes:\n  1. Removed the hardcoded \"foster youth and seniors\" from the system prompt — now it's dynamic\n  2. Added \"when in doubt, KEEP\" guidance to prevent over-filtering\n  3. Added a safety net: \"if fewer than 3 match, relax criteria\"\n  4. Broadened domain matching (e.g., foster care → social services, youth, workforce, housing)\n  5. Explicitly told it false negatives are worse than false positives"
-            },
-            {
-              "role": "system",
-              "content": "You are a specialized Grant Research Assistant for a nonprofit serving foster youth and seniors. Your goal is to filter a list of grant opportunities and provide concise, jargon-free summaries."
-            }
-          ]
-        },
-        "builtInTools": {},
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 2.1,
-      "position": [
-        33488,
-        23440
-      ],
-      "id": "27754334-8a0b-46c7-9fcf-301d0fe9a68e",
-      "name": "Filter based on search query1",
-      "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
-      }
     },
     {
       "parameters": {
@@ -943,7 +855,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Input: $input.all() contains items from the HTTP Request node\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n    const html = item.json.data; // raw HTML from SAM.gov opportunities page\n    if (!html) continue;\n\n    // Regex to extract each table row inside <tbody>\n    const rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/gi;\n    let match;\n\n    while ((match = rowRegex.exec(html)) !== null) {\n        const rowHtml = match[1];\n\n        // Extract each <td> content in this row\n        const tdRegex = /<td[^>]*>[\\s\\S]*?<div[^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?<\\/td>/gi;\n        let tdMatch;\n        const tds = [];\n        while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {\n            let value = tdMatch[1]\n                .replace(/<[^>]+>/g, '')  // remove inner HTML tags\n                .replace(/&nbsp;/g, ' ')\n                .trim();\n            tds.push(value);\n        }\n\n        // Check if row has at least the expected columns (Close date, Status, Title, Agency, Award min, Award max)\n        if (tds.length < 6) continue;\n\n        grants.push({\n            json: {\n                id: 'SAM-' + tds[2].replace(/\\s+/g, '-').substring(0, 50) + '-' + Date.now(),\n                title: tds[2] || 'No title',\n                description: '', // optional, could add opportunity number from hidden div if needed\n                link: 'https://sam.gov' + (tds[2].match(/href=\"([^\"]+)\"/) ? tds[2].match(/href=\"([^\"]+)\"/)[1] : ''),\n                openDate: '', // SAM.gov table doesn’t have open date directly\n                closeDate: tds[0] || 'Check site',\n                status: tds[1] || 'Unknown',\n                agency: tds[3] || 'Unknown',\n                awardFloor: tds[4] ? parseFloat(tds[4].replace(/[^0-9.]/g, '')) : 0,\n                awardCeiling: tds[5] ? parseFloat(tds[5].replace(/[^0-9.]/g, '')) : 0,\n                category: 'Federal Grant',\n                source: 'SAM.gov Opportunities',\n            }\n        });\n    }\n}\n\n// Return placeholder if no grants found\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'SAM.gov' } }];\n"
+        "jsCode": "// Input: $input.all() contains items from the HTTP Request node\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n    const html = item.json.data; // raw HTML from SAM.gov opportunities page\n    if (!html) continue;\n\n    // Regex to extract each table row inside <tbody>\n    const rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/gi;\n    let match;\n\n    while ((match = rowRegex.exec(html)) !== null) {\n        const rowHtml = match[1];\n\n        // Extract each <td> content in this row\n        const tdRegex = /<td[^>]*>[\\s\\S]*?<div[^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?<\\/td>/gi;\n        let tdMatch;\n        const tds = [];\n        while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {\n            let value = tdMatch[1]\n                .replace(/<[^>]+>/g, '')  // remove inner HTML tags\n                .replace(/&nbsp;/g, ' ')\n                .trim();\n            tds.push(value);\n        }\n\n        // Check if row has at least the expected columns (Close date, Status, Title, Agency, Award min, Award max)\n        if (tds.length < 6) continue;\n\n        grants.push({\n            json: {\n                id: 'SAM-' + tds[2].replace(/\\s+/g, '-').substring(0, 50) + '-' + Date.now(),\n                title: tds[2] || 'No title',\n                description: '', // optional, could add opportunity number from hidden div if needed\n                link: 'https://sam.gov' + (tds[2].match(/href=\"([^\"]+)\"/) ? tds[2].match(/href=\"([^\"]+)\"/)[1] : ''),\n                openDate: '', // SAM.gov table doesn\u2019t have open date directly\n                closeDate: tds[0] || 'Check site',\n                status: tds[1] || 'Unknown',\n                agency: tds[3] || 'Unknown',\n                awardFloor: tds[4] ? parseFloat(tds[4].replace(/[^0-9.]/g, '')) : 0,\n                awardCeiling: tds[5] ? parseFloat(tds[5].replace(/[^0-9.]/g, '')) : 0,\n                category: 'Federal Grant',\n                source: 'SAM.gov Opportunities',\n            }\n        });\n    }\n}\n\n// Return placeholder if no grants found\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'SAM.gov' } }];\n"
       },
       "id": "1236f15c-0b41-43d7-9b6c-774727876df5",
       "name": "Additional Major Foundations6",
@@ -1067,7 +979,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// n8n Code node – Extract ALL data from \"Upcoming Funding Opportunity\" section on RWJF page\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  // Get HTML from common n8n HTTP Response locations\n  let html = item.json?.body || item.json?.data || item.json?.html || item.json || \"\";\n  if (typeof html !== 'string' || html.length < 500) {\n    results.push({\n      json: {\n        error: \"No valid HTML received\",\n        receivedType: typeof html,\n        length: html?.length || 0\n      }\n    });\n    continue;\n  }\n\n  // Normalize whitespace and remove script/style tags to make regex more reliable\n  html = html.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n             .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n             .replace(/\\s+/g, ' ');\n\n  // Find the \"Upcoming Funding Opportunity\" heading and grab content until next major section\n  // We look for the h3/p with \"Upcoming\" then the following card with h4 + paragraphs\n  const sectionRegex = /<h3[^>]*>Active Funding Opportunities<\\/h3>[\\s\\S]*?<p[^>]*><span[^>]*>Upcoming Funding Opportunity<\\/span><\\/p>[\\s\\S]*?(<div class=\"card image[^>]*>[\\s\\S]*?<div class=\"cmp-customcard[^>]*>[\\s\\S]*?<\\/div>)/i;\n\n  const sectionMatch = sectionRegex.exec(html);\n  if (!sectionMatch) {\n    results.push({\n      json: {\n        empty: true,\n        message: \"No 'Upcoming Funding Opportunity' section found in HTML\",\n        hint: \"Content may be loaded dynamically via JavaScript → check Network tab for JSON calls\"\n      }\n    });\n    continue;\n  }\n\n  const cardHtml = sectionMatch[1];\n\n  // Extract title (h4 with heading8-style or similar)\n  const titleMatch = cardHtml.match(/<h4[^>]*class=\"[^\"]*heading8-style[^\"]*\"[^>]*>([\\s\\S]*?)<\\/h4>/i);\n  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : \"No title found\";\n\n  // Extract all <p> paragraphs in the card (description + release date)\n  const descParagraphs = [];\n  const pRegex = /<p[^>]*>([\\s\\S]*?)<\\/p>/gi;\n  let pMatch;\n  while ((pMatch = pRegex.exec(cardHtml)) !== null) {\n    let text = pMatch[1]\n      .replace(/<[^>]+>/g, '')          // strip inner tags\n      .replace(/&nbsp;/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    if (text && text.length > 10) {      // ignore very short/empty\n      descParagraphs.push(text);\n    }\n  }\n\n  // Look for bold release date specifically\n  const releaseMatch = cardHtml.match(/<b>Release date:\\s*([^<]+)<\\/b>/i);\n  const releaseDate = releaseMatch ? releaseMatch[1].trim() : \"Not found\";\n\n  // Build clean output\n  results.push({\n    json: {\n      section: \"Upcoming Funding Opportunity\",\n      title: title,\n      releaseDate: releaseDate,\n      description: descParagraphs.join(\"\\n\\n\"),  // full text, paragraphs separated\n      sourceUrl: \"https://www.rwjf.org/en/grants/active-funding-opportunities.html\",\n      scrapedAt: new Date().toISOString(),\n      note: \"This is the static upcoming card. Active/open opportunities load via JS → see Network tab for JSON endpoint if you need more.\"\n    }\n  });\n}\n\n// If nothing was found at all\nif (results.length === 0) {\n  results.push({\n    json: {\n      empty: true,\n      message: \"No upcoming opportunity data extracted\"\n    }\n  });\n}\n\nreturn results;"
+        "jsCode": "// n8n Code node \u2013 Extract ALL data from \"Upcoming Funding Opportunity\" section on RWJF page\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  // Get HTML from common n8n HTTP Response locations\n  let html = item.json?.body || item.json?.data || item.json?.html || item.json || \"\";\n  if (typeof html !== 'string' || html.length < 500) {\n    results.push({\n      json: {\n        error: \"No valid HTML received\",\n        receivedType: typeof html,\n        length: html?.length || 0\n      }\n    });\n    continue;\n  }\n\n  // Normalize whitespace and remove script/style tags to make regex more reliable\n  html = html.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n             .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n             .replace(/\\s+/g, ' ');\n\n  // Find the \"Upcoming Funding Opportunity\" heading and grab content until next major section\n  // We look for the h3/p with \"Upcoming\" then the following card with h4 + paragraphs\n  const sectionRegex = /<h3[^>]*>Active Funding Opportunities<\\/h3>[\\s\\S]*?<p[^>]*><span[^>]*>Upcoming Funding Opportunity<\\/span><\\/p>[\\s\\S]*?(<div class=\"card image[^>]*>[\\s\\S]*?<div class=\"cmp-customcard[^>]*>[\\s\\S]*?<\\/div>)/i;\n\n  const sectionMatch = sectionRegex.exec(html);\n  if (!sectionMatch) {\n    results.push({\n      json: {\n        empty: true,\n        message: \"No 'Upcoming Funding Opportunity' section found in HTML\",\n        hint: \"Content may be loaded dynamically via JavaScript \u2192 check Network tab for JSON calls\"\n      }\n    });\n    continue;\n  }\n\n  const cardHtml = sectionMatch[1];\n\n  // Extract title (h4 with heading8-style or similar)\n  const titleMatch = cardHtml.match(/<h4[^>]*class=\"[^\"]*heading8-style[^\"]*\"[^>]*>([\\s\\S]*?)<\\/h4>/i);\n  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : \"No title found\";\n\n  // Extract all <p> paragraphs in the card (description + release date)\n  const descParagraphs = [];\n  const pRegex = /<p[^>]*>([\\s\\S]*?)<\\/p>/gi;\n  let pMatch;\n  while ((pMatch = pRegex.exec(cardHtml)) !== null) {\n    let text = pMatch[1]\n      .replace(/<[^>]+>/g, '')          // strip inner tags\n      .replace(/&nbsp;/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    if (text && text.length > 10) {      // ignore very short/empty\n      descParagraphs.push(text);\n    }\n  }\n\n  // Look for bold release date specifically\n  const releaseMatch = cardHtml.match(/<b>Release date:\\s*([^<]+)<\\/b>/i);\n  const releaseDate = releaseMatch ? releaseMatch[1].trim() : \"Not found\";\n\n  // Build clean output\n  results.push({\n    json: {\n      section: \"Upcoming Funding Opportunity\",\n      title: title,\n      releaseDate: releaseDate,\n      description: descParagraphs.join(\"\\n\\n\"),  // full text, paragraphs separated\n      sourceUrl: \"https://www.rwjf.org/en/grants/active-funding-opportunities.html\",\n      scrapedAt: new Date().toISOString(),\n      note: \"This is the static upcoming card. Active/open opportunities load via JS \u2192 see Network tab for JSON endpoint if you need more.\"\n    }\n  });\n}\n\n// If nothing was found at all\nif (results.length === 0) {\n  results.push({\n    json: {\n      empty: true,\n      message: \"No upcoming opportunity data extracted\"\n    }\n  });\n}\n\nreturn results;"
       },
       "id": "7ca4a63d-17e3-41e6-84dc-e13e29c845ff",
       "name": "Additional Major Foundations9",
@@ -1314,33 +1226,11 @@
         ]
       ]
     },
-    "AI Classify & Filter1": {
-      "main": [
-        [
-          {
-            "node": "Code in JavaScript",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Combine & Deduplicate All Sources": {
       "main": [
         [
           {
-            "node": "Filter Amount & Keywords",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter Amount & Keywords": {
-      "main": [
-        [
-          {
-            "node": "Has Results?",
+            "node": "Limit & Prioritize Grants",
             "type": "main",
             "index": 0
           }
@@ -1369,7 +1259,7 @@
       "main": [
         [
           {
-            "node": "AI Classify & Filter1",
+            "node": "Code in JavaScript",
             "type": "main",
             "index": 0
           }
@@ -1399,17 +1289,6 @@
         [
           {
             "node": "AI Location Filter",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter based on search query1": {
-      "main": [
-        [
-          {
-            "node": "Code in JavaScript4",
             "type": "main",
             "index": 0
           }
@@ -1546,17 +1425,6 @@
           },
           {
             "node": "ProPublica Senior Orgs PA1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript4": {
-      "main": [
-        [
-          {
-            "node": "Save Filtered Grant",
             "type": "main",
             "index": 0
           }
@@ -2025,6 +1893,17 @@
         [
           {
             "node": "no result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit & Prioritize Grants": {
+      "main": [
+        [
+          {
+            "node": "Has Results?",
             "type": "main",
             "index": 0
           }
