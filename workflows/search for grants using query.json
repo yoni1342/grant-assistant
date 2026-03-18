@@ -1219,6 +1219,50 @@
       "id": "status-saving-001",
       "name": "Status: Saving",
       "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('search for proposal with query').first().json.body.callback_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ search_id: $('search for proposal with query').first().json.body.search_id, org_id: $('search for proposal with query').first().json.body.org_id, done: true }) }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -3500,
+        32500
+      ],
+      "id": "signal-no-results-001",
+      "name": "Signal No Results",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nlet callbackUrl, orgId, searchId;\ntry {\n  const webhookData = $('search for proposal with query').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  searchId = webhookData?.search_id;\n} catch(e) {\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      search_id: searchId,\n      org_id: orgId,\n      status: 'no_results',\n      stage_message: 'No new grants found matching your search.'\n    }\n  });\n} catch(e) {}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3800,
+        32500
+      ],
+      "id": "status-no-results-001",
+      "name": "Status: No Results",
+      "continueOnFail": true
     }
   ],
   "pinData": {},
@@ -1443,12 +1487,24 @@
     },
     "No Results Found": {
       "main": [
-        []
+        [
+          {
+            "node": "Status: No Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "All Already Tracked": {
       "main": [
-        []
+        [
+          {
+            "node": "Status: No Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Grants.gov Capacity Building1": {
@@ -2127,6 +2183,28 @@
         [
           {
             "node": "Has New Grants?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status: No Results": {
+      "main": [
+        [
+          {
+            "node": "Signal No Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "no result": {
+      "main": [
+        [
+          {
+            "node": "Status: No Results",
             "type": "main",
             "index": 0
           }
