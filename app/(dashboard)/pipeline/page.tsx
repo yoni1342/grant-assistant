@@ -27,12 +27,11 @@ export default async function PipelinePage() {
   ]);
 
   // Auto-trigger fetch-grants when pipeline is empty and no fetch is in progress
-  // TEMPORARILY DISABLED — re-enable when search workflow is stable
   const isEmpty = !grants || grants.length === 0;
   const isFetching = !!fetchStatus;
-  // if (isEmpty && !isFetching) {
-  //   await triggerFetchGrants(orgId);
-  // }
+  if (isEmpty && !isFetching) {
+    await triggerFetchGrants(orgId);
+  }
 
   // Re-fetch status after triggering so the banner shows immediately
   const activeFetchStatus = isFetching
