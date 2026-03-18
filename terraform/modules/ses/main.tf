@@ -41,10 +41,9 @@ data "aws_iam_policy_document" "ses_send" {
       "ses:SendEmail",
       "ses:SendRawEmail"
     ]
-    resources = [
-      aws_ses_domain_identity.main.arn,
-      aws_ses_email_identity.sender.arn
-    ]
+    # Use "*" to allow sending from any verified identity to any recipient
+    # SES will still only allow sending from verified identities
+    resources = ["*"]
   }
 }
 
