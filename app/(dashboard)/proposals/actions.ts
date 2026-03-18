@@ -18,7 +18,8 @@ export async function getProposals() {
         id,
         title,
         funder_name,
-        deadline
+        deadline,
+        eligibility
       )
     `)
     .eq('org_id', orgId)
