@@ -288,10 +288,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Grant Categories for Eligibility Matching\nconst eligibilityCriteria = {\n  categories: [\n    {\n      name: \"Core Program Grants\",\n      priority: \"TOP\",\n      focus: \"Direct services for youth aging out of foster care & seniors\",\n      awardMin: 15000,\n      awardMax: 75000,\n      useFor: [\"Clothing & essentials distribution\", \"Hygiene kits & transition supplies\", \"Senior engagement & dignity initiatives\"],\n      bestFunders: [\"Community foundations\", \"Family foundations\", \"Local corporate foundations\"],\n      keywords: [\"dignity\", \"stability\", \"equity\", \"transition support\", \"foster youth\", \"seniors\", \"clothing\", \"essentials\", \"hygiene\"]\n    },\n    {\n      name: \"Foster Care & Youth Transition Grants\",\n      priority: \"HIGH\",\n      focus: \"Independent living, workforce readiness, education support\",\n      awardMin: 25000,\n      awardMax: 100000,\n      useFor: [\"Workforce-ready clothing\", \"Life-skills & employment readiness support\", \"Transitional guidance programming\"],\n      bestFunders: [\"State agencies\", \"Federal grants\", \"National foundations\"],\n      keywords: [\"transition-age youth\", \"post-foster care outcomes\", \"equity-driven intervention\", \"workforce\", \"life skills\", \"employment\"]\n    }\n  ],\n  geographic: \"Georgia\",\n  orgType: \"501(c)(3) nonprofit\"\n};\n\nconst grantData = $input.first().json;\nreturn [{ json: { ...grantData, eligibilityCriteria } }];"
+        "jsCode": "// Pass through grant data and extract org_id for narrative fetch\nconst grantData = $input.first().json;\nconst webhookBody = $('Webhook Trigger').first().json.body;\nconst org_id = webhookBody.org_id || webhookBody.grantData?.org_id || grantData.originalGrantData?.org_id || '';\n\nreturn [{ json: { ...grantData, org_id } }];"
       },
       "id": "28de88e7-0950-43fc-9c96-4f1c9c43c893",
-      "name": "Load Eligibility Criteria3",
+      "name": "Prepare Grant Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -299,7 +299,60 @@
         -10432
       ],
       "notesInFlow": true,
-      "notes": "Grant categories for eligibility matching"
+      "notes": "Extract org_id for narrative fetch"
+    },
+    {
+      "parameters": {
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/narratives?org_id=eq.{{ $json.org_id }}&select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-fetch-narr-ativ-es0000000001",
+      "name": "Fetch Narratives",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4528,
+        -10432
+      ],
+      "alwaysOutputData": true,
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      },
+      "notes": "Fetch org narratives from Supabase"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine grant data with org narratives into a single context\nconst grantData = $('Prepare Grant Data').first().json;\nconst narrativeItems = $('Fetch Narratives').all();\n\nlet narrativeText = '';\nfor (const item of narrativeItems) {\n  const n = item.json;\n  if (n.title && n.content) {\n    narrativeText += `\\n\\n### ${n.title}\\n${n.content}`;\n  }\n}\n\nif (!narrativeText) {\n  narrativeText = 'No narratives available for this organization.';\n}\n\nreturn [{ json: { ...grantData, narrativeText: narrativeText.trim() } }];"
+      },
+      "id": "b2c3d4e5-comb-cont-ext0-000000000002",
+      "name": "Combine Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4336,
+        -10432
+      ],
+      "notesInFlow": true,
+      "notes": "Merge grant data + org narratives"
     },
     {
       "parameters": {
@@ -312,11 +365,11 @@
         "messages": {
           "values": [
             {
-              "content": "You are a grant eligibility analyst for a nonprofit serving foster youth and seniors in Pennsylvania.\n\nEVALUATE against these TWO PRIORITY CATEGORIES:\n\n**CATEGORY 1: Core Program Grants (TOP PRIORITY)**\n- Focus: Direct services for youth aging out of foster care & seniors\n- Award Range: $15,000-$75,000\n- Use For: Clothing & essentials distribution, Hygiene kits & transition supplies, Senior engagement & dignity initiatives\n- Best Funders: Community foundations, Family foundations, Local corporate foundations\n- Messaging: dignity, stability, equity, transition support\n\n**CATEGORY 2: Foster Care & Youth Transition Grants**\n- Focus: Independent living, workforce readiness, education support\n- Award Range: $25,000-$100,000\n- Use For: Workforce-ready clothing, Life-skills & employment readiness support, Transitional guidance programming\n- Messaging: \"transition-age youth\", \"post-foster care outcomes\", \"equity-driven intervention\"\n  \n# and also try and consider the criterias mentioned below so its better if its related to it\nMission: A nonprofit organization designed to help people rebuild their lives, serving as the foundation. We help\n  youths that have aged out of the foster care system and seniors in assisted care and living facilities, providing them\n   with various support services ranging from volunteer care to companionship.\n\n  Vision: To be a home of plenty - a refuge offering knowledge, information, resources, and temporary housing for those\n  failed by the system.\n\n  Target Populations Served:\n  1. Foster Youth Aging Out (Ages 18-24): Young adults exiting the foster care system who need support transitioning to\n  2. Seniors in Care Facilities (Ages 65+): Elderly individuals in assisted living and long-term care facilities\n  experiencing isolation and needing companionship.\n  3. Underserved Communities: Particularly African American individuals disproportionately affected by child welfare\n  system disparities and lower reunification rates.\n\n  Programs & Services:\n  - Youth transition support (life skills, mentorship, resource navigation, career guidance)\n  - Senior companionship and volunteer care services\n  - Resource connection and information sharing\n  - Transitional housing for former foster youth (planned/future)\n\nStrong Match Keywords: foster care, foster youth, aging out, transition age youth, child welfare, senior services,\n  elderly care, aging services, older adults, companionship, volunteer services, transitional housing, youth\n  development, independent living, life skills, mentorship, African American, minority serving, underserved populations,\n   vulnerable populations, social services, human services, New Jersey, nonprofit capacity building\n\n  Moderate Match Keywords: youth services, family services, community development, at-risk youth, low-income, wraparound\n   services, supportive services, intergenerational, dignity, equity, racial equity, trauma-informed, Northeast,\n  Mid-Atlantic, urban communities\n\n\n\n**SCORING RULES**\nFirst, calculate a Confidence Score (0–100) representing how strongly the grant opportunity matches the organization’s mission, categories, eligibility, and typical award size ($15k–$100k).\n\nAfter determining the confidence score, assign the grade based on the following thresholds:\n\nGREEN: Confidence Score above 80\nYELLOW: Confidence Score between 50 and 80\nRED: Confidence Score below 50\n\n**RETURN VALID JSON:**\n{\n  \"grantid\": \"the unique grantid of the grant\",\n\"org_id\": \"the unique orgid of the grant\",\n  \"overallScore\": \"GREEN\" | \"YELLOW\" | \"RED\",\n  \"confidence\": 0-100,\n  \"summary\": \"2-sentence eligibility determination\",\n  \"matchedCategory\": \"Core Program Grants\" | \"Foster Care & Youth Transition\" | \"None\",\n  \"grantTitle\": \"Extracted grant title\",\n  \"agency\": \"Funding agency name\",\n\"deadline\": \"{{ extract the deadline from the grant content; if no numeric date, preserve the original text like 'Ongoing' }}\",  \n\"fundingRange\": \"$X - $Y\",\n  \"categories\": {\n    \"category1Match\": true/false,\n    \"category2Match\": true/false,\n    \"matchedKeywords\": [\"foster youth\", \"seniors\", \"etc\"]\n  },\n  \"keyRequirements\": [\"501c3 letter\", \"budget\", \"etc\"],\n  \"concerns\": [\"Any red flags\"],\n  \"recommendations\": [\"Next steps\"]\n}",
+              "content": "You are a grant eligibility analyst. You evaluate grant opportunities against a specific nonprofit organization’s profile and programs.\n\n## ORGANIZATION PROFILE & PROGRAMS:\n{{ $json.narrativeText }}\n\n---\n\nUsing the organization’s narratives above as your sole matching criteria, evaluate how strongly this grant aligns with the organization’s mission, target populations, services, and programs.\n\n**SCORING RULES**\nCalculate a Confidence Score (0–100). The closer the grant aligns with the specific populations served, services delivered, and language used in the narratives, the higher the score.\n\nGREEN: Confidence Score above 80\nYELLOW: Confidence Score between 50 and 80\nRED: Confidence Score below 50\n\n**RETURN VALID JSON:**\n{\n  \"grantid\": \"the unique grantid of the grant\",\n  \"org_id\": \"the unique orgid of the grant\",\n  \"overallScore\": \"GREEN\" | \"YELLOW\" | \"RED\",\n  \"confidence\": 0-100,\n  \"summary\": \"2-sentence eligibility determination referencing specific org programs that match\",\n  \"matchedCategory\": \"Core Program Grants\" | \"Program Development & Capacity\" | \"None\",\n  \"grantTitle\": \"Extracted grant title\",\n  \"agency\": \"Funding agency name\",\n  \"deadline\": \"extract deadline from grant content; if no date, preserve original text like ‘Ongoing’\",\n  \"fundingRange\": \"$X - $Y\",\n  \"categories\": {\n    \"category1Match\": true/false,\n    \"category2Match\": true/false,\n    \"matchedKeywords\": [\"keyword1\", \"keyword2\"]\n  },\n  \"keyRequirements\": [\"501c3 letter\", \"budget\", \"etc\"],\n  \"concerns\": [\"Any red flags\"],\n  \"recommendations\": [\"Next steps\"]\n}",
               "role": "system"
             },
             {
-              "content": "=Analyze this grant for eligibility:\n\n## GRANT CONTENT:\n{{ $json.grantContent }}\n\nSource: {{ $json.sourceUrl }}\n\n## GRANT ID:\n{{ $json.grantid }}\n## ORG ID:\n{{ $json.originalGrantData.org_id }}\n---\n\n## CHECK AGAINST THESE REQUIREMENTS:\n\n1. GEOGRAPHIC: Must allow Pennsylvania-based 501(c)(3) nonprofits\n\n2. PROGRAM ALIGNMENT - Must match one of these categories:\n\n   CATEGORY 1 (TOP PRIORITY): Core Program Grants\n   - Focus: Direct services for foster youth & seniors\n   - Award Range: $15,000-$75,000\n   - Use for: Clothing distribution, Hygiene kits, Senior dignity initiatives\n   - Best funders: Community/Family/Local corporate foundations\n\n   CATEGORY 2: Foster Care & Youth Transition Grants\n   - Focus: Independent living, workforce readiness\n   - Award Range: $25,000-$100,000\n   - Use for: Workforce clothing, Life-skills support, Transitional guidance\n\n3. BUDGET: Award should be in $15,000-$100,000 range\n\n4. FUNDER PATTERNS: Check if they typically fund direct services vs research\n\n---\n\nProvide your eligibility analysis in the specified JSON format."
+              "content": "=Analyze this grant for eligibility:\n\n## GRANT CONTENT:\n{{ $json.grantContent }}\n\nSource: {{ $json.sourceUrl }}\n\n## GRANT ID:\n{{ $json.grantid }}\n## ORG ID:\n{{ $json.originalGrantData.org_id }}\n---\n\nProvide your eligibility analysis in the specified JSON format."
             }
           ]
         },
@@ -343,7 +396,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst aiResponse = item.json;\n\nlet analysis = null;\nlet parseError = null;\n\n// Extract JSON from AI response\ntry {\n  let responseText = '';\n\n  if (aiResponse.text) {\n    responseText = aiResponse.text;\n  } else if (aiResponse.message?.content) {\n    responseText = aiResponse.message.content;\n  } else if (aiResponse.output && Array.isArray(aiResponse.output)) {\n    responseText = aiResponse.output[0]?.content?.[0]?.text || '';\n  } else if (typeof aiResponse === 'string') {\n    responseText = aiResponse;\n  }\n\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);\n} catch (e) {\n  parseError = e.message;\n}\n\nconst originalData = $('Load Eligibility Criteria3').first().json;\nconst scannerData = originalData.originalGrantData || {};\n\nif (!analysis) {\n  return [{\n    json: {\n      success: false,\n      error: 'Failed to parse AI response',\n      parseError,\n      sourceUrl: originalData.sourceUrl,\n      sourceType: originalData.sourceType\n    }\n  }];\n}\n\n// ===== BUILD RESULT =====\nconst score = (analysis.overallScore || 'YELLOW').toLowerCase(); // convert to lowercase to match enum\nconst allowedScores = ['green', 'yellow', 'red'];\nconst screening_result = allowedScores.includes(score) ? score : 'yellow'; // fallback if unexpected\n\nconst result = {\n  success: true,\n  data: {\n    // analysis: analysis,\n    id: analysis.grantid,\n    org_id: analysis.org_id,\n    title: analysis.grantTitle,\n    stage: \"screening\",\n    funder_name: analysis.agency || scannerData.agency || 'Unknown',\n    amount: analysis.fundingRange || scannerData.awardRange || null,\n    deadline: analysis.deadline || scannerData.deadline,\n\n    eligibility: {\n      score: score.toUpperCase(),\n      confidence: analysis.confidence || 50,\n      indicator: {\n        green: '🟢',\n        yellow: '🟡',\n        red: '🔴'\n      }[score] || '⚪'\n    },\n\n    screening_score: analysis.confidence, // enum-safe value\n\n    screening_notes: analysis.summary || 'Unable to determine eligibility',\n    categories: analysis.categories || {},\n    concerns: analysis.concerns || [],\n    recommendations: analysis.recommendations || [],\n\n    source: {\n      url: originalData.sourceUrl,\n      type: originalData.sourceType,\n      analyzedAt: new Date().toISOString()\n    },\n\n    organization: originalData.eligibilityCriteria.geographic || {}\n  }\n};\nreturn result;\n"
+        "jsCode": "const item = $input.first();\nconst aiResponse = item.json;\n\nlet analysis = null;\nlet parseError = null;\n\n// Extract JSON from AI response\ntry {\n  let responseText = '';\n\n  if (aiResponse.text) {\n    responseText = aiResponse.text;\n  } else if (aiResponse.message?.content) {\n    responseText = aiResponse.message.content;\n  } else if (aiResponse.output && Array.isArray(aiResponse.output)) {\n    responseText = aiResponse.output[0]?.content?.[0]?.text || '';\n  } else if (typeof aiResponse === 'string') {\n    responseText = aiResponse;\n  }\n\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);\n} catch (e) {\n  parseError = e.message;\n}\n\nconst originalData = $('Combine Context').first().json;\nconst scannerData = originalData.originalGrantData || {};\n\nif (!analysis) {\n  return [{\n    json: {\n      success: false,\n      error: 'Failed to parse AI response',\n      parseError,\n      sourceUrl: originalData.sourceUrl,\n      sourceType: originalData.sourceType\n    }\n  }];\n}\n\n// ===== BUILD RESULT =====\nconst score = (analysis.overallScore || 'YELLOW').toLowerCase(); // convert to lowercase to match enum\nconst allowedScores = ['green', 'yellow', 'red'];\nconst screening_result = allowedScores.includes(score) ? score : 'yellow'; // fallback if unexpected\n\nconst result = {\n  success: true,\n  data: {\n    id: analysis.grantid,\n    org_id: analysis.org_id,\n    title: analysis.grantTitle,\n    stage: \"screening\",\n    funder_name: analysis.agency || scannerData.agency || 'Unknown',\n    amount: analysis.fundingRange || scannerData.awardRange || null,\n    deadline: analysis.deadline || scannerData.deadline,\n\n    eligibility: {\n      score: score.toUpperCase(),\n      confidence: analysis.confidence || 50,\n      indicator: {\n        green: '🟢',\n        yellow: '🟡',\n        red: '🔴'\n      }[score] || '⚪'\n    },\n\n    screening_score: analysis.confidence,\n\n    screening_notes: analysis.summary || 'Unable to determine eligibility',\n    categories: analysis.categories || {},\n    concerns: analysis.concerns || [],\n    recommendations: analysis.recommendations || [],\n\n    source: {\n      url: originalData.sourceUrl,\n      type: originalData.sourceType,\n      analyzedAt: new Date().toISOString()\n    }\n  }\n};\nreturn result;\n"
       },
       "id": "5e4f6239-e58d-451a-95e6-1b6b124dc8cb",
       "name": "Format Analysis Response",
@@ -577,7 +630,7 @@
       "main": [
         [
           {
-            "node": "Load Eligibility Criteria3",
+            "node": "Prepare Grant Data",
             "type": "main",
             "index": 0
           }
@@ -628,7 +681,7 @@
       "main": [
         [
           {
-            "node": "Load Eligibility Criteria3",
+            "node": "Prepare Grant Data",
             "type": "main",
             "index": 0
           }
@@ -639,7 +692,7 @@
       "main": [
         [
           {
-            "node": "Load Eligibility Criteria3",
+            "node": "Prepare Grant Data",
             "type": "main",
             "index": 0
           }
@@ -682,7 +735,29 @@
         ]
       ]
     },
-    "Load Eligibility Criteria3": {
+    "Prepare Grant Data": {
+      "main": [
+        [
+          {
+            "node": "Fetch Narratives",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Narratives": {
+      "main": [
+        [
+          {
+            "node": "Combine Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Context": {
       "main": [
         [
           {
