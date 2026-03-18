@@ -12,12 +12,26 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Only NEXT_PUBLIC_* vars are needed at build time (inlined into client JS by Next.js)
+# Build-time environment variables (needed for next.config.ts env embedding)
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG SUPABASE_SERVICE_ROLE_KEY
+ARG N8N_WEBHOOK_URL
+ARG N8N_WEBHOOK_SECRET
+ARG AWS_SES_REGION
+ARG AWS_SES_FROM_EMAIL
+ARG AWS_SES_FROM_NAME
+ARG AWS_SES_REPLY_TO_EMAIL
 
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+ENV N8N_WEBHOOK_URL=$N8N_WEBHOOK_URL
+ENV N8N_WEBHOOK_SECRET=$N8N_WEBHOOK_SECRET
+ENV AWS_SES_REGION=$AWS_SES_REGION
+ENV AWS_SES_FROM_EMAIL=$AWS_SES_FROM_EMAIL
+ENV AWS_SES_FROM_NAME=$AWS_SES_FROM_NAME
+ENV AWS_SES_REPLY_TO_EMAIL=$AWS_SES_REPLY_TO_EMAIL
 
 RUN npm run build
 
@@ -26,8 +40,8 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Runtime secrets — pass these via `docker run -e` or docker-compose environment,
-# NOT baked into the image.
+# All secrets are embedded at build time via next.config.ts env property
+# This is required for Next.js standalone mode to access them at runtime
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
