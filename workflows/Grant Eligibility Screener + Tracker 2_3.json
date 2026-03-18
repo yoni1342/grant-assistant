@@ -329,7 +329,7 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        -4496,
+        -4464,
         -10432
       ],
       "notesInFlow": true,
@@ -765,7 +765,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "08cd1e1d-2c0a-441e-9630-2ac09bbf6cb8",
+  "versionId": "6b6d8445-a710-484b-b010-da1990a34b17",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
