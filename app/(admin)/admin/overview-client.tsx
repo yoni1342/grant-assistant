@@ -15,7 +15,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
-import { Building2, Users, FileText, PenTool, Clock } from "lucide-react";
+import { Building2, Users, FileText, PenTool, Clock, CheckCircle2, ShieldOff, UserX } from "lucide-react";
 import { approveOrganization } from "./organizations/actions";
 import Link from "next/link";
 
@@ -28,6 +28,7 @@ interface OverviewClientProps {
     sector: string | null;
   }>;
   totalUsers: number;
+  deactivatedUsers: number;
   grants: Array<{
     id: string;
     created_at: string | null;
@@ -143,6 +144,7 @@ const workflowChartConfig: ChartConfig = {
 export function OverviewClient({
   organizations,
   totalUsers,
+  deactivatedUsers,
   grants,
   proposals,
   workflowExecutions,
@@ -153,6 +155,12 @@ export function OverviewClient({
 
   const pendingCount = organizations.filter(
     (o) => o.status === "pending"
+  ).length;
+  const approvedCount = organizations.filter(
+    (o) => o.status === "approved"
+  ).length;
+  const suspendedCount = organizations.filter(
+    (o) => o.status === "suspended"
   ).length;
 
   const registrationData = useMemo(
@@ -177,9 +185,9 @@ export function OverviewClient({
       <h2 className="text-2xl font-semibold">Platform Overview</h2>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-        <Link href="/admin/organizations">
-          <Card className="cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <Link href="/admin/organizations" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Orgs
@@ -191,8 +199,8 @@ export function OverviewClient({
             </CardContent>
           </Card>
         </Link>
-        <Link href="/admin/organizations?status=pending">
-          <Card className="cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-amber-400/30">
+        <Link href="/admin/organizations?status=pending" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-amber-400/30">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Pending Approvals
@@ -204,8 +212,34 @@ export function OverviewClient({
             </CardContent>
           </Card>
         </Link>
-        <Link href="/admin/users">
-          <Card className="cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
+        <Link href="/admin/organizations?status=approved" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-green-400/30">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Approved Orgs
+              </CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-green-600">{approvedCount}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/organizations?status=suspended" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-orange-400/30">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Suspended Orgs
+              </CardTitle>
+              <ShieldOff className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-orange-600">{suspendedCount}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/users" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Users
@@ -217,8 +251,21 @@ export function OverviewClient({
             </CardContent>
           </Card>
         </Link>
-        <Link href="/admin/grants">
-          <Card className="cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
+        <Link href="/admin/users?status=deactivated" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-red-400/30">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Deactivated Users
+              </CardTitle>
+              <UserX className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-red-600">{deactivatedUsers}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/grants" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Grants
@@ -230,8 +277,8 @@ export function OverviewClient({
             </CardContent>
           </Card>
         </Link>
-        <Link href="/admin/proposals">
-          <Card className="cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
+        <Link href="/admin/proposals" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Proposals

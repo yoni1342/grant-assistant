@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { OverviewClient } from "./overview-client";
 
@@ -79,11 +79,19 @@ export default async function AdminOverviewPage() {
     });
   }
 
+  // Count deactivated users via auth admin API
+  const adminClient = createAdminClient();
+  const { data: authData } = await adminClient.auth.admin.listUsers();
+  const deactivatedUsers = (authData?.users || []).filter(
+    (u) => u.banned_until && new Date(u.banned_until) > new Date()
+  ).length;
+
   return (
     <div className="p-6">
       <OverviewClient
         organizations={organizations || []}
         totalUsers={totalUsers || 0}
+        deactivatedUsers={deactivatedUsers}
         grants={grants || []}
         proposals={proposals || []}
         workflowExecutions={workflowExecutions || []}
