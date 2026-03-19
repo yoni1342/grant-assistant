@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -63,7 +64,9 @@ export function OrganizationsClient({
 }: {
   organizations: Organization[];
 }) {
-  const [filter, setFilter] = useState<Filter>("all");
+  const searchParams = useSearchParams();
+  const initialFilter = (searchParams.get("status") as Filter) || "all";
+  const [filter, setFilter] = useState<Filter>(initialFilter);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");

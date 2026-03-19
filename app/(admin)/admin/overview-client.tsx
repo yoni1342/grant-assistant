@@ -17,6 +17,7 @@ import {
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import { Building2, Users, FileText, PenTool, Clock } from "lucide-react";
 import { approveOrganization } from "./organizations/actions";
+import Link from "next/link";
 
 interface OverviewClientProps {
   organizations: Array<{
@@ -177,61 +178,71 @@ export function OverviewClient({
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Orgs
-            </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{organizations.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending Approvals
-            </CardTitle>
-            <Clock className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-amber-600">{pendingCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Users
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{totalUsers}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Grants
-            </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{grants.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Proposals
-            </CardTitle>
-            <PenTool className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{proposals.length}</p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/organizations">
+          <Card className="cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Orgs
+              </CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{organizations.length}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/organizations?status=pending">
+          <Card className="cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-amber-400/30">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Pending Approvals
+              </CardTitle>
+              <Clock className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-amber-600">{pendingCount}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/users">
+          <Card className="cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Users
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{totalUsers}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/grants">
+          <Card className="cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Grants
+              </CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{grants.length}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/proposals">
+          <Card className="cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Proposals
+              </CardTitle>
+              <PenTool className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{proposals.length}</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Usage Graphs */}

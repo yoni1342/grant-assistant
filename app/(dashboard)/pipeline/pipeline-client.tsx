@@ -17,7 +17,7 @@ import { KanbanView } from "./kanban-view";
 import { ListView } from "./list-view";
 import { AddGrantDialog } from "./add-grant-dialog";
 import { triggerStageWorkflow } from "./actions";
-import { Search, Plus, LayoutGrid, List } from "lucide-react";
+import { Search, Plus, LayoutGrid, List, Loader2, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 
 type Grant = Tables<"grants">;
@@ -34,8 +34,10 @@ const STAGES = [
 
 export function PipelineClient({
   initialGrants,
+  isFetchingGrants = false,
 }: {
   initialGrants: Grant[];
+  isFetchingGrants?: boolean;
 }) {
   const [grants, setGrants] = useState<Grant[]>(initialGrants);
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -208,8 +210,22 @@ export function PipelineClient({
         </Tabs>
       </div>
 
+      {/* Recommendation tip */}
+      {grants.some((g) => g.stage === "screening" || g.stage === "drafting") && (
+        <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-800 dark:bg-green-950/40 dark:text-green-300">
+          <Lightbulb className="h-4 w-4 shrink-0" />
+          <span>We recommend applying to grants with a screening score of <strong>85%+</strong> for the best chance of success.</span>
+        </div>
+      )}
+
       {/* Views */}
-      {view === "kanban" ? (
+      {grants.length === 0 && isFetchingGrants ? (
+        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin mb-4" />
+          <p className="text-sm font-medium">Searching for grants matching your organization...</p>
+          <p className="text-xs mt-1">This may take a minute. Grants will appear automatically.</p>
+        </div>
+      ) : view === "kanban" ? (
         <KanbanView grants={filtered} onStageChange={handleStageChange} />
       ) : (
         <ListView grants={filtered} />
