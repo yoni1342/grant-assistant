@@ -945,30 +945,6 @@
       "parameters": {
         "rule": {
           "interval": [
-            {
-              "field": "weeks",
-              "triggerAtDay": [
-                1
-              ],
-              "triggerAtHour": 8
-            }
-          ]
-        }
-      },
-      "id": "043d1efa-29e9-4c2a-b651-93b9a7b4b382",
-      "name": "Daily Scan Trigger test1",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        -12160,
-        31232
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "rule": {
-          "interval": [
             {}
           ]
         }
@@ -1246,38 +1222,56 @@
       "id": "404ee8dc-1acf-4db1-86b7-0f8f58594556",
       "name": "Build Location Payload",
       "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-results",
+              "leftValue": "={{ $json.noRelevantGrants }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2639b0ba-d61d-485f-ab11-4886b09ac453",
+      "name": "Has Results?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -6544,
+        31904
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "dde34132-dbb1-464d-adbe-b7c28861dea1",
+      "name": "No Results Found",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6256,
+        31872
+      ]
     }
   ],
-  "pinData": {
-    "Fetch Grants Webhook": [
-      {
-        "json": {
-          "headers": {
-            "host": "n8n.thebrownmine.com",
-            "user-agent": "node",
-            "content-length": "49",
-            "accept": "*/*",
-            "accept-encoding": "br, gzip, deflate",
-            "accept-language": "*",
-            "content-type": "application/json",
-            "sec-fetch-mode": "cors",
-            "via": "1.1 Caddy",
-            "x-forwarded-for": "152.53.91.134",
-            "x-forwarded-host": "n8n.thebrownmine.com",
-            "x-forwarded-proto": "https",
-            "x-webhook-secret": "t+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk="
-          },
-          "params": {},
-          "query": {},
-          "body": {
-            "org_id": "61661a4f-2188-40af-beb1-fd5992f061f7"
-          },
-          "webhookUrl": "https://n8n.thebrownmine.com/webhook/fetch-grants",
-          "executionMode": "production"
-        }
-      }
-    ]
-  },
+  "pinData": {},
   "connections": {
     "AI Location Filter": {
       "main": [
@@ -1294,7 +1288,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request3",
+            "node": "Has Results?",
             "type": "main",
             "index": 0
           }
@@ -1821,17 +1815,6 @@
         ]
       ]
     },
-    "Daily Scan Trigger test1": {
-      "main": [
-        [
-          {
-            "node": "PA DCED Programs1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Daily Scan Trigger1": {
       "main": [
         [
@@ -2196,6 +2179,24 @@
           }
         ]
       ]
+    },
+    "Has Results?": {
+      "main": [
+        [
+          {
+            "node": "No Results Found",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -2203,7 +2204,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "4dc7765c-13ce-4ff2-bbd2-73daa01e0440",
+  "versionId": "e8ac0f11-179f-4f77-931c-a85030a3d542",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
