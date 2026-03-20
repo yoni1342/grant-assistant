@@ -162,9 +162,54 @@ function GrantDetailBody({
   );
 }
 
+const ORG_TYPES = [
+  "501(c)(3) Nonprofit",
+  "501(c)(4) Nonprofit",
+  "Government Agency",
+  "Tribal Organization",
+  "Educational Institution",
+  "Faith-Based Organization",
+  "Community-Based Organization",
+  "Other",
+];
+
+const PROFIT_STATUSES = ["Nonprofit", "For-Profit", "Either"];
+
+const INDUSTRIES = [
+  "Health & Human Services",
+  "Education",
+  "Arts & Culture",
+  "Environment & Conservation",
+  "Housing & Community Development",
+  "Youth Development",
+  "Workforce Development",
+  "Technology & Innovation",
+  "Agriculture & Food Security",
+  "Public Safety",
+  "Other",
+];
+
+const FUNDING_CATEGORIES = [
+  "Federal Grant",
+  "State Grant",
+  "Foundation / Private Grant",
+  "Corporate Grant",
+  "Research Grant",
+  "Capacity Building",
+  "Capital / Equipment",
+  "Program / Project",
+  "General Operating Support",
+  "Other",
+];
+
 export default function DiscoveryPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [orgType, setOrgType] = useState("");
+  const [profitStatus, setProfitStatus] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [fundingCategory, setFundingCategory] = useState("");
   const [results, setResults] = useState<DiscoveredGrant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searchComplete, setSearchComplete] = useState(false);
@@ -245,7 +290,14 @@ export default function DiscoveryPage() {
       const response = await fetch("/api/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ service: "grant-discovery", searchQuery: query }),
+        body: JSON.stringify({
+          service: "grant-discovery",
+          searchQuery: query,
+          ...(orgType && { orgType }),
+          ...(profitStatus && { profitStatus }),
+          ...(industry && { industry }),
+          ...(fundingCategory && { fundingCategory }),
+        }),
       });
 
       const data = await response.json();
@@ -390,6 +442,19 @@ export default function DiscoveryPage() {
               />
             </div>
             <Button
+              variant="outline"
+              onClick={() => setShowFilters((v) => !v)}
+              className="shrink-0"
+            >
+              <Filter className="h-4 w-4 mr-1" />
+              Filters
+              {(orgType || profitStatus || industry || fundingCategory) && (
+                <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">
+                  {[orgType, profitStatus, industry, fundingCategory].filter(Boolean).length}
+                </Badge>
+              )}
+            </Button>
+            <Button
               onClick={triggerDiscovery}
               disabled={loading || !query.trim()}
             >
@@ -401,6 +466,63 @@ export default function DiscoveryPage() {
               Discover
             </Button>
           </div>
+
+          {showFilters && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Organization Type</label>
+                <select
+                  value={orgType}
+                  onChange={(e) => setOrgType(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Any</option>
+                  {ORG_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Nonprofit / For-Profit</label>
+                <select
+                  value={profitStatus}
+                  onChange={(e) => setProfitStatus(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Any</option>
+                  {PROFIT_STATUSES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Industry</label>
+                <select
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Any</option>
+                  {INDUSTRIES.map((i) => (
+                    <option key={i} value={i}>{i}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Funding Category</label>
+                <select
+                  value={fundingCategory}
+                  onChange={(e) => setFundingCategory(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Any</option>
+                  {FUNDING_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           {loading && (
             <div className="mt-3 space-y-2">
