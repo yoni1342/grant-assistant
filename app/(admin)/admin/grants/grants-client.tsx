@@ -36,15 +36,16 @@ interface Org {
   name: string;
 }
 
-type StageFilter = "all" | "discovery" | "screening" | "drafting" | "submission" | "awarded" | "reporting" | "closed";
+type StageFilter = "all" | "discovery" | "screening" | "pending_approval" | "drafting" | "submission" | "awarded" | "reporting" | "closed";
 
-const STAGES: StageFilter[] = ["all", "discovery", "screening", "drafting", "submission", "awarded", "reporting", "closed"];
+const STAGES: StageFilter[] = ["all", "discovery", "screening", "pending_approval", "drafting", "submission", "awarded", "reporting", "closed"];
 
 function stageBadge(stage: string | null) {
   if (!stage) return <span className="text-muted-foreground">—</span>;
   const colors: Record<string, string> = {
     discovery: "bg-blue-100 text-blue-800",
     screening: "bg-yellow-100 text-yellow-800",
+    pending_approval: "bg-amber-100 text-amber-800",
     drafting: "bg-purple-100 text-purple-800",
     submission: "bg-orange-100 text-orange-800",
     awarded: "bg-green-100 text-green-800",
@@ -154,7 +155,7 @@ export function GrantsClient({
               size="sm"
               onClick={() => setStageFilter(s)}
             >
-              {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+              {s === "all" ? "All" : s === "pending_approval" ? "Pending Approval" : s.charAt(0).toUpperCase() + s.slice(1)}
               {s !== "all" && ` (${stageCounts[s] || 0})`}
             </Button>
           ))}

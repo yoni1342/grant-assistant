@@ -1930,6 +1930,7 @@ export function OrgDetailClient({
                         <TableHead className="cursor-pointer select-none" onClick={() => toggleProposalSort("quality_score")}>
                           Quality <SortIcon field="quality_score" currentField={proposalSortField} asc={proposalSortAsc} />
                         </TableHead>
+                        <TableHead>Confidence</TableHead>
                         <TableHead className="cursor-pointer select-none" onClick={() => toggleProposalSort("created_at")}>
                           Created <SortIcon field="created_at" currentField={proposalSortField} asc={proposalSortAsc} />
                         </TableHead>
@@ -1964,6 +1965,24 @@ export function OrgDetailClient({
                                 {p.quality_score}%
                               </Badge>
                             ) : <span className="text-muted-foreground">-</span>}
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const elig = p.grant?.eligibility as { confidence?: number } | null;
+                              const confidence = elig?.confidence;
+                              if (confidence == null) return <span className="text-muted-foreground">-</span>;
+                              return (
+                                <Badge
+                                  variant={
+                                    confidence >= 80 ? "default" :
+                                    confidence >= 60 ? "secondary" : "destructive"
+                                  }
+                                  className="text-xs"
+                                >
+                                  {confidence}%
+                                </Badge>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {p.created_at ? new Date(p.created_at).toLocaleDateString() : "-"}

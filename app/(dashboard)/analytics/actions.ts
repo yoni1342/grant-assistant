@@ -52,7 +52,7 @@ export async function getAnalytics() {
     .from('grants')
     .select('amount')
     .eq('org_id', profile.org_id)
-    .in('stage', ['discovery', 'screening', 'drafting', 'submission'])
+    .in('stage', ['discovery', 'screening', 'pending_approval', 'drafting', 'submission'])
 
   if (pipelineError) {
     return { error: pipelineError.message, data: null }

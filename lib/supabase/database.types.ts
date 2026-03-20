@@ -850,6 +850,7 @@ export type Database = {
       grant_stage:
         | "discovery"
         | "screening"
+        | "pending_approval"
         | "drafting"
         | "submission"
         | "awarded"

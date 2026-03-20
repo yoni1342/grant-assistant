@@ -105,19 +105,9 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
     return { error: workflowError.message }
   }
 
-  // Clear screening data when moving from screening to drafting
-  if (targetStage === 'drafting' && grant.stage === 'screening') {
-    await supabase
-      .from('grants')
-      .update({
-        screening_score: null,
-        screening_notes: null,
-        eligibility: null,
-        recommendations: null,
-        concerns: null,
-      })
-      .eq('id', grantId)
-      .eq('org_id', profile.org_id)
+  // Clear screening data when moving to drafting from screening or pending_approval
+  if (targetStage === 'drafting' && (grant.stage === 'screening' || grant.stage === 'pending_approval')) {
+    // Don't clear screening data — keep it for reference in drafting report
   }
 
   // Fire-and-forget: trigger n8n workflow (notifications are created by the n8n workflows directly)

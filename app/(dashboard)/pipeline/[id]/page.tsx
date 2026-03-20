@@ -39,13 +39,20 @@ export default async function GrantDetailPage({
     .order("created_at", { ascending: false })
     .limit(10);
 
-  // Fetch proposals for this grant
-  const { data: proposals } = await supabase
-    .from("proposals")
-    .select("id, title, status")
-    .eq("grant_id", id)
-    .eq("org_id", orgId)
-    .order("created_at", { ascending: false });
+  // Fetch proposals and org name for this grant
+  const [{ data: proposals }, { data: org }] = await Promise.all([
+    supabase
+      .from("proposals")
+      .select("id, title, status, quality_score")
+      .eq("grant_id", id)
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("organizations")
+      .select("name")
+      .eq("id", orgId)
+      .single(),
+  ]);
 
   return (
     <GrantDetail
@@ -53,6 +60,7 @@ export default async function GrantDetailPage({
       activities={activities || []}
       workflows={workflows || []}
       proposals={proposals || []}
+      orgName={org?.name || "your organization"}
     />
   );
 }
