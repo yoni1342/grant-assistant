@@ -116,21 +116,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Return result for rejected grants (RED score)\nconst data = $('Format Analysis Response').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    eligibility: data.eligibility,\n    grantInfo: data.grantInfo,\n    categories: data.categories,\n    concerns: data.concerns,\n    recommendations: data.recommendations,\n    addedToTracker: false,\n    rejectionReason: 'Grant did not pass eligibility screening (RED score)',\n    source: data.source\n  }\n}];"
-      },
-      "id": "64350bcd-adf8-48f4-a70a-b6ec7bd1c8d4",
-      "name": "Rejected Response",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -2288,
-        -10688
-      ],
-      "notesInFlow": true,
-      "notes": "Return result for RED scores"
-    },
-    {
-      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -365,7 +350,7 @@
         "messages": {
           "values": [
             {
-              "content": "\n  You are a grant eligibility analyst. You evaluate grant opportunities against a specific nonprofit organization's profile and programs.\n\n  ---\n\n  Using the organization's narratives given as \"ORGANIZATION PROFILE & PROGRAMS\" as your sole matching criteria, evaluate how strongly this grant aligns\n  with the organization.\n\n  **SCORING DIMENSIONS (each worth 0-20 points, total 0-100):**\n\n  1. **Mission Alignment (0-20):** Does the grant's purpose directly support the org's stated mission?\n     - 16-20: Grant purpose is nearly identical to org mission\n     - 11-15: Strong overlap with minor differences\n     - 6-10: Partial overlap, org could make a case\n     - 0-5: Weak or no connection\n\n  2. **Target Population Match (0-20):** Does the grant serve the same populations the org serves?\n     - 16-20: Exact same population (e.g., both serve homeless youth in urban areas)\n     - 11-15: Overlapping population (e.g., grant serves \"youth\", org serves \"at-risk teens\")\n     - 6-10: Broadly related (e.g., grant serves \"families\", org serves \"children\")\n     - 0-5: Different populations\n\n  3. **Service/Program Fit (0-20):** Does the org already deliver the type of services the grant funds?\n     - 16-20: Org runs programs that directly match grant-funded activities\n     - 11-15: Org has related programs that could be adapted\n     - 6-10: Org has capacity but no existing matching program\n     - 0-5: No relevant programs\n\n  4. **Geographic Alignment (0-20):** Does the org operate in the grant's target geography?\n     - 16-20: Exact geographic match\n     - 11-15: Overlapping service area\n     - 6-10: Same state but different region\n     - 0-5: Different geography or no match\n\n  5. **Organizational Capacity (0-20):** Based on the narratives, does the org appear capable of executing this grant?\n     - 16-20: Narratives demonstrate direct experience with similar grants/projects\n     - 11-15: Org has relevant infrastructure and experience\n     - 6-10: Org could potentially handle it but limited evidence\n     - 0-5: No evidence of capacity\n\n  **SCORING RULES:**\n  - Score each dimension independently, then sum for the total Confidence Score (0-100)\n  - Be decisive: a strong match should score 85+, a poor match should score below 40\n  - Do NOT default to middle scores — justify each dimension score with specific evidence from the narratives\n  - If narratives are sparse, score based on what IS there, not what might be\n\n  GREEN: Confidence Score above 80\n  YELLOW: Confidence Score between 50 and 80\n  RED: Confidence Score below 50\n\n  **RETURN VALID JSON:**\n  {\n    \"grantid\": \"the unique grantid of the grant\",\n    \"org_id\": \"the unique orgid of the organization\",\n    \"overallScore\": \"GREEN\" | \"YELLOW\" | \"RED\",\n    \"confidence\": 0-100,\n    \"dimensionScores\": {\n      \"missionAlignment\": 0-20,\n      \"targetPopulation\": 0-20,\n      \"serviceFit\": 0-20,\n      \"geographicAlignment\": 0-20,\n      \"organizationalCapacity\": 0-20\n    },\n    \"summary\": \"2-sentence eligibility determination referencing specific org programs that match\",\n    \"matchedCategory\": \"Core Program Grants\" | \"Program Development & Capacity\" | \"None\",\n    \"grantTitle\": \"Extracted grant title\",\n    \"agency\": \"Funding agency name\",\n    \"deadline\": \"extract deadline from grant content; if no date, preserve original text like 'Ongoing'\",\n    \"fundingRange\": \"$X - $Y\",\n    \"categories\": {\n      \"category1Match\": true/false,\n      \"category2Match\": true/false,\n      \"matchedKeywords\": [\"keyword1\", \"keyword2\"]\n    },\n    \"keyRequirements\": [\"501c3 letter\", \"budget\", \"etc\"],\n    \"concerns\": [\"Any red flags\"],\n    \"recommendations\": [\"Next steps\"]\n  }",
+              "content": "You are a grant eligibility analyst. You evaluate grant opportunities against a specific nonprofit organization's profile and programs.\n\n  ---\n\n  Using the organization's narratives given as \"ORGANIZATION PROFILE & PROGRAMS\" as your sole matching criteria, evaluate how strongly this grant aligns\n  with the organization.\n\n  **SCORING DIMENSIONS (total 0-100):**\n\n  1. **Mission Alignment (0-40):** Does the grant's purpose directly support the org's stated mission?\n     - 32-40: Grant purpose clearly supports the org's mission — the org would naturally pursue this\n     - 21-31: Meaningful overlap but the grant targets a different aspect than the org's core focus\n     - 11-20: Tangential connection — org could stretch to make a case\n     - 0-10: No meaningful connection\n\n  2. **Target Population Match (0-15):** Does the grant serve the same populations the org serves?\n     - 12-15: The org explicitly serves the population this grant targets\n     - 8-11: Overlapping but not identical (e.g., grant says \"seniors\", org serves \"adults with disabilities\" including seniors)\n     - 4-7: Broadly related but different primary focus\n     - 0-3: Different populations entirely\n\n  3. **Service/Program Fit (0-25):** Does the org already deliver the type of services the grant funds?\n     - 20-25: Org's existing programs directly match what the grant funds — no new program needed\n     - 13-19: Org has related programs that could be expanded or adapted\n     - 7-12: Org has general capacity but no existing matching program\n     - 0-6: No relevant programs or experience\n\n  4. **Geographic Alignment (0-10):** Does the org operate in the grant's target geography?\n     - 8-10: Grant is open nationwide/statewide and org qualifies, OR grant targets the org's exact service area\n     - 5-7: Overlapping but not exact service area match\n     - 3-4: Same state but different region, or grant restricts to areas org doesn't serve\n     - 0-2: Grant explicitly excludes the org's geography\n\n  5. **Organizational Capacity (0-10):** Based on the narratives, does the org appear capable of executing this grant?\n     - 8-10: Narratives show the org has done similar work — relevant programs, infrastructure, or past grants\n     - 5-7: Org has relevant infrastructure but no direct evidence of similar project execution\n     - 3-4: Limited evidence of capacity for this type of work\n     - 0-2: No evidence of capacity\n\n  **CRITICAL SCORING RULES:**\n  - Score each dimension independently based on evidence in the narratives.\n  - If a dimension is clearly a strong match, score it near the top of its range. Reserve mid-range for genuinely ambiguous cases where evidence is mixed.\n  Do NOT discount points because the narratives don't use the exact same terminology as the grant.\n  - If a grant has no geographic restriction or is open nationwide, geographic alignment is 8-10 by default.\n  - If the narratives are sparse on a dimension but nothing contradicts a match, score at mid-range, not lower.\n  - Be decisive: a strong match should score 85+, a poor match should score below 40. Scores of 50-70 should be rare — most grants are either a good fit or\n  they aren't.\n\n  **INDICATOR THRESHOLDS:**\n  - GREEN: Confidence Score above 80\n  - YELLOW: Confidence Score between 50 and 80\n  - RED: Confidence Score below 50\n\n  **CALIBRATION EXAMPLES:**\n\n  Example 1 — Strong match (score ~90):\n  A grant funding \"community health education for underserved populations\" evaluated against an org whose narratives describe \"health literacy programs for\n  low-income families in rural Georgia.\" Mission, population, services, and geography all clearly align → scores of 36, 13, 23, 9, 8 = 89.\n\n  Example 2 — Poor match (score ~20):\n  A grant funding \"marine biology research fellowships for PhD students\" evaluated against the same community health org. No overlap on any dimension →\n  scores of 3, 1, 2, 9, 3 = 18.\n\n  Example 3 — Partial match (score ~45):\n  A grant funding \"youth STEM education in urban schools\" evaluated against the community health org. The org serves a related population (families) and is\n  in the right geography, but doesn't run STEM programs → scores of 12, 8, 5, 9, 6 = 40.\n\n  **RETURN VALID JSON:**\n  {\n    \"grantid\": \"the unique grantid of the grant\",\n    \"org_id\": \"the unique orgid of the organization\",\n    \"overallScore\": \"GREEN\" | \"YELLOW\" | \"RED\",\n    \"confidence\": 0-100,\n    \"dimensionScores\": {\n      \"missionAlignment\": 0-40,\n      \"targetPopulation\": 0-15,\n      \"serviceFit\": 0-25,\n      \"geographicAlignment\": 0-10,\n      \"organizationalCapacity\": 0-10\n    },\n    \"dimensionReasoning\": {\n      \"missionAlignment\": \"1-sentence justification citing specific narrative evidence\",\n      \"targetPopulation\": \"1-sentence justification citing specific narrative evidence\",\n      \"serviceFit\": \"1-sentence justification citing specific narrative evidence\",\n      \"geographicAlignment\": \"1-sentence justification citing specific narrative evidence\",\n      \"organizationalCapacity\": \"1-sentence justification citing specific narrative evidence\"\n    },\n    \"summary\": \"2-sentence eligibility determination referencing specific org programs that match\",\n    \"matchedCategory\": \"Core Program Grants\" | \"Program Development & Capacity\" | \"None\",\n    \"grantTitle\": \"Extracted grant title\",\n    \"agency\": \"Funding agency name\",\n    \"deadline\": \"extract deadline from grant content; if no date, preserve original text like 'Ongoing'\",\n    \"fundingRange\": \"$X - $Y\",\n    \"categories\": {\n      \"category1Match\": true/false,\n      \"category2Match\": true/false,\n      \"matchedKeywords\": [\"keyword1\", \"keyword2\"]\n    },\n    \"keyRequirements\": [\"501c3 letter\", \"budget\", \"etc\"],\n    \"concerns\": [\"Any red flags\"],\n    \"recommendations\": [\"Next steps\"]\n  }",
               "role": "system"
             },
             {
@@ -396,7 +381,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\n  const aiResponse = item.json;\n\n  let analysis = null;\n  let parseError = null;\n\n  // Extract JSON from AI response\n  try {\n    let responseText = '';\n\n    if (aiResponse.text) {\n      responseText = aiResponse.text;\n    } else if (aiResponse.message?.content) {\n      responseText = aiResponse.message.content;\n    } else if (aiResponse.output && Array.isArray(aiResponse.output)) {\n      responseText = aiResponse.output[0]?.content?.[0]?.text || '';\n    } else if (typeof aiResponse === 'string') {\n      responseText = aiResponse;\n    }\n\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);\n  } catch (e) {\n    parseError = e.message;\n  }\n\n  const originalData = $('Combine Context').first().json;\n  const scannerData = originalData.originalGrantData || {};\n\n  if (!analysis) {\n    return [{\n      json: {\n        success: false,\n        error: 'Failed to parse AI response',\n        parseError,\n        sourceUrl: originalData.sourceUrl,\n        sourceType: originalData.sourceType\n      }\n    }];\n  }\n\n  // ===== BUILD RESULT =====\n  const score = (analysis.overallScore || 'YELLOW').toLowerCase();\n  const allowedScores = ['green', 'yellow', 'red'];\n  const screening_result = allowedScores.includes(score) ? score : 'yellow';\n\n  // Calculate confidence from dimension scores if available, otherwise use direct confidence\n  const dims = analysis.dimensionScores || {};\n  const hasAllDimensions = dims.missionAlignment != null\n    && dims.targetPopulation != null\n    && dims.serviceFit != null\n    && dims.geographicAlignment != null\n    && dims.organizationalCapacity != null;\n\n  const calculatedConfidence = hasAllDimensions\n    ? dims.missionAlignment + dims.targetPopulation + dims.serviceFit + dims.geographicAlignment + dims.organizationalCapacity\n    : (analysis.confidence || 50);\n\n  const result = {\n    success: true,\n    data: {\n      id: analysis.grantid,\n      org_id: analysis.org_id,\n      title: analysis.grantTitle,\n      stage: \"screening\",\n      funder_name: analysis.agency || scannerData.agency || 'Unknown',\n      amount: analysis.fundingRange || scannerData.awardRange || null,\n      deadline: analysis.deadline || scannerData.deadline,\n\n      eligibility: {\n        score: score.toUpperCase(),\n        confidence: calculatedConfidence,\n        indicator: {\n          green: '🟢',\n          yellow: '🟡',\n          red: '🔴'\n        }[score] || '⚪'\n      },\n\n      screening_score: calculatedConfidence,\n\n      dimension_scores: {\n        mission_alignment: dims.missionAlignment || 0,\n        target_population: dims.targetPopulation || 0,\n        service_fit: dims.serviceFit || 0,\n        geographic_alignment: dims.geographicAlignment || 0,\n        organizational_capacity: dims.organizationalCapacity || 0\n      },\n\n      screening_notes: analysis.summary || 'Unable to determine eligibility',\n      categories: analysis.categories || {},\n      concerns: analysis.concerns || [],\n      recommendations: analysis.recommendations || [],\n\n      source: {\n        url: originalData.sourceUrl,\n        type: originalData.sourceType,\n        analyzedAt: new Date().toISOString()\n      }\n    }\n  };\n  return result;"
+        "jsCode": "const item = $input.first();\n  const aiResponse = item.json;\n\n  let analysis = null;\n  let parseError = null;\n\n  // Extract JSON from AI response\n  try {\n    let responseText = '';\n\n    if (aiResponse.text) {\n      responseText = aiResponse.text;\n    } else if (aiResponse.message?.content) {\n      responseText = aiResponse.message.content;\n    } else if (aiResponse.output && Array.isArray(aiResponse.output)) {\n      responseText = aiResponse.output[0]?.content?.[0]?.text || '';\n    } else if (typeof aiResponse === 'string') {\n      responseText = aiResponse;\n    }\n\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);\n  } catch (e) {\n    parseError = e.message;\n  }\n\n  const originalData = $('Combine Context').first().json;\n  const scannerData = originalData.originalGrantData || {};\n\n  if (!analysis) {\n    return [{\n      json: {\n        success: false,\n        error: 'Failed to parse AI response',\n        parseError,\n        sourceUrl: originalData.sourceUrl,\n        sourceType: originalData.sourceType\n      }\n    }];\n  }\n\n  // ===== BUILD RESULT =====\n  const score = (analysis.overallScore || 'YELLOW').toLowerCase();\n  const allowedScores = ['green', 'yellow', 'red'];\n  const screening_result = allowedScores.includes(score) ? score : 'yellow';\n\n  // Calculate confidence from dimension scores if available\n  const dims = analysis.dimensionScores || {};\n  const hasAllDimensions = dims.missionAlignment != null\n    && dims.targetPopulation != null\n    && dims.serviceFit != null\n    && dims.geographicAlignment != null\n    && dims.organizationalCapacity != null;\n\n  const calculatedConfidence = hasAllDimensions\n    ? dims.missionAlignment + dims.targetPopulation + dims.serviceFit + dims.geographicAlignment + dims.organizationalCapacity\n    : (analysis.confidence || 50);\n\n  const result = {\n    success: true,\n    data: {\n      id: analysis.grantid,\n      org_id: analysis.org_id || originalData.org_id || scannerData.org_id,\n      title: analysis.grantTitle,\n      stage: \"screening\",\n      funder_name: analysis.agency || scannerData.agency || 'Unknown',\n      amount: analysis.fundingRange || scannerData.awardRange || null,\n      deadline: analysis.deadline || scannerData.deadline,\n\n      eligibility: {\n        score: score.toUpperCase(),\n        confidence: calculatedConfidence,\n        indicator: {\n          green: '🟢',\n          yellow: '🟡',\n          red: '🔴'\n        }[score] || '⚪',\n        dimension_scores: {\n          mission_alignment: dims.missionAlignment || 0,\n          target_population: dims.targetPopulation || 0,\n          service_fit: dims.serviceFit || 0,\n          geographic_alignment: dims.geographicAlignment || 0,\n          organizational_capacity: dims.organizationalCapacity || 0\n        }\n      },\n\n      screening_score: calculatedConfidence,\n\n      screening_notes: analysis.summary || 'Unable to determine eligibility',\n      categories: analysis.categories || {},\n      concerns: analysis.concerns || [],\n      recommendations: analysis.recommendations || [],\n\n      source: {\n        url: originalData.sourceUrl,\n        type: originalData.sourceType,\n        analyzedAt: new Date().toISOString()\n      }\n    }\n  };\n  return result;"
       },
       "id": "48fe4ade-3183-416c-9222-e6e7ef3d8254",
       "name": "Format Analysis Response",
@@ -404,7 +389,7 @@
       "typeVersion": 2,
       "position": [
         -2736,
-        -10880
+        -10896
       ],
       "notesInFlow": true,
       "notes": "Structure the final output"
@@ -423,37 +408,6 @@
       ],
       "notesInFlow": true,
       "notes": "Return success with tracker confirmation"
-    },
-    {
-      "parameters": {
-        "select": "channel",
-        "channelId": {
-          "__rl": true,
-          "value": "C0ABUATDHG9",
-          "mode": "list",
-          "cachedResultName": "grant-assistant"
-        },
-        "messageType": "block",
-        "blocksUi": "={{ $json.blocks }}",
-        "otherOptions": {
-          "includeLinkToWorkflow": false
-        }
-      },
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.4,
-      "position": [
-        -1216,
-        -10672
-      ],
-      "id": "ccb873ac-beb7-4165-ab1d-254f0ec3cc1a",
-      "name": "Send a message1",
-      "webhookId": "7eba1a6d-405b-447e-967b-0ccadd1a97ed",
-      "credentials": {
-        "slackApi": {
-          "id": "rFSQaYpz4DWprrfA",
-          "name": "Grant Assistant"
-        }
-      }
     },
     {
       "parameters": {
@@ -589,6 +543,109 @@
           "name": "x-webhook-secret"
         }
       }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": " {\n    \"success\": true,\n    \"eligible\": false,\n    \"message\": \"Grant did not pass eligibility screening\"\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -1552,
+        -10688
+      ],
+      "id": "97f1c1af-aec5-41b2-a08f-4f2d866b4250",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $json.data.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "=  {{ JSON.stringify(Object.fromEntries(Object.entries($json.data).filter(([k]) => k !== 'id'))) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2224,
+        -10656
+      ],
+      "id": "ef9cc561-f85f-490b-bf76-394028d5f441",
+      "name": "update grant",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/activity_log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n    org_id: $json.org_id,\n    grant_id: $json.id,\n    action: \"screening_completed\",\n    details: {\n      score: $json.eligibility?.score || null,\n      confidence: $json.eligibility?.confidence || null,\n      summary: $json.screening_notes || null,\n      grant_name: $json.title || null,\n      funder: $json.funder_name || null,\n      workflow: \"WF2_eligibility_screener\"\n    }\n  }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2000,
+        -10640
+      ],
+      "id": "c5e817da-65ea-4fe6-80a1-302f2a1f4051",
+      "name": "update grant4",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -631,17 +688,6 @@
         [
           {
             "node": "Prepare Grant Data",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Rejected Response": {
-      "main": [
-        [
-          {
-            "node": "Notify Not Eligible",
             "type": "main",
             "index": 0
           }
@@ -728,7 +774,7 @@
         ],
         [
           {
-            "node": "Rejected Response",
+            "node": "update grant",
             "type": "main",
             "index": 0
           }
@@ -833,6 +879,39 @@
           }
         ]
       ]
+    },
+    "Notify Not Eligible": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update grant": {
+      "main": [
+        [
+          {
+            "node": "update grant4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update grant4": {
+      "main": [
+        [
+          {
+            "node": "Notify Not Eligible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -840,7 +919,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "8cb85fb5-57d6-46e6-aafc-7de0cf088282",
+  "versionId": "6d41261c-bf65-4818-830f-4f05a4394517",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
