@@ -13,11 +13,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { KanbanView } from "./kanban-view";
 import { ListView } from "./list-view";
 import { AddGrantDialog } from "./add-grant-dialog";
 import { triggerStageWorkflow } from "./actions";
-import { Search, Plus, LayoutGrid, List } from "lucide-react";
+import { Search, Plus, LayoutGrid, List, Loader2, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 
 type Grant = Tables<"grants">;
@@ -25,6 +34,7 @@ type Grant = Tables<"grants">;
 const STAGES = [
   "discovery",
   "screening",
+  "pending_approval",
   "drafting",
   // "submission",
   // "awarded",
@@ -34,14 +44,42 @@ const STAGES = [
 
 export function PipelineClient({
   initialGrants,
+  isFetchingGrants = false,
 }: {
   initialGrants: Grant[];
+  isFetchingGrants?: boolean;
 }) {
   const [grants, setGrants] = useState<Grant[]>(initialGrants);
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [confirmGrant, setConfirmGrant] = useState<Grant | null>(null);
+  const [orgName, setOrgName] = useState<string>("");
+
+  // Fetch org name for confirmation dialog
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from("profiles")
+        .select("org_id")
+        .eq("id", user.id)
+        .single()
+        .then(({ data: profile }) => {
+          if (!profile?.org_id) return;
+          supabase
+            .from("organizations")
+            .select("name")
+            .eq("id", profile.org_id)
+            .single()
+            .then(({ data: org }) => {
+              if (org?.name) setOrgName(org.name);
+            });
+        });
+    });
+  }, []);
 
   // Realtime subscription + polling fallback
   useEffect(() => {
@@ -126,11 +164,24 @@ export function PipelineClient({
   }
 
   const handleStageChange = useCallback(async (grantId: string, targetStage: string) => {
-    // Optimistically move the grant in the UI
+    const grant = grants.find((g) => g.id === grantId);
+    if (!grant) return;
+
+    // If moving to drafting, show confirmation dialog instead of proceeding
+    if (targetStage === "drafting" && grant.stage !== "drafting") {
+      setConfirmGrant(grant);
+      return;
+    }
+
+    await executeStageChange(grantId, targetStage);
+  }, [grants]);
+
+  const executeStageChange = useCallback(async (grantId: string, targetStage: string) => {
     const grant = grants.find((g) => g.id === grantId);
     if (!grant) return;
     const previousStage = grant.stage;
 
+    // Optimistically move the grant in the UI
     setGrants((prev) =>
       prev.map((g) =>
         g.id === grantId
@@ -186,11 +237,20 @@ export function PipelineClient({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All stages</SelectItem>
-            {STAGES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </SelectItem>
-            ))}
+            {STAGES.map((s) => {
+              const labels: Record<string, string> = {
+                discovery: "Discovery",
+                screening: "Screening",
+                pending_approval: "Pending Approval",
+                drafting: "Drafting",
+                closed: "Closed",
+              };
+              return (
+                <SelectItem key={s} value={s}>
+                  {labels[s] || s}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
         <Tabs
@@ -208,8 +268,22 @@ export function PipelineClient({
         </Tabs>
       </div>
 
+      {/* Recommendation tip */}
+      {grants.some((g) => g.stage === "screening" || g.stage === "pending_approval" || g.stage === "drafting") && (
+        <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-800 dark:bg-green-950/40 dark:text-green-300">
+          <Lightbulb className="h-4 w-4 shrink-0" />
+          <span>We recommend applying to grants with a screening score of <strong>85%+</strong> for the best chance of success.</span>
+        </div>
+      )}
+
       {/* Views */}
-      {view === "kanban" ? (
+      {grants.length === 0 && isFetchingGrants ? (
+        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin mb-4" />
+          <p className="text-sm font-medium">Searching for grants matching your organization...</p>
+          <p className="text-xs mt-1">This may take a minute. Grants will appear automatically.</p>
+        </div>
+      ) : view === "kanban" ? (
         <KanbanView grants={filtered} onStageChange={handleStageChange} />
       ) : (
         <ListView grants={filtered} />
@@ -220,6 +294,68 @@ export function PipelineClient({
         onClose={() => setShowAddDialog(false)}
         onGrantAdded={handleGrantAdded}
       />
+
+      {/* Confirm Proposal Generation Dialog */}
+      <Dialog open={!!confirmGrant} onOpenChange={(open) => { if (!open) setConfirmGrant(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Proposal Generation</DialogTitle>
+            <DialogDescription>
+              You are about to generate a grant proposal for:
+            </DialogDescription>
+          </DialogHeader>
+          {confirmGrant && (
+            <div className="space-y-3 py-2">
+              <div className="rounded-lg border p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Grant:</span>
+                  <span className="text-sm font-medium">{confirmGrant.title}</span>
+                </div>
+                {confirmGrant.funder_name && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">Funder:</span>
+                    <span className="text-sm">{confirmGrant.funder_name}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Applying as:</span>
+                  <span className="text-sm font-semibold">{orgName || "your organization"}</span>
+                </div>
+                {confirmGrant.screening_score != null && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">Screening Score:</span>
+                    <Badge
+                      variant={
+                        confirmGrant.screening_score >= 80 ? "default" :
+                        confirmGrant.screening_score >= 50 ? "secondary" : "destructive"
+                      }
+                      className="text-xs"
+                    >
+                      {confirmGrant.screening_score}%
+                    </Badge>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                This will move the grant to the Drafting stage and begin generating a proposal. Continue?
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmGrant(null)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              if (confirmGrant) {
+                executeStageChange(confirmGrant.id, "drafting");
+                setConfirmGrant(null);
+              }
+            }}>
+              Approve & Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

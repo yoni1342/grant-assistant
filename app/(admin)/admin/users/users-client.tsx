@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +47,10 @@ export function UsersClient({
   users: UserRow[];
   currentUserId: string;
 }) {
+  const searchParams = useSearchParams();
+  const initialStatusFilter = searchParams.get("status") || "all";
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
   const [loading, setLoading] = useState<string | null>(null);
 
   // Confirm dialog for delete/deactivate
@@ -68,14 +72,22 @@ export function UsersClient({
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState("");
 
-  const filtered = users.filter((u) => {
-    const q = search.toLowerCase();
-    if (!q) return true;
-    return (
-      (u.full_name?.toLowerCase().includes(q) ?? false) ||
-      (u.email?.toLowerCase().includes(q) ?? false)
-    );
-  });
+  const filtered = useMemo(() => {
+    return users.filter((u) => {
+      const q = search.toLowerCase();
+      const matchesSearch =
+        !q ||
+        (u.full_name?.toLowerCase().includes(q) ?? false) ||
+        (u.email?.toLowerCase().includes(q) ?? false);
+      const deactivated = u.banned_until ? new Date(u.banned_until) > new Date() : false;
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "deactivated" && deactivated) ||
+        (statusFilter === "active" && !deactivated && !u.is_platform_admin) ||
+        (statusFilter === "admin" && u.is_platform_admin);
+      return matchesSearch && matchesStatus;
+    });
+  }, [users, search, statusFilter]);
 
   function isDeactivated(user: UserRow) {
     if (!user.banned_until) return false;
@@ -134,12 +146,26 @@ export function UsersClient({
         </Button>
       </div>
 
-      <Input
-        placeholder="Search by name or email..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="max-w-sm"
-      />
+      <div className="flex items-center gap-3 flex-wrap">
+        <Input
+          placeholder="Search by name or email..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+        <div className="flex gap-2">
+          {(["all", "active", "admin", "deactivated"] as const).map((s) => (
+            <Button
+              key={s}
+              variant={statusFilter === s ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter(s)}
+            >
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </Button>
+          ))}
+        </div>
+      </div>
 
       <Card>
         <CardContent className="p-0">

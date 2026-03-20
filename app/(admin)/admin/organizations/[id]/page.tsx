@@ -41,7 +41,7 @@ export default async function OrgDetailPage({
       .order("created_at", { ascending: false }),
     adminClient
       .from("proposals")
-      .select("*, grant:grants(id, title, funder_name, deadline), proposal_sections(*)")
+      .select("*, grant:grants(id, title, funder_name, deadline, eligibility), proposal_sections(*)")
       .eq("org_id", id)
       .order("created_at", { ascending: false }),
     adminClient
@@ -55,7 +55,7 @@ export default async function OrgDetailPage({
       .select("id, action, created_at")
       .eq("org_id", id)
       .order("created_at", { ascending: false })
-      .limit(20),
+      .limit(100),
     adminClient
       .from("documents")
       .select("id, title, name, category, ai_category, file_type, file_size, file_path, extraction_status, extracted_text, metadata, created_at")

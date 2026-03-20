@@ -53,7 +53,7 @@ export default async function PipelinePage() {
           <GrantFetchBanner orgId={orgId} initialStatus={activeFetchStatus} />
         </div>
       )}
-      <PipelineClient initialGrants={grants || []} />
+      <PipelineClient initialGrants={grants || []} isFetchingGrants={!!activeFetchStatus} />
     </div>
   );
 }

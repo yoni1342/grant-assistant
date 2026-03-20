@@ -15,6 +15,7 @@ interface PipelineBreakdownProps {
 const stageColors: Record<string, string> = {
   discovery: 'bg-blue-500',
   screening: 'bg-yellow-500',
+  pending_approval: 'bg-amber-500',
   drafting: 'bg-purple-500',
   closed: 'bg-gray-500',
 }
@@ -23,6 +24,7 @@ const stageColors: Record<string, string> = {
 const stageBadgeColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   discovery: 'default',
   screening: 'secondary',
+  pending_approval: 'secondary',
   drafting: 'secondary',
   closed: 'outline',
 }

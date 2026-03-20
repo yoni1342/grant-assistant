@@ -13,6 +13,7 @@ type Grant = Tables<"grants">;
 const STAGES = [
   { key: "discovery", label: "Discovery", color: "bg-blue-500" },
   { key: "screening", label: "Screening", color: "bg-yellow-500" },
+  { key: "pending_approval", label: "Pending Approval", color: "bg-amber-500" },
   { key: "drafting", label: "Drafting", color: "bg-purple-500" },
   // { key: "submission", label: "Submission", color: "bg-orange-500" },
   // { key: "awarded", label: "Awarded", color: "bg-green-500" },
@@ -33,6 +34,29 @@ function ScreeningScore({ score }: { score: number | null }) {
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}
     >
       {score}%
+    </span>
+  );
+}
+
+function ConfidenceScore({ grant }: { grant: Grant }) {
+  if (grant.stage !== "drafting") return null;
+  const elig = (typeof grant.eligibility === "string"
+    ? JSON.parse(grant.eligibility)
+    : grant.eligibility) as { confidence?: number } | null;
+  const confidence = elig?.confidence;
+  if (confidence == null) return null;
+  const color =
+    confidence >= 80
+      ? "bg-purple-100 text-purple-800"
+      : confidence >= 50
+        ? "bg-yellow-100 text-yellow-800"
+        : "bg-red-100 text-red-800";
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}
+      title="Confidence score"
+    >
+      {confidence}% conf
     </span>
   );
 }
@@ -163,6 +187,7 @@ export function KanbanView({
                               </Badge>
                             )}
                             <ScreeningScore score={grant.screening_score} />
+                            <ConfidenceScore grant={grant} />
                           </div>
                           {grant.deadline && (
                             <p className="text-xs text-muted-foreground">

@@ -8,6 +8,8 @@ import {
   LayoutDashboard,
   Building2,
   Users,
+  FileText,
+  PenTool,
   Settings,
   LogOut,
   ChevronLeft,
@@ -19,6 +21,8 @@ const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/admin/organizations", label: "Organizations", icon: Building2 },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/grants", label: "Grants", icon: FileText },
+  { href: "/admin/proposals", label: "Proposals", icon: PenTool },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

@@ -57,8 +57,8 @@ export async function deleteUser(userId: string) {
 
   const orgId = profile?.org_id
 
-  // If user owns an org, delete all org-related data first (order matters for FK constraints)
-  if (orgId && profile.role === 'owner') {
+  // If user has an org, delete all org-related data first (order matters for FK constraints)
+  if (orgId) {
     // 1. Delete storage files: documents
     const { data: docs } = await adminClient
       .from('documents')
@@ -108,6 +108,8 @@ export async function deleteUser(userId: string) {
       'documents',
       'grants',
       'funders',
+      'search_results',
+      'grant_fetch_status',
     ] as const
 
     for (const table of orgTables) {
@@ -160,7 +162,25 @@ export async function deactivateUser(userId: string) {
     return { error: 'Unable to deactivate this user. Please try again later or contact support if the issue persists.' }
   }
 
+  // Automatically suspend the user's organization
+  const { data: profile } = await adminClient
+    .from('profiles')
+    .select('org_id')
+    .eq('id', userId)
+    .single()
+
+  if (profile?.org_id) {
+    const { error: orgError } = await adminClient
+      .from('organizations')
+      .update({ status: 'suspended' })
+      .eq('id', profile.org_id)
+    if (orgError) {
+      console.error('Auto-suspend org error:', orgError.message)
+    }
+  }
+
   revalidatePath('/admin/users')
+  revalidatePath('/admin/organizations')
   return { success: true }
 }
 
@@ -177,7 +197,26 @@ export async function activateUser(userId: string) {
     return { error: 'Unable to activate this user. Please try again later or contact support if the issue persists.' }
   }
 
+  // Automatically unsuspend the user's organization if it was suspended
+  const { data: profile } = await adminClient
+    .from('profiles')
+    .select('org_id')
+    .eq('id', userId)
+    .single()
+
+  if (profile?.org_id) {
+    const { error: orgError } = await adminClient
+      .from('organizations')
+      .update({ status: 'approved' })
+      .eq('id', profile.org_id)
+      .eq('status', 'suspended')
+    if (orgError) {
+      console.error('Auto-unsuspend org error:', orgError.message)
+    }
+  }
+
   revalidatePath('/admin/users')
+  revalidatePath('/admin/organizations')
   return { success: true }
 }
 

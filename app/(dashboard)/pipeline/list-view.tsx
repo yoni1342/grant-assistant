@@ -17,8 +17,17 @@ type Grant = Tables<"grants">;
 const STAGE_COLORS: Record<string, string> = {
   discovery: "bg-blue-100 text-blue-800",
   screening: "bg-yellow-100 text-yellow-800",
+  pending_approval: "bg-amber-100 text-amber-800",
   drafting: "bg-purple-100 text-purple-800",
   closed: "bg-muted text-foreground",
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  discovery: "Discovery",
+  screening: "Screening",
+  pending_approval: "Pending Approval",
+  drafting: "Drafting",
+  closed: "Closed",
 };
 
 export function ListView({ grants }: { grants: Grant[] }) {
@@ -39,6 +48,7 @@ export function ListView({ grants }: { grants: Grant[] }) {
             <TableHead>Funder</TableHead>
             <TableHead>Stage</TableHead>
             <TableHead>Screening</TableHead>
+            <TableHead>Confidence</TableHead>
             <TableHead className="text-right">Amount</TableHead>
             <TableHead>Deadline</TableHead>
           </TableRow>
@@ -61,8 +71,7 @@ export function ListView({ grants }: { grants: Grant[] }) {
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STAGE_COLORS[g.stage || "discovery"]}`}
                 >
-                  {(g.stage || "discovery").charAt(0).toUpperCase() +
-                    (g.stage || "discovery").slice(1)}
+                  {STAGE_LABELS[g.stage || "discovery"] || g.stage}
                 </span>
               </TableCell>
               <TableCell>
@@ -81,6 +90,25 @@ export function ListView({ grants }: { grants: Grant[] }) {
                 ) : (
                   <span className="text-xs text-muted-foreground">—</span>
                 )}
+              </TableCell>
+              <TableCell>
+                {(() => {
+                  const elig = (typeof g.eligibility === "string"
+                    ? JSON.parse(g.eligibility)
+                    : g.eligibility) as { confidence?: number } | null;
+                  const confidence = elig?.confidence;
+                  if (confidence == null) return <span className="text-xs text-muted-foreground">—</span>;
+                  return (
+                    <Badge
+                      variant={
+                        confidence >= 80 ? "default" :
+                        confidence >= 50 ? "secondary" : "destructive"
+                      }
+                    >
+                      {confidence}%
+                    </Badge>
+                  );
+                })()}
               </TableCell>
               <TableCell className="text-right">
                 {g.amount || "—"}

@@ -1340,14 +1340,26 @@ export function OrgDetailClient({
   }, [proposals]);
 
   const workflowStats = useMemo(() => {
-    const counts = { running: 0, completed: 0, failed: 0 };
-    for (const w of workflowExecutions) {
-      const s = w.status || "running";
-      if (s in counts) counts[s as keyof typeof counts]++;
+    // Derive integration stats from activity_log since n8n writes there directly
+    // and workflow_executions status may not get updated by n8n callbacks
+    let running = 0;
+    let completed = 0;
+    let failed = 0;
+    for (const entry of activityLog) {
+      const a = entry.action;
+      if (a.endsWith("_completed") || a === "proposal_generated") {
+        completed++;
+      } else if (a.endsWith("_failed") || a === "screening_failed" || a === "proposal_failed") {
+        failed++;
+      } else if (a.endsWith("_started") || a === "screening_started" || a === "proposal_started") {
+        running++;
+      }
     }
-    const lastExecution = workflowExecutions[0]?.completed_at || workflowExecutions[0]?.created_at;
-    return { ...counts, lastExecution };
-  }, [workflowExecutions]);
+    // Subtract completed/failed from running since _started precedes _completed/_failed
+    running = Math.max(0, running - completed - failed);
+    const lastExecution = activityLog[0]?.created_at || null;
+    return { running, completed, failed, lastExecution };
+  }, [activityLog]);
 
   const stageChartConfig: ChartConfig = {
     count: { label: "Grants", color: "hsl(220, 70%, 50%)" },
@@ -1918,6 +1930,7 @@ export function OrgDetailClient({
                         <TableHead className="cursor-pointer select-none" onClick={() => toggleProposalSort("quality_score")}>
                           Quality <SortIcon field="quality_score" currentField={proposalSortField} asc={proposalSortAsc} />
                         </TableHead>
+                        <TableHead>Confidence</TableHead>
                         <TableHead className="cursor-pointer select-none" onClick={() => toggleProposalSort("created_at")}>
                           Created <SortIcon field="created_at" currentField={proposalSortField} asc={proposalSortAsc} />
                         </TableHead>
@@ -1952,6 +1965,24 @@ export function OrgDetailClient({
                                 {p.quality_score}%
                               </Badge>
                             ) : <span className="text-muted-foreground">-</span>}
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const elig = p.grant?.eligibility as { confidence?: number } | null;
+                              const confidence = elig?.confidence;
+                              if (confidence == null) return <span className="text-muted-foreground">-</span>;
+                              return (
+                                <Badge
+                                  variant={
+                                    confidence >= 80 ? "default" :
+                                    confidence >= 60 ? "secondary" : "destructive"
+                                  }
+                                  className="text-xs"
+                                >
+                                  {confidence}%
+                                </Badge>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {p.created_at ? new Date(p.created_at).toLocaleDateString() : "-"}

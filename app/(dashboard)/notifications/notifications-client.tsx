@@ -154,11 +154,19 @@ export function NotificationsClient({
       ) : (
         <div className="space-y-2">
           {notifications.map((notif) => {
-            const config = TYPE_CONFIG[notif.type] || DEFAULT_CONFIG;
+            const isStale =
+              (notif.type === "screening_started" || notif.type === "proposal_started") &&
+              notif.created_at &&
+              Date.now() - new Date(notif.created_at).getTime() > 60 * 60 * 1000;
+
+            const config = isStale
+              ? { icon: XCircle, color: "text-yellow-500", badge: "Timed Out", badgeVariant: "outline" as const }
+              : TYPE_CONFIG[notif.type] || DEFAULT_CONFIG;
             const Icon = config.icon;
             const isSpinner =
-              notif.type === "screening_started" ||
-              notif.type === "proposal_started";
+              !isStale &&
+              (notif.type === "screening_started" ||
+              notif.type === "proposal_started");
 
             return (
               <Card
@@ -188,11 +196,15 @@ export function NotificationsClient({
                       )}
                     </div>
                     <p className="text-sm font-medium">{notif.title}</p>
-                    {notif.message && (
+                    {isStale ? (
+                      <p className="text-sm text-yellow-600 mt-0.5">
+                        This workflow did not complete. It may have been cancelled or encountered an error.
+                      </p>
+                    ) : notif.message ? (
                       <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
                         {notif.message}
                       </p>
-                    )}
+                    ) : null}
                     {notif.grants && (
                       <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                         {notif.grants.funder_name && (

@@ -42,6 +42,7 @@ type Grant = Tables<"grants">;
 const STAGES = [
   "discovery",
   "screening",
+  "pending_approval",
   "drafting",
   // "submission",
   // "awarded",
@@ -49,16 +50,26 @@ const STAGES = [
   "closed",
 ] as const;
 
+const STAGE_LABELS: Record<string, string> = {
+  discovery: "Discovery",
+  screening: "Screening",
+  pending_approval: "Pending Approval",
+  drafting: "Drafting",
+  closed: "Closed",
+};
+
 export function GrantDetail({
   grant,
   activities,
   workflows,
   proposals,
+  orgName,
 }: {
   grant: Grant;
   activities: Tables<"activity_log">[];
   workflows: Tables<"workflow_executions">[];
-  proposals: Array<{ id: string; title: string; status: string }>;
+  proposals: Array<{ id: string; title: string; status: string; quality_score: number | null }>;
+  orgName: string;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -74,6 +85,7 @@ export function GrantDetail({
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
   const [proposalStatus, setProposalStatus] = useState<"generating" | "done" | "error">("generating");
   const [proposalError, setProposalError] = useState<string | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   const eligibility = (typeof grant.eligibility === "string"
     ? JSON.parse(grant.eligibility)
@@ -93,10 +105,24 @@ export function GrantDetail({
   const recommendations = grant.recommendations as { text?: string }[] | string[] | null;
 
   async function handleSave() {
+    // If moving to drafting, require confirmation first
     const stageChangedToDrafting = stage === "drafting" && grant.stage !== "drafting";
-
-    // If stage changed to drafting, trigger proposal generation first
     if (stageChangedToDrafting) {
+      setConfirmDialogOpen(true);
+      return;
+    }
+
+    await saveGrant(false);
+  }
+
+  async function handleConfirmProposal() {
+    setConfirmDialogOpen(false);
+    await saveGrant(true);
+  }
+
+  async function saveGrant(generateProposal: boolean) {
+    // If generating proposal, trigger the workflow first
+    if (generateProposal) {
       setProposalError(null);
       setProposalStatus("generating");
       setProposalDialogOpen(true);
@@ -145,7 +171,7 @@ export function GrantDetail({
 
     setSaving(false);
 
-    if (stageChangedToDrafting) {
+    if (generateProposal) {
       setTimeout(() => {
         setProposalDialogOpen(false);
         router.refresh();
@@ -204,7 +230,7 @@ export function GrantDetail({
                 <SelectContent>
                   {STAGES.map((s) => (
                     <SelectItem key={s} value={s}>
-                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                      {STAGE_LABELS[s] || s.charAt(0).toUpperCase() + s.slice(1)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -376,6 +402,128 @@ export function GrantDetail({
         </Card>
       )}
 
+      {/* Pending Approval - prompt user to approve */}
+      {grant.stage === "pending_approval" && (
+        <Card className="border-amber-200 dark:border-amber-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
+              Awaiting Your Approval
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This grant passed eligibility screening and is ready for proposal generation.
+              Review the screening report above, then approve to begin drafting a proposal
+              for <strong>{orgName}</strong>.
+            </p>
+            <Button
+              onClick={() => {
+                setStage("drafting");
+                setConfirmDialogOpen(true);
+              }}
+            >
+              Approve & Generate Proposal
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Drafting Report - show confidence & quality when in drafting stage */}
+      {grant.stage === "drafting" && proposals.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Drafting Report</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Confidence Score */}
+            {eligibility?.confidence != null && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium">Confidence:</span>
+                <Badge
+                  variant={
+                    eligibility.confidence >= 80
+                      ? "default"
+                      : eligibility.confidence >= 50
+                        ? "secondary"
+                        : "destructive"
+                  }
+                  className="text-sm"
+                >
+                  {eligibility.confidence}%
+                </Badge>
+              </div>
+            )}
+
+            {/* Proposal Quality Scores */}
+            {proposals.some((p) => p.quality_score != null) && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Proposal Quality</p>
+                <div className="flex flex-col gap-2">
+                  {proposals.filter((p) => p.quality_score != null).map((p) => (
+                    <div key={p.id} className="flex items-center gap-2">
+                      <Link href={`/proposals/${p.id}`} className="text-sm hover:underline flex-1 truncate">
+                        {p.title}
+                      </Link>
+                      <Badge
+                        variant={
+                          p.quality_score! >= 80 ? "default" :
+                          p.quality_score! >= 60 ? "secondary" : "destructive"
+                        }
+                        className="text-xs"
+                      >
+                        {p.quality_score}%
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dimension Scores (same breakdown as screening but shown in drafting context) */}
+            {eligibility?.dimension_scores && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Eligibility Breakdown</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { key: "mission_alignment" as const, label: "Mission Alignment" },
+                    { key: "target_population" as const, label: "Target Population" },
+                    { key: "service_fit" as const, label: "Service/Program Fit" },
+                    { key: "geographic_alignment" as const, label: "Geographic Alignment" },
+                    { key: "organizational_capacity" as const, label: "Org Capacity" },
+                  ].map(({ key, label }) => {
+                    const value = eligibility.dimension_scores?.[key] ?? 0;
+                    const pct = (value / 20) * 100;
+                    const color =
+                      value >= 16
+                        ? "bg-green-500"
+                        : value >= 11
+                          ? "bg-yellow-500"
+                          : value >= 6
+                            ? "bg-orange-500"
+                            : "bg-red-500";
+                    return (
+                      <div key={key} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{label}</span>
+                          <span className="font-medium">{value}/20</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${color} transition-all`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* AI Tools */}
       <Card>
         <CardHeader>
@@ -397,6 +545,17 @@ export function GrantDetail({
                     <Badge variant="outline" className="text-xs">
                       {proposal.status}
                     </Badge>
+                    {proposal.quality_score != null && (
+                      <Badge
+                        variant={
+                          proposal.quality_score >= 80 ? "default" :
+                          proposal.quality_score >= 60 ? "secondary" : "destructive"
+                        }
+                        className="text-xs"
+                      >
+                        {proposal.quality_score}%
+                      </Badge>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -492,6 +651,64 @@ export function GrantDetail({
           </CardContent>
         </Card>
       </div>
+
+      {/* Confirm Organization Dialog */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Proposal Generation</DialogTitle>
+            <DialogDescription>
+              You are about to generate a grant proposal for:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="rounded-lg border p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Grant:</span>
+                <span className="text-sm font-medium">{grant.title}</span>
+              </div>
+              {grant.funder_name && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Funder:</span>
+                  <span className="text-sm">{grant.funder_name}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Applying as:</span>
+                <span className="text-sm font-semibold">{orgName}</span>
+              </div>
+              {grant.screening_score != null && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Screening Score:</span>
+                  <Badge
+                    variant={
+                      grant.screening_score >= 80 ? "default" :
+                      grant.screening_score >= 50 ? "secondary" : "destructive"
+                    }
+                    className="text-xs"
+                  >
+                    {grant.screening_score}%
+                  </Badge>
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This will move the grant to the Drafting stage and begin generating a proposal. Continue?
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setStage(grant.stage || "pending_approval");
+              setConfirmDialogOpen(false);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmProposal}>
+              Approve & Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Proposal Generation Dialog */}
       <Dialog open={proposalDialogOpen} onOpenChange={() => {}}>
