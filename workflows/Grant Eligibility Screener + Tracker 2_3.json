@@ -40,7 +40,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "= {{ JSON.stringify({\n    org_id: $(\"Webhook Trigger\").first().json.body.orgId,\n    grant_id: $(\"Webhook Trigger\").first().json.body.grantid,\n    type: \"grant_not_eligible\",\n    title: \"Grant \\\"\" + ($(\"Webhook Trigger\").first().json.body.grantData?.title || \"Unknown\") + \"\\\" is not eligible\",\n    message: $json.rejectionReason || \"Grant did not pass eligibility screening (RED score)\"\n  }) }}",
+        "body": "= {{ JSON.stringify({\n    org_id: $json.org_id,\n    grant_id: $json.grant_id,\n    type: \"grant_not_eligible\",\n    title: \"Grant \\\"\" + ($json.details?.grant_name || \"Unknown\") + \"\\\" is not eligible\",\n    message: $json.details?.summary || \"Grant did not pass eligibility screening (RED score)\"\n  }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
