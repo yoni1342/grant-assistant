@@ -1,6 +1,11 @@
 'use client'
 
-import { useMemo, useState, useLayoutEffect, useRef, useCallback, useEffect } from 'react'
+import { useMemo, useState, useLayoutEffect, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useExportPdf } from '@/app/(dashboard)/proposals/[id]/components/use-export-pdf'
+
+export interface NarrativeDocumentViewerHandle {
+  exportPdf: () => Promise<void>
+}
 
 interface NarrativeDocumentViewerProps {
   title: string
@@ -14,7 +19,7 @@ function formatInlineMarkdown(text: string): string {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
 }
 
-export function NarrativeDocumentViewer({ title, content, category }: NarrativeDocumentViewerProps) {
+export const NarrativeDocumentViewer = forwardRef<NarrativeDocumentViewerHandle, NarrativeDocumentViewerProps>(function NarrativeDocumentViewer({ title, content, category }, ref) {
   const measureRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -133,6 +138,20 @@ export function NarrativeDocumentViewer({ title, content, category }: NarrativeD
   }, [coverHtml, contentPages])
 
   const totalPages = allPages.length
+
+  // PDF export
+  const { exportPdf } = useExportPdf()
+
+  useImperativeHandle(ref, () => ({
+    exportPdf: async () => {
+      await exportPdf({
+        allPages,
+        coverTitle: 'Organization Narrative',
+        totalPages,
+        proposalTitle: title,
+      })
+    },
+  }), [exportPdf, allPages, totalPages, title])
 
   // Track which page is in view using IntersectionObserver
   useEffect(() => {
@@ -269,7 +288,7 @@ export function NarrativeDocumentViewer({ title, content, category }: NarrativeD
       </div>
     </div>
   )
-}
+})
 
 const viewerStyles = `
   /* ── PDF Browser Shell ── */
