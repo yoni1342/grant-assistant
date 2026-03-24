@@ -241,10 +241,10 @@ export function PipelineClient({
             <SelectItem value="all">All stages</SelectItem>
             {STAGES.map((s) => {
               const labels: Record<string, string> = {
-                discovery: "Discovery",
-                screening: "Screening",
-                pending_approval: "Pending Approval",
-                drafting: "Drafting",
+                discovery: "Discovered",
+                screening: "Screened",
+                pending_approval: "Waiting for Approval",
+                drafting: "Drafted",
                 closed: "Closed",
               };
               return (
@@ -339,7 +339,7 @@ export function PipelineClient({
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                This will move the grant to the Drafting stage and begin generating a proposal. Continue?
+                This will move the grant to the Drafted stage and begin generating a proposal. Continue?
               </p>
             </div>
           )}

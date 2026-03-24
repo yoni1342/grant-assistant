@@ -56,7 +56,7 @@ export function PipelineBreakdown({ stages }: PipelineBreakdownProps) {
                     <div className="flex items-center gap-2">
                       <div className={`w-3 h-3 rounded-full ${colorClass}`} />
                       <span className="text-sm font-medium">
-                        {stage === 'pending_approval' ? 'Pending Approval' : stage.charAt(0).toUpperCase() + stage.slice(1)}
+                        {stage === 'pending_approval' ? 'Waiting for Approval' : stage === 'discovery' ? 'Discovered' : stage === 'screening' ? 'Screened' : stage === 'drafting' ? 'Drafted' : stage.charAt(0).toUpperCase() + stage.slice(1)}
                       </span>
                     </div>
                     <Badge variant={badgeVariant}>{count}</Badge>

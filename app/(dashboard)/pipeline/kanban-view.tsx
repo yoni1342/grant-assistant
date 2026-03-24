@@ -11,10 +11,10 @@ import Link from "next/link";
 type Grant = Tables<"grants">;
 
 const STAGES = [
-  { key: "discovery", label: "Discovery", color: "bg-blue-500" },
-  { key: "screening", label: "Screening", color: "bg-yellow-500" },
-  { key: "pending_approval", label: "Pending Approval", color: "bg-amber-500" },
-  { key: "drafting", label: "Drafting", color: "bg-purple-500" },
+  { key: "discovery", label: "Discovered", color: "bg-blue-500" },
+  { key: "screening", label: "Screened", color: "bg-yellow-500" },
+  { key: "pending_approval", label: "Waiting for Approval", color: "bg-amber-500" },
+  { key: "drafting", label: "Drafted", color: "bg-purple-500" },
   // { key: "submission", label: "Submission", color: "bg-orange-500" },
   // { key: "awarded", label: "Awarded", color: "bg-green-500" },
   // { key: "reporting", label: "Reporting", color: "bg-teal-500" },

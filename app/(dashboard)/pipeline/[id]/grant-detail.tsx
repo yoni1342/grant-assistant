@@ -49,10 +49,10 @@ const STAGES = [
 ] as const;
 
 const STAGE_LABELS: Record<string, string> = {
-  discovery: "Discovery",
-  screening: "Screening",
-  pending_approval: "Pending Approval",
-  drafting: "Drafting",
+  discovery: "Discovered",
+  screening: "Screened",
+  pending_approval: "Waiting for Approval",
+  drafting: "Drafted",
   closed: "Closed",
 };
 
@@ -396,6 +396,30 @@ export function GrantDetail({
         </Card>
       )}
 
+      {/* Discovery/Screening - prompt user to generate proposal */}
+      {(grant.stage === "discovery" || grant.stage === "screening") && (
+        <Card className="border-blue-200 dark:border-blue-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+              Generate Proposal
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Ready to apply? Generate a proposal for <strong>{orgName}</strong> based on this grant.
+            </p>
+            <Button
+              onClick={() => {
+                setStage("drafting");
+                setConfirmDialogOpen(true);
+              }}
+            >
+              Generate Proposal
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pending Approval - prompt user to approve */}
       {grant.stage === "pending_approval" && (
         <Card className="border-amber-200 dark:border-amber-800">
@@ -408,7 +432,7 @@ export function GrantDetail({
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
               This grant passed eligibility screening and is ready for proposal generation.
-              Review the screening report above, then approve to begin drafting a proposal
+              Review the screening report above, then approve to begin generating a proposal
               for <strong>{orgName}</strong>.
             </p>
             <Button
@@ -427,7 +451,7 @@ export function GrantDetail({
       {grant.stage === "drafting" && proposals.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Drafting Report</CardTitle>
+            <CardTitle>Drafted Report</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Confidence Score */}
@@ -566,7 +590,7 @@ export function GrantDetail({
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              This will move the grant to the Drafting stage and begin generating a proposal. Continue?
+              This will move the grant to the Drafted stage and begin generating a proposal. Continue?
             </p>
           </div>
           <DialogFooter>
