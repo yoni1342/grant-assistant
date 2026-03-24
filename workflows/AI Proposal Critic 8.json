@@ -340,6 +340,63 @@
           "name": "Grant Assistant"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const critic = $json;\nconst proposalId = $('Parse Request').first().json.proposalId || $('Parse Request').first().json.proposal_id;\nif (!proposalId) { return []; }\nconst qualityReview = {\n  overall_score: critic.overallScore * 10,\n  section_scores: [\n    { section: 'Clarity', score: critic.scores.clarity * 10, feedback: '' },\n    { section: 'Persuasiveness', score: critic.scores.persuasiveness * 10, feedback: '' },\n    { section: 'Specificity', score: critic.scores.specificity * 10, feedback: '' },\n    { section: 'Emotional Appeal', score: critic.scores.emotional_appeal * 10, feedback: '' },\n    { section: 'Funder Alignment', score: critic.scores.funder_alignment * 10, feedback: '' }\n  ],\n  issues: Object.values(critic.issuesByType || {}).flat().map(i => ({\n    type: (i.type || 'other').toLowerCase(),\n    severity: 'medium',\n    text: i.text || '',\n    suggestion: i.suggestion || '',\n    section: i.location || ''\n  })),\n  summary: critic.recommendation + '. Strengths: ' + (critic.strengths || []).join('; ') + '. To improve: ' + (critic.weaknesses || []).join('; '),\n  recommendation: critic.recommendation\n};\nreturn [{ json: { proposalId, quality_score: Math.round(critic.overallScore * 10), quality_review: qualityReview } }];"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Prepare Supabase Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        1060
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/proposals?id=eq.{{ $json.proposalId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ quality_score: $json.quality_score, quality_review: $json.quality_review }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3392,
+        1060
+      ],
+      "id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+      "name": "Update Proposal Quality",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
     }
   ],
   "pinData": {
@@ -504,13 +561,35 @@
             "node": "Code in JavaScript2",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Prepare Supabase Update",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
     },
     "Code in JavaScript2": {
       "main": [
-        []
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Supabase Update": {
+      "main": [
+        [
+          {
+            "node": "Update Proposal Quality",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
