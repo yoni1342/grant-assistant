@@ -174,7 +174,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={\n  \"funderName\": \"{{$json.funder}}\",\n  \"grantPurpose\": \"{{$json.focus}}\",\n  \"deadline\": \"{{$json.deadline}}\",\n  \"alignmentScore\": {{$json.alignmentScore}},\n  \"complianceScore\": {{$json.complianceScore}},\n  \"warnings\": \"{{$json.warnings}}\",\n  \"budget\": {{ JSON.stringify($json.budget || {}) }},\n  \"budgetAmount\": {{$json.budgetAmount || 0}},\n  \"googleDocUrl\": \"{{$json.googleDocUrl || ''}}\",\n  \"proposalText\": {{ JSON.stringify($json.proposalMarkdown || '') }}\n}",
+        "body": "={\n  \"proposalId\": \"{{ $('HTTP Request18').first().json.id }}\",\n  \"funderName\": \"{{ $('Format Proposal').first().json.funder }}\",\n  \"grantPurpose\": \"{{ $('Format Proposal').first().json.focus }}\",\n  \"deadline\": \"{{ $('Format Proposal').first().json.deadline }}\",\n  \"alignmentScore\": {{ $('Format Proposal').first().json.alignmentScore }},\n  \"complianceScore\": {{ $('Format Proposal').first().json.complianceScore }},\n  \"warnings\": \"{{ $('Format Proposal').first().json.warnings }}\",\n  \"budget\": {{ JSON.stringify($('Format Proposal').first().json.budget || {}) }},\n  \"budgetAmount\": {{ $('Format Proposal').first().json.budgetAmount || 0 }},\n  \"googleDocUrl\": \"{{ $('Format Proposal').first().json.googleDocUrl || '' }}\",\n  \"proposalText\": {{ JSON.stringify($('Format Proposal').first().json.proposalMarkdown || '') }}\n}",
         "options": {
           "allowUnauthorizedCerts": true
         }
@@ -487,7 +487,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "= {{ JSON.stringify(\n      $('Return Response').first().json.sections.map(s => ({\n        proposal_id: $input.first().json.id,\n        title: s.title,\n        content: s.content,\n        sort_order: s.sort_order\n      }))\n    ) }}",
+        "body": "= {{ JSON.stringify(\n      $('Return Response').first().json.sections.map(s => ({\n        proposal_id: $('HTTP Request18').first().json.id,\n        title: s.title,\n        content: s.content,\n        sort_order: s.sort_order\n      }))\n    ) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -644,7 +644,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "Return Response",
             "type": "main",
             "index": 0
           }
@@ -695,7 +695,7 @@
       "main": [
         [
           {
-            "node": "Return Response",
+            "node": "HTTP Request19",
             "type": "main",
             "index": 0
           }
@@ -706,7 +706,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request19",
+            "node": "HTTP Request",
             "type": "main",
             "index": 0
           }

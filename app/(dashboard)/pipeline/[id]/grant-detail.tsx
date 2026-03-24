@@ -34,8 +34,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import Link from "next/link";
-import { GenerateProposalButton } from "./components/generate-proposal-button";
-import { FunderAnalysisButton } from "./components/funder-analysis-button";
 
 type Grant = Tables<"grants">;
 
@@ -60,14 +58,10 @@ const STAGE_LABELS: Record<string, string> = {
 
 export function GrantDetail({
   grant,
-  activities,
-  workflows,
   proposals,
   orgName,
 }: {
   grant: Grant;
-  activities: Tables<"activity_log">[];
-  workflows: Tables<"workflow_executions">[];
   proposals: Array<{ id: string; title: string; status: string; quality_score: number | null }>;
   orgName: string;
 }) {
@@ -523,134 +517,6 @@ export function GrantDetail({
           </CardContent>
         </Card>
       )}
-
-      {/* AI Tools */}
-      <Card>
-        <CardHeader>
-          <CardTitle>AI Tools</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Existing Proposals */}
-          {proposals.length > 0 && (
-            <div className="rounded-lg border p-4 space-y-2">
-              <p className="text-sm font-medium">Existing Proposals:</p>
-              <div className="flex flex-col gap-2">
-                {proposals.map((proposal) => (
-                  <Link
-                    key={proposal.id}
-                    href={`/proposals/${proposal.id}`}
-                    className="text-sm hover:underline flex items-center gap-2"
-                  >
-                    {proposal.title}
-                    <Badge variant="outline" className="text-xs">
-                      {proposal.status}
-                    </Badge>
-                    {proposal.quality_score != null && (
-                      <Badge
-                        variant={
-                          proposal.quality_score >= 80 ? "default" :
-                          proposal.quality_score >= 60 ? "secondary" : "destructive"
-                        }
-                        className="text-xs"
-                      >
-                        {proposal.quality_score}%
-                      </Badge>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Generate Proposal */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Proposal Generation</p>
-            <GenerateProposalButton
-              grantId={grant.id}
-              grantTitle={grant.title}
-              existingProposalId={proposals.length > 0 ? proposals[0].id : undefined}
-            />
-          </div>
-
-          {/* Funder Analysis */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Funder Research</p>
-            <FunderAnalysisButton
-              grantId={grant.id}
-              funderName={grant.funder_name || undefined}
-              ein={(grant.metadata as { ein?: string })?.ein}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Workflow History */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Workflow History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {workflows.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No workflows run yet
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {workflows.map((w) => (
-                  <div
-                    key={w.id}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <div>
-                      <p className="font-medium">{w.workflow_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(w.created_at!).toLocaleString()}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        w.status === "completed"
-                          ? "default"
-                          : w.status === "failed"
-                            ? "destructive"
-                            : "secondary"
-                      }
-                    >
-                      {w.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Activity Log */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activities.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No activity yet
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {activities.map((a) => (
-                  <div key={a.id} className="text-sm">
-                    <p>{a.action}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(a.created_at!).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Confirm Organization Dialog */}
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
