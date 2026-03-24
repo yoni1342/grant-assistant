@@ -211,11 +211,17 @@ export async function registerOrganizationForExistingUser(data: {
     return { error: orgError?.message || 'Failed to create organization' }
   }
 
-  // Update profile with org_id + role
+  // Upsert profile with org_id + role (handles OAuth users who may not have a profile yet)
   const { error: profileError } = await serviceClient
     .from('profiles')
-    .update({ org_id: org.id, role: 'owner' })
-    .eq('id', user.id)
+    .upsert({
+      id: user.id,
+      org_id: org.id,
+      role: 'owner',
+      full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+      email: user.email || null,
+      avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+    }, { onConflict: 'id' })
 
   if (profileError) {
     await serviceClient.from('organizations').delete().eq('id', org.id)

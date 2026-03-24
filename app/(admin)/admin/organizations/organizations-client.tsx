@@ -4,12 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -158,53 +153,17 @@ export function OrganizationsClient({
     }
   };
 
-  const filters: { label: string; value: Filter }[] = [
+  const filters: { label: string; count?: number; value: Filter }[] = [
     { label: "All", value: "all" },
-    { label: `Pending (${counts.pending})`, value: "pending" },
-    { label: `Approved (${counts.approved})`, value: "approved" },
-    { label: `Rejected (${counts.rejected})`, value: "rejected" },
-    { label: `Suspended (${counts.suspended})`, value: "suspended" },
+    { label: "Pending", count: counts.pending, value: "pending" },
+    { label: "Approved", count: counts.approved, value: "approved" },
+    { label: "Rejected", count: counts.rejected, value: "rejected" },
+    { label: "Suspended", count: counts.suspended, value: "suspended" },
   ];
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Organizations</h2>
-
-      {/* Stats cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-amber-600">{counts.pending}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-green-600">{counts.approved}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Rejected</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-red-600">{counts.rejected}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Suspended</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-orange-600">{counts.suspended}</p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Filter tabs */}
       <div className="flex gap-2">
@@ -216,6 +175,11 @@ export function OrganizationsClient({
             onClick={() => setFilter(f.value)}
           >
             {f.label}
+            {f.count !== undefined && (
+              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-primary/15 text-primary px-2 py-0.5 text-xs font-bold tabular-nums min-w-[1.5rem]">
+                {f.count}
+              </span>
+            )}
           </Button>
         ))}
       </div>

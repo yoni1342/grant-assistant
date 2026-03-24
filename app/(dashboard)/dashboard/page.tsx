@@ -11,6 +11,7 @@ import {
 const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovery",
   screening: "Screening",
+  pending_approval: "Pending Approval",
   drafting: "Drafting",
   // submission: "Submission",
   // awarded: "Awarded",
