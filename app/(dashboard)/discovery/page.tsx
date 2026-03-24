@@ -567,11 +567,6 @@ export default function DiscoveryPage() {
                   );
                 })()}
               </div>
-              {results.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {results.length} grant{results.length !== 1 ? "s" : ""} found so far
-                </p>
-              )}
             </div>
           )}
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
