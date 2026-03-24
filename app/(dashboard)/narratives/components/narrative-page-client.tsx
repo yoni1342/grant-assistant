@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Plus, Download, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { NarrativeList } from './narrative-list'
 import { NarrativeDialog } from './narrative-dialog'
-import { NarrativeDocumentViewer } from './narrative-document-viewer'
+import { NarrativeDocumentViewer, NarrativeDocumentViewerHandle } from './narrative-document-viewer'
 
 type Narrative = {
   id: string
@@ -37,6 +38,21 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
   const [viewingNarrative, setViewingNarrative] = useState<Narrative | undefined>(
     narratives.length > 0 ? narratives[0] : undefined
   )
+  const [isExporting, setIsExporting] = useState(false)
+  const viewerRef = useRef<NarrativeDocumentViewerHandle>(null)
+
+  const handleExportPdf = useCallback(async () => {
+    if (!viewerRef.current) return
+    setIsExporting(true)
+    try {
+      await viewerRef.current.exportPdf()
+      toast.success('PDF exported successfully')
+    } catch {
+      toast.error('Failed to export PDF. Please try again.')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [])
 
   const handleCreateClick = () => {
     setDialogMode('create')
@@ -64,10 +80,22 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
             Reusable content blocks for grant proposals
           </p>
         </div>
-        <Button onClick={handleCreateClick}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Narrative
-        </Button>
+        <div className="flex items-center gap-2">
+          {viewingNarrative && (
+            <Button variant="outline" onClick={handleExportPdf} disabled={isExporting}>
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Export PDF
+            </Button>
+          )}
+          <Button onClick={handleCreateClick}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Narrative
+          </Button>
+        </div>
       </div>
 
       {/* Split layout: list + document viewer */}
@@ -86,6 +114,7 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
         <div className="flex-1 min-w-0">
           {viewingNarrative ? (
             <NarrativeDocumentViewer
+              ref={viewerRef}
               title={viewingNarrative.title}
               content={viewingNarrative.content}
               category={viewingNarrative.category}

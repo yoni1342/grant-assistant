@@ -55,7 +55,7 @@ async function getPipelineBreakdown() {
   const stageCounts = new Map<string, number>()
 
   // Initialize all stages with 0
-  const allStages = ['discovery', 'screening', 'drafting', 'closed']
+  const allStages = ['discovery', 'screening', 'pending_approval', 'drafting', 'closed']
   allStages.forEach(stage => stageCounts.set(stage, 0))
 
   // Count actual grants per stage

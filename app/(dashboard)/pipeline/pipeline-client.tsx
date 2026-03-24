@@ -45,9 +45,11 @@ const STAGES = [
 export function PipelineClient({
   initialGrants,
   isFetchingGrants = false,
+  proposalQualityMap = {},
 }: {
   initialGrants: Grant[];
   isFetchingGrants?: boolean;
+  proposalQualityMap?: Record<string, number>;
 }) {
   const [grants, setGrants] = useState<Grant[]>(initialGrants);
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -239,10 +241,10 @@ export function PipelineClient({
             <SelectItem value="all">All stages</SelectItem>
             {STAGES.map((s) => {
               const labels: Record<string, string> = {
-                discovery: "Discovery",
-                screening: "Screening",
-                pending_approval: "Pending Approval",
-                drafting: "Drafting",
+                discovery: "Discovered",
+                screening: "Screened",
+                pending_approval: "Waiting for Approval",
+                drafting: "Drafted",
                 closed: "Closed",
               };
               return (
@@ -284,7 +286,7 @@ export function PipelineClient({
           <p className="text-xs mt-1">This may take a minute. Grants will appear automatically.</p>
         </div>
       ) : view === "kanban" ? (
-        <KanbanView grants={filtered} onStageChange={handleStageChange} />
+        <KanbanView grants={filtered} onStageChange={handleStageChange} proposalQualityMap={proposalQualityMap} />
       ) : (
         <ListView grants={filtered} />
       )}
@@ -337,7 +339,7 @@ export function PipelineClient({
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                This will move the grant to the Drafting stage and begin generating a proposal. Continue?
+                This will move the grant to the Drafted stage and begin generating a proposal. Continue?
               </p>
             </div>
           )}

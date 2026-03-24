@@ -269,7 +269,42 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract grant context from webhook body\nconst raw = $('Narrative Request').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grantId || payload.grant_id;\nconst org_id = payload.org_id;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    grant_title: payload.grant_title || 'Not specified',\n    grant_description: payload.grant_description || 'Not specified',\n    funder_name: payload.funder_name || 'Not specified',\n    deadline: payload.deadline || 'Not specified',\n    amount: payload.amount || 'Not specified',\n  }\n}];"
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $json.body.grantId || $json.body.grant_id }}&select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-345678901234",
+      "name": "Get Grant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1488,
+        576
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract grant context from webhook body + Supabase grant data\nconst raw = $('Narrative Request').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grantId || payload.grant_id;\nconst org_id = payload.org_id;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\n// Get grant data fetched from Supabase\nconst grantRows = $('Get Grant').first().json;\nconst grant = Array.isArray(grantRows) ? grantRows[0] : grantRows;\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    grant_title: grant.title || grant.name || 'Not specified',\n    grant_description: grant.description || grant.focus_areas || 'Not specified',\n    funder_name: grant.funder_name || grant.funder || 'Not specified',\n    deadline: grant.deadline || 'Not specified',\n    amount: grant.amount || grant.award_amount || 'Not specified',\n  }\n}];"
       },
       "id": "a18a1bae-9ba1-48b7-b4f5-f24023ac4100",
       "name": "Extract Grant Context",
@@ -282,7 +317,7 @@
     },
     {
       "parameters": {
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/narratives?org_id=eq.{{ $json.org_id }}&select=*",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?org_id=eq.{{ $json.org_id }}&category=eq.narrative&select=*",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -319,7 +354,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Filter narratives for relevance to the grant, then pair with grant context\nconst narratives = $('Get Narratives').all().map(item => item.json);\nconst gc = $('Extract Grant Context').first().json;\n\nif (!narratives || narratives.length === 0 || !narratives[0].id) {\n  return [{\n    json: {\n      error: true,\n      message: 'No narratives found for this org',\n    }\n  }];\n}\n\n// Build a searchable string from grant context for relevance matching\nconst grantText = [\n  gc.grant_title,\n  gc.grant_description,\n  gc.funder_name,\n].join(' ').toLowerCase();\n\n// Keywords that map narrative categories/content to grant topics\nconst relevanceKeywords = {\n  mission: ['mission', 'organization', 'nonprofit', 'community', 'overview', 'about'],\n  impact: ['impact', 'outcomes', 'results', 'data', 'metrics', 'evaluation', 'measure'],\n  methods: ['methods', 'approach', 'strategy', 'program', 'activities', 'services', 'intervention'],\n  evaluation: ['evaluation', 'assessment', 'measure', 'outcomes', 'data', 'metrics'],\n  youth: ['youth', 'foster', 'children', 'young', 'adolescent', 'teen', 'aging out'],\n  seniors: ['senior', 'aging', 'elderly', 'older adults', 'long-term care', 'alzheimer', 'dementia'],\n  equity: ['equity', 'racial', 'diversity', 'inclusion', 'african american', 'disparit'],\n  workforce: ['workforce', 'employment', 'job', 'career', 'professional', 'work'],\n  mental_health: ['mental health', 'trauma', 'healing', 'wellness', 'behavioral'],\n  community: ['community', 'volunteer', 'partner', 'collaboration', 'local'],\n};\n\n// Score each narrative for relevance\nconst scored = narratives.map(n => {\n  const narrativeText = [\n    n.title || '',\n    n.category || '',\n    n.content || '',\n    (n.tags || []).join(' '),\n  ].join(' ').toLowerCase();\n\n  let score = 0;\n\n  // Always include mission/overview narratives (score boost)\n  if ((n.category || '').toLowerCase() === 'mission' || (n.title || '').toLowerCase().includes('mission')) {\n    score += 3;\n  }\n\n  // Check if narrative category keywords appear in grant text\n  for (const [category, keywords] of Object.entries(relevanceKeywords)) {\n    const narrativeMatchesCategory = keywords.some(kw => narrativeText.includes(kw));\n    const grantMatchesCategory = keywords.some(kw => grantText.includes(kw));\n    if (narrativeMatchesCategory && grantMatchesCategory) {\n      score += 2;\n    }\n  }\n\n  // Direct word overlap between narrative title/category and grant text\n  const titleWords = (n.title || '').toLowerCase().split(/\\s+/);\n  for (const word of titleWords) {\n    if (word.length > 3 && grantText.includes(word)) {\n      score += 1;\n    }\n  }\n\n  return { narrative: n, score };\n});\n\n// Filter: keep narratives with score > 0, sorted by relevance\nlet relevant = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);\n\n// Fallback: if nothing matched, use mission + methods + impact narratives\nif (relevant.length === 0) {\n  const fallbackCategories = ['mission', 'methods', 'impact'];\n  relevant = scored.filter(s => {\n    const cat = (s.narrative.category || '').toLowerCase();\n    return fallbackCategories.includes(cat);\n  });\n}\n\n// Still nothing? Use all narratives\nif (relevant.length === 0) {\n  relevant = scored;\n}\n\nreturn relevant.map(s => ({\n  json: {\n    narrative_id: s.narrative.id,\n    section_id: s.narrative.category || 'general',\n    section_name: s.narrative.title,\n    base_content: s.narrative.content,\n    word_limit: s.narrative.metadata?.word_count || 250,\n    relevance_score: s.score,\n    grantContext: gc,\n  }\n}));"
+        "jsCode": "// Filter narrative documents for relevance to the grant, then pair with grant context\nconst documents = $('Get Narratives').all().map(item => item.json);\nconst gc = $('Extract Grant Context').first().json;\n\nif (!documents || documents.length === 0 || !documents[0].id) {\n  return [{\n    json: {\n      error: true,\n      message: 'No narrative documents found for this org',\n    }\n  }];\n}\n\n// Build a searchable string from grant context for relevance matching\nconst grantText = [\n  gc.grant_title,\n  gc.grant_description,\n  gc.funder_name,\n].join(' ').toLowerCase();\n\n// Keywords that map narrative categories/content to grant topics\nconst relevanceKeywords = {\n  mission: ['mission', 'organization', 'nonprofit', 'community', 'overview', 'about'],\n  impact: ['impact', 'outcomes', 'results', 'data', 'metrics', 'evaluation', 'measure'],\n  methods: ['methods', 'approach', 'strategy', 'program', 'activities', 'services', 'intervention'],\n  evaluation: ['evaluation', 'assessment', 'measure', 'outcomes', 'data', 'metrics'],\n  youth: ['youth', 'foster', 'children', 'young', 'adolescent', 'teen', 'aging out'],\n  seniors: ['senior', 'aging', 'elderly', 'older adults', 'long-term care', 'alzheimer', 'dementia'],\n  equity: ['equity', 'racial', 'diversity', 'inclusion', 'african american', 'disparit'],\n  workforce: ['workforce', 'employment', 'job', 'career', 'professional', 'work'],\n  mental_health: ['mental health', 'trauma', 'healing', 'wellness', 'behavioral'],\n  community: ['community', 'volunteer', 'partner', 'collaboration', 'local'],\n};\n\n// Score each document for relevance\nconst scored = documents.map(n => {\n  const docText = [\n    n.title || n.name || '',\n    n.subcategory || '',\n    n.extracted_text || '',\n    (n.tags || []).join(' '),\n  ].join(' ').toLowerCase();\n\n  let score = 0;\n\n  // Always include mission/overview documents (score boost)\n  const docTitle = (n.title || n.name || '').toLowerCase();\n  const docSubcat = (n.subcategory || '').toLowerCase();\n  if (docSubcat === 'mission' || docTitle.includes('mission')) {\n    score += 3;\n  }\n\n  // Check if document keywords appear in grant text\n  for (const [category, keywords] of Object.entries(relevanceKeywords)) {\n    const docMatchesCategory = keywords.some(kw => docText.includes(kw));\n    const grantMatchesCategory = keywords.some(kw => grantText.includes(kw));\n    if (docMatchesCategory && grantMatchesCategory) {\n      score += 2;\n    }\n  }\n\n  // Direct word overlap between document title and grant text\n  const titleWords = docTitle.split(/\\s+/);\n  for (const word of titleWords) {\n    if (word.length > 3 && grantText.includes(word)) {\n      score += 1;\n    }\n  }\n\n  return { document: n, score };\n});\n\n// Filter: keep documents with score > 0, sorted by relevance\nlet relevant = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);\n\n// Fallback: if nothing matched, use mission + methods + impact documents\nif (relevant.length === 0) {\n  const fallbackKeywords = ['mission', 'method', 'impact'];\n  relevant = scored.filter(s => {\n    const text = (s.document.title || s.document.name || s.document.subcategory || '').toLowerCase();\n    return fallbackKeywords.some(kw => text.includes(kw));\n  });\n}\n\n// Still nothing? Use all documents\nif (relevant.length === 0) {\n  relevant = scored;\n}\n\nreturn relevant.map(s => ({\n  json: {\n    narrative_id: s.document.id,\n    section_id: s.document.subcategory || 'general',\n    section_name: s.document.title || s.document.name,\n    base_content: s.document.extracted_text,\n    word_limit: s.document.metadata?.word_count || 250,\n    relevance_score: s.score,\n    grantContext: gc,\n  }\n}));"
       },
       "id": "1d9bce19-3caf-4ee2-a9cb-d09b7a8e4b9c",
       "name": "Prepare Context",
@@ -497,6 +532,17 @@
       ]
     },
     "Narrative Request": {
+      "main": [
+        [
+          {
+            "node": "Get Grant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Grant": {
       "main": [
         [
           {

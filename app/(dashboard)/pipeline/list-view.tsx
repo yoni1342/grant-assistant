@@ -23,10 +23,10 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 const STAGE_LABELS: Record<string, string> = {
-  discovery: "Discovery",
-  screening: "Screening",
-  pending_approval: "Pending Approval",
-  drafting: "Drafting",
+  discovery: "Discovered",
+  screening: "Screened",
+  pending_approval: "Waiting for Approval",
+  drafting: "Drafted",
   closed: "Closed",
 };
 

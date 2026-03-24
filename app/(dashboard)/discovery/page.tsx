@@ -202,6 +202,20 @@ const FUNDING_CATEGORIES = [
   "Other",
 ];
 
+const US_STATES = [
+  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+  "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
+  "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana",
+  "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+  "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
+  "New Hampshire", "New Jersey", "New Mexico", "New York",
+  "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon",
+  "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+  "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
+  "West Virginia", "Wisconsin", "Wyoming", "District of Columbia",
+  "National / All States",
+];
+
 export default function DiscoveryPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -210,6 +224,7 @@ export default function DiscoveryPage() {
   const [profitStatus, setProfitStatus] = useState("");
   const [industry, setIndustry] = useState("");
   const [fundingCategory, setFundingCategory] = useState("");
+  const [location, setLocation] = useState("");
   const [results, setResults] = useState<DiscoveredGrant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searchComplete, setSearchComplete] = useState(false);
@@ -297,6 +312,7 @@ export default function DiscoveryPage() {
           ...(profitStatus && { profitStatus }),
           ...(industry && { industry }),
           ...(fundingCategory && { fundingCategory }),
+          ...(location && { location }),
         }),
       });
 
@@ -448,9 +464,9 @@ export default function DiscoveryPage() {
             >
               <Filter className="h-4 w-4 mr-1" />
               Filters
-              {(orgType || profitStatus || industry || fundingCategory) && (
+              {(orgType || profitStatus || industry || fundingCategory || location) && (
                 <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">
-                  {[orgType, profitStatus, industry, fundingCategory].filter(Boolean).length}
+                  {[orgType, profitStatus, industry, fundingCategory, location].filter(Boolean).length}
                 </Badge>
               )}
             </Button>
@@ -468,7 +484,20 @@ export default function DiscoveryPage() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Location</label>
+                <select
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Any</option>
+                  {US_STATES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Organization Type</label>
                 <select
@@ -538,11 +567,6 @@ export default function DiscoveryPage() {
                   );
                 })()}
               </div>
-              {results.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {results.length} grant{results.length !== 1 ? "s" : ""} found so far from {sourceCount} source{sourceCount !== 1 ? "s" : ""} — searching remaining sources
-                </p>
-              )}
             </div>
           )}
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
@@ -564,7 +588,7 @@ export default function DiscoveryPage() {
             <h2 className="text-lg font-medium">
               Results{" "}
               <span className="text-muted-foreground font-normal">
-                ({results.length} found{loading ? " so far" : ""})
+                ({results.length} found{loading ? " so far" : ""}){loading ? " — searching remaining sources" : ""}
               </span>
             </h2>
           </div>

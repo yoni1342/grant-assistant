@@ -52,9 +52,16 @@ function stageBadge(stage: string | null) {
     reporting: "bg-teal-100 text-teal-800",
     closed: "bg-gray-100 text-gray-800",
   };
+  const labels: Record<string, string> = {
+    discovery: "Discovered",
+    screening: "Screened",
+    pending_approval: "Waiting for Approval",
+    drafting: "Drafted",
+    closed: "Closed",
+  };
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[stage] || "bg-gray-100 text-gray-800"}`}>
-      {stage}
+      {labels[stage] || stage}
     </span>
   );
 }
@@ -155,7 +162,7 @@ export function GrantsClient({
               size="sm"
               onClick={() => setStageFilter(s)}
             >
-              {s === "all" ? "All" : s === "pending_approval" ? "Pending Approval" : s.charAt(0).toUpperCase() + s.slice(1)}
+              {s === "all" ? "All" : s === "pending_approval" ? "Waiting for Approval" : s === "discovery" ? "Discovered" : s === "screening" ? "Screened" : s.charAt(0).toUpperCase() + s.slice(1)}
               {s !== "all" && ` (${stageCounts[s] || 0})`}
             </Button>
           ))}
