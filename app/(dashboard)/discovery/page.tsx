@@ -569,7 +569,7 @@ export default function DiscoveryPage() {
               </div>
               {results.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {results.length} grant{results.length !== 1 ? "s" : ""} found so far from {sourceCount} source{sourceCount !== 1 ? "s" : ""} — searching remaining sources
+                  {results.length} grant{results.length !== 1 ? "s" : ""} found so far
                 </p>
               )}
             </div>
@@ -593,7 +593,7 @@ export default function DiscoveryPage() {
             <h2 className="text-lg font-medium">
               Results{" "}
               <span className="text-muted-foreground font-normal">
-                ({results.length} found{loading ? " so far" : ""})
+                ({results.length} found{loading ? " so far" : ""}){loading ? " — searching remaining sources" : ""}
               </span>
             </h2>
           </div>
