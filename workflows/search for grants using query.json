@@ -1139,6 +1139,7 @@
     },
     {
       "parameters": {
+        "batchSize": 1,
         "options": {}
       },
       "type": "n8n-nodes-base.splitInBatches",
@@ -1655,7 +1656,7 @@
       "main": [
         [
           {
-            "node": "Status: Saving",
+            "node": "Split In Batches",
             "type": "main",
             "index": 0
           }
@@ -1921,7 +1922,7 @@
         ],
         [
           {
-            "node": "Split In Batches",
+            "node": "Status: Saving",
             "type": "main",
             "index": 0
           }
