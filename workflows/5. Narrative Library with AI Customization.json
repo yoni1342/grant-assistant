@@ -269,7 +269,42 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract grant context from webhook body\nconst raw = $('Narrative Request').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grantId || payload.grant_id;\nconst org_id = payload.org_id;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    grant_title: payload.grant_title || 'Not specified',\n    grant_description: payload.grant_description || 'Not specified',\n    funder_name: payload.funder_name || 'Not specified',\n    deadline: payload.deadline || 'Not specified',\n    amount: payload.amount || 'Not specified',\n  }\n}];"
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants?id=eq.{{ $json.body.grantId || $json.body.grant_id }}&select=*",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-345678901234",
+      "name": "Get Grant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1488,
+        576
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract grant context from webhook body + Supabase grant data\nconst raw = $('Narrative Request').first().json;\nconst body = raw.body || {};\nconst payload = body.$json || body;\n\nconst grant_id = payload.grantId || payload.grant_id;\nconst org_id = payload.org_id;\n\nif (!grant_id || !org_id) {\n  return [{\n    json: {\n      error: true,\n      message: `Missing required fields. grant_id: ${grant_id}, org_id: ${org_id}`,\n    }\n  }];\n}\n\n// Get grant data fetched from Supabase\nconst grantRows = $('Get Grant').first().json;\nconst grant = Array.isArray(grantRows) ? grantRows[0] : grantRows;\n\nreturn [{\n  json: {\n    grant_id,\n    org_id,\n    grant_title: grant.title || grant.name || 'Not specified',\n    grant_description: grant.description || grant.focus_areas || 'Not specified',\n    funder_name: grant.funder_name || grant.funder || 'Not specified',\n    deadline: grant.deadline || 'Not specified',\n    amount: grant.amount || grant.award_amount || 'Not specified',\n  }\n}];"
       },
       "id": "a18a1bae-9ba1-48b7-b4f5-f24023ac4100",
       "name": "Extract Grant Context",
@@ -497,6 +532,17 @@
       ]
     },
     "Narrative Request": {
+      "main": [
+        [
+          {
+            "node": "Get Grant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Grant": {
       "main": [
         [
           {
