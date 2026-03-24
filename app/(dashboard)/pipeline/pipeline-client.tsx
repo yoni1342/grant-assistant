@@ -45,9 +45,11 @@ const STAGES = [
 export function PipelineClient({
   initialGrants,
   isFetchingGrants = false,
+  proposalQualityMap = {},
 }: {
   initialGrants: Grant[];
   isFetchingGrants?: boolean;
+  proposalQualityMap?: Record<string, number>;
 }) {
   const [grants, setGrants] = useState<Grant[]>(initialGrants);
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -284,7 +286,7 @@ export function PipelineClient({
           <p className="text-xs mt-1">This may take a minute. Grants will appear automatically.</p>
         </div>
       ) : view === "kanban" ? (
-        <KanbanView grants={filtered} onStageChange={handleStageChange} />
+        <KanbanView grants={filtered} onStageChange={handleStageChange} proposalQualityMap={proposalQualityMap} />
       ) : (
         <ListView grants={filtered} />
       )}

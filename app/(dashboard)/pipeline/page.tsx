@@ -11,7 +11,7 @@ export default async function PipelinePage() {
 
   const staleThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-  const [{ data: grants }, { data: fetchStatus }] = await Promise.all([
+  const [{ data: grants }, { data: fetchStatus }, { data: proposals }] = await Promise.all([
     supabase
       .from("grants")
       .select("*")
@@ -24,6 +24,10 @@ export default async function PipelinePage() {
       .neq("status", "complete")
       .gte("updated_at", staleThreshold)
       .single(),
+    supabase
+      .from("proposals")
+      .select("id, grant_id, quality_score")
+      .eq("org_id", orgId),
   ]);
 
   // Auto-trigger fetch-grants when pipeline is empty and no fetch is in progress
@@ -53,7 +57,17 @@ export default async function PipelinePage() {
           <GrantFetchBanner orgId={orgId} initialStatus={activeFetchStatus} />
         </div>
       )}
-      <PipelineClient initialGrants={grants || []} isFetchingGrants={!!activeFetchStatus} />
+      <PipelineClient initialGrants={grants || []} isFetchingGrants={!!activeFetchStatus} proposalQualityMap={
+        (proposals || []).reduce((acc, p) => {
+          if (p.grant_id && p.quality_score != null) {
+            const existing = acc[p.grant_id];
+            if (existing == null || p.quality_score > existing) {
+              acc[p.grant_id] = p.quality_score;
+            }
+          }
+          return acc;
+        }, {} as Record<string, number>)
+      } />
     </div>
   );
 }

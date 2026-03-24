@@ -449,30 +449,37 @@ export function GrantDetail({
               </div>
             )}
 
-            {/* Proposal Quality Scores */}
-            {proposals.some((p) => p.quality_score != null) && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Proposal Quality</p>
-                <div className="flex flex-col gap-2">
-                  {proposals.filter((p) => p.quality_score != null).map((p) => (
-                    <div key={p.id} className="flex items-center gap-2">
-                      <Link href={`/proposals/${p.id}`} className="text-sm hover:underline flex-1 truncate">
-                        {p.title}
-                      </Link>
+            {/* Proposals list with View Proposal links */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Proposals</p>
+              <div className="flex flex-col gap-2">
+                {proposals.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2 rounded-lg border p-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{p.title}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{p.status}</p>
+                    </div>
+                    {p.quality_score != null && (
                       <Badge
                         variant={
-                          p.quality_score! >= 80 ? "default" :
-                          p.quality_score! >= 60 ? "secondary" : "destructive"
+                          p.quality_score >= 85 ? "default" :
+                          p.quality_score >= 60 ? "secondary" : "destructive"
                         }
-                        className="text-xs"
+                        className="text-xs shrink-0"
                       >
-                        {p.quality_score}%
+                        {p.quality_score}% quality
                       </Badge>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                    <Link href={`/proposals/${p.id}`}>
+                      <Button size="sm" className="shrink-0 gap-1 bg-purple-600 hover:bg-purple-700 text-white">
+                        <ExternalLink className="h-3 w-3" />
+                        View Proposal
+                      </Button>
+                    </Link>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
             {/* Dimension Scores (same breakdown as screening but shown in drafting context) */}
             {eligibility?.dimension_scores && (

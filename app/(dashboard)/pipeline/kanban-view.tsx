@@ -61,12 +61,32 @@ function ConfidenceScore({ grant }: { grant: Grant }) {
   );
 }
 
+function ProposalQualityScore({ score }: { score: number | undefined }) {
+  if (score == null) return null;
+  const color =
+    score >= 85
+      ? "bg-green-100 text-green-800"
+      : score >= 60
+        ? "bg-yellow-100 text-yellow-800"
+        : "bg-red-100 text-red-800";
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}
+      title="Proposal quality"
+    >
+      {score}% quality
+    </span>
+  );
+}
+
 export function KanbanView({
   grants,
   onStageChange,
+  proposalQualityMap = {},
 }: {
   grants: Grant[];
   onStageChange?: (grantId: string, targetStage: string) => Promise<void>;
+  proposalQualityMap?: Record<string, number>;
 }) {
   const [draggedGrantId, setDraggedGrantId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
@@ -180,14 +200,20 @@ export function KanbanView({
                               {grant.funder_name}
                             </p>
                           )}
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             {grant.amount && (
                               <Badge variant="secondary" className="text-xs">
                                 ${grant.amount.toLocaleString()}
                               </Badge>
                             )}
-                            <ScreeningScore score={grant.screening_score} />
-                            <ConfidenceScore grant={grant} />
+                            {grant.stage === "drafting" ? (
+                              <>
+                                <ConfidenceScore grant={grant} />
+                                <ProposalQualityScore score={proposalQualityMap[grant.id]} />
+                              </>
+                            ) : (
+                              <ScreeningScore score={grant.screening_score} />
+                            )}
                           </div>
                           {grant.deadline && (
                             <p className="text-xs text-muted-foreground">

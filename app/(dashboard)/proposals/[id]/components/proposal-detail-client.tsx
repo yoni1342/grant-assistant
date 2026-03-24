@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Download, Loader2, Pencil, Save, RotateCcw } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Pencil, Save, RotateCcw, ClipboardCheck, PanelRightClose, PanelRightOpen } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { ProposalSections, ProposalSectionsHandle } from "./proposal-sections"
+import { QualityReview } from "./quality-review"
 import { useRef } from "react"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -30,6 +31,7 @@ export function ProposalDetailClient({
   const sectionsRef = useRef<ProposalSectionsHandle>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [, forceRender] = useState(0)
+  const [showReviewPanel, setShowReviewPanel] = useState(false)
 
   // Force re-render when edit state changes so we pick up isEditing/isSaving from the ref
   const triggerRender = useCallback(() => forceRender(n => n + 1), [])
@@ -194,12 +196,57 @@ export function ProposalDetailClient({
               )}
               {isExporting ? 'Exporting...' : 'Export PDF'}
             </Button>
+
+            {/* Toggle Review Panel */}
+            <Button
+              variant={showReviewPanel ? "default" : "outline"}
+              size="sm"
+              className="gap-2"
+              onClick={() => setShowReviewPanel(!showReviewPanel)}
+            >
+              {showReviewPanel ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <ClipboardCheck className="h-4 w-4" />
+              )}
+              View Review
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Sections */}
-      <ProposalSections ref={sectionsRef} sections={sections} proposalId={proposal.id} proposalTitle={proposal.title} />
+      {/* Main content area with optional review panel */}
+      <div className="flex gap-6">
+        {/* Sections - shrink when panel is open */}
+        <div className={showReviewPanel ? 'flex-1 min-w-0' : 'w-full'}>
+          <ProposalSections ref={sectionsRef} sections={sections} proposalId={proposal.id} proposalTitle={proposal.title} />
+        </div>
+
+        {/* Review Panel */}
+        {showReviewPanel && (
+          <div className="w-[380px] shrink-0">
+            <div className="sticky top-8 max-h-[82vh] overflow-y-auto rounded-lg border bg-background p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm">Quality Review</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setShowReviewPanel(false)}
+                >
+                  <PanelRightClose className="h-4 w-4" />
+                </Button>
+              </div>
+              <QualityReview
+                proposalId={proposal.id}
+                qualityScore={proposal.quality_score}
+                qualityReview={proposal.quality_review}
+                embedded
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
