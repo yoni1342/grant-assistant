@@ -21,7 +21,7 @@ function HeroSection() {
               Fundory
             </span>
             <span className="font-mono text-[8px] tracking-[0.18em] text-[#888] uppercase">
-              Grant Intelligence
+              Grant Intelligence Platform
             </span>
           </div>
         </div>
@@ -33,8 +33,10 @@ function HeroSection() {
       {/* Massive headline */}
       <div className="flex-1 flex flex-col justify-center mt-16 md:mt-0">
         <h1 className="font-display text-6xl md:text-8xl lg:text-[10vw] font-black tracking-tight leading-[0.88] text-[#0A0A0A] uppercase">
-          <span className="block">All sources.</span>
-          <span className="block mt-2 md:mt-4">One search.</span>
+          <span className="block">Stop Chasing</span>
+          <span className="block mt-2 md:mt-4">Grants.</span>
+          <span className="block mt-2 md:mt-4">Start Winning</span>
+          <span className="block mt-2 md:mt-4">Them.</span>
         </h1>
       </div>
 
@@ -42,31 +44,42 @@ function HeroSection() {
       <div className="flex flex-col lg:flex-row items-end justify-between gap-12 pb-4">
         <div className="max-w-[500px]">
           <p className="text-lg md:text-2xl text-[#0A0A0A] leading-relaxed text-left">
-            A centralized intelligence layer for the grant lifecycle. Aggregate
-            data, validate eligibility, and generate technical drafts.
+            Fundory replaces fragmented grant research, manual eligibility checks, and blank-page proposal dread with a single intelligent system built for organizations that can&apos;t afford to leave funding on the table.
           </p>
-          <div className="mt-8">
+          <div className="mt-8 flex items-center gap-4">
             <Link
               href="/register"
               className="group inline-flex items-center justify-center gap-2 bg-[#0A0A0A] text-[#F5F5F0] font-medium px-8 py-4 text-sm font-mono tracking-[0.12em] uppercase border-2 border-[#0A0A0A] hover:bg-[#F5F5F0] hover:text-[#0A0A0A] transition-all duration-300 ease-in-out"
             >
-              Get Access
+              Request Access
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="transition-transform duration-300 ease-in-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
                 <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </Link>
+            <a
+              href="#how-it-works"
+              className="font-mono text-sm tracking-[0.12em] uppercase text-[#0A0A0A] hover:text-[#888] transition-colors"
+            >
+              See How It Works
+            </a>
           </div>
         </div>
 
         <div className="flex flex-col items-end gap-6">
           <nav className="flex items-center gap-8">
-            {["System", "Features", "Architecture", "Contact"].map((item) => (
+            {[
+              { label: "The Problem", href: "#the-problem" },
+              { label: "Platform", href: "#platform" },
+              { label: "How It Works", href: "#how-it-works" },
+              { label: "Sectors", href: "#sectors" },
+              { label: "Get Access", href: "#get-access" },
+            ].map((item) => (
               <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
+                key={item.label}
+                href={item.href}
                 className="font-mono text-[10px] text-[#0A0A0A] hover:text-[#888] transition-colors tracking-[0.2em] uppercase"
               >
-                {item}
+                {item.label}
               </a>
             ))}
           </nav>
@@ -87,39 +100,136 @@ function HeroSection() {
 }
 
 /* ═══════════════════════════════════════════
+   STATS BAR
+   ═══════════════════════════════════════════ */
+function StatsBar() {
+  const stats = [
+    { value: "10K+", label: "Grants Indexed" },
+    { value: "5", label: "Data Sources Unified" },
+    { value: "79%", label: "Avg. Eligibility Score" },
+    { value: "$2.4M+", label: "Pipeline Managed" },
+  ];
+  return (
+    <section className="bg-white border-b-2 border-[#0A0A0A]">
+      <div className="grid grid-cols-2 md:grid-cols-4">
+        {stats.map((stat, i) => (
+          <div
+            key={stat.label}
+            className={`px-6 md:px-12 lg:px-16 py-10 text-center ${
+              i > 0 ? "border-l-2 border-[#0A0A0A]" : ""
+            }`}
+          >
+            <span className="font-display text-3xl md:text-4xl font-black tracking-tight text-[#0A0A0A] block">
+              {stat.value}
+            </span>
+            <span className="font-mono text-[10px] tracking-[0.2em] text-[#888] uppercase mt-2 block">
+              {stat.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   THE REALITY (PROBLEM SECTION)
+   ═══════════════════════════════════════════ */
+const problems = [
+  {
+    title: "Fragmented Search",
+    description:
+      "Grants.gov, ProPublica, CFDA: each with its own interface, its own data model, its own dead ends. Hours spent searching. Minutes left to apply.",
+  },
+  {
+    title: "Eligibility Guesswork",
+    description:
+      "You read the RFP. You assume you qualify. You spend three weeks writing, then discover you were never a fit. That\u2019s not a process. That\u2019s a gamble.",
+  },
+  {
+    title: "Generic Proposals",
+    description:
+      "Templates built for anyone win for no one. Funders read hundreds of proposals. The ones that win speak their language, address their rubric, and reflect their priorities.",
+  },
+  {
+    title: "No Pipeline Visibility",
+    description:
+      "Deadlines managed in spreadsheets. Status tracked in emails. Compliance requirements missed. A $500K grant doesn\u2019t fail at the writing stage. It fails at the management stage.",
+  },
+];
+
+function ProblemSection() {
+  return (
+    <section id="the-problem" className="bg-white border-b-2 border-[#0A0A0A]">
+      <div className="px-6 md:px-12 lg:px-16 py-24 md:py-40">
+        <div className="mb-16">
+          <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] uppercase block mb-4">
+            The Reality
+          </span>
+          <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-black tracking-tight text-[#0A0A0A] leading-[0.85] uppercase">
+            Your mission is fundable.<br />Your process is the problem.
+          </h2>
+          <p className="mt-8 text-lg md:text-2xl text-[#888] max-w-[700px] leading-relaxed">
+            Every year, billions in grant funding go unclaimed. Not because organizations don&apos;t qualify, but because they can&apos;t navigate the noise fast enough. That ends now.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+          {problems.map((problem, i) => (
+            <div
+              key={problem.title}
+              className={`py-10 px-8 ${
+                i % 2 !== 0 ? "md:border-l-2 md:border-[#0A0A0A]" : ""
+              } ${i >= 2 ? "border-t-2 border-[#0A0A0A]" : ""}`}
+            >
+              <h3 className="font-display text-xl md:text-2xl font-black tracking-tight text-[#0A0A0A] mb-4 uppercase">
+                {problem.title}
+              </h3>
+              <p className="text-sm text-[#888] leading-relaxed max-w-sm">
+                {problem.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════
    FEATURE ROWS
    ═══════════════════════════════════════════ */
 const features = [
   {
     number: "01",
     label: "AGGREGATE",
-    title: "All databases.\nOne query.",
+    title: "Every Source.\nOne Search.",
     description:
-      "Cross-reference Grants.gov, ProPublica, USAspending, CFDA, and PND in a single search. Structured results. No manual reconciliation.",
+      "Cross-reference Grants.gov, ProPublica, USAspending, CFDA, and PND simultaneously. Structured, deduplicated, ranked results with no manual reconciliation required. Search in natural language. Get intelligence back.",
     databases: ["Grants.gov", "ProPublica", "USAspending", "CFDA", "PND"],
   },
   {
     number: "02",
     label: "VALIDATE",
-    title: "Technical fit.\nScored.",
+    title: "Know Before\nYou Apply.",
     description:
-      "AI-driven eligibility scoring based on your specific organizational data. Match grant requirements against your profile, capacity, and track record.",
+      "AI-powered eligibility scoring calibrated to your organization\u2019s specific profile: geography, capacity, track record, and alignment. An 80% composite score means you\u2019re ready to compete. A red flag means you move on. No more wasted proposals.",
     databases: null,
   },
   {
     number: "03",
     label: "COMPOSE",
-    title: "Funder-specific\ntechnical drafts.",
+    title: "Proposals That\nSpeak Funder.",
     description:
-      "Generate Executive Summaries, Program Narratives, and Evaluation Plans tailored to each funder's technical requirements and scoring rubric.",
+      "Executive summaries, program narratives, evaluation plans: each generated to the specific rubric and language priorities of the target funder. Not boilerplate. Not generic. Funder-specific technical drafts built to score.",
     databases: null,
   },
   {
     number: "04",
     label: "MANAGE",
-    title: "Pipeline\noversight.",
+    title: "Full Lifecycle.\nFull Control.",
     description:
-      "Full lifecycle visibility from discovery to post-award. Deadline management, compliance tracking, and reporting milestones in one view.",
+      "Track every grant from discovery through post-award in a single pipeline view. Deadline alerts, compliance milestones, status tracking so your team is executing, not scrambling. Your $2M pipeline deserves better than a spreadsheet.",
     databases: null,
   },
 ];
@@ -271,7 +381,7 @@ function ComposeVisual() {
         </div>
       </div>
       <div className="px-4 py-3 border-t border-[#D8D8D4] bg-[#F5F5F0] flex justify-between items-center">
-        <span className="font-mono text-[9px] text-[#888]">Tailored to NSF rubric</span>
+        <span className="font-mono text-[9px] text-[#888]">Tailored to funder rubric</span>
         <span className="font-mono text-[9px] text-[#0A0A0A] tracking-wider">GENERATING...</span>
       </div>
     </div>
@@ -380,7 +490,16 @@ function FeatureRow({
 
 function FeaturesSection() {
   return (
-    <section id="features" className="bg-white">
+    <section id="platform" className="bg-white">
+      {/* Section header */}
+      <div className="px-6 md:px-12 lg:px-16 py-24 md:py-32 border-b-2 border-[#0A0A0A]">
+        <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] uppercase block mb-4">
+          The Platform
+        </span>
+        <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-black tracking-tight text-[#0A0A0A] leading-[0.85] uppercase">
+          Four capabilities.<br />One system.<br />Zero excuses.
+        </h2>
+      </div>
       {features.map((feature) => (
         <FeatureRow key={feature.number} feature={feature} />
       ))}
@@ -389,7 +508,7 @@ function FeaturesSection() {
 }
 
 /* ═══════════════════════════════════════════
-   SYSTEM ARCHITECTURE
+   THE PROCESS (ARCHITECTURE)
    ═══════════════════════════════════════════ */
 const architecture = [
   {
@@ -397,42 +516,45 @@ const architecture = [
     label: "INGEST",
     title: "Data Aggregation",
     description:
-      "Multi-source API layer. Normalizes grant data from federal, state, and private databases into a unified schema.",
+      "A unified API layer normalizes grant data across federal, state, and private databases into one searchable schema. Real-time. Always current.",
   },
   {
     number: "02",
     label: "ANALYZE",
-    title: "Eligibility Engine",
+    title: "Eligibility Scoring",
     description:
-      "Scores organizational fit against grant requirements. Surfaces tactical advantages and disqualifying criteria.",
+      "Your organization profile is scored against each grant across six criteria. Tactical advantages surface. Disqualifying factors flag. You only pursue winnable opportunities.",
   },
   {
     number: "03",
     label: "GENERATE",
     title: "Draft Composition",
     description:
-      "Produces funder-specific technical documents. Executive summaries, narratives, budgets, and evaluation frameworks.",
+      "Funder-specific documents including narratives, budgets, and evaluation frameworks produced in the language and format each funder rewards. Ready to refine, not start from scratch.",
   },
   {
     number: "04",
     label: "TRACK",
-    title: "Pipeline Control",
+    title: "Pipeline Oversight",
     description:
-      "Deadline management, milestone tracking, and compliance monitoring across the full grant lifecycle.",
+      "Every active grant. Every deadline. Every milestone. Compliance and post-award reporting tracked in one view so nothing falls through the cracks.",
   },
 ];
 
 function ArchitectureSection() {
   return (
-    <section id="architecture" className="bg-white border-b-2 border-[#0A0A0A]">
+    <section id="how-it-works" className="bg-white border-b-2 border-[#0A0A0A]">
       <div className="px-6 md:px-12 lg:px-16 py-24 md:py-40">
         <div className="mb-24">
           <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] uppercase block mb-4">
-            System
+            The Process
           </span>
           <h2 className="font-display text-5xl md:text-7xl lg:text-[10vw] font-black tracking-tight text-[#0A0A0A] leading-[0.85] uppercase">
-            Architecture.
+            From search to<br />submission.
           </h2>
+          <p className="mt-8 text-lg md:text-2xl text-[#888] max-w-[500px] leading-relaxed">
+            Systematized.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
@@ -463,8 +585,10 @@ function ArchitectureSection() {
 }
 
 /* ═══════════════════════════════════════════
-   SECTORS
+   SECTORS & COVERAGE
    ═══════════════════════════════════════════ */
+const databases = ["Grants.gov", "ProPublica", "USAspending", "CFDA", "PND"];
+
 const sectors = [
   "Education & Research",
   "Healthcare & Science",
@@ -472,21 +596,41 @@ const sectors = [
   "Environmental Policy",
   "Arts & Culture",
   "International NGOs",
+  "Workforce Development",
+  "Housing & Community",
 ];
 
 function SectorsSection() {
   return (
-    <section id="system" className="bg-white border-b-2 border-[#0A0A0A]">
+    <section id="sectors" className="bg-white border-b-2 border-[#0A0A0A]">
       <div className="px-6 md:px-12 lg:px-16 py-24 md:py-32">
         <div className="mb-16">
           <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] uppercase block mb-4">
             Coverage
           </span>
           <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-black tracking-tight text-[#0A0A0A] leading-[0.85] uppercase">
-            Sectors.
+            Built across every major<br />federal and private database.
           </h2>
         </div>
 
+        {/* Databases */}
+        <div className="flex flex-wrap gap-4 mb-16">
+          {databases.map((db) => (
+            <span
+              key={db}
+              className="border-2 border-[#0A0A0A] px-6 py-3 font-mono text-xs text-[#0A0A0A] tracking-wide uppercase hover:bg-[#0A0A0A] hover:text-[#F5F5F0] transition-colors cursor-default"
+            >
+              {db}
+            </span>
+          ))}
+        </div>
+
+        {/* Sectors */}
+        <div className="mb-8">
+          <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] uppercase block mb-6">
+            Serving organizations across all major grant sectors
+          </span>
+        </div>
         <div className="flex flex-wrap gap-4">
           {sectors.map((sector) => (
             <span
@@ -507,27 +651,51 @@ function SectorsSection() {
    ═══════════════════════════════════════════ */
 function FinalCTA() {
   return (
-    <section id="contact" className="bg-[#0A0A0A]">
-      <div className="px-6 md:px-12 lg:px-16 py-24 md:py-40">
+    <section id="get-access" className="bg-[#0A0A0A]">
+      {/* Quote block */}
+      <div className="px-6 md:px-12 lg:px-16 py-24 md:py-32 border-b border-[#888]/20">
         <span className="font-mono text-[10px] tracking-[0.3em] text-[#888]/60 uppercase block mb-8">
-          Access
+          Designed For Organizations That Can&apos;t Afford to Lose
         </span>
+        <blockquote className="max-w-[700px]">
+          <p className="text-lg md:text-2xl text-[#F5F5F0]/80 leading-relaxed italic">
+            &ldquo;Nonprofits and community organizations do the hardest work and historically get the least support navigating the funding landscape. Fundory exists to close that gap permanently.&rdquo;
+          </p>
+          <footer className="mt-6">
+            <span className="font-mono text-[10px] tracking-[0.2em] text-[#888]/60 uppercase">
+              Fundory Design Principle &middot; 2026
+            </span>
+          </footer>
+        </blockquote>
+      </div>
+
+      {/* CTA */}
+      <div className="px-6 md:px-12 lg:px-16 py-24 md:py-40">
         <h2 className="font-display text-5xl md:text-7xl lg:text-[10vw] font-black tracking-tight text-[#F5F5F0] leading-[0.85] uppercase">
-          Start<br />searching.
+          Your mission is<br />fundable.
         </h2>
-        <p className="mt-8 text-lg md:text-2xl text-[#888] max-w-[500px] leading-relaxed">
-          Replace manual grant workflows with a centralized intelligence system.
+        <p className="mt-4 font-display text-3xl md:text-5xl font-black tracking-tight text-[#888] leading-[0.85] uppercase">
+          Let&apos;s prove it.
         </p>
-        <div className="mt-12">
+        <p className="mt-8 text-lg md:text-2xl text-[#888] max-w-[500px] leading-relaxed">
+          Replace fragmented grant workflows with a centralized intelligence system that works as hard as your team does.
+        </p>
+        <div className="mt-12 flex items-center gap-6">
           <Link
             href="/register"
             className="group inline-flex items-center justify-center gap-2 bg-[#F5F5F0] text-[#0A0A0A] font-medium px-8 py-4 font-mono text-sm tracking-[0.12em] uppercase border-2 border-[#F5F5F0] hover:bg-[#0A0A0A] hover:text-[#F5F5F0] hover:border-[#888]/30 transition-all duration-300 ease-in-out"
           >
-            Get Access
+            Get Access Now
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="transition-transform duration-300 ease-in-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
               <path d="M1 11L11 1M11 1H3M11 1V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </Link>
+          <a
+            href="#platform"
+            className="font-mono text-sm tracking-[0.12em] uppercase text-[#888] hover:text-[#F5F5F0] transition-colors"
+          >
+            Explore the Platform
+          </a>
         </div>
       </div>
 
@@ -556,7 +724,7 @@ function Footer() {
             </span>
           </div>
           <span className="font-mono text-[10px] text-[#888]/40 block mt-2 tracking-[0.2em]">
-            &copy; 2026 All rights reserved.
+            &copy; 2026 Fundory.ai &middot; All rights reserved.
           </span>
         </div>
         <div className="flex gap-8">
@@ -578,6 +746,12 @@ function Footer() {
           >
             Documentation
           </Link>
+          <Link
+            href="#"
+            className="font-mono text-[10px] text-[#888]/50 hover:text-[#F5F5F0] transition-colors uppercase tracking-[0.2em]"
+          >
+            Contact
+          </Link>
         </div>
       </div>
     </footer>
@@ -591,6 +765,8 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen bg-[#F5F5F0] text-[#0A0A0A]">
       <HeroSection />
+      <StatsBar />
+      <ProblemSection />
       <FeaturesSection />
       <ArchitectureSection />
       <SectorsSection />
