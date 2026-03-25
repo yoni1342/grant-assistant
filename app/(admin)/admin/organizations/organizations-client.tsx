@@ -47,12 +47,16 @@ interface Organization {
   annual_budget: number | null;
   staff_count: number | null;
   geographic_focus: string[] | null;
+  plan: string | null;
+  subscription_status: string | null;
+  trial_ends_at: string | null;
   documents: Record<string, unknown>[];
   budgets: Record<string, unknown>[];
   narratives: Record<string, unknown>[];
 }
 
 type Filter = "all" | "pending" | "approved" | "rejected" | "suspended";
+type BillingFilter = "all" | "active" | "trialing" | "past_due" | "canceled" | "none";
 
 export function OrganizationsClient({
   organizations,
@@ -61,7 +65,9 @@ export function OrganizationsClient({
 }) {
   const searchParams = useSearchParams();
   const initialFilter = (searchParams.get("status") as Filter) || "all";
+  const initialBillingFilter = (searchParams.get("billing") as BillingFilter) || "all";
   const [filter, setFilter] = useState<Filter>(initialFilter);
+  const [billingFilter, setBillingFilter] = useState<BillingFilter>(initialBillingFilter);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -83,10 +89,23 @@ export function OrganizationsClient({
     suspended: organizations.filter((o) => o.status === "suspended").length,
   };
 
-  const filtered =
-    filter === "all"
-      ? organizations
-      : organizations.filter((o) => o.status === filter);
+  const billingCounts = {
+    active: organizations.filter((o) => o.subscription_status === "active").length,
+    trialing: organizations.filter((o) => o.subscription_status === "trialing").length,
+    past_due: organizations.filter((o) => o.subscription_status === "past_due").length,
+    canceled: organizations.filter((o) => o.subscription_status === "canceled").length,
+    none: organizations.filter((o) => !o.subscription_status).length,
+  };
+
+  const filtered = organizations.filter((o) => {
+    if (filter !== "all" && o.status !== filter) return false;
+    if (billingFilter !== "all") {
+      if (billingFilter === "none") {
+        if (o.subscription_status) return false;
+      } else if (o.subscription_status !== billingFilter) return false;
+    }
+    return true;
+  });
 
   async function handleApprove(orgId: string) {
     setLoading(orgId);
@@ -166,13 +185,36 @@ export function OrganizationsClient({
       <h2 className="text-2xl font-semibold">Organizations</h2>
 
       {/* Filter tabs */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {filters.map((f) => (
           <Button
             key={f.value}
             variant={filter === f.value ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter(f.value)}
+          >
+            {f.label}
+            {f.count !== undefined && (
+              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-primary/15 text-primary px-2 py-0.5 text-xs font-bold tabular-nums min-w-[1.5rem]">
+                {f.count}
+              </span>
+            )}
+          </Button>
+        ))}
+        <span className="mx-1 self-center text-muted-foreground text-xs">|</span>
+        {([
+          { label: "All Billing", value: "all" as BillingFilter },
+          { label: "Active", value: "active" as BillingFilter, count: billingCounts.active },
+          { label: "Trialing", value: "trialing" as BillingFilter, count: billingCounts.trialing },
+          { label: "Past Due", value: "past_due" as BillingFilter, count: billingCounts.past_due },
+          { label: "Canceled", value: "canceled" as BillingFilter, count: billingCounts.canceled },
+          { label: "No Sub", value: "none" as BillingFilter, count: billingCounts.none },
+        ]).map((f) => (
+          <Button
+            key={f.value}
+            variant={billingFilter === f.value ? "default" : "outline"}
+            size="sm"
+            onClick={() => setBillingFilter(f.value)}
           >
             {f.label}
             {f.count !== undefined && (
@@ -194,6 +236,8 @@ export function OrganizationsClient({
                 <TableHead>Owner</TableHead>
                 <TableHead>Sector</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead>Billing</TableHead>
                 <TableHead>Registered</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -201,7 +245,7 @@ export function OrganizationsClient({
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     No organizations found
                   </TableCell>
                 </TableRow>
@@ -224,6 +268,24 @@ export function OrganizationsClient({
                     </TableCell>
                     <TableCell>{org.sector || "-"}</TableCell>
                     <TableCell>{statusBadge(org.status)}</TableCell>
+                    <TableCell className="text-sm">{org.plan || "free"}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const s = org.subscription_status;
+                        if (!s) return <span className="text-xs text-muted-foreground">-</span>;
+                        const colors: Record<string, string> = {
+                          active: "border-green-300 text-green-700 dark:text-green-400 bg-green-500/10",
+                          trialing: "border-amber-300 text-amber-700 dark:text-amber-400 bg-amber-500/10",
+                          past_due: "border-red-300 text-red-700 dark:text-red-400 bg-red-500/10",
+                          canceled: "border-gray-300 text-gray-600 dark:text-gray-400",
+                        };
+                        return (
+                          <Badge variant="outline" className={`text-xs ${colors[s] || ""}`}>
+                            {s.replace("_", " ")}
+                          </Badge>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell>
                       {org.created_at
                         ? new Date(org.created_at).toLocaleDateString()

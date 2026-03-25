@@ -15,7 +15,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
-import { Building2, Users, FileText, PenTool, Clock, CheckCircle2, ShieldOff, UserX } from "lucide-react";
+import { Building2, Users, FileText, PenTool, Clock, CheckCircle2, ShieldOff, UserX, CreditCard, DollarSign, AlertTriangle, XCircle } from "lucide-react";
 import { approveOrganization } from "./organizations/actions";
 import Link from "next/link";
 
@@ -26,6 +26,9 @@ interface OverviewClientProps {
     status: string;
     created_at: string | null;
     sector: string | null;
+    plan: string | null;
+    subscription_status: string | null;
+    trial_ends_at: string | null;
   }>;
   totalUsers: number;
   deactivatedUsers: number;
@@ -163,6 +166,27 @@ export function OverviewClient({
     (o) => o.status === "suspended"
   ).length;
 
+  const activeSubscriptions = organizations.filter(
+    (o) => o.subscription_status === "active"
+  ).length;
+  const trialingCount = organizations.filter(
+    (o) => o.subscription_status === "trialing"
+  ).length;
+  const pastDueCount = organizations.filter(
+    (o) => o.subscription_status === "past_due"
+  ).length;
+  const canceledCount = organizations.filter(
+    (o) => o.subscription_status === "canceled"
+  ).length;
+
+  // Calculate MRR from active + trialing orgs with paid plans
+  const mrr = useMemo(() => {
+    const PLAN_PRICES: Record<string, number> = { professional: 49, agency: 149 };
+    return organizations
+      .filter((o) => o.subscription_status === "active" && o.plan && o.plan !== "free")
+      .reduce((sum, o) => sum + (PLAN_PRICES[o.plan!] || 0), 0);
+  }, [organizations]);
+
   const registrationData = useMemo(
     () => groupByMonth(organizations),
     [organizations]
@@ -287,6 +311,73 @@ export function OverviewClient({
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">{proposals.length}</p>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      {/* Billing Stats */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              MRR
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-green-600">${mrr}</p>
+          </CardContent>
+        </Card>
+        <Link href="/admin/organizations?billing=active" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-green-400/30">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Active Subs
+              </CardTitle>
+              <CreditCard className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-green-600">{activeSubscriptions}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/organizations?billing=trialing" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-amber-400/30">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Trialing
+              </CardTitle>
+              <Clock className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-amber-600">{trialingCount}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/organizations?billing=past_due" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-red-400/30">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Past Due
+              </CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-red-600">{pastDueCount}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/organizations?billing=canceled" className="h-full">
+          <Card className="h-full cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-gray-400/30">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Canceled
+              </CardTitle>
+              <XCircle className="h-4 w-4 text-gray-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-gray-600">{canceledCount}</p>
             </CardContent>
           </Card>
         </Link>
