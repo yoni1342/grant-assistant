@@ -95,6 +95,7 @@ export async function registerOrganization(data: {
   password: string
   org: OrgData
   questionnaire?: QuestionnaireData | null
+  plan?: string
 }) {
   const serviceClient = getServiceClient()
 
@@ -149,7 +150,7 @@ export async function registerOrganization(data: {
   // 2. Insert organization (status defaults to 'pending')
   const { data: org, error: orgError } = await serviceClient
     .from('organizations')
-    .insert({ name: data.org.name, ein: data.org.ein, mission: data.org.mission, sector: data.org.sector, address: data.org.address, phone: data.org.phone, email: data.org.email, website: data.org.website, founding_year: data.org.founding_year, geographic_focus: data.org.geographic_focus })
+    .insert({ name: data.org.name, ein: data.org.ein, mission: data.org.mission, sector: data.org.sector, address: data.org.address, phone: data.org.phone, email: data.org.email, website: data.org.website, founding_year: data.org.founding_year, geographic_focus: data.org.geographic_focus, plan: data.plan || 'free' })
     .select('id')
     .single()
 
@@ -193,6 +194,7 @@ export async function registerOrganization(data: {
 export async function registerOrganizationForExistingUser(data: {
   org: OrgData
   questionnaire?: QuestionnaireData | null
+  plan?: string
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -203,7 +205,7 @@ export async function registerOrganizationForExistingUser(data: {
   // Insert organization
   const { data: org, error: orgError } = await serviceClient
     .from('organizations')
-    .insert({ name: data.org.name, ein: data.org.ein, mission: data.org.mission, sector: data.org.sector, address: data.org.address, phone: data.org.phone, email: data.org.email, website: data.org.website, founding_year: data.org.founding_year, geographic_focus: data.org.geographic_focus })
+    .insert({ name: data.org.name, ein: data.org.ein, mission: data.org.mission, sector: data.org.sector, address: data.org.address, phone: data.org.phone, email: data.org.email, website: data.org.website, founding_year: data.org.founding_year, geographic_focus: data.org.geographic_focus, plan: data.plan || 'free' })
     .select('id')
     .single()
 

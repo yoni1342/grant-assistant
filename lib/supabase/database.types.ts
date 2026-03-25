@@ -411,6 +411,11 @@ export type Database = {
           staff_count: number | null
           status: Database["public"]["Enums"]["org_status"]
           updated_at: string | null
+          plan: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
+          trial_ends_at: string | null
           voice_profile: Json | null
           website: string | null
         }
@@ -437,6 +442,11 @@ export type Database = {
           staff_count?: number | null
           status?: Database["public"]["Enums"]["org_status"]
           updated_at?: string | null
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          trial_ends_at?: string | null
           voice_profile?: Json | null
           website?: string | null
         }
@@ -463,6 +473,11 @@ export type Database = {
           staff_count?: number | null
           status?: Database["public"]["Enums"]["org_status"]
           updated_at?: string | null
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          trial_ends_at?: string | null
           voice_profile?: Json | null
           website?: string | null
         }
