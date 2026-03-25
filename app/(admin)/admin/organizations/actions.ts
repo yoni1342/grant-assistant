@@ -326,6 +326,223 @@ export async function unsuspendOrganization(orgId: string) {
   return { success: true }
 }
 
+export async function updateOrgPlan(orgId: string, newPlan: PlanId) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_platform_admin')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.is_platform_admin) return { error: 'Unauthorized' }
+
+  const adminClient = createAdminClient()
+
+  // Get current org data
+  const { data: org } = await adminClient
+    .from('organizations')
+    .select('stripe_customer_id, stripe_subscription_id, plan')
+    .eq('id', orgId)
+    .single()
+
+  if (!org) return { error: 'Organization not found' }
+
+  // Update plan in database
+  const updateData: Record<string, unknown> = { plan: newPlan }
+
+  // If switching to free, cancel Stripe subscription if one exists
+  if (newPlan === 'free' && org.stripe_subscription_id) {
+    try {
+      const stripe = getStripeClient()
+      await stripe.subscriptions.cancel(org.stripe_subscription_id)
+      updateData.stripe_subscription_id = null
+      updateData.subscription_status = 'canceled'
+    } catch (err) {
+      console.error('[updateOrgPlan] Failed to cancel Stripe subscription:', err)
+    }
+  }
+
+  // If switching to a paid plan with an existing Stripe customer
+  if (newPlan !== 'free' && org.stripe_customer_id) {
+    const planConfig = PLANS[newPlan]
+    if (planConfig?.stripePriceId) {
+      try {
+        const stripe = getStripeClient()
+
+        if (org.stripe_subscription_id) {
+          // Update existing subscription to new price
+          const subscription = await stripe.subscriptions.retrieve(org.stripe_subscription_id)
+          await stripe.subscriptions.update(org.stripe_subscription_id, {
+            items: [{
+              id: subscription.items.data[0].id,
+              price: planConfig.stripePriceId,
+            }],
+            metadata: { org_id: orgId, plan: newPlan },
+          })
+        } else {
+          // Create new subscription
+          const subscription = await stripe.subscriptions.create({
+            customer: org.stripe_customer_id,
+            items: [{ price: planConfig.stripePriceId }],
+            metadata: { org_id: orgId, plan: newPlan },
+          })
+          updateData.stripe_subscription_id = subscription.id
+          updateData.subscription_status = subscription.status
+        }
+      } catch (err) {
+        console.error('[updateOrgPlan] Failed to update Stripe subscription:', err)
+      }
+    }
+  }
+
+  const { error } = await adminClient
+    .from('organizations')
+    .update(updateData)
+    .eq('id', orgId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/organizations')
+  revalidatePath(`/admin/organizations/${orgId}`)
+  return { success: true }
+}
+
+export async function cancelSubscription(orgId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_platform_admin')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.is_platform_admin) return { error: 'Unauthorized' }
+
+  const adminClient = createAdminClient()
+
+  const { data: org } = await adminClient
+    .from('organizations')
+    .select('stripe_subscription_id')
+    .eq('id', orgId)
+    .single()
+
+  if (!org?.stripe_subscription_id) return { error: 'No active subscription found' }
+
+  try {
+    const stripe = getStripeClient()
+    await stripe.subscriptions.cancel(org.stripe_subscription_id)
+  } catch (err) {
+    console.error('[cancelSubscription] Stripe error:', err)
+    return { error: 'Failed to cancel subscription in Stripe' }
+  }
+
+  const { error } = await adminClient
+    .from('organizations')
+    .update({
+      subscription_status: 'canceled',
+      stripe_subscription_id: null,
+    })
+    .eq('id', orgId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/organizations')
+  revalidatePath(`/admin/organizations/${orgId}`)
+  return { success: true }
+}
+
+export async function extendTrial(orgId: string, additionalDays: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_platform_admin')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.is_platform_admin) return { error: 'Unauthorized' }
+
+  if (additionalDays < 1 || additionalDays > 365) return { error: 'Days must be between 1 and 365' }
+
+  const adminClient = createAdminClient()
+
+  const { data: org } = await adminClient
+    .from('organizations')
+    .select('stripe_subscription_id, trial_ends_at, subscription_status')
+    .eq('id', orgId)
+    .single()
+
+  if (!org) return { error: 'Organization not found' }
+
+  // Calculate new trial end date
+  const currentEnd = org.trial_ends_at ? new Date(org.trial_ends_at) : new Date()
+  const newEnd = new Date(currentEnd.getTime() + additionalDays * 24 * 60 * 60 * 1000)
+
+  // Update Stripe subscription trial end if exists
+  if (org.stripe_subscription_id) {
+    try {
+      const stripe = getStripeClient()
+      await stripe.subscriptions.update(org.stripe_subscription_id, {
+        trial_end: Math.floor(newEnd.getTime() / 1000),
+      })
+    } catch (err) {
+      console.error('[extendTrial] Stripe error:', err)
+      return { error: 'Failed to extend trial in Stripe' }
+    }
+  }
+
+  const { error } = await adminClient
+    .from('organizations')
+    .update({
+      trial_ends_at: newEnd.toISOString(),
+      subscription_status: 'trialing',
+    })
+    .eq('id', orgId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/organizations')
+  revalidatePath(`/admin/organizations/${orgId}`)
+  return { success: true }
+}
+
+export async function updateSubscriptionStatus(orgId: string, status: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_platform_admin')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.is_platform_admin) return { error: 'Unauthorized' }
+
+  const validStatuses = ['active', 'trialing', 'past_due', 'canceled', 'unpaid']
+  if (!validStatuses.includes(status)) return { error: 'Invalid status' }
+
+  const adminClient = createAdminClient()
+
+  const { error } = await adminClient
+    .from('organizations')
+    .update({ subscription_status: status })
+    .eq('id', orgId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/organizations')
+  revalidatePath(`/admin/organizations/${orgId}`)
+  return { success: true }
+}
+
 export async function getAdminDocumentUrl(filePath: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

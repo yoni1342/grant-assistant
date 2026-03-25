@@ -51,12 +51,27 @@ import {
   Users,
   BarChart3,
   FolderOpen,
+  CreditCard,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   approveOrganization,
   rejectOrganization,
   getAdminDocumentUrl,
+  updateOrgPlan,
+  cancelSubscription,
+  extendTrial,
+  updateSubscriptionStatus,
 } from "../actions";
+import { PLANS } from "@/lib/stripe/config";
+import type { PlanId } from "@/lib/stripe/config";
 import { ProposalSections } from "@/app/(dashboard)/proposals/[id]/components/proposal-sections";
 
 interface DocumentItem {
@@ -91,6 +106,11 @@ interface OrgDetailClientProps {
     geographic_focus: string[] | null;
     created_at: string | null;
     rejection_reason: string | null;
+    plan: string | null;
+    subscription_status: string | null;
+    stripe_customer_id: string | null;
+    stripe_subscription_id: string | null;
+    trial_ends_at: string | null;
   };
   profiles: Array<{
     id: string;
@@ -1288,6 +1308,10 @@ export function OrgDetailClient({
   const [loading, setLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [billingLoading, setBillingLoading] = useState<string | null>(null);
+  const [trialDaysInput, setTrialDaysInput] = useState("7");
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const [billingSuccess, setBillingSuccess] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedGrant, setSelectedGrant] = useState<any | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1573,6 +1597,10 @@ export function OrgDetailClient({
           <TabsTrigger value="team" className="gap-1.5">
             <Users className="h-4 w-4" />
             Team & Activity
+          </TabsTrigger>
+          <TabsTrigger value="billing" className="gap-1.5">
+            <CreditCard className="h-4 w-4" />
+            Billing
           </TabsTrigger>
         </TabsList>
 
@@ -2110,6 +2138,250 @@ export function OrgDetailClient({
                       </span>
                     </div>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ===== BILLING TAB ===== */}
+        <TabsContent value="billing" className="space-y-4">
+          {billingError && (
+            <div className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
+              {billingError}
+            </div>
+          )}
+          {billingSuccess && (
+            <div className="rounded-lg border border-green-300 bg-green-50 dark:bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
+              {billingSuccess}
+            </div>
+          )}
+
+          {/* Current Billing Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Subscription Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+                <div>
+                  <p className="text-muted-foreground">Plan</p>
+                  <p className="text-lg font-semibold">
+                    {PLANS[organization.plan as PlanId]?.name || organization.plan || "Free"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Subscription Status</p>
+                  <div className="mt-1">
+                    {(() => {
+                      const status = organization.subscription_status;
+                      if (!status) return <Badge variant="outline">None</Badge>;
+                      const colors: Record<string, string> = {
+                        active: "border-green-300 text-green-700 dark:text-green-400 bg-green-500/10",
+                        trialing: "border-amber-300 text-amber-700 dark:text-amber-400 bg-amber-500/10",
+                        past_due: "border-red-300 text-red-700 dark:text-red-400 bg-red-500/10",
+                        canceled: "border-gray-300 text-gray-700 dark:text-gray-400",
+                        unpaid: "border-red-300 text-red-700 dark:text-red-400 bg-red-500/10",
+                      };
+                      return (
+                        <Badge variant="outline" className={colors[status] || ""}>
+                          {status.replace("_", " ")}
+                        </Badge>
+                      );
+                    })()}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Monthly Price</p>
+                  <p className="text-lg font-semibold">
+                    {PLANS[organization.plan as PlanId]?.price === 0
+                      ? "Free"
+                      : `$${PLANS[organization.plan as PlanId]?.price || 0}`}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Trial Ends</p>
+                  <p className="text-sm font-medium">
+                    {organization.trial_ends_at
+                      ? (() => {
+                          const end = new Date(organization.trial_ends_at);
+                          const now = new Date();
+                          const daysLeft = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          return (
+                            <>
+                              {end.toLocaleDateString()}
+                              {daysLeft > 0 ? (
+                                <span className="text-amber-600 dark:text-amber-400 ml-1">
+                                  ({daysLeft}d left)
+                                </span>
+                              ) : (
+                                <span className="text-red-600 dark:text-red-400 ml-1">(expired)</span>
+                              )}
+                            </>
+                          );
+                        })()
+                      : "N/A"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Stripe IDs */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Stripe Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+                <div>
+                  <p className="text-muted-foreground">Customer ID</p>
+                  <p className="font-mono text-xs mt-1">
+                    {organization.stripe_customer_id || "Not set"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Subscription ID</p>
+                  <p className="font-mono text-xs mt-1">
+                    {organization.stripe_subscription_id || "Not set"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Admin Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Billing Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Change Plan */}
+              <div className="space-y-2">
+                <Label>Change Plan</Label>
+                <div className="flex items-center gap-3">
+                  <Select
+                    defaultValue={organization.plan || "free"}
+                    onValueChange={async (value) => {
+                      setBillingLoading("plan");
+                      setBillingError(null);
+                      setBillingSuccess(null);
+                      const result = await updateOrgPlan(organization.id, value as PlanId);
+                      if (result.error) setBillingError(result.error);
+                      else setBillingSuccess(`Plan updated to ${PLANS[value as PlanId]?.name || value}`);
+                      setBillingLoading(null);
+                    }}
+                    disabled={billingLoading === "plan"}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.entries(PLANS) as [PlanId, typeof PLANS[PlanId]][]).map(([id, plan]) => (
+                        <SelectItem key={id} value={id}>
+                          {plan.name} {plan.price > 0 ? `($${plan.price}/mo)` : "(Free)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {billingLoading === "plan" && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
+              </div>
+
+              {/* Update Subscription Status */}
+              <div className="space-y-2">
+                <Label>Override Subscription Status</Label>
+                <div className="flex items-center gap-3">
+                  <Select
+                    defaultValue={organization.subscription_status || ""}
+                    onValueChange={async (value) => {
+                      setBillingLoading("status");
+                      setBillingError(null);
+                      setBillingSuccess(null);
+                      const result = await updateSubscriptionStatus(organization.id, value);
+                      if (result.error) setBillingError(result.error);
+                      else setBillingSuccess(`Subscription status updated to ${value}`);
+                      setBillingLoading(null);
+                    }}
+                    disabled={billingLoading === "status"}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="trialing">Trialing</SelectItem>
+                      <SelectItem value="past_due">Past Due</SelectItem>
+                      <SelectItem value="canceled">Canceled</SelectItem>
+                      <SelectItem value="unpaid">Unpaid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {billingLoading === "status" && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
+              </div>
+
+              {/* Extend Trial */}
+              <div className="space-y-2">
+                <Label>Extend Trial</Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={trialDaysInput}
+                    onChange={(e) => setTrialDaysInput(e.target.value)}
+                    className="w-[100px]"
+                    placeholder="Days"
+                  />
+                  <span className="text-sm text-muted-foreground">days</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const days = parseInt(trialDaysInput);
+                      if (isNaN(days) || days < 1) return;
+                      setBillingLoading("trial");
+                      setBillingError(null);
+                      setBillingSuccess(null);
+                      const result = await extendTrial(organization.id, days);
+                      if (result.error) setBillingError(result.error);
+                      else setBillingSuccess(`Trial extended by ${days} days`);
+                      setBillingLoading(null);
+                    }}
+                    disabled={billingLoading === "trial"}
+                  >
+                    {billingLoading === "trial" ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : null}
+                    Extend
+                  </Button>
+                </div>
+              </div>
+
+              {/* Cancel Subscription */}
+              {organization.stripe_subscription_id && (
+                <div className="space-y-2 pt-4 border-t">
+                  <Label className="text-red-600">Danger Zone</Label>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={async () => {
+                      if (!confirm("Are you sure you want to cancel this subscription? This will immediately cancel the Stripe subscription.")) return;
+                      setBillingLoading("cancel");
+                      setBillingError(null);
+                      setBillingSuccess(null);
+                      const result = await cancelSubscription(organization.id);
+                      if (result.error) setBillingError(result.error);
+                      else setBillingSuccess("Subscription canceled successfully");
+                      setBillingLoading(null);
+                    }}
+                    disabled={billingLoading === "cancel"}
+                  >
+                    {billingLoading === "cancel" ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : null}
+                    Cancel Subscription
+                  </Button>
                 </div>
               )}
             </CardContent>

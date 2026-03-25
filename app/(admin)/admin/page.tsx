@@ -21,7 +21,7 @@ export default async function AdminOverviewPage() {
   ] = await Promise.all([
     supabase
       .from("organizations")
-      .select("id, name, status, created_at, sector")
+      .select("id, name, status, created_at, sector, plan, subscription_status, trial_ends_at")
       .order("created_at", { ascending: false }),
     supabase
       .from("profiles")

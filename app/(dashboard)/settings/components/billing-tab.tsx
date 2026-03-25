@@ -146,7 +146,7 @@ export function BillingTab({
                   <Badge variant="destructive">Payment past due</Badge>
                 )}
                 {subscriptionStatus === "active" && (
-                  <Badge variant="default">Active</Badge>
+                  <Badge variant="outline" className="border-green-500 text-green-600 dark:text-green-400 bg-green-500/10">Active</Badge>
                 )}
                 {(!subscriptionStatus || subscriptionStatus === "canceled") && currentPlan === "free" && (
                   <Badge variant="outline">Free</Badge>
@@ -243,15 +243,15 @@ export function BillingTab({
                         Subscribe Now
                       </Button>
                     ) : isCurrent && isTrialing ? (
-                      <Button variant="secondary" className="w-full" disabled>
+                      <Button variant="outline" className="w-full border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/10" disabled>
                         Active Trial
                       </Button>
                     ) : isCurrent && subscriptionStatus === "active" ? (
-                      <Button variant="outline" className="w-full" disabled>
+                      <Button variant="outline" className="w-full border-green-500 text-green-600 dark:text-green-400 bg-green-500/10 hover:bg-green-500/10" disabled>
                         Subscribed
                       </Button>
                     ) : isCurrent ? (
-                      <Button variant="outline" className="w-full" disabled>
+                      <Button variant="outline" className="w-full border-green-500 text-green-600 dark:text-green-400 bg-green-500/10 hover:bg-green-500/10" disabled>
                         Current Plan
                       </Button>
                     ) : planId === "free" ? (

@@ -93,6 +93,10 @@ export default async function OrganizationsPage() {
       annual_budget: org.annual_budget,
       staff_count: org.staff_count,
       geographic_focus: org.geographic_focus,
+      // Billing data
+      plan: org.plan || null,
+      subscription_status: org.subscription_status || null,
+      trial_ends_at: org.trial_ends_at || null,
       // Related data
       documents: documentsByOrg[org.id] || [],
       budgets: budgetsByOrg[org.id] || [],
