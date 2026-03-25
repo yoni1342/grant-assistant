@@ -62,6 +62,12 @@ jobs:
             --build-arg AWS_SES_FROM_EMAIL="${{ secrets.AWS_SES_FROM_EMAIL }}" \
             --build-arg AWS_SES_FROM_NAME="${{ secrets.AWS_SES_FROM_NAME }}" \
             --build-arg AWS_SES_REPLY_TO_EMAIL="${{ secrets.AWS_SES_REPLY_TO_EMAIL }}" \
+            --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}" \
+            --build-arg STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
+            --build-arg STRIPE_PROFESSIONAL_PRICE_ID="${{ secrets.STRIPE_PROFESSIONAL_PRICE_ID }}" \
+            --build-arg STRIPE_AGENCY_PRICE_ID="${{ secrets.STRIPE_AGENCY_PRICE_ID }}" \
+            --build-arg STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
+            --build-arg NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}" \
             --cache-from ${{ steps.tags.outputs.image_latest }} \
             -t ${{ steps.tags.outputs.image_sha }} \
             -t ${{ steps.tags.outputs.image_short }} \
