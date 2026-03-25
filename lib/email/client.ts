@@ -9,15 +9,18 @@ let sesClient: SESClient | null = null
 export function getSESClient(): SESClient {
   if (!sesClient) {
     const region = process.env.AWS_SES_REGION || 'us-east-1'
+    const hasAccessKey = !!process.env.AWS_ACCESS_KEY_ID
+    const hasSecretKey = !!process.env.AWS_SECRET_ACCESS_KEY
 
-    // In production (ECS), credentials come from the task role
-    // In development, use explicit credentials from environment
+    console.log('[SES Client] Initializing:', {
+      region,
+      hasAccessKey,
+      hasSecretKey,
+      accessKeyPrefix: hasAccessKey ? process.env.AWS_ACCESS_KEY_ID?.substring(0, 8) + '...' : 'none',
+    })
+
     sesClient = new SESClient({
       region,
-      // Credentials are automatically loaded from:
-      // 1. ECS task role (in production)
-      // 2. AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars (in development)
-      // 3. AWS credentials file (~/.aws/credentials)
     })
   }
 

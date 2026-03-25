@@ -21,13 +21,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
-import { FileText, ClipboardList, Upload, X } from "lucide-react";
+import { FileText, ClipboardList, Upload, X, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   registerOrganization,
   registerOrganizationForExistingUser,
   uploadRegistrationDocuments,
 } from "./actions";
+import { PLANS, TRIAL_DAYS } from "@/lib/stripe/config";
+import type { PlanId } from "@/lib/stripe/config";
 
 const SECTORS = [
   "Education",
@@ -132,7 +134,10 @@ export function RegisterWizard({
     setGeographicFocus((prev) => prev.filter((s) => s !== state));
   }
 
-  // Step 3: Profile mode
+  // Step 3: Plan selection
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("free");
+
+  // Step 4: Profile mode
   const [profileMode, setProfileMode] = useState<
     "documents" | "questionnaire" | null
   >(null);
@@ -185,6 +190,15 @@ export function RegisterWizard({
     setStep(3);
   }
 
+  function handleNextToStep4() {
+    setError(null);
+    if (profileMode === "documents" && !narrativeFile && additionalFiles.length === 0) {
+      setError("Please upload at least one document");
+      return;
+    }
+    setStep(4);
+  }
+
   function validateFile(file: File): string | null {
     if (!ALLOWED_TYPES.includes(file.type)) {
       return `${file.name}: Invalid type. Only PDF, DOCX, XLSX, PPTX, PNG, JPG allowed.`;
@@ -226,15 +240,6 @@ export function RegisterWizard({
 
   async function handleSubmit() {
     setError(null);
-
-    // Validate step 3
-    if (profileMode === "documents") {
-      if (!narrativeFile && additionalFiles.length === 0) {
-        setError("Please upload at least one document");
-        return;
-      }
-    }
-
     setLoading(true);
 
     const orgData = {
@@ -269,6 +274,7 @@ export function RegisterWizard({
       result = await registerOrganizationForExistingUser({
         org: orgData,
         questionnaire,
+        plan: selectedPlan,
       });
     } else {
       result = await registerOrganization({
@@ -277,6 +283,7 @@ export function RegisterWizard({
         password,
         org: orgData,
         questionnaire,
+        plan: selectedPlan,
       });
     }
 
@@ -303,8 +310,30 @@ export function RegisterWizard({
 
       const uploadResult = await uploadRegistrationDocuments(formData);
       if (uploadResult.error) {
-        // Org was created but documents failed - still show success with warning
         console.error("Document upload error:", uploadResult.error);
+      }
+    }
+
+    // For paid plans, redirect to Stripe Checkout
+    if (selectedPlan !== "free" && result.orgId) {
+      try {
+        const res = await fetch("/api/stripe/checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orgId: result.orgId,
+            plan: selectedPlan,
+            email: isAuthenticated ? userEmail : email.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+          return;
+        }
+      } catch (err) {
+        console.error("Stripe checkout error:", err);
+        // Still show success — they can upgrade later from billing settings
       }
     }
 
@@ -336,28 +365,31 @@ export function RegisterWizard({
     );
   }
 
-  const stepLabels = ["Create your account", "Organization details", "Organization profile"];
+  const stepLabels = ["Create your account", "Organization details", "Organization profile", "Choose your plan"];
   const currentStepLabel = isAuthenticated
     ? stepLabels[step]
     : stepLabels[step - 1];
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-8">
-      <Card className="w-full max-w-lg">
+      <Card className={`w-full ${step === 4 ? "max-w-3xl" : "max-w-lg"}`}>
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-semibold">Fundory.ai</CardTitle>
           <CardDescription>{currentStepLabel}</CardDescription>
           <div className="flex items-center justify-center gap-2 pt-2">
             {!isAuthenticated && (
               <div
-                className={`h-2 w-16 rounded-full ${step >= 1 ? "bg-primary" : "bg-muted"}`}
+                className={`h-2 w-12 rounded-full ${step >= 1 ? "bg-primary" : "bg-muted"}`}
               />
             )}
             <div
-              className={`h-2 w-16 rounded-full ${step >= 2 ? "bg-primary" : "bg-muted"}`}
+              className={`h-2 w-12 rounded-full ${step >= 2 ? "bg-primary" : "bg-muted"}`}
             />
             <div
-              className={`h-2 w-16 rounded-full ${step >= 3 ? "bg-primary" : "bg-muted"}`}
+              className={`h-2 w-12 rounded-full ${step >= 3 ? "bg-primary" : "bg-muted"}`}
+            />
+            <div
+              className={`h-2 w-12 rounded-full ${step >= 4 ? "bg-primary" : "bg-muted"}`}
             />
           </div>
         </CardHeader>
@@ -709,11 +741,10 @@ export function RegisterWizard({
                   Back
                 </Button>
                 <Button
-                  onClick={handleSubmit}
-                  disabled={loading}
+                  onClick={handleNextToStep4}
                   className="flex-1"
                 >
-                  {loading ? "Submitting..." : "Register Organization"}
+                  Next
                 </Button>
               </div>
             </div>
@@ -824,11 +855,77 @@ export function RegisterWizard({
                   Back
                 </Button>
                 <Button
+                  onClick={handleNextToStep4}
+                  className="flex-1"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Plan Selection */}
+          {step === 4 && (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {(Object.entries(PLANS) as [PlanId, typeof PLANS[PlanId]][]).map(([planId, plan]) => (
+                  <button
+                    key={planId}
+                    type="button"
+                    onClick={() => setSelectedPlan(planId)}
+                    className={`relative flex flex-col rounded-lg border-2 p-5 text-left transition-colors ${
+                      selectedPlan === planId
+                        ? "border-primary bg-primary/5"
+                        : "border-muted hover:border-muted-foreground/40"
+                    }`}
+                  >
+                    {selectedPlan === planId && (
+                      <div className="absolute top-3 right-3 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-3 w-3 text-white" />
+                      </div>
+                    )}
+                    <p className="font-semibold text-lg">{plan.name}</p>
+                    <p className="text-2xl font-bold mt-1">
+                      {plan.price === 0 ? "Free" : `$${plan.price}`}
+                      {plan.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                    </p>
+                    {plan.price > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">{TRIAL_DAYS}-day free trial</p>
+                    )}
+                    <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
+                    <ul className="mt-3 space-y-1.5">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2 text-sm">
+                          <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </button>
+                ))}
+              </div>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStep(3);
+                    setError(null);
+                  }}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button
                   onClick={handleSubmit}
                   disabled={loading}
                   className="flex-1"
                 >
-                  {loading ? "Submitting..." : "Register Organization"}
+                  {loading
+                    ? "Submitting..."
+                    : selectedPlan === "free"
+                      ? "Register Organization"
+                      : `Register & Start Trial`}
                 </Button>
               </div>
             </div>

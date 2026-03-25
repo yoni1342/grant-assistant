@@ -3,6 +3,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendOrganizationApprovedEmail, sendOrganizationRejectedEmail } from '@/lib/email/service'
+import { getStripeClient } from '@/lib/stripe/client'
+import { PLANS, TRIAL_DAYS } from '@/lib/stripe/config'
+import type { PlanId } from '@/lib/stripe/config'
 
 export async function approveOrganization(orgId: string) {
   const supabase = await createClient()
@@ -31,6 +34,45 @@ export async function approveOrganization(orgId: string) {
     .eq('id', orgId)
 
   if (error) return { error: error.message }
+
+  // Start Stripe subscription with trial for paid-plan orgs
+  const { data: orgData } = await supabase
+    .from('organizations')
+    .select('plan, stripe_customer_id')
+    .eq('id', orgId)
+    .single()
+
+  if (orgData?.stripe_customer_id && orgData.plan && orgData.plan !== 'free') {
+    const planConfig = PLANS[orgData.plan as PlanId]
+    if (planConfig?.stripePriceId) {
+      try {
+        const stripe = getStripeClient()
+        const subscription = await stripe.subscriptions.create({
+          customer: orgData.stripe_customer_id,
+          items: [{ price: planConfig.stripePriceId }],
+          trial_period_days: TRIAL_DAYS,
+          metadata: { org_id: orgId, plan: orgData.plan },
+        })
+
+        const adminClient = createAdminClient()
+        await adminClient
+          .from('organizations')
+          .update({
+            stripe_subscription_id: subscription.id,
+            subscription_status: 'trialing',
+            trial_ends_at: subscription.trial_end
+              ? new Date(subscription.trial_end * 1000).toISOString()
+              : null,
+          })
+          .eq('id', orgId)
+
+        console.log('[approveOrganization] Stripe subscription created with trial:', subscription.id)
+      } catch (stripeErr) {
+        console.error('[approveOrganization] Failed to create Stripe subscription:', stripeErr)
+        // Don't fail approval if Stripe fails — they can set up billing later
+      }
+    }
+  }
 
   // Trigger grant fetch workflow for the newly approved org
   if (process.env.N8N_WEBHOOK_URL) {
@@ -76,12 +118,16 @@ export async function approveOrganization(orgId: string) {
       .single()
 
     if (org && ownerProfile) {
+      console.log('[approveOrganization] Sending approval email to:', ownerProfile.email, 'for org:', org.name)
       await sendOrganizationApprovedEmail({
         toEmail: ownerProfile.email,
         fullName: ownerProfile.full_name,
         organizationName: org.name,
         approvedAt,
       })
+      console.log('[approveOrganization] Approval email sent successfully')
+    } else {
+      console.warn('[approveOrganization] Skipping email — missing data:', { org: !!org, ownerProfile: !!ownerProfile })
     }
   } catch (error) {
     console.error('[approveOrganization] Failed to send approval email:', error)
@@ -135,6 +181,7 @@ export async function rejectOrganization(orgId: string, reason?: string) {
       .single()
 
     if (org && ownerProfile) {
+      console.log('[rejectOrganization] Sending rejection email to:', ownerProfile.email, 'for org:', org.name)
       await sendOrganizationRejectedEmail({
         toEmail: ownerProfile.email,
         fullName: ownerProfile.full_name,
@@ -142,6 +189,9 @@ export async function rejectOrganization(orgId: string, reason?: string) {
         rejectionReason: reason,
         rejectedAt,
       })
+      console.log('[rejectOrganization] Rejection email sent successfully')
+    } else {
+      console.warn('[rejectOrganization] Skipping email — missing data:', { org: !!org, ownerProfile: !!ownerProfile })
     }
   } catch (error) {
     console.error('[rejectOrganization] Failed to send rejection email:', error)

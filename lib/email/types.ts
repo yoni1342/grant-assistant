@@ -31,6 +31,15 @@ export interface OrganizationRejectedEmailParams extends BaseEmailParams {
 }
 
 /**
+ * Trial ending email parameters
+ */
+export interface TrialEndingEmailParams extends BaseEmailParams {
+  organizationName: string
+  planName: string
+  trialEndsAt: string
+}
+
+/**
  * Generic send email parameters
  */
 export interface SendEmailParams {
