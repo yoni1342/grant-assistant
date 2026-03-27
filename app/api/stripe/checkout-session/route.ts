@@ -4,11 +4,11 @@ import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
   try {
-    const { orgId, plan, email, mode } = await req.json()
-    console.log('[stripe/checkout-session] Request received:', { orgId, plan, email, mode })
+    const { orgId, agencyId, plan, email, mode } = await req.json()
+    console.log('[stripe/checkout-session] Request received:', { orgId, agencyId, plan, email, mode })
 
-    if (!orgId || !plan || !email) {
-      console.error('[stripe/checkout-session] Missing required fields:', { orgId: !!orgId, plan: !!plan, email: !!email })
+    if ((!orgId && !agencyId) || !plan || !email) {
+      console.error('[stripe/checkout-session] Missing required fields:', { orgId: !!orgId, agencyId: !!agencyId, plan: !!plan, email: !!email })
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -29,44 +29,72 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Stripe price ID not configured for plan: ${plan}` }, { status: 500 })
     }
 
-    // Check if org already has a Stripe customer
     const adminClient = createAdminClient()
-    const { data: org, error: orgError } = await adminClient
-      .from('organizations')
-      .select('stripe_customer_id, subscription_status')
-      .eq('id', orgId)
-      .single()
 
-    if (orgError) {
-      console.error('[stripe/checkout-session] Failed to fetch org:', orgError.message)
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+    // Resolve the entity (org or agency) for billing
+    let entityId = orgId
+    let entityType: 'org' | 'agency' = 'org'
+    let existingCustomerId: string | null = null
+    let existingSubscriptionStatus: string | null = null
+
+    if (agencyId && plan === 'agency') {
+      entityType = 'agency'
+      entityId = agencyId
+      const { data: agency, error: agencyError } = await adminClient
+        .from('agencies')
+        .select('stripe_customer_id, subscription_status')
+        .eq('id', agencyId)
+        .single()
+      if (agencyError) {
+        console.error('[stripe/checkout-session] Failed to fetch agency:', agencyError.message)
+        return NextResponse.json({ error: 'Agency not found' }, { status: 404 })
+      }
+      existingCustomerId = agency?.stripe_customer_id ?? null
+      existingSubscriptionStatus = agency?.subscription_status ?? null
+    } else {
+      const { data: org, error: orgError } = await adminClient
+        .from('organizations')
+        .select('stripe_customer_id, subscription_status')
+        .eq('id', orgId)
+        .single()
+      if (orgError) {
+        console.error('[stripe/checkout-session] Failed to fetch org:', orgError.message)
+        return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+      }
+      existingCustomerId = org?.stripe_customer_id ?? null
+      existingSubscriptionStatus = org?.subscription_status ?? null
     }
 
-    console.log('[stripe/checkout-session] Org data:', { stripe_customer_id: org?.stripe_customer_id || 'none', subscription_status: org?.subscription_status || 'none' })
+    console.log('[stripe/checkout-session] Entity data:', { entityType, entityId, stripe_customer_id: existingCustomerId || 'none', subscription_status: existingSubscriptionStatus || 'none' })
 
-    let customerId = org?.stripe_customer_id
+    let customerId = existingCustomerId
 
     if (!customerId) {
       console.log('[stripe/checkout-session] Creating new Stripe customer for:', email)
-      const customer = await stripe.customers.create({
-        email,
-        metadata: { org_id: orgId },
-      })
+      const metadata: Record<string, string> = entityType === 'agency' ? { agency_id: entityId } : { org_id: entityId }
+      const customer = await stripe.customers.create({ email, metadata })
       customerId = customer.id
       console.log('[stripe/checkout-session] Created Stripe customer:', customerId)
 
-      await adminClient
-        .from('organizations')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', orgId)
+      if (entityType === 'agency') {
+        await adminClient.from('agencies').update({ stripe_customer_id: customerId }).eq('id', entityId)
+        // Also update the agency's placeholder org
+        await adminClient.from('organizations').update({ stripe_customer_id: customerId }).eq('agency_id', entityId)
+      } else {
+        await adminClient.from('organizations').update({ stripe_customer_id: customerId }).eq('id', entityId)
+      }
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
     console.log('[stripe/checkout-session] App URL:', appUrl)
 
     // Use subscription mode when resubscribing (past_due/canceled), setup mode for initial registration
-    const needsSubscription = mode === 'subscribe' || org?.subscription_status === 'past_due' || org?.subscription_status === 'canceled'
-    console.log('[stripe/checkout-session] Session mode:', needsSubscription ? 'subscription' : 'setup', { mode, subscription_status: org?.subscription_status })
+    const needsSubscription = mode === 'subscribe' || existingSubscriptionStatus === 'past_due' || existingSubscriptionStatus === 'canceled'
+    console.log('[stripe/checkout-session] Session mode:', needsSubscription ? 'subscription' : 'setup', { mode, subscription_status: existingSubscriptionStatus })
+
+    const sessionMetadata: Record<string, string> = entityType === 'agency'
+      ? { agency_id: entityId, org_id: orgId || '', plan }
+      : { org_id: entityId, plan }
 
     let session
     if (needsSubscription && planConfig.stripePriceId) {
@@ -75,9 +103,9 @@ export async function POST(req: Request) {
         customer: customerId,
         mode: 'subscription',
         line_items: [{ price: planConfig.stripePriceId, quantity: 1 }],
-        metadata: { org_id: orgId, plan },
-        success_url: `${appUrl}/billing?payment=success`,
-        cancel_url: `${appUrl}/billing`,
+        metadata: sessionMetadata,
+        success_url: entityType === 'agency' ? `${appUrl}/agency/billing?payment=success` : `${appUrl}/billing?payment=success`,
+        cancel_url: entityType === 'agency' ? `${appUrl}/agency/billing` : `${appUrl}/billing`,
       })
     } else {
       console.log('[stripe/checkout-session] Creating setup checkout:', { customerId })
@@ -85,7 +113,7 @@ export async function POST(req: Request) {
         customer: customerId,
         mode: 'setup',
         payment_method_types: ['card'],
-        metadata: { org_id: orgId, plan },
+        metadata: sessionMetadata,
         success_url: `${appUrl}/pending-approval?payment=success`,
         cancel_url: `${appUrl}/pending-approval`,
       })

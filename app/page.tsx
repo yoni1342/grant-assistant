@@ -25,9 +25,17 @@ function HeroSection() {
             </span>
           </div>
         </div>
-        <span className="font-mono text-[10px] text-[#888] hidden md:block tracking-[0.3em] uppercase">
-          EST. 2026
-        </span>
+        <div className="flex items-center gap-6">
+          <span className="font-mono text-[10px] text-[#888] hidden md:block tracking-[0.3em] uppercase">
+            EST. 2026
+          </span>
+          <Link
+            href="/login"
+            className="font-mono text-xs tracking-[0.12em] uppercase text-[#0A0A0A] hover:text-[#888] transition-colors"
+          >
+            Sign In
+          </Link>
+        </div>
       </div>
 
       {/* Massive headline */}

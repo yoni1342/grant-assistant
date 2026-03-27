@@ -1,12 +1,16 @@
 import { createClient, getUserOrgId } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   FileText,
   Clock,
   TrendingUp,
+  ArrowRight,
 } from "lucide-react";
+import { GrantUsageCard } from "./grant-usage-card";
 
 const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovered",
@@ -67,14 +71,13 @@ export default async function DashboardPage() {
     (g) => g.deadline && new Date(g.deadline) > new Date()
   ).length;
 
-  // Upcoming deadlines list
+  // Upcoming deadlines list (all, sorted by soonest first)
   const deadlineGrants = allGrants
     .filter((g) => g.deadline && new Date(g.deadline) > new Date())
     .sort(
       (a, b) =>
         new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime()
-    )
-    .slice(0, 5);
+    );
 
   return (
     <div className="p-6 space-y-6">
@@ -86,7 +89,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Grants</CardTitle>
@@ -107,6 +110,7 @@ export default async function DashboardPage() {
             <div className="text-2xl font-bold">{upcomingDeadlines}</div>
           </CardContent>
         </Card>
+        <GrantUsageCard />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -152,8 +156,17 @@ export default async function DashboardPage() {
 
         {/* Upcoming Deadlines */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Upcoming Deadlines</CardTitle>
+            {deadlineGrants.length > 0 && (
+              <Link
+                href="/dashboard/deadlines"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View All
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
           </CardHeader>
           <CardContent>
             {deadlineGrants.length === 0 ? (
@@ -161,31 +174,34 @@ export default async function DashboardPage() {
                 No upcoming deadlines
               </p>
             ) : (
-              <div className="space-y-3">
-                {deadlineGrants.map((g) => {
-                  const urgency = getDeadlineUrgency(g.deadline!);
-                  return (
-                    <div
-                      key={g.id}
-                      className="flex items-start justify-between gap-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
-                          {g.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(g.deadline!).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {urgency.label && (
-                        <Badge variant={urgency.variant} className="shrink-0">
-                          {urgency.label}
-                        </Badge>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <ScrollArea className="h-[340px] -mr-4 pr-4">
+                <div className="space-y-1">
+                  {deadlineGrants.map((g) => {
+                    const urgency = getDeadlineUrgency(g.deadline!);
+                    return (
+                      <Link
+                        key={g.id}
+                        href={`/pipeline/${g.id}?from=deadlines`}
+                        className="flex items-start justify-between gap-2 rounded-md px-2 py-2 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {g.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(g.deadline!).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {urgency.label && (
+                          <Badge variant={urgency.variant} className="shrink-0">
+                            {urgency.label}
+                          </Badge>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             )}
           </CardContent>
         </Card>

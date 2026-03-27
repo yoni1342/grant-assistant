@@ -1,6 +1,8 @@
 import fetch from "node-fetch";
 import https from "https";
 import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/server";
+import { PLANS } from "@/lib/stripe/config";
+import type { PlanId } from "@/lib/stripe/config";
 
 // Map service names to n8n webhook paths
 const SERVICE_MAP: Record<string, string> = {
@@ -46,6 +48,41 @@ export async function POST(req: Request) {
   const payload = { ...data, org_id: orgId };
 
   const agent = new https.Agent({ rejectUnauthorized: false });
+
+  // Enforce daily grant limit for add-to-pipeline
+  if (service === "grant-screening") {
+    const adminSupabase = createAdminClient();
+    const { data: org } = await adminSupabase
+      .from("organizations")
+      .select("plan")
+      .eq("id", orgId)
+      .single();
+
+    const plan = (org?.plan as PlanId) || "free";
+    const limit = PLANS[plan]?.dailyGrantLimit ?? null;
+
+    if (limit !== null) {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+
+      const { count } = await adminSupabase
+        .from("grants")
+        .select("*", { count: "exact", head: true })
+        .eq("org_id", orgId)
+        .gte("created_at", startOfDay);
+
+      if ((count ?? 0) >= limit) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `You've reached your daily limit of ${limit} grant${limit === 1 ? "" : "s"}. Upgrade to Professional for unlimited grants.`,
+            code: "GRANT_LIMIT_REACHED",
+          }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+  }
 
   // For grant-discovery, fire-and-forget to n8n.
   // n8n writes status updates and results directly to Supabase search_results table.

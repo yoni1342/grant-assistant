@@ -58,20 +58,41 @@ export async function updateSession(request: NextRequest) {
 
   // --- Authenticated: redirect away from login/signup/landing ---
   if (pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname === "/") {
+    // Quick check: if user is an agency user, send them to /agency instead of /dashboard
+    const { data: loginProfile } = await supabase
+      .from("profiles")
+      .select("agency_id")
+      .eq("id", user.id)
+      .single();
+    if (loginProfile?.agency_id) {
+      return NextResponse.redirect(getRedirectUrl(request, "/agency"));
+    }
     return NextResponse.redirect(getRedirectUrl(request, "/dashboard"));
   }
 
   // Fetch profile + org status in one query
-  const { data: profile } = await supabase
+  let { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("is_platform_admin, org_id, organizations(status)")
+    .select("is_platform_admin, org_id, agency_id, organizations(status)")
     .eq("id", user.id)
     .single();
+
+  // Fallback: if agency_id column doesn't exist yet, retry without it
+  if (profileError && profileError.message?.includes("agency_id")) {
+    const fallback = await supabase
+      .from("profiles")
+      .select("is_platform_admin, org_id, organizations(status)")
+      .eq("id", user.id)
+      .single();
+    profile = fallback.data ? { ...fallback.data, agency_id: null } as typeof profile : null;
+    profileError = fallback.error;
+  }
 
   const isAdmin = profile?.is_platform_admin === true;
   const orgs = profile?.organizations as unknown as { status: string } | { status: string }[] | null;
   const orgStatus = Array.isArray(orgs) ? orgs[0]?.status : orgs?.status;
   const hasOrg = !!profile?.org_id;
+  const hasAgency = !!profile?.agency_id;
 
   // --- Platform admin ---
   if (isAdmin) {
@@ -82,6 +103,22 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
     return NextResponse.redirect(getRedirectUrl(request, "/admin"));
+  }
+
+  // --- Agency user: route to /agency by default ---
+  if (hasAgency) {
+    if (pathname.startsWith("/admin")) {
+      return NextResponse.redirect(getRedirectUrl(request, "/agency"));
+    }
+    if (
+      pathname.startsWith("/pending-approval") ||
+      pathname.startsWith("/rejected") ||
+      pathname.startsWith("/register")
+    ) {
+      return NextResponse.redirect(getRedirectUrl(request, "/agency"));
+    }
+    // Allow /agency and /dashboard routes (org context via cookie)
+    return supabaseResponse;
   }
 
   // --- Has org, status = pending ---

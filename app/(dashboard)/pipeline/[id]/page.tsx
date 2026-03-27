@@ -2,12 +2,20 @@ import { createClient, getUserOrgId } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { GrantDetail } from "./grant-detail";
 
+const BACK_MAP: Record<string, { href: string; label: string }> = {
+  deadlines: { href: "/dashboard/deadlines", label: "Deadlines" },
+};
+
 export default async function GrantDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
+  const { from } = await searchParams;
+  const back = from ? BACK_MAP[from] : undefined;
   const supabase = await createClient();
   const { orgId } = await getUserOrgId(supabase);
   if (!orgId) redirect("/login");
@@ -43,6 +51,7 @@ export default async function GrantDetailPage({
       grant={grant}
       proposals={proposals || []}
       orgName={org?.name || "your organization"}
+      {...(back && { backHref: back.href, backLabel: back.label })}
     />
   );
 }

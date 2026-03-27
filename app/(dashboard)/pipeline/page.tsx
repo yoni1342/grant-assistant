@@ -31,9 +31,18 @@ export default async function PipelinePage() {
   ]);
 
   // Auto-trigger fetch-grants when pipeline is empty and no fetch is in progress
+  // Only for professional and agency plans — free tier must use Discovery manually
   const isEmpty = !grants || grants.length === 0;
   const isFetching = !!fetchStatus;
-  if (isEmpty && !isFetching) {
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("plan")
+    .eq("id", orgId)
+    .single();
+  const orgPlan = org?.plan || "free";
+
+  if (isEmpty && !isFetching && orgPlan !== "free") {
     await triggerFetchGrants(orgId);
   }
 
