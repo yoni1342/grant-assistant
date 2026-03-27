@@ -29,6 +29,8 @@ import {
   Sparkles,
   CheckCheck,
   SearchX,
+  ArrowUpRight,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -63,11 +65,13 @@ function GrantDetailBody({
   grant,
   isAdded,
   isAdding,
+  atLimit,
   onAddToPipeline,
 }: {
   grant: DiscoveredGrant;
   isAdded: boolean;
   isAdding: boolean;
+  atLimit: boolean;
   onAddToPipeline: () => void;
 }) {
   return (
@@ -147,6 +151,13 @@ function GrantDetailBody({
             <CheckCircle2 className="h-4 w-4 mr-1" />
             Added to Pipeline
           </Button>
+        ) : atLimit ? (
+          <a href="/billing">
+            <Button className="gap-1">
+              <ArrowUpRight className="h-4 w-4" />
+              Upgrade to Add More Grants
+            </Button>
+          </a>
         ) : (
           <Button disabled={isAdding} onClick={onAddToPipeline}>
             {isAdding ? (
@@ -216,6 +227,12 @@ const US_STATES = [
   "National / All States",
 ];
 
+interface GrantUsage {
+  used: number;
+  limit: number | null;
+  plan: string;
+}
+
 export default function DiscoveryPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -235,10 +252,31 @@ export default function DiscoveryPage() {
   const [addedGrants, setAddedGrants] = useState<Set<string>>(new Set());
   const [sourceCount, setSourceCount] = useState(0);
   const [stageMessage, setStageMessage] = useState(DEFAULT_STAGE);
+  const [grantUsage, setGrantUsage] = useState<GrantUsage | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const channelRef = useRef<any>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval>>(null);
   const seenTitlesRef = useRef<Set<string>>(new Set());
+  const seenRowIdsRef = useRef<Set<string>>(new Set());
+
+  const atLimit = grantUsage !== null && grantUsage.limit !== null && grantUsage.used >= grantUsage.limit;
+
+  // Fetch grant usage on mount
+  useEffect(() => {
+    async function fetchUsage() {
+      try {
+        const res = await fetch("/api/grants/usage");
+        if (res.ok) {
+          const data = await res.json();
+          setGrantUsage(data);
+        }
+      } catch {
+        // silent — usage indicator just won't show
+      }
+    }
+    fetchUsage();
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -248,6 +286,7 @@ export default function DiscoveryPage() {
         supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
       }
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
 
@@ -289,8 +328,9 @@ export default function DiscoveryPage() {
     setSourceCount(0);
     setStageMessage(DEFAULT_STAGE);
     seenTitlesRef.current = new Set();
+    seenRowIdsRef.current = new Set();
 
-    // Clean up previous subscription
+    // Clean up previous subscription & polling
     if (channelRef.current) {
       const supabase = createClient();
       supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
@@ -299,6 +339,10 @@ export default function DiscoveryPage() {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
+    }
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
     }
 
     try {
@@ -325,9 +369,45 @@ export default function DiscoveryPage() {
       }
 
       const searchId = data.search_id;
-
-      // Subscribe to real-time search results
       const supabase = createClient();
+
+      // Helper: process a row from search_results (used by both Realtime and polling)
+      const processRow = (row: { grant_data: unknown; is_complete: boolean; source_group: string }) => {
+        if (row.is_complete) {
+          setSearchComplete(true);
+          setTimeout(() => setLoading(false), 600);
+          if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+          return;
+        }
+
+        if (row.source_group?.startsWith("__status__:")) {
+          const d = row.grant_data as { status?: string; stage_message?: string };
+          if (d?.stage_message) {
+            const icon = STAGE_ICONS[d.status || ""] || Sparkles;
+            setStageMessage({ message: d.stage_message, icon });
+          }
+          return;
+        }
+
+        const grants = extractGrants(row.grant_data);
+        if (grants.length > 0) {
+          const newGrants = grants.filter((g) => {
+            if (seenTitlesRef.current.has(g.title)) return false;
+            seenTitlesRef.current.add(g.title);
+            return true;
+          });
+
+          if (newGrants.length > 0) {
+            setResults((prev) => [...prev, ...newGrants]);
+            setSourceCount((prev) => prev + 1);
+          }
+        }
+      };
+
+      // 1) Subscribe to real-time search results
       const channel = supabase
         .channel(`search-${searchId}`)
         .on(
@@ -339,48 +419,34 @@ export default function DiscoveryPage() {
             filter: `search_id=eq.${searchId}`,
           },
           (payload) => {
-            const row = payload.new as {
-              grant_data: unknown;
-              is_complete: boolean;
-              source_group: string;
-            };
-
-            if (row.is_complete) {
-              setSearchComplete(true);
-              // Small delay so the last status message is visible before loading hides it
-              setTimeout(() => setLoading(false), 600);
-              return;
-            }
-
-            // Handle status updates from workflow
-            if (row.source_group?.startsWith("__status__:")) {
-              const data = row.grant_data as { status?: string; stage_message?: string };
-              if (data?.stage_message) {
-                const icon = STAGE_ICONS[data.status || ""] || Sparkles;
-                setStageMessage({ message: data.stage_message, icon });
-              }
-              return;
-            }
-
-            const grants = extractGrants(row.grant_data);
-            if (grants.length > 0) {
-              // Deduplicate by title
-              const newGrants = grants.filter((g) => {
-                if (seenTitlesRef.current.has(g.title)) return false;
-                seenTitlesRef.current.add(g.title);
-                return true;
-              });
-
-              if (newGrants.length > 0) {
-                setResults((prev) => [...prev, ...newGrants]);
-                setSourceCount((prev) => prev + 1);
-              }
-            }
+            processRow(payload.new as { grant_data: unknown; is_complete: boolean; source_group: string });
           }
         )
         .subscribe();
 
       channelRef.current = channel;
+
+      // 2) Polling fallback: fetch search_results via server API every 2s
+      //    (bypasses RLS which can block the browser client's Realtime & direct queries)
+      const pollForResults = async () => {
+        try {
+          const res = await fetch(`/api/grants/search-results?search_id=${searchId}`);
+          if (!res.ok) return;
+          const rows = await res.json() as { id: string; grant_data: unknown; is_complete: boolean; source_group: string }[];
+
+          for (const row of rows) {
+            if (seenRowIdsRef.current.has(row.id)) continue;
+            seenRowIdsRef.current.add(row.id);
+            processRow(row);
+          }
+        } catch {
+          // silent — will retry on next poll
+        }
+      };
+
+      // Run first poll immediately, then every 2s
+      pollForResults();
+      pollRef.current = setInterval(pollForResults, 2000);
 
       // Safety timeout: stop loading after 3 minutes
       timeoutRef.current = setTimeout(() => {
@@ -388,6 +454,10 @@ export default function DiscoveryPage() {
         setSearchComplete(true);
         supabase.removeChannel(channel);
         channelRef.current = null;
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
       }, 180000);
     } catch (err) {
       console.error("Discovery error:", err);
@@ -396,7 +466,21 @@ export default function DiscoveryPage() {
     }
   }
 
+  async function refreshUsage() {
+    try {
+      const res = await fetch("/api/grants/usage");
+      if (res.ok) setGrantUsage(await res.json());
+    } catch { /* silent */ }
+  }
+
   async function addToPipeline(grant: DiscoveredGrant) {
+    if (atLimit) {
+      toast.error("Daily grant limit reached", {
+        description: "Upgrade to Professional for unlimited grants.",
+      });
+      return;
+    }
+
     const grantKey = grant.title;
     setAddingToPipeline(grantKey);
 
@@ -416,13 +500,21 @@ export default function DiscoveryPage() {
       }
 
       if (!response.ok || result.success === false) {
-        toast.error("Failed to add grant to pipeline", {
-          description: result.error || "Something went wrong",
-        });
+        if (result.code === "GRANT_LIMIT_REACHED") {
+          toast.error("Monthly grant limit reached", {
+            description: "Upgrade to Professional for unlimited grants.",
+          });
+          await refreshUsage();
+        } else {
+          toast.error("Failed to add grant to pipeline", {
+            description: result.error || "Something went wrong",
+          });
+        }
       } else {
         setAddedGrants((prev) => new Set(prev).add(grantKey));
         const msg = result.data?.message || result.message || "Grant added to pipeline successfully";
         toast.success(msg);
+        await refreshUsage();
       }
     } catch {
       toast.error("Failed to add grant to pipeline", {
@@ -573,6 +665,47 @@ export default function DiscoveryPage() {
         </CardContent>
       </Card>
 
+      {/* Grant Usage Indicator (free tier) */}
+      {grantUsage && grantUsage.limit !== null && (
+        <div className={`rounded-lg border-2 p-4 flex items-center justify-between ${
+          atLimit
+            ? "border-red-500 bg-red-500/10"
+            : grantUsage.used >= grantUsage.limit - 1
+              ? "border-amber-500 bg-amber-500/10"
+              : "border-muted bg-muted/30"
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1">
+              {Array.from({ length: grantUsage.limit }, (_, i) => (
+                <div
+                  key={i}
+                  className={`h-2.5 w-6 rounded-full ${
+                    i < grantUsage.used
+                      ? atLimit ? "bg-red-500" : "bg-primary"
+                      : "bg-muted-foreground/20"
+                  }`}
+                />
+              ))}
+            </div>
+            <span className={`text-sm font-medium ${atLimit ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}>
+              {grantUsage.used}/{grantUsage.limit} grant{grantUsage.limit === 1 ? "" : "s"} used today
+            </span>
+          </div>
+          {atLimit ? (
+            <a href="/billing">
+              <Button size="sm" className="gap-1">
+                <ArrowUpRight className="h-3.5 w-3.5" />
+                Upgrade to Professional
+              </Button>
+            </a>
+          ) : grantUsage.used >= grantUsage.limit - 1 ? (
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+              {grantUsage.limit - grantUsage.used} grant{grantUsage.limit - grantUsage.used === 1 ? "" : "s"} remaining
+            </span>
+          ) : null}
+        </div>
+      )}
+
       {/* No results message */}
       {searchComplete && !loading && results.length === 0 && (
         <div className="flex items-center gap-2 rounded-md border border-muted px-4 py-3 text-sm text-muted-foreground">
@@ -663,8 +796,8 @@ export default function DiscoveryPage() {
 
                       <Button
                         size="sm"
-                        variant={isAdded ? "outline" : "default"}
-                        disabled={isAdding || isAdded}
+                        variant={isAdded ? "outline" : atLimit && !isAdded ? "outline" : "default"}
+                        disabled={isAdding || isAdded || atLimit}
                         onClick={(e) => {
                           e.stopPropagation();
                           addToPipeline(grant);
@@ -675,10 +808,12 @@ export default function DiscoveryPage() {
                           <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                         ) : isAdded ? (
                           <CheckCircle2 className="h-4 w-4 mr-1" />
+                        ) : atLimit ? (
+                          <Lock className="h-4 w-4 mr-1" />
                         ) : (
                           <Plus className="h-4 w-4 mr-1" />
                         )}
-                        {isAdded ? "Added" : "Add to Pipeline"}
+                        {isAdded ? "Added" : atLimit ? "Limit Reached" : "Add to Pipeline"}
                       </Button>
                     </div>
                   </CardContent>
@@ -701,6 +836,7 @@ export default function DiscoveryPage() {
               grant={selectedGrant}
               isAdded={addedGrants.has(selectedGrant.title)}
               isAdding={addingToPipeline === selectedGrant.title}
+              atLimit={atLimit}
               onAddToPipeline={() => addToPipeline(selectedGrant)}
             />
           )}

@@ -60,10 +60,14 @@ export function GrantDetail({
   grant,
   proposals,
   orgName,
+  backHref = "/pipeline",
+  backLabel = "Pipeline",
 }: {
   grant: Grant;
   proposals: Array<{ id: string; title: string; status: string; quality_score: number | null }>;
   orgName: string;
+  backHref?: string;
+  backLabel?: string;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -178,10 +182,10 @@ export function GrantDetail({
   return (
     <div className="p-6 space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
-        <Link href="/pipeline">
+        <Link href={backHref}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Pipeline
+            {backLabel}
           </Button>
         </Link>
       </div>

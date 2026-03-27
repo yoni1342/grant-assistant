@@ -4,11 +4,12 @@ export const PLANS = {
     description: 'Get started with grant discovery',
     price: 0,
     stripePriceId: null,
+    dailyGrantLimit: 1,
     features: [
-      '5 grants/month',
-      'Basic AI writing',
+      '1 grant/day',
+      'AI writing & drafts',
       'Core discovery',
-      'Community access',
+      'Pipeline tracking',
     ],
   },
   professional: {
@@ -16,9 +17,10 @@ export const PLANS = {
     description: 'Everything you need to win grants',
     price: 49,
     stripePriceId: process.env.STRIPE_PROFESSIONAL_PRICE_ID!,
+    dailyGrantLimit: null, // unlimited
     features: [
       'Unlimited grants',
-      'Advanced AI drafts',
+      'AI writing & drafts',
       'RFP parsing',
       'Content library',
       'Pipeline tracking',
@@ -26,15 +28,16 @@ export const PLANS = {
   },
   agency: {
     name: 'Agency',
-    description: 'For organizations managing multiple clients',
+    description: 'Manage multiple organizations under one plan',
     price: 149,
     stripePriceId: process.env.STRIPE_AGENCY_PRICE_ID!,
+    dailyGrantLimit: null, // unlimited
     features: [
+      'Unlimited grants per org',
       'Multi-org management',
-      'White-label ready',
-      'Priority support',
-      'API access',
-      'Analytics dashboard',
+      'Org switching',
+      'Cross-org analytics',
+      'Single billing for all orgs',
     ],
   },
 } as const

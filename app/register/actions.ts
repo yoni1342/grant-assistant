@@ -202,6 +202,17 @@ export async function registerOrganizationForExistingUser(data: {
 
   const serviceClient = getServiceClient()
 
+  // Check if user already has an organization
+  const { data: profile } = await serviceClient
+    .from('profiles')
+    .select('org_id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (profile?.org_id) {
+    return { error: 'You already have an organization. Each user can only have one organization.' }
+  }
+
   // Insert organization
   const { data: org, error: orgError } = await serviceClient
     .from('organizations')
@@ -257,6 +268,176 @@ export async function registerOrganizationForExistingUser(data: {
   }
 
   return { success: true, orgId: org.id, userId: user.id }
+}
+
+export async function registerAgency(data: {
+  fullName: string
+  email: string
+  password: string
+  agencyName: string
+}) {
+  const serviceClient = getServiceClient()
+
+  // 1. Create user
+  const { data: userData, error: userError } = await serviceClient.auth.admin.createUser({
+    email: data.email,
+    password: data.password,
+    email_confirm: true,
+    user_metadata: { full_name: data.fullName },
+  })
+
+  if (userError) {
+    if (userError.message?.includes('already been registered')) {
+      return { error: 'An account with this email already exists. Please sign in instead.' }
+    }
+    return { error: `Registration failed: ${userError.message}` }
+  }
+  if (!userData.user) return { error: 'Failed to create account. Please try again.' }
+
+  const userId = userData.user.id
+
+  // 2. Create agency record
+  const { data: agency, error: agencyError } = await serviceClient
+    .from('agencies')
+    .insert({ name: data.agencyName, owner_user_id: userId })
+    .select('id')
+    .single()
+
+  if (agencyError || !agency) {
+    await serviceClient.auth.admin.deleteUser(userId)
+    return { error: 'Failed to create agency. Please try again.' }
+  }
+
+  // 3. Create a placeholder org for the agency owner (needed for auth flow)
+  const { data: org, error: orgError } = await serviceClient
+    .from('organizations')
+    .insert({
+      name: `${data.agencyName} (Agency)`,
+      plan: 'agency',
+      agency_id: agency.id,
+      status: 'approved',
+    })
+    .select('id')
+    .single()
+
+  if (orgError || !org) {
+    await serviceClient.from('agencies').delete().eq('id', agency.id)
+    await serviceClient.auth.admin.deleteUser(userId)
+    return { error: 'Failed to set up agency. Please try again.' }
+  }
+
+  // 4. Update profile with org_id, agency_id, and role
+  const { error: profileError } = await serviceClient
+    .from('profiles')
+    .update({ org_id: org.id, agency_id: agency.id, role: 'owner', full_name: data.fullName, email: data.email })
+    .eq('id', userId)
+
+  if (profileError) {
+    await serviceClient.from('organizations').delete().eq('id', org.id)
+    await serviceClient.from('agencies').delete().eq('id', agency.id)
+    await serviceClient.auth.admin.deleteUser(userId)
+    return { error: 'Failed to set up your profile. Please try again.' }
+  }
+
+  // 5. Send welcome email
+  try {
+    await sendWelcomeEmail({
+      toEmail: data.email,
+      fullName: data.fullName,
+      organizationName: data.agencyName,
+    })
+  } catch (error) {
+    console.error('[registerAgency] Failed to send welcome email:', error)
+  }
+
+  return { success: true, agencyId: agency.id, userId }
+}
+
+export async function registerAgencyForExistingUser(data: {
+  agencyName: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const serviceClient = getServiceClient()
+
+  // Check if user already owns an agency
+  const { data: existingAgency } = await serviceClient
+    .from('agencies')
+    .select('id')
+    .eq('owner_user_id', user.id)
+    .maybeSingle()
+
+  if (existingAgency) {
+    return { error: 'You already have an agency. Each user can only create one agency.' }
+  }
+
+  // 1. Create agency record
+  const { data: agency, error: agencyError } = await serviceClient
+    .from('agencies')
+    .insert({ name: data.agencyName, owner_user_id: user.id })
+    .select('id')
+    .single()
+
+  if (agencyError || !agency) {
+    return { error: agencyError?.message || 'Failed to create agency' }
+  }
+
+  // 2. Create placeholder org
+  const { data: org, error: orgError } = await serviceClient
+    .from('organizations')
+    .insert({
+      name: `${data.agencyName} (Agency)`,
+      plan: 'agency',
+      agency_id: agency.id,
+      status: 'approved',
+    })
+    .select('id')
+    .single()
+
+  if (orgError || !org) {
+    await serviceClient.from('agencies').delete().eq('id', agency.id)
+    return { error: 'Failed to set up agency' }
+  }
+
+  // 3. Update profile
+  const { error: profileError } = await serviceClient
+    .from('profiles')
+    .upsert({
+      id: user.id,
+      org_id: org.id,
+      agency_id: agency.id,
+      role: 'owner',
+      full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+      email: user.email || null,
+    }, { onConflict: 'id' })
+
+  if (profileError) {
+    await serviceClient.from('organizations').delete().eq('id', org.id)
+    await serviceClient.from('agencies').delete().eq('id', agency.id)
+    return { error: profileError.message }
+  }
+
+  // 4. Send welcome email
+  try {
+    const { data: profile } = await serviceClient
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', user.id)
+      .single()
+    if (profile) {
+      await sendWelcomeEmail({
+        toEmail: profile.email,
+        fullName: profile.full_name,
+        organizationName: data.agencyName,
+      })
+    }
+  } catch (error) {
+    console.error('[registerAgencyForExistingUser] Failed to send welcome email:', error)
+  }
+
+  return { success: true, agencyId: agency.id, userId: user.id }
 }
 
 export async function uploadRegistrationDocuments(formData: FormData) {

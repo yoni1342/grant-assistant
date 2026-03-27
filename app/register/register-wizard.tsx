@@ -21,11 +21,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { FileText, ClipboardList, Upload, X, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   registerOrganization,
   registerOrganizationForExistingUser,
+  registerAgency,
+  registerAgencyForExistingUser,
   uploadRegistrationDocuments,
 } from "./actions";
 import { PLANS, TRIAL_DAYS } from "@/lib/stripe/config";
@@ -82,6 +86,7 @@ export function RegisterWizard({
   userName,
 }: RegisterWizardProps) {
   const [step, setStep] = useState(isAuthenticated ? 2 : 1);
+  const firstStep = isAuthenticated ? 2 : 1;
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -134,15 +139,18 @@ export function RegisterWizard({
     setGeographicFocus((prev) => prev.filter((s) => s !== state));
   }
 
-  // Step 3: Plan selection
+  // Step 2: Plan selection (moved up)
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("free");
 
-  // Step 4: Profile mode
+  // Agency-specific
+  const [agencyName, setAgencyName] = useState("");
+
+  // Step 3/4: Profile mode (org flow only)
   const [profileMode, setProfileMode] = useState<
     "documents" | "questionnaire" | null
   >(null);
 
-  // Step 3: Documents
+  // Documents
   const [narrativeFile, setNarrativeFile] = useState<File | null>(null);
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
 
@@ -177,7 +185,14 @@ export function RegisterWizard({
     setStep(2);
   }
 
-  function handleNextToStep3() {
+  function handleNextFromPlan() {
+    setError(null);
+    // Agency plan goes to agency name step (step 3)
+    // Org plans go to org details step (step 3)
+    setStep(3);
+  }
+
+  function handleNextToOrgProfile() {
     setError(null);
     if (!orgName.trim()) {
       setError("Organization name is required");
@@ -187,16 +202,17 @@ export function RegisterWizard({
       setError("Please select at least one geographic focus area");
       return;
     }
-    setStep(3);
+    setStep(4);
   }
 
-  function handleNextToStep4() {
+  function handleNextToStep5() {
     setError(null);
     if (profileMode === "documents" && !narrativeFile && additionalFiles.length === 0) {
       setError("Please upload at least one document");
       return;
     }
-    setStep(4);
+    // Submit directly after profile step
+    handleSubmit();
   }
 
   function validateFile(file: File): string | null {
@@ -242,6 +258,62 @@ export function RegisterWizard({
     setError(null);
     setLoading(true);
 
+    // --- Agency registration flow ---
+    if (selectedPlan === "agency") {
+      if (!agencyName.trim()) {
+        setError("Agency name is required");
+        setLoading(false);
+        return;
+      }
+
+      let result;
+      if (isAuthenticated) {
+        result = await registerAgencyForExistingUser({
+          agencyName: agencyName.trim(),
+        });
+      } else {
+        result = await registerAgency({
+          fullName: fullName.trim(),
+          email: email.trim(),
+          password,
+          agencyName: agencyName.trim(),
+        });
+      }
+
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+
+      // Redirect to Stripe Checkout for agency billing
+      if (result.agencyId) {
+        try {
+          const res = await fetch("/api/stripe/checkout-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              agencyId: result.agencyId,
+              plan: "agency",
+              email: isAuthenticated ? userEmail : email.trim(),
+            }),
+          });
+          const data = await res.json();
+          if (data.url) {
+            window.location.href = data.url;
+            return;
+          }
+        } catch (err) {
+          console.error("Stripe checkout error:", err);
+        }
+      }
+
+      setSuccess(true);
+      setLoading(false);
+      return;
+    }
+
+    // --- Org registration flow (Free / Professional) ---
     const orgData = {
       name: orgName.trim(),
       ein: ein.trim() || undefined,
@@ -342,6 +414,7 @@ export function RegisterWizard({
   }
 
   if (success) {
+    const isAgency = selectedPlan === "agency";
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
         <Card className="w-full max-w-sm">
@@ -350,9 +423,19 @@ export function RegisterWizard({
               Registration Submitted
             </CardTitle>
             <CardDescription>
-              Your organization <strong>{orgName}</strong> has been registered
-              and is pending admin approval. You will be able to access the
-              dashboard once approved.
+              {isAgency ? (
+                <>
+                  Your agency <strong>{agencyName}</strong> has been registered
+                  and is pending admin approval. You will be able to access the
+                  agency dashboard once approved.
+                </>
+              ) : (
+                <>
+                  Your organization <strong>{orgName}</strong> has been registered
+                  and is pending admin approval. You will be able to access the
+                  dashboard once approved.
+                </>
+              )}
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
@@ -365,14 +448,18 @@ export function RegisterWizard({
     );
   }
 
-  const stepLabels = ["Create your account", "Organization details", "Organization profile", "Choose your plan"];
+  const isAgencyFlow = selectedPlan === "agency";
+  const stepLabels = isAgencyFlow
+    ? ["Create your account", "Choose your plan", "Agency details"]
+    : ["Create your account", "Choose your plan", "Organization details", "Organization profile"];
   const currentStepLabel = isAuthenticated
     ? stepLabels[step]
     : stepLabels[step - 1];
+  const totalSteps = isAgencyFlow ? 3 : (isAuthenticated ? 4 : 4);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-8">
-      <Card className={`w-full ${step === 4 ? "max-w-3xl" : "max-w-lg"}`}>
+      <Card className={`w-full ${step === 2 ? "max-w-3xl" : "max-w-lg"}`}>
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-semibold">Fundory.ai</CardTitle>
           <CardDescription>{currentStepLabel}</CardDescription>
@@ -382,15 +469,12 @@ export function RegisterWizard({
                 className={`h-2 w-12 rounded-full ${step >= 1 ? "bg-primary" : "bg-muted"}`}
               />
             )}
-            <div
-              className={`h-2 w-12 rounded-full ${step >= 2 ? "bg-primary" : "bg-muted"}`}
-            />
-            <div
-              className={`h-2 w-12 rounded-full ${step >= 3 ? "bg-primary" : "bg-muted"}`}
-            />
-            <div
-              className={`h-2 w-12 rounded-full ${step >= 4 ? "bg-primary" : "bg-muted"}`}
-            />
+            {Array.from({ length: isAgencyFlow ? 2 : 3 }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-2 w-12 rounded-full ${step >= i + 2 ? "bg-primary" : "bg-muted"}`}
+              />
+            ))}
           </div>
         </CardHeader>
         <CardContent>
@@ -450,8 +534,110 @@ export function RegisterWizard({
             </div>
           )}
 
-          {/* Step 2: Organization */}
+          {/* Step 2: Plan Selection */}
           {step === 2 && (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {(Object.entries(PLANS) as [PlanId, typeof PLANS[PlanId]][]).map(([planId, plan]) => (
+                  <button
+                    key={planId}
+                    type="button"
+                    onClick={() => setSelectedPlan(planId)}
+                    className={`relative flex flex-col rounded-lg border-2 p-5 text-left transition-colors ${
+                      selectedPlan === planId
+                        ? "border-primary bg-primary/5"
+                        : "border-muted hover:border-muted-foreground/40"
+                    }`}
+                  >
+                    {selectedPlan === planId && (
+                      <div className="absolute top-3 right-3 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-3 w-3 text-white" />
+                      </div>
+                    )}
+                    <p className="font-semibold text-lg">{plan.name}</p>
+                    <p className="text-2xl font-bold mt-1">
+                      {plan.price === 0 ? "Free" : `$${plan.price}`}
+                      {plan.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                    </p>
+                    {plan.price > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">{TRIAL_DAYS}-day free trial</p>
+                    )}
+                    <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
+                    <ul className="mt-3 space-y-1.5">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2 text-sm">
+                          <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </button>
+                ))}
+              </div>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <div className="flex gap-3">
+                {!isAuthenticated && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setStep(1);
+                      setError(null);
+                    }}
+                    className="flex-1"
+                  >
+                    Back
+                  </Button>
+                )}
+                <Button onClick={handleNextFromPlan} className="flex-1">
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 (Agency flow): Agency Name */}
+          {step === 3 && isAgencyFlow && (
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Set up your agency account. You&apos;ll be able to create and manage
+                multiple organizations from your agency dashboard.
+              </p>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="agencyName">Agency Name *</Label>
+                <Input
+                  id="agencyName"
+                  type="text"
+                  placeholder="Your agency name"
+                  value={agencyName}
+                  onChange={(e) => setAgencyName(e.target.value)}
+                  required
+                />
+              </div>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStep(2);
+                    setError(null);
+                  }}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="flex-1"
+                >
+                  {loading ? "Submitting..." : "Register & Start Trial"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 (Org flow): Organization Details */}
+          {step === 3 && !isAgencyFlow && (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="orgName">Organization Name *</Label>
@@ -597,27 +783,25 @@ export function RegisterWizard({
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <div className="flex gap-3">
-                {!isAuthenticated && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setStep(1);
-                      setError(null);
-                    }}
-                    className="flex-1"
-                  >
-                    Back
-                  </Button>
-                )}
-                <Button onClick={handleNextToStep3} className="flex-1">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStep(2);
+                    setError(null);
+                  }}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button onClick={handleNextToOrgProfile} className="flex-1">
                   Next
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Step 3: Organization Profile */}
-          {step === 3 && !profileMode && (
+          {/* Step 4 (Org flow): Organization Profile */}
+          {step === 4 && !profileMode && (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-muted-foreground text-center">
                 Help us understand your organization better. Choose one option:
@@ -661,8 +845,8 @@ export function RegisterWizard({
             </div>
           )}
 
-          {/* Step 3: Upload Documents */}
-          {step === 3 && profileMode === "documents" && (
+          {/* Step 4 (Org flow): Upload Documents */}
+          {step === 4 && profileMode === "documents" && (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Narrative Document</Label>
@@ -741,17 +925,22 @@ export function RegisterWizard({
                   Back
                 </Button>
                 <Button
-                  onClick={handleNextToStep4}
+                  onClick={handleNextToStep5}
+                  disabled={loading}
                   className="flex-1"
                 >
-                  Next
+                  {loading
+                    ? "Submitting..."
+                    : selectedPlan === "free"
+                      ? "Register Organization"
+                      : "Register & Start Trial"}
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Step 3: Questionnaire */}
-          {step === 3 && profileMode === "questionnaire" && (
+          {/* Step 4 (Org flow): Questionnaire */}
+          {step === 4 && profileMode === "questionnaire" && (
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
@@ -855,69 +1044,7 @@ export function RegisterWizard({
                   Back
                 </Button>
                 <Button
-                  onClick={handleNextToStep4}
-                  className="flex-1"
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Plan Selection */}
-          {step === 4 && (
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {(Object.entries(PLANS) as [PlanId, typeof PLANS[PlanId]][]).map(([planId, plan]) => (
-                  <button
-                    key={planId}
-                    type="button"
-                    onClick={() => setSelectedPlan(planId)}
-                    className={`relative flex flex-col rounded-lg border-2 p-5 text-left transition-colors ${
-                      selectedPlan === planId
-                        ? "border-primary bg-primary/5"
-                        : "border-muted hover:border-muted-foreground/40"
-                    }`}
-                  >
-                    {selectedPlan === planId && (
-                      <div className="absolute top-3 right-3 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="h-3 w-3 text-white" />
-                      </div>
-                    )}
-                    <p className="font-semibold text-lg">{plan.name}</p>
-                    <p className="text-2xl font-bold mt-1">
-                      {plan.price === 0 ? "Free" : `$${plan.price}`}
-                      {plan.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
-                    </p>
-                    {plan.price > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">{TRIAL_DAYS}-day free trial</p>
-                    )}
-                    <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
-                    <ul className="mt-3 space-y-1.5">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2 text-sm">
-                          <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </button>
-                ))}
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setStep(3);
-                    setError(null);
-                  }}
-                  className="flex-1"
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={handleSubmit}
+                  onClick={handleNextToStep5}
                   disabled={loading}
                   className="flex-1"
                 >
@@ -925,22 +1052,46 @@ export function RegisterWizard({
                     ? "Submitting..."
                     : selectedPlan === "free"
                       ? "Register Organization"
-                      : `Register & Start Trial`}
+                      : "Register & Start Trial"}
                 </Button>
               </div>
             </div>
           )}
+
+          {/* Plan selection is now at step 2 */}
         </CardContent>
         <CardFooter className="justify-center">
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link
-              href="/login"
-              className="font-medium text-foreground hover:underline"
-            >
-              Sign in
-            </Link>
-          </p>
+          {isAuthenticated ? (
+            <p className="text-sm text-muted-foreground">
+              Signed in as {userEmail}.{" "}
+              <button
+                type="button"
+                className="font-medium text-foreground hover:underline"
+                onClick={async () => {
+                  const supabase = createClient();
+                  await supabase.auth.signOut();
+                  window.location.href = "/login";
+                }}
+              >
+                Switch account
+              </button>
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <button
+                type="button"
+                className="font-medium text-foreground hover:underline"
+                onClick={async () => {
+                  const supabase = createClient();
+                  await supabase.auth.signOut();
+                  window.location.href = "/login";
+                }}
+              >
+                Sign in
+              </button>
+            </p>
+          )}
         </CardFooter>
       </Card>
     </div>

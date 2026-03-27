@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient, getUserOrgId } from '@/lib/supabase/server'
+import { createClient, createAdminClient, getUserOrgId } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function getNarratives() {
@@ -10,7 +10,8 @@ export async function getNarratives() {
     return { error: orgError || 'Not authenticated', data: [] }
   }
 
-  const { data, error } = await supabase
+  const adminDb = createAdminClient()
+  const { data, error } = await adminDb
     .from('documents')
     .select('*')
     .eq('org_id', orgId)
@@ -56,28 +57,18 @@ export async function createNarrative(formData: FormData) {
     ? tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
     : []
 
-  // Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) {
     return { error: 'Not authenticated' }
   }
 
-  // Get user's org_id from profiles
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile?.org_id) {
-    return { error: 'User profile or organization not found' }
-  }
+  const adminDb = createAdminClient()
 
   // Insert as document
-  const { data: doc, error } = await supabase
+  const { data: doc, error } = await adminDb
     .from('documents')
     .insert({
-      org_id: profile.org_id,
+      org_id: orgId,
       title,
       name: title,
       category: 'narrative',
@@ -129,8 +120,10 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
     ? tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
     : []
 
+  const adminDb = createAdminClient()
+
   // Get existing metadata to merge
-  const { data: existing } = await supabase
+  const { data: existing } = await adminDb
     .from('documents')
     .select('metadata')
     .eq('id', narrativeId)
@@ -139,7 +132,7 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
   const existingMeta = (existing?.metadata as Record<string, unknown>) || {}
 
   // Update document
-  const { data: doc, error } = await supabase
+  const { data: doc, error } = await adminDb
     .from('documents')
     .update({
       title,
@@ -176,12 +169,13 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
 export async function deleteNarrative(narrativeId: string) {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) {
     return { error: 'Not authenticated' }
   }
 
-  const { error } = await supabase
+  const adminDb = createAdminClient()
+  const { error } = await adminDb
     .from('documents')
     .delete()
     .eq('id', narrativeId)

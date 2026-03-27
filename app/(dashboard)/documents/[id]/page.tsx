@@ -1,4 +1,4 @@
-import { createClient, getUserOrgId } from "@/lib/supabase/server"
+import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/server"
 import { notFound, redirect } from "next/navigation"
 import { DocumentDetail } from "./document-detail"
 
@@ -12,7 +12,9 @@ export default async function DocumentDetailPage({
   const { orgId } = await getUserOrgId(supabase)
   if (!orgId) redirect("/login")
 
-  const { data: document } = await supabase
+  const adminDb = createAdminClient()
+
+  const { data: document } = await adminDb
     .from("documents")
     .select("*")
     .eq("id", id)
@@ -26,7 +28,7 @@ export default async function DocumentDetailPage({
   // Generate signed URL for viewing (file_path may be null for legacy docs)
   let signedUrl: string | null = null
   if (document.file_path) {
-    const { data: signedUrlData } = await supabase.storage
+    const { data: signedUrlData } = await adminDb.storage
       .from("documents")
       .createSignedUrl(document.file_path, 3600)
     signedUrl = signedUrlData?.signedUrl || null
@@ -35,7 +37,7 @@ export default async function DocumentDetailPage({
   // Fetch linked grant title if grant_id exists
   let linkedGrant: { id: string; title: string } | null = null
   if (document.grant_id) {
-    const { data: grant } = await supabase
+    const { data: grant } = await adminDb
       .from("grants")
       .select("id, title")
       .eq("id", document.grant_id)
