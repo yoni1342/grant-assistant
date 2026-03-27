@@ -1,4 +1,4 @@
-import { createClient, getUserOrgId } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/server";
 import { PipelineClient } from "./pipeline-client";
 import { GrantFetchBanner } from "./grant-fetch-banner";
 import { redirect } from "next/navigation";
@@ -9,22 +9,26 @@ export default async function PipelinePage() {
   const { orgId } = await getUserOrgId(supabase);
   if (!orgId) redirect("/login");
 
+  // Use admin client for data fetching — RLS policies don't support agency users
+  // who switch between orgs. Auth is already validated by getUserOrgId above.
+  const adminDb = createAdminClient();
+
   const staleThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
   const [{ data: grants }, { data: fetchStatus }, { data: proposals }] = await Promise.all([
-    supabase
+    adminDb
       .from("grants")
       .select("*")
       .eq("org_id", orgId)
       .order("created_at", { ascending: false }),
-    supabase
+    adminDb
       .from("grant_fetch_status")
       .select("*")
       .eq("org_id", orgId)
       .neq("status", "complete")
       .gte("updated_at", staleThreshold)
       .single(),
-    supabase
+    adminDb
       .from("proposals")
       .select("id, grant_id, quality_score")
       .eq("org_id", orgId),
@@ -35,7 +39,7 @@ export default async function PipelinePage() {
   const isEmpty = !grants || grants.length === 0;
   const isFetching = !!fetchStatus;
 
-  const { data: org } = await supabase
+  const { data: org } = await adminDb
     .from("organizations")
     .select("plan")
     .eq("id", orgId)
@@ -50,7 +54,7 @@ export default async function PipelinePage() {
   const activeFetchStatus = isFetching
     ? fetchStatus
     : isEmpty
-      ? (await supabase
+      ? (await adminDb
           .from("grant_fetch_status")
           .select("*")
           .eq("org_id", orgId)

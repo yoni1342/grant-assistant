@@ -1,4 +1,4 @@
-import { createClient, getUserOrgId } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +35,9 @@ export default async function DeadlinesPage() {
   const { orgId } = await getUserOrgId(supabase);
   if (!orgId) redirect("/login");
 
-  const { data: grants } = await supabase
+  const adminDb = createAdminClient();
+
+  const { data: grants } = await adminDb
     .from("grants")
     .select("id, title, funder_name, stage, amount, deadline, description, source_url")
     .eq("org_id", orgId)

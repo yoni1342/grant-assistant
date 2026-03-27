@@ -1,4 +1,4 @@
-import { createClient, getUserOrgId } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,15 +38,17 @@ export default async function DashboardPage() {
   const { orgId } = await getUserOrgId(supabase);
   if (!orgId) redirect("/login");
 
+  const adminDb = createAdminClient();
+
   // Fetch grants for pipeline overview
-  const { data: grants } = await supabase
+  const { data: grants } = await adminDb
     .from("grants")
     .select("id, title, funder_name, stage, amount, deadline")
     .eq("org_id", orgId)
     .order("created_at", { ascending: false });
 
   // Fetch recent activity
-  const { data: activities } = await supabase
+  const { data: activities } = await adminDb
     .from("activity_log")
     .select("id, action, details, created_at")
     .eq("org_id", orgId)

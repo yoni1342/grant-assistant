@@ -1,4 +1,4 @@
-import { createClient, getUserOrgId } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { GrantDetail } from "./grant-detail";
 
@@ -20,7 +20,9 @@ export default async function GrantDetailPage({
   const { orgId } = await getUserOrgId(supabase);
   if (!orgId) redirect("/login");
 
-  const { data: grant } = await supabase
+  const adminDb = createAdminClient();
+
+  const { data: grant } = await adminDb
     .from("grants")
     .select("*")
     .eq("id", id)
@@ -33,13 +35,13 @@ export default async function GrantDetailPage({
 
   // Fetch proposals and org name for this grant
   const [{ data: proposals }, { data: org }] = await Promise.all([
-    supabase
+    adminDb
       .from("proposals")
       .select("id, title, status, quality_score")
       .eq("grant_id", id)
       .eq("org_id", orgId)
       .order("created_at", { ascending: false }),
-    supabase
+    adminDb
       .from("organizations")
       .select("name")
       .eq("id", orgId)

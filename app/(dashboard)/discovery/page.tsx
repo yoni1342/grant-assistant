@@ -256,7 +256,9 @@ export default function DiscoveryPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const channelRef = useRef<any>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval>>(null);
   const seenTitlesRef = useRef<Set<string>>(new Set());
+  const seenRowIdsRef = useRef<Set<string>>(new Set());
 
   const atLimit = grantUsage !== null && grantUsage.limit !== null && grantUsage.used >= grantUsage.limit;
 
@@ -284,6 +286,7 @@ export default function DiscoveryPage() {
         supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
       }
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
 
@@ -325,8 +328,9 @@ export default function DiscoveryPage() {
     setSourceCount(0);
     setStageMessage(DEFAULT_STAGE);
     seenTitlesRef.current = new Set();
+    seenRowIdsRef.current = new Set();
 
-    // Clean up previous subscription
+    // Clean up previous subscription & polling
     if (channelRef.current) {
       const supabase = createClient();
       supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
@@ -335,6 +339,10 @@ export default function DiscoveryPage() {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
+    }
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
     }
 
     try {
@@ -361,9 +369,45 @@ export default function DiscoveryPage() {
       }
 
       const searchId = data.search_id;
-
-      // Subscribe to real-time search results
       const supabase = createClient();
+
+      // Helper: process a row from search_results (used by both Realtime and polling)
+      const processRow = (row: { grant_data: unknown; is_complete: boolean; source_group: string }) => {
+        if (row.is_complete) {
+          setSearchComplete(true);
+          setTimeout(() => setLoading(false), 600);
+          if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+          return;
+        }
+
+        if (row.source_group?.startsWith("__status__:")) {
+          const d = row.grant_data as { status?: string; stage_message?: string };
+          if (d?.stage_message) {
+            const icon = STAGE_ICONS[d.status || ""] || Sparkles;
+            setStageMessage({ message: d.stage_message, icon });
+          }
+          return;
+        }
+
+        const grants = extractGrants(row.grant_data);
+        if (grants.length > 0) {
+          const newGrants = grants.filter((g) => {
+            if (seenTitlesRef.current.has(g.title)) return false;
+            seenTitlesRef.current.add(g.title);
+            return true;
+          });
+
+          if (newGrants.length > 0) {
+            setResults((prev) => [...prev, ...newGrants]);
+            setSourceCount((prev) => prev + 1);
+          }
+        }
+      };
+
+      // 1) Subscribe to real-time search results
       const channel = supabase
         .channel(`search-${searchId}`)
         .on(
@@ -375,48 +419,34 @@ export default function DiscoveryPage() {
             filter: `search_id=eq.${searchId}`,
           },
           (payload) => {
-            const row = payload.new as {
-              grant_data: unknown;
-              is_complete: boolean;
-              source_group: string;
-            };
-
-            if (row.is_complete) {
-              setSearchComplete(true);
-              // Small delay so the last status message is visible before loading hides it
-              setTimeout(() => setLoading(false), 600);
-              return;
-            }
-
-            // Handle status updates from workflow
-            if (row.source_group?.startsWith("__status__:")) {
-              const data = row.grant_data as { status?: string; stage_message?: string };
-              if (data?.stage_message) {
-                const icon = STAGE_ICONS[data.status || ""] || Sparkles;
-                setStageMessage({ message: data.stage_message, icon });
-              }
-              return;
-            }
-
-            const grants = extractGrants(row.grant_data);
-            if (grants.length > 0) {
-              // Deduplicate by title
-              const newGrants = grants.filter((g) => {
-                if (seenTitlesRef.current.has(g.title)) return false;
-                seenTitlesRef.current.add(g.title);
-                return true;
-              });
-
-              if (newGrants.length > 0) {
-                setResults((prev) => [...prev, ...newGrants]);
-                setSourceCount((prev) => prev + 1);
-              }
-            }
+            processRow(payload.new as { grant_data: unknown; is_complete: boolean; source_group: string });
           }
         )
         .subscribe();
 
       channelRef.current = channel;
+
+      // 2) Polling fallback: fetch search_results via server API every 2s
+      //    (bypasses RLS which can block the browser client's Realtime & direct queries)
+      const pollForResults = async () => {
+        try {
+          const res = await fetch(`/api/grants/search-results?search_id=${searchId}`);
+          if (!res.ok) return;
+          const rows = await res.json() as { id: string; grant_data: unknown; is_complete: boolean; source_group: string }[];
+
+          for (const row of rows) {
+            if (seenRowIdsRef.current.has(row.id)) continue;
+            seenRowIdsRef.current.add(row.id);
+            processRow(row);
+          }
+        } catch {
+          // silent — will retry on next poll
+        }
+      };
+
+      // Run first poll immediately, then every 2s
+      pollForResults();
+      pollRef.current = setInterval(pollForResults, 2000);
 
       // Safety timeout: stop loading after 3 minutes
       timeoutRef.current = setTimeout(() => {
@@ -424,6 +454,10 @@ export default function DiscoveryPage() {
         setSearchComplete(true);
         supabase.removeChannel(channel);
         channelRef.current = null;
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
       }, 180000);
     } catch (err) {
       console.error("Discovery error:", err);
