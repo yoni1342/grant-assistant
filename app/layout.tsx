@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Barlow, Barlow_Condensed, Space_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { ClarityProvider } from "@/components/clarity-provider";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body
         className={`${barlow.variable} ${barlowCondensed.variable} ${spaceMono.variable} antialiased`}
       >
+        <ClarityProvider />
         <Providers>{children}</Providers>
       </body>
     </html>

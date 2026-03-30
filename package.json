@@ -11,8 +11,10 @@
   "dependencies": {
     "@aws-sdk/client-ses": "^3.1011.0",
     "@hookform/resolvers": "^5.2.2",
+    "@microsoft/clarity": "^1.0.2",
     "@react-email/components": "^1.0.9",
     "@react-email/render": "^2.0.4",
+    "@sentry/nextjs": "^10.46.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "@tanstack/react-table": "^8.21.3",

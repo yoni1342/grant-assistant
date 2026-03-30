@@ -47,26 +47,93 @@ export async function approveOrganization(orgId: string) {
     if (planConfig?.stripePriceId) {
       try {
         const stripe = getStripeClient()
-        const subscription = await stripe.subscriptions.create({
-          customer: orgData.stripe_customer_id,
-          items: [{ price: planConfig.stripePriceId }],
-          trial_period_days: TRIAL_DAYS,
-          metadata: { org_id: orgId, plan: orgData.plan },
-        })
 
-        const adminClient = createAdminClient()
-        await adminClient
-          .from('organizations')
-          .update({
-            stripe_subscription_id: subscription.id,
-            subscription_status: 'trialing',
-            trial_ends_at: subscription.trial_end
-              ? new Date(subscription.trial_end * 1000).toISOString()
-              : null,
+        // For agency plan: create the agency record and link everything
+        if (orgData.plan === 'agency') {
+          const adminClient = createAdminClient()
+
+          // Find the org owner
+          const { data: ownerProfile } = await adminClient
+            .from('profiles')
+            .select('id')
+            .eq('org_id', orgId)
+            .eq('role', 'owner')
+            .single()
+
+          if (ownerProfile) {
+            // Create agency record with billing info
+            const { data: agency } = await adminClient
+              .from('agencies')
+              .insert({
+                name: (await adminClient.from('organizations').select('name').eq('id', orgId).single()).data?.name || 'Agency',
+                owner_user_id: ownerProfile.id,
+                stripe_customer_id: orgData.stripe_customer_id,
+              })
+              .select('id')
+              .single()
+
+            if (agency) {
+              // Link org to agency and set profile agency_id
+              await adminClient.from('organizations').update({ agency_id: agency.id }).eq('id', orgId)
+              await adminClient.from('profiles').update({ agency_id: agency.id }).eq('id', ownerProfile.id)
+
+              // Create subscription on the agency (not the org)
+              const subscription = await stripe.subscriptions.create({
+                customer: orgData.stripe_customer_id,
+                items: [{ price: planConfig.stripePriceId }],
+                trial_period_days: TRIAL_DAYS,
+                metadata: { agency_id: agency.id, plan: 'agency' },
+              })
+
+              await adminClient
+                .from('agencies')
+                .update({
+                  stripe_subscription_id: subscription.id,
+                  subscription_status: 'trialing',
+                  trial_ends_at: subscription.trial_end
+                    ? new Date(subscription.trial_end * 1000).toISOString()
+                    : null,
+                })
+                .eq('id', agency.id)
+
+              // Also update org subscription fields for consistency
+              await adminClient
+                .from('organizations')
+                .update({
+                  stripe_subscription_id: subscription.id,
+                  subscription_status: 'trialing',
+                  trial_ends_at: subscription.trial_end
+                    ? new Date(subscription.trial_end * 1000).toISOString()
+                    : null,
+                })
+                .eq('id', orgId)
+
+              console.log('[approveOrganization] Agency created:', agency.id, 'with subscription:', subscription.id)
+            }
+          }
+        } else {
+          // Non-agency paid plan: create subscription on org directly
+          const subscription = await stripe.subscriptions.create({
+            customer: orgData.stripe_customer_id,
+            items: [{ price: planConfig.stripePriceId }],
+            trial_period_days: TRIAL_DAYS,
+            metadata: { org_id: orgId, plan: orgData.plan },
           })
-          .eq('id', orgId)
 
-        console.log('[approveOrganization] Stripe subscription created with trial:', subscription.id)
+          const adminClient = createAdminClient()
+          await adminClient
+            .from('organizations')
+            .update({
+              stripe_subscription_id: subscription.id,
+              subscription_status: 'trialing',
+              trial_ends_at: subscription.trial_end
+                ? new Date(subscription.trial_end * 1000).toISOString()
+                : null,
+            })
+            .eq('id', orgId)
+
+          console.log('[approveOrganization] Stripe subscription created with trial:', subscription.id)
+        }
       } catch (stripeErr) {
         console.error('[approveOrganization] Failed to create Stripe subscription:', stripeErr)
         // Don't fail approval if Stripe fails — they can set up billing later

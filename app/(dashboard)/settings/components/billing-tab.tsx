@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -26,6 +26,17 @@ export function BillingTab({
   stripeCustomerId,
 }: BillingTabProps) {
   const [loading, setLoading] = useState<string | null>(null)
+  const [grantUsage, setGrantUsage] = useState<{ used: number; limit: number | null } | null>(null)
+
+  useEffect(() => {
+    async function fetchUsage() {
+      try {
+        const res = await fetch("/api/grants/usage")
+        if (res.ok) setGrantUsage(await res.json())
+      } catch { /* silent */ }
+    }
+    fetchUsage()
+  }, [])
 
   const isTrialing = subscriptionStatus === "trialing"
   const isPastDue = subscriptionStatus === "past_due"
@@ -192,6 +203,45 @@ export function BillingTab({
         </CardContent>
       </Card>
 
+      {/* Grant Usage (free tier) */}
+      {grantUsage && grantUsage.limit !== null && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Grant Usage</CardTitle>
+            <CardDescription>Daily pipeline additions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  {grantUsage.used} of {grantUsage.limit} grant{grantUsage.limit === 1 ? "" : "s"} used today
+                </span>
+                <span className="text-sm font-medium">
+                  {grantUsage.limit - grantUsage.used} remaining
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2.5">
+                <div
+                  className={`h-2.5 rounded-full transition-all ${
+                    grantUsage.used >= grantUsage.limit
+                      ? "bg-red-500"
+                      : grantUsage.used >= grantUsage.limit - 1
+                        ? "bg-amber-500"
+                        : "bg-primary"
+                  }`}
+                  style={{ width: `${Math.min((grantUsage.used / grantUsage.limit) * 100, 100)}%` }}
+                />
+              </div>
+              {grantUsage.used >= grantUsage.limit && (
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  You&apos;ve reached your daily limit. Upgrade to Professional for unlimited grants.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Plan Comparison */}
       <Card>
         <CardHeader>
@@ -199,8 +249,8 @@ export function BillingTab({
           <CardDescription>Choose the plan that fits your needs</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {(Object.entries(PLANS) as [PlanId, typeof PLANS[PlanId]][]).map(([planId, plan]) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(Object.entries(PLANS) as [PlanId, typeof PLANS[PlanId]][]).filter(([planId]) => planId !== "agency").map(([planId, plan]) => {
               const isCurrent = planId === currentPlan
               return (
                 <div

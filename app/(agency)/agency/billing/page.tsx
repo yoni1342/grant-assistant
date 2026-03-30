@@ -1,0 +1,111 @@
+import { createClient, getUserAgencyId } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { PLANS } from "@/lib/stripe/config";
+import { CreditCard, Check } from "lucide-react";
+
+export default async function AgencyBillingPage() {
+  const supabase = await createClient();
+  const { agencyId } = await getUserAgencyId(supabase);
+  if (!agencyId) redirect("/login");
+
+  const { data: agency } = await supabase
+    .from("agencies")
+    .select("name, stripe_customer_id, stripe_subscription_id, subscription_status, trial_ends_at")
+    .eq("id", agencyId)
+    .single();
+
+  // Count orgs under agency
+  const { count: orgCount } = await supabase
+    .from("organizations")
+    .select("id", { count: "exact", head: true })
+    .eq("agency_id", agencyId)
+    .neq("plan", "agency");
+
+  const plan = PLANS.agency;
+  const isTrialing = agency?.subscription_status === "trialing";
+  const trialEndsAt = agency?.trial_ends_at ? new Date(agency.trial_ends_at) : null;
+  const daysLeft = trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
+
+  return (
+    <div className="p-6 space-y-6 max-w-3xl">
+      <div>
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">
+          Billing
+        </h1>
+        <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
+          Manage your agency subscription
+        </p>
+      </div>
+
+      {/* Current Plan */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>{plan.name} Plan</CardTitle>
+              <CardDescription>{plan.description}</CardDescription>
+            </div>
+            <Badge variant={agency?.subscription_status === "active" || isTrialing ? "default" : "destructive"}>
+              {agency?.subscription_status || "active"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-baseline gap-1">
+            <span className="text-3xl font-bold">${plan.price}</span>
+            <span className="text-muted-foreground">/month</span>
+          </div>
+
+          {isTrialing && trialEndsAt && (
+            <div className="rounded-md bg-muted p-3 text-sm">
+              <p className="font-medium">Trial Period</p>
+              <p className="text-muted-foreground">
+                {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining — ends{" "}
+                {trialEndsAt.toLocaleDateString()}
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 pt-2">
+            <div>
+              <p className="text-sm text-muted-foreground">Organizations</p>
+              <p className="text-lg font-bold">{orgCount || 0}</p>
+              <p className="text-xs text-muted-foreground">Unlimited included</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Grants per Org</p>
+              <p className="text-lg font-bold">Unlimited</p>
+              <p className="text-xs text-muted-foreground">No daily limit</p>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <p className="text-sm font-medium mb-2">Plan Features</p>
+            <ul className="space-y-1.5">
+              {plan.features.map((feature) => (
+                <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Check className="h-3.5 w-3.5 text-foreground shrink-0" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {agency?.stripe_customer_id && (
+            <div className="pt-4 border-t border-border">
+              <form action="/api/stripe/portal" method="POST">
+                <Button variant="outline" className="gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Manage Billing
+                </Button>
+              </form>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

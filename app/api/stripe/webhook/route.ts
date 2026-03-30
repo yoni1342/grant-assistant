@@ -59,6 +59,7 @@ export async function POST(req: Request) {
             }
           }
 
+          // Update the org with plan and stripe customer
           const { error: updateErr } = await adminClient
             .from('organizations')
             .update({

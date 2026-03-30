@@ -22,6 +22,7 @@ import {
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { OrgSwitcher } from "@/components/org-switcher";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -48,7 +49,13 @@ function FundoryMark({ className }: { className?: string }) {
   );
 }
 
-export function Sidebar({ user }: { user: User }) {
+interface SidebarProps {
+  user: User;
+  agencyId?: string | null;
+  activeOrgId?: string | null;
+}
+
+export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -151,9 +158,16 @@ export function Sidebar({ user }: { user: User }) {
         </button>
       </div>
 
+      {/* Org Switcher (agency users only) */}
+      {agencyId && (
+        <div className="border-b border-border">
+          <OrgSwitcher agencyId={agencyId} activeOrgId={activeOrgId ?? null} collapsed={collapsed} />
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 p-2">
-        {navItems.map((item) => {
+        {navItems.filter((item) => !(agencyId && item.href === "/billing")).map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           const isNotifications = item.href === "/notifications";
