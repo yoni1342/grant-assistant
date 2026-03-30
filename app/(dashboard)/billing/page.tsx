@@ -34,6 +34,7 @@ export default async function BillingPage() {
         subscriptionStatus={(org?.subscription_status as string) || null}
         trialEndsAt={(org?.trial_ends_at as string) || null}
         stripeCustomerId={(org?.stripe_customer_id as string) || null}
+        isTester={(org?.is_tester as boolean) || false}
       />
     </div>
   )

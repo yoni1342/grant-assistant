@@ -15,6 +15,7 @@ interface BillingTabProps {
   subscriptionStatus: string | null
   trialEndsAt: string | null
   stripeCustomerId: string | null
+  isTester?: boolean
 }
 
 export function BillingTab({
@@ -24,6 +25,7 @@ export function BillingTab({
   subscriptionStatus,
   trialEndsAt,
   stripeCustomerId,
+  isTester = false,
 }: BillingTabProps) {
   const [loading, setLoading] = useState<string | null>(null)
   const [grantUsage, setGrantUsage] = useState<{ used: number; limit: number | null } | null>(null)
@@ -87,6 +89,45 @@ export function BillingTab({
     } finally {
       setLoading(null)
     }
+  }
+
+  if (isTester) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-lg border-2 border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-400 p-4 flex items-center gap-4">
+          <Check className="h-6 w-6 shrink-0" />
+          <div>
+            <p className="font-bold text-base">Pilot Tester Account</p>
+            <p className="text-sm mt-0.5 opacity-80">
+              Your organization has full access to all features as a pilot tester. No payment is required.
+            </p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Current Plan</CardTitle>
+            <CardDescription>Your organization&apos;s subscription</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold">
+                  {PLANS[currentPlan as PlanId]?.name || "Professional"}
+                </p>
+                <Badge variant="outline" className="border-purple-500 text-purple-600 dark:text-purple-400 bg-purple-500/10 mt-1">
+                  Pilot Tester
+                </Badge>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">$0</p>
+                <p className="text-sm text-muted-foreground">pilot access</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (

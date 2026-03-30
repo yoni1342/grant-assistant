@@ -54,12 +54,12 @@ export async function POST(req: Request) {
     const adminSupabase = createAdminClient();
     const { data: org } = await adminSupabase
       .from("organizations")
-      .select("plan")
+      .select("plan, is_tester")
       .eq("id", orgId)
       .single();
 
     const plan = (org?.plan as PlanId) || "free";
-    const limit = PLANS[plan]?.dailyGrantLimit ?? null;
+    const limit = org?.is_tester ? null : (PLANS[plan]?.dailyGrantLimit ?? null);
 
     if (limit !== null) {
       const now = new Date();

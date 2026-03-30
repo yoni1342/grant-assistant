@@ -401,6 +401,7 @@ export type Database = {
           founding_year: number | null
           geographic_focus: string[] | null
           id: string
+          is_tester: boolean
           metadata: Json | null
           mission: string | null
           name: string
@@ -432,6 +433,7 @@ export type Database = {
           founding_year?: number | null
           geographic_focus?: string[] | null
           id?: string
+          is_tester?: boolean
           metadata?: Json | null
           mission?: string | null
           name: string
@@ -463,6 +465,7 @@ export type Database = {
           founding_year?: number | null
           geographic_focus?: string[] | null
           id?: string
+          is_tester?: boolean
           metadata?: Json | null
           mission?: string | null
           name?: string

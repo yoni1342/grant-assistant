@@ -95,6 +95,7 @@ export default async function OrganizationsPage() {
       geographic_focus: org.geographic_focus,
       // Billing data
       plan: org.plan || null,
+      is_tester: org.is_tester || false,
       subscription_status: org.subscription_status || null,
       trial_ends_at: org.trial_ends_at || null,
       // Related data
