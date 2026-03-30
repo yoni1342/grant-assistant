@@ -69,6 +69,7 @@ import {
   cancelSubscription,
   extendTrial,
   updateSubscriptionStatus,
+  toggleTester,
 } from "../actions";
 import { PLANS } from "@/lib/stripe/config";
 import type { PlanId } from "@/lib/stripe/config";
@@ -107,6 +108,7 @@ interface OrgDetailClientProps {
     created_at: string | null;
     rejection_reason: string | null;
     plan: string | null;
+    is_tester: boolean;
     subscription_status: string | null;
     stripe_customer_id: string | null;
     stripe_subscription_id: string | null;
@@ -1306,6 +1308,8 @@ export function OrgDetailClient({
   documents,
 }: OrgDetailClientProps) {
   const [loading, setLoading] = useState(false);
+  const [isTester, setIsTester] = useState(organization.is_tester);
+  const [testerLoading, setTesterLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [billingLoading, setBillingLoading] = useState<string | null>(null);
@@ -1504,6 +1508,11 @@ export function OrgDetailClient({
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-semibold">{organization.name}</h2>
             {statusBadge(organization.status)}
+            {isTester && (
+              <Badge variant="outline" className="border-purple-300 text-purple-700 dark:text-purple-400 bg-purple-500/10">
+                Tester
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {owner && (
@@ -2246,6 +2255,40 @@ export function OrgDetailClient({
                     {organization.stripe_subscription_id || "Not set"}
                   </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tester Toggle */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Pilot Tester</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm">
+                    {isTester
+                      ? "This organization is a pilot tester — billing is bypassed and they have full access."
+                      : "Mark this organization as a pilot tester to bypass all payment requirements."}
+                  </p>
+                </div>
+                <Button
+                  variant={isTester ? "destructive" : "outline"}
+                  size="sm"
+                  disabled={testerLoading}
+                  onClick={async () => {
+                    setTesterLoading(true);
+                    const result = await toggleTester(organization.id, !isTester);
+                    if (!result.error) setIsTester(!isTester);
+                    setTesterLoading(false);
+                  }}
+                >
+                  {testerLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : null}
+                  {isTester ? "Remove Tester" : "Mark as Tester"}
+                </Button>
               </div>
             </CardContent>
           </Card>

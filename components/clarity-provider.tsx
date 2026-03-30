@@ -3,12 +3,11 @@
 import { useEffect } from "react";
 import Clarity from "@microsoft/clarity";
 
-const CLARITY_PROJECT_ID = "w3s40s8211";
-
 export function ClarityProvider() {
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      Clarity.init(CLARITY_PROJECT_ID);
+    const clarityId = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
+    if (typeof window !== "undefined" && clarityId) {
+      Clarity.init(clarityId);
     }
   }, []);
 

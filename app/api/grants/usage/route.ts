@@ -14,15 +14,15 @@ export async function GET() {
 
   const adminSupabase = createAdminClient()
 
-  // Get org plan
+  // Get org plan and tester status
   const { data: org } = await adminSupabase
     .from("organizations")
-    .select("plan")
+    .select("plan, is_tester")
     .eq("id", orgId)
     .single()
 
   const plan = (org?.plan as PlanId) || "free"
-  const limit = PLANS[plan]?.dailyGrantLimit ?? null
+  const limit = org?.is_tester ? null : (PLANS[plan]?.dailyGrantLimit ?? null)
 
   // Count grants added today
   const now = new Date()

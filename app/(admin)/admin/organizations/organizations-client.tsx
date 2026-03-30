@@ -48,6 +48,7 @@ interface Organization {
   staff_count: number | null;
   geographic_focus: string[] | null;
   plan: string | null;
+  is_tester: boolean;
   subscription_status: string | null;
   trial_ends_at: string | null;
   documents: Record<string, unknown>[];
@@ -268,7 +269,14 @@ export function OrganizationsClient({
                     </TableCell>
                     <TableCell>{org.sector || "-"}</TableCell>
                     <TableCell>{statusBadge(org.status)}</TableCell>
-                    <TableCell className="text-sm">{org.plan || "free"}</TableCell>
+                    <TableCell className="text-sm">
+                      {org.plan || "free"}
+                      {org.is_tester && (
+                        <Badge variant="outline" className="ml-1 text-xs border-purple-300 text-purple-700 dark:text-purple-400 bg-purple-500/10">
+                          Tester
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {(() => {
                         const s = org.subscription_status;

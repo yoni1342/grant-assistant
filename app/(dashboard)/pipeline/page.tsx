@@ -41,12 +41,12 @@ export default async function PipelinePage() {
 
   const { data: org } = await adminDb
     .from("organizations")
-    .select("plan")
+    .select("plan, is_tester")
     .eq("id", orgId)
     .single();
   const orgPlan = org?.plan || "free";
 
-  if (isEmpty && !isFetching && orgPlan !== "free") {
+  if (isEmpty && !isFetching && (orgPlan !== "free" || org?.is_tester)) {
     await triggerFetchGrants(orgId);
   }
 

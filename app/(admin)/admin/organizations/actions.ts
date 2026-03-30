@@ -35,14 +35,14 @@ export async function approveOrganization(orgId: string) {
 
   if (error) return { error: error.message }
 
-  // Start Stripe subscription with trial for paid-plan orgs
+  // Start Stripe subscription with trial for paid-plan orgs (skip for testers)
   const { data: orgData } = await supabase
     .from('organizations')
-    .select('plan, stripe_customer_id')
+    .select('plan, stripe_customer_id, is_tester')
     .eq('id', orgId)
     .single()
 
-  if (orgData?.stripe_customer_id && orgData.plan && orgData.plan !== 'free') {
+  if (!orgData?.is_tester && orgData?.stripe_customer_id && orgData.plan && orgData.plan !== 'free') {
     const planConfig = PLANS[orgData.plan as PlanId]
     if (planConfig?.stripePriceId) {
       try {
@@ -601,6 +601,41 @@ export async function updateSubscriptionStatus(orgId: string, status: string) {
   const { error } = await adminClient
     .from('organizations')
     .update({ subscription_status: status })
+    .eq('id', orgId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/organizations')
+  revalidatePath(`/admin/organizations/${orgId}`)
+  return { success: true }
+}
+
+export async function toggleTester(orgId: string, isTester: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_platform_admin')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.is_platform_admin) return { error: 'Unauthorized' }
+
+  const adminClient = createAdminClient()
+
+  // When marking as tester, set plan to professional and subscription_status to active
+  // so they get full access without Stripe
+  const updateData: Record<string, unknown> = { is_tester: isTester }
+  if (isTester) {
+    updateData.plan = 'professional'
+    updateData.subscription_status = 'active'
+  }
+
+  const { error } = await adminClient
+    .from('organizations')
+    .update(updateData)
     .eq('id', orgId)
 
   if (error) return { error: error.message }
