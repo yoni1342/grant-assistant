@@ -223,6 +223,27 @@ export function useExportPdf() {
       font-size: 11pt;
     }
 
+    /* ── Bullet items (individual <p> elements) ── */
+    .doc-page-content p.bullet-item {
+      font-family: 'Inter', sans-serif;
+      font-size: 10pt;
+      line-height: 1.75;
+      color: #1a1a1a;
+      padding-left: 18px;
+      position: relative;
+      margin: 0 0 4px 3px;
+      text-align: left;
+    }
+
+    .doc-page-content p.bullet-item::before {
+      content: '\\2022';
+      position: absolute;
+      left: 3px;
+      color: #1a1a1a;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+
     /* ── Tables ── */
     .doc-page-content table {
       border-collapse: collapse;
