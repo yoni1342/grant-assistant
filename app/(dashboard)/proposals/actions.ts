@@ -62,20 +62,30 @@ export async function getProposal(proposalId: string) {
   }
 
   // Fetch proposal sections (scoped via proposal_sections RLS through proposals)
-  const { data: sections, error: sectionsError } = await supabase
+  const { data: rawSections, error: sectionsError } = await supabase
     .from('proposal_sections')
     .select('*')
     .eq('proposal_id', proposalId)
-    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
 
   if (sectionsError) {
     return { error: sectionsError.message, data: null }
   }
 
+  // Deduplicate by sort_order, keeping the latest entry
+  const sections = rawSections
+    ? Object.values(
+        rawSections.reduce((acc: Record<number, typeof rawSections[0]>, s) => {
+          if (!acc[s.sort_order]) acc[s.sort_order] = s;
+          return acc;
+        }, {})
+      ).sort((a, b) => a.sort_order - b.sort_order)
+    : []
+
   return {
     data: {
       proposal,
-      sections: sections || [],
+      sections,
       grant: proposal.grant,
     },
     error: null,

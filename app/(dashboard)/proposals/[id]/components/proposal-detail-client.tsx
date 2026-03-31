@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Download, Loader2, Pencil, Save, RotateCcw, ClipboardCheck, PanelRightClose, PanelRightOpen } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Pencil, Save, RotateCcw, ClipboardCheck, PanelRightClose, PanelRightOpen, FileText, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { ProposalSections, ProposalSectionsHandle } from "./proposal-sections"
@@ -36,9 +36,14 @@ export function ProposalDetailClient({
   // Force re-render when edit state changes so we pick up isEditing/isSaving from the ref
   const triggerRender = useCallback(() => forceRender(n => n + 1), [])
 
+  const [exportType, setExportType] = useState<'pdf' | 'docx' | null>(null)
+  const [showExportMenu, setShowExportMenu] = useState(false)
+
   const handleExportPdf = useCallback(async () => {
     if (!sectionsRef.current) return
     setIsExporting(true)
+    setExportType('pdf')
+    setShowExportMenu(false)
     try {
       await sectionsRef.current.exportPdf()
       toast.success('PDF exported successfully')
@@ -46,6 +51,23 @@ export function ProposalDetailClient({
       toast.error('Failed to export PDF. Please try again.')
     } finally {
       setIsExporting(false)
+      setExportType(null)
+    }
+  }, [])
+
+  const handleExportDocx = useCallback(async () => {
+    if (!sectionsRef.current) return
+    setIsExporting(true)
+    setExportType('docx')
+    setShowExportMenu(false)
+    try {
+      await sectionsRef.current.exportDocx()
+      toast.success('Word document exported successfully')
+    } catch {
+      toast.error('Failed to export Word document. Please try again.')
+    } finally {
+      setIsExporting(false)
+      setExportType(null)
     }
   }, [])
 
@@ -181,21 +203,47 @@ export function ProposalDetailClient({
               </Button>
             )}
 
-            {/* Export PDF */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              disabled={isExporting || sections.length === 0}
-              onClick={handleExportPdf}
-            >
-              {isExporting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
+            {/* Export dropdown */}
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={isExporting || sections.length === 0}
+                onClick={() => setShowExportMenu(!showExportMenu)}
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {isExporting
+                  ? exportType === 'docx' ? 'Exporting Word...' : 'Exporting PDF...'
+                  : 'Export'}
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+              {showExportMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-md shadow-lg py-1 min-w-[160px]">
+                    <button
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={handleExportPdf}
+                    >
+                      <Download className="h-4 w-4" />
+                      Export as PDF
+                    </button>
+                    <button
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={handleExportDocx}
+                    >
+                      <FileText className="h-4 w-4" />
+                      Export as Word
+                    </button>
+                  </div>
+                </>
               )}
-              {isExporting ? 'Exporting...' : 'Export PDF'}
-            </Button>
+            </div>
 
             {/* Toggle Review Panel */}
             <Button

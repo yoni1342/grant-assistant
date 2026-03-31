@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Pencil, Save, RotateCcw, Loader2 } from "lucide-react"
 import { updateProposalSections } from '../../actions'
 import { useExportPdf } from './use-export-pdf'
+import { useExportDocx } from './use-export-docx'
 
 interface ChapterItem {
   chapter: string
   sort_order: number
+  type?: string
 }
 
 interface Section {
@@ -24,6 +26,7 @@ interface Section {
 
 export interface ProposalSectionsHandle {
   exportPdf: () => Promise<void>
+  exportDocx: () => Promise<void>
   startEdit: () => void
   resetEdit: () => void
   saveEdit: () => Promise<void>
@@ -48,6 +51,21 @@ function parseTabulation(text: string): string {
     line.split('|').map((cell) => cell.trim())
   )
 
+  const colCount = rows[0]?.length || 0
+
+  // 2-column tables are key-value (e.g., Grant Application Summary) — no header row
+  if (colCount <= 2) {
+    const bodyRows = rows
+      .map((row) => {
+        const label = `<td class="kv-label">${row[0] || ''}</td>`
+        const value = `<td class="kv-value">${row[1] || ''}</td>`
+        return `<tr>${label}${value}</tr>`
+      })
+      .join('')
+    return `<table class="kv-table"><tbody>${bodyRows}</tbody></table>`
+  }
+
+  // 3+ column tables have a header row (e.g., Budget)
   const headerCells = rows[0]
     .map((cell) => `<th>${cell}</th>`)
     .join('')
@@ -68,13 +86,33 @@ function formatInlineMarkdown(text: string): string {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
 }
 
+function renderContentHtml(chapter: string, attrs: string): string {
+  const lines = chapter.split('\n').filter(l => l.trim())
+  const isBulletList = lines.length > 0 && lines.every(l => /^[•\-]\s/.test(l.trim()))
+
+  if (isBulletList) {
+    // Render each bullet as a separate <p> so pagination can break between them
+    return lines
+      .map(l => `<p class="bullet-item" ${attrs}>${formatInlineMarkdown(l.replace(/^[•\-]\s*/, '').trim())}</p>`)
+      .join('')
+  }
+
+  // Signature block
+  if (chapter.startsWith('Respectfully Submitted')) {
+    const sigLines = lines.map(l => `<p>${formatInlineMarkdown(l)}</p>`).join('')
+    return `<div class="signature-block" ${attrs}>${sigLines}</div>`
+  }
+
+  return `<p ${attrs}>${formatInlineMarkdown(chapter)}</p>`
+}
+
 function buildSectionHtml(section: Section): string {
-  type TaggedItem = ChapterItem & { type: 'header1' | 'header2' | 'content' | 'tabulation' }
+  type TaggedItem = ChapterItem & { type: string }
   const tagged: TaggedItem[] = []
 
-  const add = (arr: ChapterItem[] | null, type: TaggedItem['type']) => {
+  const add = (arr: ChapterItem[] | null, fallbackType: string) => {
     if (!Array.isArray(arr)) return
-    arr.forEach((item) => tagged.push({ ...item, type }))
+    arr.forEach((item) => tagged.push({ ...item, type: item.type || fallbackType }))
   }
 
   add(section.header1, 'header1')
@@ -89,9 +127,9 @@ function buildSectionHtml(section: Section): string {
       switch (item.type) {
         case 'header1': return `<h2 ${attrs}>${formatInlineMarkdown(item.chapter)}</h2>`
         case 'header2': return `<h3 ${attrs}>${formatInlineMarkdown(item.chapter)}</h3>`
-        case 'content': return `<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`
-        case 'tabulation': return `<div ${attrs}>${parseTabulation(item.chapter)}</div>`
-        default: return `<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`
+        case 'tabulation':
+        case 'table': return `<div ${attrs} class="table-wrap">${parseTabulation(item.chapter)}</div>`
+        default: return renderContentHtml(item.chapter, attrs)
       }
     })
     .join('')
@@ -176,71 +214,93 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
   const [isSaving, setIsSaving] = useState(false)
   const [renderKey, setRenderKey] = useState(0)
   const { exportPdf } = useExportPdf()
+  const { exportDocx } = useExportDocx()
 
   // Store latest values in a ref so the imperative handle always has current data
   const exportDataRef = useRef({ allPages: [] as string[], coverTitle: '', totalPages: 0, proposalTitle: '' })
 
   useImperativeHandle(ref, () => ({
     exportPdf: () => exportPdf(exportDataRef.current),
+    exportDocx: () => exportDocx(sections, proposalTitle || exportDataRef.current.coverTitle || 'Proposal'),
     startEdit: handleEdit,
     resetEdit: handleReset,
     saveEdit: handleSave,
     isEditing,
     isSaving,
-  }), [exportPdf, isEditing, isSaving])
+  }), [exportPdf, exportDocx, isEditing, isSaving, sections, proposalTitle])
 
-  const { standalonePages, contentItems } = useMemo(() => {
-    if (sections.length === 0) return { standalonePages: [] as string[], contentItems: [] as string[] }
+  const contentItems = useMemo(() => {
+    if (sections.length === 0) return [] as string[]
 
     const sorted = [...sections].sort((a, b) => a.sort_order - b.sort_order)
-
-    const standalonePages: string[] = []
-    const contentSections: Section[] = []
+    const items: string[] = []
 
     for (let idx = 0; idx < sorted.length; idx++) {
       const section = sorted[idx]
-      // First section (cover page) and Table of Contents are standalone pages
-      const isStandalone =
-        idx === 0 || /table of contents/i.test(section.title)
+      const isCover = idx === 0 || section.title === 'Cover Page' || (section as any).sectionType === 'cover'
+      const isToc = /table of contents/i.test(section.title)
 
-      if (isStandalone) {
-        standalonePages.push(
-          `<h1 data-section-id="${section.id}" data-type="title">${section.title}</h1>` +
-          buildSectionHtml(section)
-        )
+      if (isCover) {
+        // Build cover banner — integrated into page 1, not a separate page
+        const coverItems = (section.content || []).sort((a, b) => a.sort_order - b.sort_order)
+        const orgName = coverItems[0]?.chapter || ''
+        const projectTitle = coverItems[1]?.chapter || ''
+        const metaItems = coverItems.slice(2)
+
+        items.push(`
+          <div class="cover-banner">
+            <div class="cover-label">GRANT PROPOSAL</div>
+            <div class="cover-org" data-section-id="${section.id}" data-type="content" data-sort-order="${coverItems[0]?.sort_order || 1}">${orgName}</div>
+            <div class="cover-project" data-section-id="${section.id}" data-type="content" data-sort-order="${coverItems[1]?.sort_order || 2}">${projectTitle}</div>
+          </div>
+        `)
+
+        for (const item of metaItems) {
+          items.push(`<p class="cover-meta" data-section-id="${section.id}" data-type="content" data-sort-order="${item.sort_order}">${item.chapter}</p>`)
+        }
+      } else if (isToc) {
+        // Skip TOC — not in sample design
+        continue
       } else {
-        contentSections.push(section)
-      }
-    }
+        items.push(`<h1 data-section-id="${section.id}" data-type="title">${section.title}</h1>`)
 
-    const contentItems: string[] = []
-    for (const section of contentSections) {
-      contentItems.push(`<h1 data-section-id="${section.id}" data-type="title">${section.title}</h1>`)
+        type TaggedItem = ChapterItem & { type: string }
+        const tagged: TaggedItem[] = []
+        const add = (arr: ChapterItem[] | null, fallbackType: string) => {
+          if (!Array.isArray(arr)) return
+          arr.forEach((item) => tagged.push({ ...item, type: item.type || fallbackType }))
+        }
+        add(section.header1, 'header1')
+        add(section.header2, 'header2')
+        add(section.content, 'content')
+        add(section.tabulation, 'tabulation')
+        tagged.sort((a, b) => a.sort_order - b.sort_order)
 
-      type TaggedItem = ChapterItem & { type: 'header1' | 'header2' | 'content' | 'tabulation' }
-      const tagged: TaggedItem[] = []
-      const add = (arr: ChapterItem[] | null, type: TaggedItem['type']) => {
-        if (!Array.isArray(arr)) return
-        arr.forEach((item) => tagged.push({ ...item, type }))
-      }
-      add(section.header1, 'header1')
-      add(section.header2, 'header2')
-      add(section.content, 'content')
-      add(section.tabulation, 'tabulation')
-      tagged.sort((a, b) => a.sort_order - b.sort_order)
-
-      for (const item of tagged) {
-        const attrs = `data-section-id="${section.id}" data-type="${item.type}" data-sort-order="${item.sort_order}"`
-        switch (item.type) {
-          case 'header1': contentItems.push(`<h2 ${attrs}>${formatInlineMarkdown(item.chapter)}</h2>`); break
-          case 'header2': contentItems.push(`<h3 ${attrs}>${formatInlineMarkdown(item.chapter)}</h3>`); break
-          case 'content': contentItems.push(`<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`); break
-          case 'tabulation': contentItems.push(`<div ${attrs}>${parseTabulation(item.chapter)}</div>`); break
+        for (const item of tagged) {
+          const attrs = `data-section-id="${section.id}" data-type="${item.type}" data-sort-order="${item.sort_order}"`
+          switch (item.type) {
+            case 'header1': items.push(`<h2 ${attrs}>${formatInlineMarkdown(item.chapter)}</h2>`); break
+            case 'header2': items.push(`<h3 ${attrs}>${formatInlineMarkdown(item.chapter)}</h3>`); break
+            case 'tabulation':
+            case 'table': items.push(`<div ${attrs} class="table-wrap">${parseTabulation(item.chapter)}</div>`); break
+            default: {
+              const html = renderContentHtml(item.chapter, attrs)
+              // If renderContentHtml returned multiple elements (bullet items),
+              // split them into separate items so pagination can break between them
+              if (html.includes('class="bullet-item"')) {
+                const parts = html.split('</p>').filter(s => s.trim()).map(s => s + '</p>')
+                for (const part of parts) items.push(part)
+              } else {
+                items.push(html)
+              }
+              break
+            }
+          }
         }
       }
     }
 
-    return { standalonePages, contentItems }
+    return items
   }, [sections])
 
   // Measure actual rendered heights and paginate
@@ -269,15 +329,38 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
       const mb = parseFloat(style.marginBottom) || 0
       const totalHeight = mt + el.offsetHeight + mb
 
-      // Add the element to the current page first
-      currentPage.push(contentItems[i])
-      currentHeight += totalHeight
-
-      // Break AFTER adding — so every closed page is full (no bottom whitespace)
-      if (currentHeight >= PAGE_CONTENT_HEIGHT && i < children.length - 1) {
+      // Break BEFORE adding if this element would overflow the page
+      if (currentHeight + totalHeight > PAGE_CONTENT_HEIGHT && currentPage.length > 0) {
         pages.push(currentPage)
         currentPage = []
         currentHeight = 0
+      }
+
+      currentPage.push(contentItems[i])
+      currentHeight += totalHeight
+
+      // Detect headings and bold subheaders (e.g. "Organizational Strengths:")
+      // so they don't sit alone at the bottom of a page without any content after them
+      const tag = el.tagName.toLowerCase()
+      const isHeading = tag === 'h1' || tag === 'h2' || tag === 'h3'
+      const isBoldSubheader = tag === 'p' && el.firstElementChild?.tagName === 'STRONG' &&
+        el.textContent && el.textContent.length < 120
+
+      if ((isHeading || isBoldSubheader) && i + 1 < children.length) {
+        const nextEl = children[i + 1]
+        const nextStyle = window.getComputedStyle(nextEl)
+        const nextMt = parseFloat(nextStyle.marginTop) || 0
+        const nextMb = parseFloat(nextStyle.marginBottom) || 0
+        const nextHeight = nextMt + nextEl.offsetHeight + nextMb
+
+        // If the next element won't fit on this page, move heading to new page
+        if (currentHeight + nextHeight > PAGE_CONTENT_HEIGHT && currentPage.length > 1) {
+          const heading = currentPage.pop()!
+          currentHeight -= totalHeight
+          pages.push(currentPage)
+          currentPage = [heading]
+          currentHeight = totalHeight
+        }
       }
     }
 
@@ -288,13 +371,15 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
     setContentPages(pages)
   }, [contentItems])
 
-  const totalPages = standalonePages.length + contentPages.length
+  const totalPages = contentPages.length
 
-  // Extract cover page title for use in content page headers
+  // Extract cover info for headers and footers
   const coverTitle = useMemo(() => {
     if (sections.length === 0) return ''
     const sorted = [...sections].sort((a, b) => a.sort_order - b.sort_order)
-    return sorted[0]?.title || ''
+    const coverSection = sorted[0]
+    const orgName = coverSection?.content?.[0]?.chapter || ''
+    return orgName ? `${orgName} | Grant Proposal` : sorted[0]?.title || ''
   }, [sections])
 
   // Track which page is in view using IntersectionObserver
@@ -354,15 +439,8 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
 
   // Build all page HTML arrays for rendering
   const allPages = useMemo(() => {
-    const pages: string[] = []
-    for (const html of standalonePages) {
-      pages.push(html)
-    }
-    for (const pageHtml of contentPages) {
-      pages.push(pageHtml.join(''))
-    }
-    return pages
-  }, [standalonePages, contentPages])
+    return contentPages.map(pageHtml => pageHtml.join(''))
+  }, [contentPages])
 
   // Keep export data ref in sync for imperative handle
   exportDataRef.current = {
@@ -481,7 +559,7 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
               onClick={() => scrollToPage(i)}
               aria-label={`Go to page ${i + 1}`}
             >
-              <div className={`pdf-thumb-page${i === 0 ? ' doc-cover-thumb' : ''}`}>
+              <div className="pdf-thumb-page">
                 <div
                   className="doc-page-content pdf-thumb-content"
                   dangerouslySetInnerHTML={{ __html: html }}
@@ -494,34 +572,23 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
 
         {/* Main content area */}
         <div className="pdf-content" ref={contentRef} key={renderKey}>
-          {allPages.map((html, i) => {
-            const isCover = i === 0
-            return (
+          {allPages.map((html, i) => (
               <div
                 key={i}
                 ref={(el) => setPageRef(i, el)}
                 data-page-idx={i}
-                className={`doc-page${isCover ? ' doc-cover-page' : ''}`}
+                className="doc-page"
               >
-                {!isCover && (
-                  <div className="doc-page-header">
-                    <span className="doc-page-header-title">{coverTitle}</span>
-                  </div>
-                )}
                 <div
                   className="doc-page-content"
                   suppressContentEditableWarning
                   dangerouslySetInnerHTML={{ __html: html }}
                 />
-                {!isCover && (
-                  <div className="doc-page-footer">
-                    <span className="doc-page-footer-title">{coverTitle}</span>
-                    <span className="doc-page-footer-number">Page {i + 1} of {totalPages}</span>
-                  </div>
-                )}
+                <div className="doc-page-footer">
+                  <span className="doc-page-footer-text">{coverTitle} | Page {i + 1}</span>
+                </div>
               </div>
-            )
-          })}
+          ))}
         </div>
 
         <style jsx global>{viewerStyles}</style>
@@ -531,6 +598,8 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
 })
 
 const viewerStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
   /* ── PDF Browser Shell ── */
   .pdf-browser {
     display: flex;
@@ -540,17 +609,6 @@ const viewerStyles = `
     height: 82vh;
     background: hsl(0 0% 92%);
     position: relative;
-  }
-
-  /* ── Toolbar ── */
-  .pdf-toolbar {
-    position: absolute;
-    top: 8px;
-    right: 12px;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   /* ── Sidebar ── */
@@ -606,8 +664,8 @@ const viewerStyles = `
   }
 
   .pdf-thumb-active .pdf-thumb-page {
-    border-color: hsl(0 72% 51%);
-    box-shadow: 0 0 0 1px hsl(0 72% 51%);
+    border-color: #1B3A5C;
+    box-shadow: 0 0 0 1px #1B3A5C;
   }
 
   .pdf-thumb-content {
@@ -619,27 +677,16 @@ const viewerStyles = `
     pointer-events: none;
   }
 
-  /* Cover page thumbnail accent bar */
-  .doc-cover-thumb::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
-    z-index: 1;
-  }
-
   .pdf-thumb-label {
     font-size: 0.65rem;
     color: hsl(var(--muted-foreground));
     font-variant-numeric: tabular-nums;
     line-height: 1;
+    font-family: 'Inter', sans-serif;
   }
 
   .pdf-thumb-active .pdf-thumb-label {
-    color: hsl(0 72% 51%);
+    color: #1B3A5C;
     font-weight: 600;
   }
 
@@ -680,158 +727,76 @@ const viewerStyles = `
     position: relative;
     overflow-wrap: break-word;
     word-wrap: break-word;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
   /* ══════════════════════════════════════════
-     COVER PAGE
+     COVER BANNER — Navy blue box at top of page 1
      ══════════════════════════════════════════ */
-  .doc-cover-page {
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  /* Top accent bar */
-  .doc-cover-page::before {
-    content: '';
-    display: block;
-    width: 100%;
-    height: 8px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
-    flex-shrink: 0;
-  }
-
-  .doc-cover-page .doc-page-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+  .cover-banner {
+    margin: -96px -72px 20px -72px;
+    padding: 48px 72px 32px;
+    background: #1B3A5C;
     text-align: center;
-    padding: 80px 72px 100px;
+    border-bottom: 4px solid #C5960C;
   }
 
-  /* Cover label (e.g. "Proposal for Grant") */
-  .doc-cover-page .doc-page-content h1 {
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: #5a6a7a;
-    border-bottom: none;
-    padding-bottom: 0;
-    margin: 0 0 0.4rem 0;
+  .cover-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+
+  .cover-org {
+    font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: #C5960C;
+    margin-bottom: 0.5rem;
     line-height: 1.3;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
   }
 
-  .doc-cover-page .doc-page-content h1::after {
-    display: none;
-  }
-
-  /* Grant name — first paragraph on cover is the prominent title */
-  .doc-cover-page .doc-page-content p:first-of-type {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #1a2b42;
-    margin: 0 0 1.5rem 0;
-    line-height: 1.25;
-    letter-spacing: -0.02em;
-  }
-
-  /* Decorative rule under grant name */
-  .doc-cover-page .doc-page-content p:first-of-type::after {
-    content: '';
-    display: block;
-    width: 80px;
-    height: 3px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
-    margin: 1.25rem auto 0;
-    border-radius: 2px;
-  }
-
-  /* Cover meta info (Submitted to, Prepared by, Date) */
-  .doc-cover-page .doc-page-content p {
+  .cover-project {
+    font-family: 'Inter', sans-serif;
     font-size: 0.95rem;
-    color: #5a6a7a;
-    margin: 0.35rem 0;
-    line-height: 1.7;
-    letter-spacing: 0.01em;
+    font-weight: 400;
+    color: #ffffff;
+    line-height: 1.4;
   }
 
-  /* Cover h2/h3 if present */
-  .doc-cover-page .doc-page-content h2 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #2d5a8e;
-    margin: 1rem 0 0.3rem 0;
-    text-align: center;
-  }
-
-  .doc-cover-page .doc-page-content h3 {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #5a6a7a;
-    text-align: center;
+  .cover-meta {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    color: #555555;
+    margin: 0.2rem 0;
+    line-height: 1.5;
+    text-align: right;
+    font-style: italic;
   }
 
   /* ══════════════════════════════════════════
-     CONTENT PAGE HEADER
-     ══════════════════════════════════════════ */
-  .doc-page-header {
-    position: absolute;
-    top: 32px;
-    left: 72px;
-    right: 72px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #e0e4e8;
-    pointer-events: none;
-  }
-
-  .doc-page-header-title {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #8a95a5;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  /* ══════════════════════════════════════════
-     CONTENT PAGE FOOTER
+     PAGE FOOTER — Centered
      ══════════════════════════════════════════ */
   .doc-page-footer {
     position: absolute;
     bottom: 32px;
     left: 72px;
     right: 72px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    text-align: center;
     padding-top: 10px;
-    border-top: 1px solid #e0e4e8;
+    border-top: 1px solid #CCCCCC;
     pointer-events: none;
   }
 
-  .doc-page-footer-title {
-    font-size: 0.65rem;
-    color: #a0a8b4;
+  .doc-page-footer-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.6rem;
+    color: #555555;
     letter-spacing: 0.02em;
-    max-width: 60%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .doc-page-footer-number {
-    font-size: 0.65rem;
-    color: #a0a8b4;
-    letter-spacing: 0.02em;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Remove old page number since footer replaces it */
-  .doc-page-number {
-    display: none;
   }
 
   /* ── Content ── */
@@ -840,71 +805,195 @@ const viewerStyles = `
     flex-direction: column;
   }
 
-  /* ── Typography ── */
+  /* ══════════════════════════════════════════
+     TYPOGRAPHY — Section Titles (H1)
+     ══════════════════════════════════════════ */
   .doc-page-content h1 {
-    font-size: 1.45rem;
+    font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+    font-size: 1.15rem;
     font-weight: 700;
-    margin: 1.5rem 0 0.5rem 0;
-    color: #1a2b42;
-    border-bottom: 2px solid #e0e4e8;
+    color: #1B3A5C;
+    margin: 1.75rem 0 0.6rem 0;
     padding-bottom: 0.4rem;
+    border-bottom: 2px solid #C5960C;
     line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
+
   .doc-page-content h1:first-child {
     margin-top: 0;
   }
 
+  /* Sub-section headers (H2) */
   .doc-page-content h2 {
-    font-size: 1.15rem;
+    font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+    font-size: 1.05rem;
     font-weight: 700;
-    margin: 1rem 0 0.2rem 0;
-    color: #1a2b42;
+    margin: 1.25rem 0 0.3rem 0;
+    color: #1B3A5C;
+    padding-bottom: 0.3rem;
+    border-bottom: 2px solid #C5960C;
     line-height: 1.35;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
+  /* Sub-sub-headers (H3) — Bold italic like sample */
   .doc-page-content h3 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin: 0.6rem 0 0.1rem 0;
-    color: #4a5568;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-style: italic;
+    margin: 0.85rem 0 0.15rem 0;
+    color: #1a1a1a;
     line-height: 1.4;
   }
 
+  /* Body paragraphs — Justified */
   .doc-page-content p {
-    font-size: 0.875rem;
-    margin: 0.25rem 0;
-    line-height: 1.85;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 0.85rem;
+    margin: 0.3rem 0;
+    line-height: 1.75;
+    color: #1a1a1a;
+    text-align: justify;
+  }
+
+  .doc-page-content strong {
+    font-weight: 600;
     color: #1a1a1a;
   }
 
-  /* ── Tables ── */
+  /* ══════════════════════════════════════════
+     BULLET LISTS
+     ══════════════════════════════════════════ */
+  .doc-page-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.4rem 0 0.4rem 0.25rem;
+  }
+
+  .doc-page-content ul li {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.75;
+    color: #1a1a1a;
+    padding-left: 1.5rem;
+    position: relative;
+    margin-bottom: 0.4rem;
+  }
+
+  .doc-page-content ul li::before {
+    content: '\\2022';
+    position: absolute;
+    left: 0.25rem;
+    color: #1a1a1a;
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .doc-page-content p.bullet-item {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.75;
+    color: #1a1a1a;
+    padding-left: 1.5rem;
+    position: relative;
+    margin: 0 0 0.4rem 0.25rem;
+    text-align: left;
+  }
+
+  .doc-page-content p.bullet-item::before {
+    content: '\\2022';
+    position: absolute;
+    left: 0.25rem;
+    color: #1a1a1a;
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  /* ══════════════════════════════════════════
+     TABLES — Navy blue headers matching sample
+     ══════════════════════════════════════════ */
   .doc-page-content table {
     border-collapse: collapse;
     width: 100%;
-    margin: 0.5rem 0 0.3rem 0;
+    margin: 0.5rem 0 0.5rem 0;
+    font-family: 'Inter', sans-serif;
     font-size: 0.8rem;
+    border: 1px solid #CCCCCC;
   }
 
   .doc-page-content table th {
-    background-color: #f0f3f7;
+    background-color: #1B3A5C;
     font-weight: 600;
     text-align: left;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #d8dde4;
-    color: #1a2b42;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #1B3A5C;
+    border-bottom: 2px solid #C5960C;
+    color: #ffffff;
   }
 
   .doc-page-content table td {
-    padding: 0.45rem 0.75rem;
-    border: 1px solid #d8dde4;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #E0E0E0;
     color: #1a1a1a;
+    vertical-align: top;
   }
 
-  .doc-page-content table tr:nth-child(even) td {
-    background-color: #f8f9fb;
+  /* Key-value tables (2-column summary tables) — navy label cells */
+  .doc-page-content .kv-table {
+    border-top: 3px solid #C5960C;
   }
 
-  /* ── Editable Elements ── */
+  .doc-page-content .kv-table .kv-label {
+    font-weight: 600;
+    color: #ffffff;
+    background-color: #1B3A5C;
+    width: 30%;
+    white-space: nowrap;
+    border: 1px solid #1B3A5C;
+  }
+
+  .doc-page-content .kv-table .kv-value {
+    color: #1a1a1a;
+    background-color: #ffffff;
+  }
+
+  .doc-page-content table tbody tr:last-child td {
+    border-bottom: 1px solid #CCCCCC;
+  }
+
+  /* ══════════════════════════════════════════
+     SIGNATURE BLOCK
+     ══════════════════════════════════════════ */
+  .signature-block {
+    margin-top: 2rem;
+    padding-top: 1rem;
+  }
+
+  .signature-block p {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    color: #1a1a1a;
+    margin: 0.15rem 0;
+    line-height: 1.75;
+  }
+
+  .signature-block p:first-child {
+    font-style: italic;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ══════════════════════════════════════════
+     EDITABLE ELEMENTS
+     ══════════════════════════════════════════ */
   .doc-page-content [contenteditable="true"] {
     outline: none;
     cursor: text;
@@ -913,11 +1002,11 @@ const viewerStyles = `
   }
 
   .doc-page-content [contenteditable="true"]:hover:not(:focus) {
-    background: hsl(45 100% 97%);
+    background: #FFFDF0;
   }
 
   .doc-page-content [contenteditable="true"]:focus {
     background: hsl(45 100% 95%);
-    box-shadow: inset 0 0 0 1px hsl(45 80% 70%);
+    box-shadow: inset 0 0 0 1px #1B3A5C;
   }
 `
