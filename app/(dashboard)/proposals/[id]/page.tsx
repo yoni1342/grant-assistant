@@ -32,11 +32,21 @@ export default async function ProposalDetailPage({
     notFound();
   }
 
-  // Fetch proposal sections
-  const { data: sections } = await supabase
+  // Fetch proposal sections and deduplicate by sort_order (keep latest)
+  const { data: rawSections } = await supabase
     .from("proposal_sections")
     .select("*")
-    .eq("proposal_id", id);
+    .eq("proposal_id", id)
+    .order("created_at", { ascending: false });
+
+  const sections = rawSections
+    ? Object.values(
+        rawSections.reduce((acc: Record<number, typeof rawSections[0]>, s) => {
+          if (!acc[s.sort_order]) acc[s.sort_order] = s;
+          return acc;
+        }, {})
+      ).sort((a, b) => a.sort_order - b.sort_order)
+    : null;
 
   // Fetch funder data if grant has a funder_name
   let funder = null;

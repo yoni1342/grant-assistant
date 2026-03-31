@@ -22,27 +22,13 @@ export function useExportPdf() {
       // Build the full HTML document for printing
       const pagesHtml = allPages
         .map((html, i) => {
-          const isCover = i === 0
-          if (isCover) {
-            return `
-              <div class="doc-page doc-cover-page">
-                <div class="accent-bar"></div>
-                <div class="doc-page-content cover-content">
-                  ${html}
-                </div>
-              </div>`
-          }
           return `
             <div class="doc-page">
-              <div class="doc-page-header">
-                <span>${coverTitle}</span>
-              </div>
               <div class="doc-page-content">
                 ${html}
               </div>
               <div class="doc-page-footer">
-                <span class="footer-title">${coverTitle}</span>
-                <span class="footer-number">Page ${i + 1} of ${totalPages}</span>
+                <span>${coverTitle} | Page ${i + 1}</span>
               </div>
             </div>`
         })
@@ -53,6 +39,7 @@ export function useExportPdf() {
 <head>
   <meta charset="utf-8" />
   <title>${proposalTitle || 'Proposal'}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     @page {
       size: A4;
@@ -68,7 +55,7 @@ export function useExportPdf() {
     body {
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -76,7 +63,7 @@ export function useExportPdf() {
     .doc-page {
       width: 210mm;
       min-height: 297mm;
-      padding: 25mm 18mm 28mm;
+      padding: 25mm 25mm 28mm;
       position: relative;
       background: white;
       page-break-after: always;
@@ -87,142 +74,87 @@ export function useExportPdf() {
       page-break-after: auto;
     }
 
-    /* Cover page */
-    .doc-cover-page {
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .accent-bar {
-      width: 100%;
-      height: 8px;
-      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
-      flex-shrink: 0;
-    }
-
-    .cover-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+    /* ── Cover Banner ── */
+    .cover-banner {
+      margin: -25mm -25mm 6mm -25mm;
+      padding: 14mm 25mm 10mm;
+      background: #1B3A5C;
       text-align: center;
-      padding: 20mm 18mm 28mm;
+      border-bottom: 1.5mm solid #C5960C;
     }
 
-    .cover-content h1 {
+    .cover-label {
+      font-family: 'Inter', sans-serif;
       font-size: 13pt;
-      font-weight: 600;
-      color: #5a6a7a;
-      margin: 0 0 0.4rem 0;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .cover-org {
+      font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+      font-size: 22pt;
+      font-weight: 700;
+      color: #C5960C;
+      margin-bottom: 4px;
       line-height: 1.3;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      border-bottom: none;
-      padding-bottom: 0;
     }
 
-    .cover-content p:first-of-type {
-      font-size: 24pt;
-      font-weight: 800;
-      color: #1a2b42;
-      margin: 0 0 1.5rem 0;
-      line-height: 1.25;
-      letter-spacing: -0.02em;
-    }
-
-    .cover-content p:first-of-type::after {
-      content: '';
-      display: block;
-      width: 80px;
-      height: 3px;
-      background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
-      margin: 1.25rem auto 0;
-      border-radius: 2px;
-    }
-
-    .cover-content p {
+    .cover-project {
+      font-family: 'Inter', sans-serif;
       font-size: 11pt;
-      color: #5a6a7a;
-      margin: 0.35rem 0;
-      line-height: 1.7;
+      font-weight: 400;
+      color: #ffffff;
+      line-height: 1.4;
     }
 
-    .cover-content h2 {
-      font-size: 14pt;
-      font-weight: 600;
-      color: #2d5a8e;
-      margin: 1rem 0 0.3rem 0;
+    .cover-meta {
+      font-family: 'Inter', sans-serif;
+      font-size: 9pt;
+      color: #555555;
+      margin: 2px 0;
+      line-height: 1.5;
+      text-align: right;
+      font-style: italic;
     }
 
-    .cover-content h3 {
-      font-size: 12pt;
-      font-weight: 500;
-      color: #5a6a7a;
-    }
-
-    /* Page header */
-    .doc-page-header {
-      position: absolute;
-      top: 8mm;
-      left: 18mm;
-      right: 18mm;
-      padding-bottom: 2.5mm;
-      border-bottom: 1px solid #e0e4e8;
-    }
-
-    .doc-page-header span {
-      font-size: 7pt;
-      font-weight: 600;
-      color: #8a95a5;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    /* Page footer */
+    /* ── Page footer ── */
     .doc-page-footer {
       position: absolute;
       bottom: 8mm;
-      left: 18mm;
-      right: 18mm;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      left: 25mm;
+      right: 25mm;
+      text-align: center;
       padding-top: 2.5mm;
-      border-top: 1px solid #e0e4e8;
+      border-top: 0.5px solid #CCCCCC;
     }
 
-    .footer-title {
-      font-size: 6.5pt;
-      color: #a0a8b4;
-      letter-spacing: 0.02em;
-      max-width: 60%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .footer-number {
-      font-size: 6.5pt;
-      color: #a0a8b4;
+    .doc-page-footer span {
+      font-family: 'Inter', sans-serif;
+      font-size: 7pt;
+      color: #555555;
       letter-spacing: 0.02em;
     }
 
-    /* Content typography */
+    /* ── Content typography ── */
     .doc-page-content {
       display: flex;
       flex-direction: column;
     }
 
     .doc-page-content h1 {
-      font-size: 16pt;
+      font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+      font-size: 14pt;
       font-weight: 700;
-      margin: 1.5rem 0 0.5rem 0;
-      color: #1a2b42;
-      border-bottom: 2px solid #e0e4e8;
-      padding-bottom: 0.4rem;
+      color: #1B3A5C;
+      margin: 20px 0 8px 0;
+      padding-bottom: 4px;
+      border-bottom: 2px solid #C5960C;
       line-height: 1.3;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
     }
 
     .doc-page-content h1:first-child {
@@ -230,53 +162,136 @@ export function useExportPdf() {
     }
 
     .doc-page-content h2 {
+      font-family: 'Playfair Display', serif;
       font-size: 13pt;
       font-weight: 700;
-      margin: 1rem 0 0.2rem 0;
-      color: #1a2b42;
+      margin: 16px 0 4px 0;
+      padding-bottom: 3px;
+      border-bottom: 2px solid #C5960C;
+      color: #1B3A5C;
       line-height: 1.35;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
     }
 
     .doc-page-content h3 {
+      font-family: 'Inter', sans-serif;
       font-size: 11pt;
-      font-weight: 600;
-      margin: 0.6rem 0 0.1rem 0;
-      color: #4a5568;
+      font-weight: 700;
+      font-style: italic;
+      margin: 10px 0 2px 0;
+      color: #1a1a1a;
       line-height: 1.4;
     }
 
     .doc-page-content p {
+      font-family: 'Inter', -apple-system, sans-serif;
       font-size: 10pt;
-      margin: 0.25rem 0;
-      line-height: 1.85;
+      margin: 3px 0;
+      line-height: 1.75;
       color: #1a1a1a;
+      text-align: justify;
     }
 
-    /* Tables */
+    .doc-page-content strong {
+      font-weight: 600;
+    }
+
+    /* ── Bullet lists ── */
+    .doc-page-content ul {
+      list-style: none;
+      padding: 0;
+      margin: 5px 0 5px 3px;
+    }
+
+    .doc-page-content ul li {
+      font-family: 'Inter', sans-serif;
+      font-size: 10pt;
+      line-height: 1.75;
+      color: #1a1a1a;
+      padding-left: 18px;
+      position: relative;
+      margin-bottom: 4px;
+    }
+
+    .doc-page-content ul li::before {
+      content: '\\2022';
+      position: absolute;
+      left: 3px;
+      color: #1a1a1a;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+
+    /* ── Tables ── */
     .doc-page-content table {
       border-collapse: collapse;
       width: 100%;
-      margin: 0.5rem 0 0.3rem 0;
+      margin: 6px 0;
+      font-family: 'Inter', sans-serif;
       font-size: 9pt;
+      border: 1px solid #CCCCCC;
     }
 
     .doc-page-content table th {
-      background-color: #f0f3f7;
+      background-color: #1B3A5C;
       font-weight: 600;
       text-align: left;
-      padding: 0.5rem 0.75rem;
-      border: 1px solid #d8dde4;
-      color: #1a2b42;
+      text-transform: uppercase;
+      font-size: 8pt;
+      letter-spacing: 0.04em;
+      padding: 8px 12px;
+      border: 1px solid #1B3A5C;
+      border-bottom: 2px solid #C5960C;
+      color: #ffffff;
     }
 
     .doc-page-content table td {
-      padding: 0.45rem 0.75rem;
-      border: 1px solid #d8dde4;
+      padding: 8px 12px;
+      border: 1px solid #E0E0E0;
       color: #1a1a1a;
+      vertical-align: top;
     }
 
-    .doc-page-content table tr:nth-child(even) td {
-      background-color: #f8f9fb;
+    .doc-page-content .kv-table {
+      border-top: 3px solid #C5960C;
+    }
+
+    .doc-page-content .kv-table .kv-label {
+      font-weight: 600;
+      color: #ffffff;
+      background-color: #1B3A5C;
+      width: 30%;
+      white-space: nowrap;
+      border: 1px solid #1B3A5C;
+    }
+
+    .doc-page-content .kv-table .kv-value {
+      color: #1a1a1a;
+      background-color: #ffffff;
+    }
+
+    .doc-page-content table tbody tr:last-child td {
+      border-bottom: 1px solid #CCCCCC;
+    }
+
+    /* ── Signature block ── */
+    .signature-block {
+      margin-top: 24px;
+      padding-top: 12px;
+    }
+
+    .signature-block p {
+      font-family: 'Inter', sans-serif;
+      font-size: 10pt;
+      color: #1a1a1a;
+      margin: 2px 0;
+      line-height: 1.75;
+    }
+
+    .signature-block p:first-child {
+      font-style: italic;
+      margin-bottom: 18px;
     }
   </style>
 </head>
