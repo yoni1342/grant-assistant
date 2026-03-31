@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Pencil, Save, RotateCcw, Loader2 } from "lucide-react"
 import { updateProposalSections } from '../../actions'
 import { useExportPdf } from './use-export-pdf'
+import { useExportDocx } from './use-export-docx'
 
 interface ChapterItem {
   chapter: string
@@ -25,6 +26,7 @@ interface Section {
 
 export interface ProposalSectionsHandle {
   exportPdf: () => Promise<void>
+  exportDocx: () => Promise<void>
   startEdit: () => void
   resetEdit: () => void
   saveEdit: () => Promise<void>
@@ -212,18 +214,20 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
   const [isSaving, setIsSaving] = useState(false)
   const [renderKey, setRenderKey] = useState(0)
   const { exportPdf } = useExportPdf()
+  const { exportDocx } = useExportDocx()
 
   // Store latest values in a ref so the imperative handle always has current data
   const exportDataRef = useRef({ allPages: [] as string[], coverTitle: '', totalPages: 0, proposalTitle: '' })
 
   useImperativeHandle(ref, () => ({
     exportPdf: () => exportPdf(exportDataRef.current),
+    exportDocx: () => exportDocx(sections, proposalTitle || exportDataRef.current.coverTitle || 'Proposal'),
     startEdit: handleEdit,
     resetEdit: handleReset,
     saveEdit: handleSave,
     isEditing,
     isSaving,
-  }), [exportPdf, isEditing, isSaving])
+  }), [exportPdf, exportDocx, isEditing, isSaving, sections, proposalTitle])
 
   const contentItems = useMemo(() => {
     if (sections.length === 0) return [] as string[]
