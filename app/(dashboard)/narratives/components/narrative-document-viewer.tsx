@@ -39,6 +39,7 @@ export const NarrativeDocumentViewer = forwardRef<NarrativeDocumentViewerHandle,
   // Parse content into individual elements for pagination
   const contentItems = useMemo(() => {
     if (!content) return []
+    if (typeof document === 'undefined') return []
 
     // If content is HTML, parse it into individual block elements
     const tmp = document.createElement('div')
