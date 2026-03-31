@@ -9,6 +9,7 @@ import { useExportPdf } from './use-export-pdf'
 interface ChapterItem {
   chapter: string
   sort_order: number
+  type?: string
 }
 
 interface Section {
@@ -48,6 +49,21 @@ function parseTabulation(text: string): string {
     line.split('|').map((cell) => cell.trim())
   )
 
+  const colCount = rows[0]?.length || 0
+
+  // 2-column tables are key-value (e.g., Grant Application Summary) — no header row
+  if (colCount <= 2) {
+    const bodyRows = rows
+      .map((row) => {
+        const label = `<td class="kv-label">${row[0] || ''}</td>`
+        const value = `<td class="kv-value">${row[1] || ''}</td>`
+        return `<tr>${label}${value}</tr>`
+      })
+      .join('')
+    return `<table class="kv-table"><tbody>${bodyRows}</tbody></table>`
+  }
+
+  // 3+ column tables have a header row (e.g., Budget)
   const headerCells = rows[0]
     .map((cell) => `<th>${cell}</th>`)
     .join('')
@@ -68,13 +84,33 @@ function formatInlineMarkdown(text: string): string {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
 }
 
+function renderContentHtml(chapter: string, attrs: string): string {
+  const lines = chapter.split('\n').filter(l => l.trim())
+  const isBulletList = lines.length > 0 && lines.every(l => /^[•\-]\s/.test(l.trim()))
+
+  if (isBulletList) {
+    const items = lines
+      .map(l => `<li>${formatInlineMarkdown(l.replace(/^[•\-]\s*/, '').trim())}</li>`)
+      .join('')
+    return `<ul ${attrs}>${items}</ul>`
+  }
+
+  // Signature block
+  if (chapter.startsWith('Respectfully Submitted')) {
+    const sigLines = lines.map(l => `<p>${formatInlineMarkdown(l)}</p>`).join('')
+    return `<div class="signature-block" ${attrs}>${sigLines}</div>`
+  }
+
+  return `<p ${attrs}>${formatInlineMarkdown(chapter)}</p>`
+}
+
 function buildSectionHtml(section: Section): string {
-  type TaggedItem = ChapterItem & { type: 'header1' | 'header2' | 'content' | 'tabulation' }
+  type TaggedItem = ChapterItem & { type: string }
   const tagged: TaggedItem[] = []
 
-  const add = (arr: ChapterItem[] | null, type: TaggedItem['type']) => {
+  const add = (arr: ChapterItem[] | null, fallbackType: string) => {
     if (!Array.isArray(arr)) return
-    arr.forEach((item) => tagged.push({ ...item, type }))
+    arr.forEach((item) => tagged.push({ ...item, type: item.type || fallbackType }))
   }
 
   add(section.header1, 'header1')
@@ -89,9 +125,9 @@ function buildSectionHtml(section: Section): string {
       switch (item.type) {
         case 'header1': return `<h2 ${attrs}>${formatInlineMarkdown(item.chapter)}</h2>`
         case 'header2': return `<h3 ${attrs}>${formatInlineMarkdown(item.chapter)}</h3>`
-        case 'content': return `<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`
-        case 'tabulation': return `<div ${attrs}>${parseTabulation(item.chapter)}</div>`
-        default: return `<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`
+        case 'tabulation':
+        case 'table': return `<div ${attrs} class="table-wrap">${parseTabulation(item.chapter)}</div>`
+        default: return renderContentHtml(item.chapter, attrs)
       }
     })
     .join('')
@@ -199,15 +235,36 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
 
     for (let idx = 0; idx < sorted.length; idx++) {
       const section = sorted[idx]
-      // First section (cover page) and Table of Contents are standalone pages
-      const isStandalone =
-        idx === 0 || /table of contents/i.test(section.title)
+      const isCover = idx === 0 || section.title === 'Cover Page' || (section as any).sectionType === 'cover'
+      const isToc = /table of contents/i.test(section.title)
 
-      if (isStandalone) {
-        standalonePages.push(
-          `<h1 data-section-id="${section.id}" data-type="title">${section.title}</h1>` +
-          buildSectionHtml(section)
-        )
+      if (isCover) {
+        // Build cover page with specific structure
+        const coverItems = (section.content || []).sort((a, b) => a.sort_order - b.sort_order)
+        const orgName = coverItems[0]?.chapter || ''
+        const projectTitle = coverItems[1]?.chapter || ''
+        const metaItems = coverItems.slice(2)
+
+        standalonePages.push(`
+          <div class="cover-label">GRANT PROPOSAL</div>
+          <div class="cover-org" data-section-id="${section.id}" data-type="content" data-sort-order="${coverItems[0]?.sort_order || 1}">${orgName}</div>
+          <div class="cover-project" data-section-id="${section.id}" data-type="content" data-sort-order="${coverItems[1]?.sort_order || 2}">${projectTitle}</div>
+          <div class="cover-divider"></div>
+          ${metaItems.map(item =>
+            `<p class="cover-meta-line" data-section-id="${section.id}" data-type="content" data-sort-order="${item.sort_order}">${item.chapter}</p>`
+          ).join('')}
+        `)
+      } else if (isToc) {
+        const tocItems = (section.content || []).sort((a, b) => a.sort_order - b.sort_order)
+        standalonePages.push(`
+          <h1 class="toc-title" data-section-id="${section.id}" data-type="title">Table of Contents</h1>
+          <div class="toc-divider"></div>
+          <div class="toc-list">
+            ${tocItems.map(item =>
+              `<div class="toc-item" data-section-id="${section.id}" data-type="content" data-sort-order="${item.sort_order}">${item.chapter}</div>`
+            ).join('')}
+          </div>
+        `)
       } else {
         contentSections.push(section)
       }
@@ -234,8 +291,8 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
         switch (item.type) {
           case 'header1': contentItems.push(`<h2 ${attrs}>${formatInlineMarkdown(item.chapter)}</h2>`); break
           case 'header2': contentItems.push(`<h3 ${attrs}>${formatInlineMarkdown(item.chapter)}</h3>`); break
-          case 'content': contentItems.push(`<p ${attrs}>${formatInlineMarkdown(item.chapter)}</p>`); break
-          case 'tabulation': contentItems.push(`<div ${attrs}>${parseTabulation(item.chapter)}</div>`); break
+          case 'tabulation': contentItems.push(`<div ${attrs} class="table-wrap">${parseTabulation(item.chapter)}</div>`); break
+          default: contentItems.push(renderContentHtml(item.chapter, attrs)); break
         }
       }
     }
@@ -290,11 +347,14 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
 
   const totalPages = standalonePages.length + contentPages.length
 
-  // Extract cover page title for use in content page headers
+  // Extract cover info for headers and footers
   const coverTitle = useMemo(() => {
     if (sections.length === 0) return ''
     const sorted = [...sections].sort((a, b) => a.sort_order - b.sort_order)
-    return sorted[0]?.title || ''
+    // Use first content item (org name) from cover section for footer
+    const coverSection = sorted[0]
+    const orgName = coverSection?.content?.[0]?.chapter || ''
+    return orgName ? `${orgName} | Grant Proposal` : sorted[0]?.title || ''
   }, [sections])
 
   // Track which page is in view using IntersectionObserver
@@ -531,6 +591,8 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
 })
 
 const viewerStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
   /* ── PDF Browser Shell ── */
   .pdf-browser {
     display: flex;
@@ -540,17 +602,6 @@ const viewerStyles = `
     height: 82vh;
     background: hsl(0 0% 92%);
     position: relative;
-  }
-
-  /* ── Toolbar ── */
-  .pdf-toolbar {
-    position: absolute;
-    top: 8px;
-    right: 12px;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   /* ── Sidebar ── */
@@ -606,8 +657,8 @@ const viewerStyles = `
   }
 
   .pdf-thumb-active .pdf-thumb-page {
-    border-color: hsl(0 72% 51%);
-    box-shadow: 0 0 0 1px hsl(0 72% 51%);
+    border-color: #B8860B;
+    box-shadow: 0 0 0 1px #B8860B;
   }
 
   .pdf-thumb-content {
@@ -619,7 +670,7 @@ const viewerStyles = `
     pointer-events: none;
   }
 
-  /* Cover page thumbnail accent bar */
+  /* Cover page thumbnail accent */
   .doc-cover-thumb::before {
     content: '';
     position: absolute;
@@ -627,7 +678,7 @@ const viewerStyles = `
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
+    background: #B8860B;
     z-index: 1;
   }
 
@@ -636,10 +687,11 @@ const viewerStyles = `
     color: hsl(var(--muted-foreground));
     font-variant-numeric: tabular-nums;
     line-height: 1;
+    font-family: 'Inter', sans-serif;
   }
 
   .pdf-thumb-active .pdf-thumb-label {
-    color: hsl(0 72% 51%);
+    color: #B8860B;
     font-weight: 600;
   }
 
@@ -680,6 +732,7 @@ const viewerStyles = `
     position: relative;
     overflow-wrap: break-word;
     word-wrap: break-word;
+    font-family: 'Inter', 'Open Sans', -apple-system, sans-serif;
   }
 
   /* ══════════════════════════════════════════
@@ -692,16 +745,6 @@ const viewerStyles = `
     overflow: hidden;
   }
 
-  /* Top accent bar */
-  .doc-cover-page::before {
-    content: '';
-    display: block;
-    width: 100%;
-    height: 8px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
-    flex-shrink: 0;
-  }
-
   .doc-cover-page .doc-page-content {
     flex: 1;
     display: flex;
@@ -712,67 +755,85 @@ const viewerStyles = `
     padding: 80px 72px 100px;
   }
 
-  /* Cover label (e.g. "Proposal for Grant") */
-  .doc-cover-page .doc-page-content h1 {
-    font-size: 1.15rem;
+  .cover-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
     font-weight: 600;
-    color: #5a6a7a;
-    border-bottom: none;
-    padding-bottom: 0;
-    margin: 0 0 0.4rem 0;
-    line-height: 1.3;
-    letter-spacing: 0.03em;
+    color: #4A4A4A;
+    letter-spacing: 2px;
     text-transform: uppercase;
+    margin-bottom: 2rem;
   }
 
-  .doc-cover-page .doc-page-content h1::after {
-    display: none;
+  .cover-org {
+    font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #B8860B;
+    margin-bottom: 1rem;
+    line-height: 1.3;
   }
 
-  /* Grant name — first paragraph on cover is the prominent title */
-  .doc-cover-page .doc-page-content p:first-of-type {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #1a2b42;
-    margin: 0 0 1.5rem 0;
-    line-height: 1.25;
-    letter-spacing: -0.02em;
+  .cover-project {
+    font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #222222;
+    margin-bottom: 2rem;
+    line-height: 1.35;
   }
 
-  /* Decorative rule under grant name */
-  .doc-cover-page .doc-page-content p:first-of-type::after {
-    content: '';
-    display: block;
-    width: 80px;
-    height: 3px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
-    margin: 1.25rem auto 0;
-    border-radius: 2px;
+  .cover-divider {
+    width: 100%;
+    height: 2px;
+    background: #B8860B;
+    margin-bottom: 2rem;
   }
 
-  /* Cover meta info (Submitted to, Prepared by, Date) */
-  .doc-cover-page .doc-page-content p {
-    font-size: 0.95rem;
-    color: #5a6a7a;
-    margin: 0.35rem 0;
-    line-height: 1.7;
-    letter-spacing: 0.01em;
+  .cover-meta-line {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    color: #4A4A4A;
+    margin: 0.3rem 0;
+    line-height: 1.6;
   }
 
-  /* Cover h2/h3 if present */
-  .doc-cover-page .doc-page-content h2 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #2d5a8e;
-    margin: 1rem 0 0.3rem 0;
-    text-align: center;
+  /* ══════════════════════════════════════════
+     TABLE OF CONTENTS
+     ══════════════════════════════════════════ */
+  .toc-title {
+    font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #B8860B;
+    margin: 0 0 0.75rem 0;
+    padding-bottom: 0.5rem;
   }
 
-  .doc-cover-page .doc-page-content h3 {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #5a6a7a;
-    text-align: center;
+  .toc-divider {
+    width: 100%;
+    height: 1px;
+    background: #B8860B;
+    margin-bottom: 1.5rem;
+  }
+
+  .toc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .toc-item {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    color: #222222;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #E0E0E0;
+    line-height: 1.5;
+  }
+
+  .toc-item:last-child {
+    border-bottom: none;
   }
 
   /* ══════════════════════════════════════════
@@ -784,14 +845,15 @@ const viewerStyles = `
     left: 72px;
     right: 72px;
     padding-bottom: 10px;
-    border-bottom: 1px solid #e0e4e8;
+    border-bottom: 0.5px solid #4A4A4A;
     pointer-events: none;
   }
 
   .doc-page-header-title {
-    font-size: 0.7rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.6rem;
     font-weight: 600;
-    color: #8a95a5;
+    color: #4A4A4A;
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
@@ -808,13 +870,14 @@ const viewerStyles = `
     justify-content: space-between;
     align-items: center;
     padding-top: 10px;
-    border-top: 1px solid #e0e4e8;
+    border-top: 0.5px solid #4A4A4A;
     pointer-events: none;
   }
 
   .doc-page-footer-title {
-    font-size: 0.65rem;
-    color: #a0a8b4;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.56rem;
+    color: #4A4A4A;
     letter-spacing: 0.02em;
     max-width: 60%;
     overflow: hidden;
@@ -823,16 +886,14 @@ const viewerStyles = `
   }
 
   .doc-page-footer-number {
-    font-size: 0.65rem;
-    color: #a0a8b4;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.56rem;
+    color: #4A4A4A;
     letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
   }
 
-  /* Remove old page number since footer replaces it */
-  .doc-page-number {
-    display: none;
-  }
+  .doc-page-number { display: none; }
 
   /* ── Content ── */
   .doc-page-content {
@@ -840,71 +901,173 @@ const viewerStyles = `
     flex-direction: column;
   }
 
-  /* ── Typography ── */
+  /* ══════════════════════════════════════════
+     TYPOGRAPHY — Section Titles (H1)
+     ══════════════════════════════════════════ */
   .doc-page-content h1 {
-    font-size: 1.45rem;
+    font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+    font-size: 1.1rem;
     font-weight: 700;
-    margin: 1.5rem 0 0.5rem 0;
-    color: #1a2b42;
-    border-bottom: 2px solid #e0e4e8;
+    color: #B8860B;
+    margin: 2rem 0 0.75rem 0;
     padding-bottom: 0.4rem;
+    border-bottom: 1px solid #B8860B;
     line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
+
   .doc-page-content h1:first-child {
     margin-top: 0;
   }
 
+  /* Sub-section headers (H2) */
   .doc-page-content h2 {
-    font-size: 1.15rem;
+    font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+    font-size: 1rem;
     font-weight: 700;
     margin: 1rem 0 0.2rem 0;
-    color: #1a2b42;
+    color: #222222;
     line-height: 1.35;
   }
 
+  /* Sub-sub-headers (H3) — used for bold sub-section names */
   .doc-page-content h3 {
-    font-size: 0.95rem;
+    font-family: 'Playfair Display', 'Times New Roman', Georgia, serif;
+    font-size: 0.9rem;
     font-weight: 600;
-    margin: 0.6rem 0 0.1rem 0;
-    color: #4a5568;
+    margin: 0.85rem 0 0.15rem 0;
+    color: #222222;
     line-height: 1.4;
   }
 
+  /* Body paragraphs */
   .doc-page-content p {
-    font-size: 0.875rem;
-    margin: 0.25rem 0;
-    line-height: 1.85;
-    color: #1a1a1a;
+    font-family: 'Inter', 'Open Sans', sans-serif;
+    font-size: 0.82rem;
+    margin: 0.3rem 0;
+    line-height: 1.6;
+    color: #222222;
   }
 
-  /* ── Tables ── */
+  .doc-page-content strong {
+    font-weight: 600;
+    color: #222222;
+  }
+
+  /* ══════════════════════════════════════════
+     BULLET LISTS
+     ══════════════════════════════════════════ */
+  .doc-page-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.3rem 0 0.3rem 0.25rem;
+  }
+
+  .doc-page-content ul li {
+    font-family: 'Inter', 'Open Sans', sans-serif;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: #222222;
+    padding-left: 1.25rem;
+    position: relative;
+    margin-bottom: 0.25rem;
+  }
+
+  .doc-page-content ul li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #B8860B;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  /* ══════════════════════════════════════════
+     TABLES — No vertical borders, gold-tinted alternating rows
+     ══════════════════════════════════════════ */
   .doc-page-content table {
     border-collapse: collapse;
     width: 100%;
-    margin: 0.5rem 0 0.3rem 0;
-    font-size: 0.8rem;
+    margin: 0.5rem 0 0.5rem 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
   }
 
+  /* Standard data tables (3+ columns) */
   .doc-page-content table th {
-    background-color: #f0f3f7;
+    background-color: #F5F5F5;
     font-weight: 600;
     text-align: left;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #d8dde4;
-    color: #1a2b42;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-bottom: 1px solid #E0E0E0;
+    color: #4A4A4A;
   }
 
   .doc-page-content table td {
-    padding: 0.45rem 0.75rem;
-    border: 1px solid #d8dde4;
-    color: #1a1a1a;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-bottom: 1px solid #E0E0E0;
+    color: #222222;
+    vertical-align: top;
   }
 
-  .doc-page-content table tr:nth-child(even) td {
-    background-color: #f8f9fb;
+  .doc-page-content table tbody tr:nth-child(even) td {
+    background-color: #FFFDF0;
   }
 
-  /* ── Editable Elements ── */
+  /* Key-value tables (2-column summary tables) */
+  .doc-page-content .kv-table .kv-label {
+    font-weight: 600;
+    color: #4A4A4A;
+    width: 35%;
+    white-space: nowrap;
+  }
+
+  .doc-page-content .kv-table .kv-value {
+    color: #222222;
+  }
+
+  /* Last row in tables — no bottom border */
+  .doc-page-content table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* TOTAL row styling */
+  .doc-page-content table tbody tr:last-child td {
+    font-weight: 700;
+    border-top: 2px solid #B8860B;
+    border-bottom: none;
+  }
+
+  /* ══════════════════════════════════════════
+     SIGNATURE BLOCK
+     ══════════════════════════════════════════ */
+  .signature-block {
+    margin-top: 2rem;
+    padding-top: 1rem;
+  }
+
+  .signature-block p {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    color: #222222;
+    margin: 0.15rem 0;
+    line-height: 1.6;
+  }
+
+  .signature-block p:first-child {
+    font-style: italic;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ══════════════════════════════════════════
+     EDITABLE ELEMENTS
+     ══════════════════════════════════════════ */
   .doc-page-content [contenteditable="true"] {
     outline: none;
     cursor: text;
@@ -913,11 +1076,11 @@ const viewerStyles = `
   }
 
   .doc-page-content [contenteditable="true"]:hover:not(:focus) {
-    background: hsl(45 100% 97%);
+    background: #FFFDF0;
   }
 
   .doc-page-content [contenteditable="true"]:focus {
     background: hsl(45 100% 95%);
-    box-shadow: inset 0 0 0 1px hsl(45 80% 70%);
+    box-shadow: inset 0 0 0 1px #B8860B;
   }
 `
