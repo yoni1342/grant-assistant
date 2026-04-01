@@ -166,6 +166,64 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
   return { data: narrative, error: null }
 }
 
+export async function getNarrative(narrativeId: string) {
+  const supabase = await createClient()
+  const { orgId, error: orgError } = await getUserOrgId(supabase)
+  if (!orgId) {
+    return { error: orgError || 'Not authenticated', data: null }
+  }
+
+  const adminDb = createAdminClient()
+  const { data: doc, error } = await adminDb
+    .from('documents')
+    .select('*')
+    .eq('id', narrativeId)
+    .eq('org_id', orgId)
+    .eq('category', 'narrative')
+    .single()
+
+  if (error || !doc) {
+    return { error: error?.message || 'Not found', data: null }
+  }
+
+  const narrative = {
+    id: doc.id,
+    org_id: doc.org_id,
+    title: doc.title || doc.name || 'Untitled',
+    content: doc.extracted_text || '',
+    category: doc.ai_category || null,
+    tags: ((doc.metadata as Record<string, unknown>)?.tags as string[]) || null,
+    embedding: doc.embedding,
+    metadata: doc.metadata,
+    created_at: doc.created_at,
+    updated_at: doc.updated_at,
+  }
+
+  return { data: narrative, error: null }
+}
+
+export async function deleteNarratives(narrativeIds: string[]) {
+  const supabase = await createClient()
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) {
+    return { error: 'Not authenticated' }
+  }
+
+  const adminDb = createAdminClient()
+  const { error } = await adminDb
+    .from('documents')
+    .delete()
+    .in('id', narrativeIds)
+    .eq('org_id', orgId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/narratives')
+  return { success: true }
+}
+
 export async function deleteNarrative(narrativeId: string) {
   const supabase = await createClient()
 

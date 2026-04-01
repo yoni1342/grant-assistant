@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, Download, Loader2 } from 'lucide-react'
+import { Plus, Download, Loader2, Pencil, Save, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { NarrativeList } from './narrative-list'
 import { NarrativeDialog } from './narrative-dialog'
@@ -39,6 +39,8 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
     narratives.length > 0 ? narratives[0] : undefined
   )
   const [isExporting, setIsExporting] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const viewerRef = useRef<NarrativeDocumentViewerHandle>(null)
 
   const handleExportPdf = useCallback(async () => {
@@ -60,13 +62,42 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
     setDialogOpen(true)
   }
 
+  const handleStartEdit = () => {
+    viewerRef.current?.startEdit()
+    setIsEditing(true)
+  }
+
+  const handleResetEdit = () => {
+    viewerRef.current?.resetEdit()
+    setIsEditing(false)
+  }
+
+  const handleSaveEdit = async () => {
+    setIsSaving(true)
+    try {
+      await viewerRef.current?.saveEdit()
+    } finally {
+      setIsSaving(false)
+      setIsEditing(false)
+    }
+  }
+
   const handleEditClick = (narrative: Narrative) => {
-    setDialogMode('edit')
-    setSelectedNarrative(narrative)
-    setDialogOpen(true)
+    // Select the narrative and start inline editing (same as proposal page)
+    setViewingNarrative(narrative)
+    // Small delay to let the viewer mount/update before starting edit
+    setTimeout(() => {
+      viewerRef.current?.startEdit()
+      setIsEditing(true)
+    }, 100)
   }
 
   const handleSelectNarrative = (narrative: Narrative) => {
+    // If currently editing, reset before switching
+    if (isEditing) {
+      viewerRef.current?.resetEdit()
+      setIsEditing(false)
+    }
     setViewingNarrative(narrative)
   }
 
@@ -81,17 +112,57 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Edit / Save / Reset */}
           {viewingNarrative && (
-            <Button variant="outline" onClick={handleExportPdf} disabled={isExporting}>
-              {isExporting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Export PDF
-            </Button>
+            isEditing ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={isSaving}
+                  onClick={handleResetEdit}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset
+                </Button>
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  disabled={isSaving}
+                  onClick={handleSaveEdit}
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {isSaving ? 'Saving...' : 'Save'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleStartEdit}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={isExporting} className="gap-2">
+                  {isExporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  Export PDF
+                </Button>
+              </>
+            )
           )}
-          <Button onClick={handleCreateClick}>
+          <Button size="sm" onClick={handleCreateClick}>
             <Plus className="h-4 w-4 mr-2" />
             New Narrative
           </Button>
@@ -118,6 +189,8 @@ export function NarrativePageClient({ narratives, grants }: NarrativePageClientP
               title={viewingNarrative.title}
               content={viewingNarrative.content}
               category={viewingNarrative.category}
+              narrativeId={viewingNarrative.id}
+              tags={viewingNarrative.tags}
             />
           ) : (
             <div className="flex items-center justify-center h-full rounded-lg border border-dashed border-border bg-muted/20">

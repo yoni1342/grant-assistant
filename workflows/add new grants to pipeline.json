@@ -21,7 +21,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const httpResponse = $input.first().json;\nconst origItems = $('HTTP Request2').all();\n\n// Get inserted grants returned from webhook\nconst insertedGrants = httpResponse.grants || [];\n\nreturn insertedGrants.map((grant, index) => {\n  const orig = origItems[index]?.json || {};\n\n  return {\n    json: {\n      // ← Supabase UUID (replaces grantId)\n      url: orig.link || orig.url || '',\n      grantId: grant.id,\n      grantData: {\n        title: grant.title || orig.title || '',\n        agency: grant.funder_name || orig.agency || '',\n        awardRange: grant.amount || 'Not specified',\n        deadline: grant.deadline || orig.closeDate || '',\n        description: grant.description || '',\n        source: grant.source || orig.source || ''\n      }\n    }\n  };\n});"
+        "jsCode": "const insertedGrants = $input.all().map(item => item.json);\n\n  return insertedGrants.map((grant) => {\n    return {\n      json: {\n        body: {\n          grant_id: grant.id,\n          grantId: grant.id,\n          grant_name: grant.title,\n          org_id: grant.org_id,\n          workflow_id: '',\n          grantData: {\n            id: grant.id,\n            org_id: grant.org_id,\n            title: grant.title,\n            funder_name: grant.funder_name,\n            description: grant.description,\n            amount: grant.amount,\n            deadline: grant.deadline,\n            stage: grant.stage,\n            screening_notes: grant.screening_notes || null,\n            source: grant.source,\n            source_url: grant.source_url,\n            metadata: grant.metadata,\n            created_at: grant.created_at,\n            updated_at: grant.updated_at,\n            categories: grant.categories || null,\n            concerns: grant.concerns || null,\n            eligibility: grant.eligibility || null,\n            organization: grant.organization || null,\n            recommendations: grant.recommendations || null,\n            source_id: grant.source_id,\n            screening_score: grant.screening_score || null\n          }\n        }\n      }\n    };\n  });"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -35,37 +35,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://152.53.91.134:3000/api/webhook",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "=  {{ JSON.stringify({ \"action\": \"insert_grants\", \"data\": { \"grants\": [$json.body] } }) }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        240,
-        0
-      ],
-      "id": "83146953-690f-4c41-aa31-c2bde9717752",
-      "name": "HTTP Request2",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "58HU1FxffRqvjWUp",
-          "name": "x-webhook-secret"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.thebrownmine.com/webhook-test/screen-grant",
+        "url": "https://n8n.thebrownmine.com/webhook/screen-grant",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n   \"url\":\"{{ $json.url }}\",\n   \"grantid\":\"{{ $json.grantId }}\",\n   \"grantData\":{\n      \"title\":\"{{ $json.grantData.title }}\",\n      \"agency\":\"{{ $json.grantData.agency }}\",\n      \"awardRange\":\"{{ $json.grantData.awardRange }}\",\n      \"deadline\":\"{{ $json.grantData.deadline }}\",\n      \"description\":\"{{ $json.grantData.description }}\",\n      \"source\":\"{{ $json.grantData.source }}\"\n   }\n}",
+        "jsonBody": "= {{ JSON.stringify($json.body) }}",
         "options": {
           "allowUnauthorizedCerts": true,
           "timeout": 12000
@@ -124,6 +97,50 @@
         -176
       ],
       "id": "18e66299-cffc-4ce3-a462-d82a010c301c"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "= {{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        0
+      ],
+      "id": "9a1f6510-369e-414e-92e7-be3bcb580ddc",
+      "name": "HTTP Request2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -150,6 +167,17 @@
         ]
       ]
     },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "HTTP Request2": {
       "main": [
         [
@@ -165,17 +193,6 @@
           }
         ]
       ]
-    },
-    "Error Trigger": {
-      "main": [
-        [
-          {
-            "node": "Error Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "active": true,
@@ -183,7 +200,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "d5db0ca7-345e-4c2c-9d76-2a0ef966c3ba",
+  "versionId": "4d4f933a-63cd-40e4-9118-b45ca7b3999b",
   "meta": {
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
   },

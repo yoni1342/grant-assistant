@@ -31,7 +31,18 @@ import {
   SearchX,
   ArrowUpRight,
   Lock,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  X,
+  ChevronDown,
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 
@@ -102,8 +113,14 @@ function GrantDetailBody({
             {grant.deadline && (
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Deadline</p>
-                <p className="text-sm font-medium">
+                <p className={`text-sm font-medium flex items-center gap-1.5 ${isGrantExpired(grant.deadline) ? "text-red-500" : ""}`}>
+                  {isGrantExpired(grant.deadline) && <AlertTriangle className="h-3.5 w-3.5" />}
                   {new Date(grant.deadline).toLocaleDateString()}
+                  {isGrantExpired(grant.deadline) && (
+                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                      Expired
+                    </Badge>
+                  )}
                 </p>
               </div>
             )}
@@ -227,6 +244,129 @@ const US_STATES = [
   "National / All States",
 ];
 
+function MultiSelect({
+  label,
+  options,
+  selected,
+  onChange,
+  searchable = false,
+}: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (val: string[]) => void;
+  searchable?: boolean;
+}) {
+  const [search, setSearch] = useState("");
+
+  const filtered = searchable && search
+    ? options.filter((o) => o.toLowerCase().includes(search.toLowerCase()))
+    : options;
+
+  const toggle = (option: string) => {
+    onChange(
+      selected.includes(option)
+        ? selected.filter((s) => s !== option)
+        : [...selected, option]
+    );
+  };
+
+  return (
+    <div>
+      <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
+      <Popover onOpenChange={() => setSearch("")}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-left flex items-center justify-between gap-1 min-w-0"
+          >
+            <span className="truncate min-w-0 text-muted-foreground">
+              {selected.length === 0
+                ? "Any"
+                : `${selected.length} selected`}
+            </span>
+            <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] min-w-52 max-w-80 p-0 overflow-hidden"
+          align="start"
+        >
+          {searchable && (
+            <div className="p-2 border-b">
+              <Input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 text-sm"
+              />
+            </div>
+          )}
+          <div className="max-h-56 overflow-y-auto overscroll-contain p-1">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-muted-foreground px-2 py-3 text-center">No matches</p>
+            ) : (
+              filtered.map((option) => (
+                <label
+                  key={option}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent cursor-pointer text-sm select-none"
+                >
+                  <Checkbox
+                    checked={selected.includes(option)}
+                    onCheckedChange={() => toggle(option)}
+                    className="shrink-0"
+                  />
+                  <span className="truncate">{option}</span>
+                </label>
+              ))
+            )}
+          </div>
+          {selected.length > 0 && (
+            <div className="border-t p-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs h-7"
+                onClick={() => onChange([])}
+              >
+                Clear all
+              </Button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1.5">
+          {selected.map((item) => (
+            <span
+              key={item}
+              className="inline-flex items-center gap-0.5 rounded-md bg-secondary px-1.5 py-0.5 text-[11px] text-secondary-foreground"
+            >
+              <span className="truncate max-w-[120px]">{item}</span>
+              <button
+                type="button"
+                onClick={() => onChange(selected.filter((s) => s !== item))}
+                className="shrink-0 rounded-sm hover:bg-secondary-foreground/20 p-0.5"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function isGrantExpired(deadline: string | null): boolean {
+  if (!deadline) return false;
+  const deadlineDate = new Date(deadline);
+  if (isNaN(deadlineDate.getTime())) return false;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return deadlineDate < now;
+}
+
 interface GrantUsage {
   used: number;
   limit: number | null;
@@ -237,11 +377,12 @@ export default function DiscoveryPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [orgType, setOrgType] = useState("");
-  const [profitStatus, setProfitStatus] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [fundingCategory, setFundingCategory] = useState("");
-  const [location, setLocation] = useState("");
+  const [orgType, setOrgType] = useState<string[]>([]);
+  const [profitStatus, setProfitStatus] = useState<string[]>([]);
+  const [industry, setIndustry] = useState<string[]>([]);
+  const [fundingCategory, setFundingCategory] = useState<string[]>([]);
+  const [location, setLocation] = useState<string[]>([]);
+  const [hideExpired, setHideExpired] = useState(true);
   const [results, setResults] = useState<DiscoveredGrant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searchComplete, setSearchComplete] = useState(false);
@@ -256,11 +397,88 @@ export default function DiscoveryPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const channelRef = useRef<any>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const inactivityRef = useRef<ReturnType<typeof setTimeout>>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>(null);
   const seenTitlesRef = useRef<Set<string>>(new Set());
   const seenRowIdsRef = useRef<Set<string>>(new Set());
 
+  const [storageKey, setStorageKey] = useState<string | null>(null);
+
+  // Resolve org-specific storage key
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from("profiles")
+        .select("org_id")
+        .eq("id", user.id)
+        .single()
+        .then(({ data }) => {
+          if (data?.org_id) {
+            setStorageKey(`fundory_discovery_${data.org_id}`);
+          }
+        });
+    });
+  }, []);
+
+  // Restore state from sessionStorage on mount (once storageKey is resolved)
+  const hasRestored = useRef(false);
+  useEffect(() => {
+    if (hasRestored.current || !storageKey) return;
+    hasRestored.current = true;
+    try {
+      const saved = sessionStorage.getItem(storageKey);
+      if (!saved) return;
+      const s = JSON.parse(saved);
+      if (s.query) setQuery(s.query);
+      if (s.orgType) setOrgType(s.orgType);
+      if (s.profitStatus) setProfitStatus(s.profitStatus);
+      if (s.industry) setIndustry(s.industry);
+      if (s.fundingCategory) setFundingCategory(s.fundingCategory);
+      if (s.location) setLocation(s.location);
+      if (s.results?.length) {
+        setResults(s.results);
+        setSearchComplete(true);
+        // Rebuild seen titles set
+        for (const g of s.results) {
+          seenTitlesRef.current.add(g.title);
+        }
+      }
+      if (s.addedGrants?.length) setAddedGrants(new Set(s.addedGrants));
+    } catch {
+      // corrupted storage — ignore
+    }
+  }, [storageKey]);
+
+  // Save state to sessionStorage on changes
+  useEffect(() => {
+    if (!hasRestored.current || !storageKey) return;
+    try {
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          query,
+          orgType,
+          profitStatus,
+          industry,
+          fundingCategory,
+          location,
+          results,
+          addedGrants: Array.from(addedGrants),
+        })
+      );
+    } catch {
+      // storage full — ignore
+    }
+  }, [storageKey, query, orgType, profitStatus, industry, fundingCategory, location, results, addedGrants]);
+
   const atLimit = grantUsage !== null && grantUsage.limit !== null && grantUsage.used >= grantUsage.limit;
+
+  const expiredCount = results.filter((g) => isGrantExpired(g.deadline)).length;
+  const visibleResults = hideExpired
+    ? results.filter((g) => !isGrantExpired(g.deadline))
+    : results;
 
   // Fetch grant usage on mount
   useEffect(() => {
@@ -286,6 +504,7 @@ export default function DiscoveryPage() {
         supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
       }
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (inactivityRef.current) clearTimeout(inactivityRef.current);
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
@@ -340,6 +559,10 @@ export default function DiscoveryPage() {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
+    if (inactivityRef.current) {
+      clearTimeout(inactivityRef.current);
+      inactivityRef.current = null;
+    }
     if (pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;
@@ -352,11 +575,11 @@ export default function DiscoveryPage() {
         body: JSON.stringify({
           service: "grant-discovery",
           searchQuery: query,
-          ...(orgType && { orgType }),
-          ...(profitStatus && { profitStatus }),
-          ...(industry && { industry }),
-          ...(fundingCategory && { fundingCategory }),
-          ...(location && { location }),
+          ...(orgType.length > 0 && { orgType: orgType.join(", ") }),
+          ...(profitStatus.length > 0 && { profitStatus: profitStatus.join(", ") }),
+          ...(industry.length > 0 && { industry: industry.join(", ") }),
+          ...(fundingCategory.length > 0 && { fundingCategory: fundingCategory.join(", ") }),
+          ...(location.length > 0 && { location: location.join(", ") }),
         }),
       });
 
@@ -371,14 +594,37 @@ export default function DiscoveryPage() {
       const searchId = data.search_id;
       const supabase = createClient();
 
+      // Inactivity timeout: if no data arrives for 15s, mark search as complete
+      const resetInactivityTimer = () => {
+        if (inactivityRef.current) clearTimeout(inactivityRef.current);
+        inactivityRef.current = setTimeout(() => {
+          setSearchComplete(true);
+          setLoading(false);
+          if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        }, 15000);
+      };
+
+      // Start the initial inactivity timer
+      resetInactivityTimer();
+
       // Helper: process a row from search_results (used by both Realtime and polling)
       const processRow = (row: { grant_data: unknown; is_complete: boolean; source_group: string }) => {
+        // Reset inactivity timer on any activity
+        resetInactivityTimer();
+
         if (row.is_complete) {
           setSearchComplete(true);
           setTimeout(() => setLoading(false), 600);
           if (pollRef.current) {
             clearInterval(pollRef.current);
             pollRef.current = null;
+          }
+          if (inactivityRef.current) {
+            clearTimeout(inactivityRef.current);
+            inactivityRef.current = null;
           }
           return;
         }
@@ -458,6 +704,10 @@ export default function DiscoveryPage() {
           clearInterval(pollRef.current);
           pollRef.current = null;
         }
+        if (inactivityRef.current) {
+          clearTimeout(inactivityRef.current);
+          inactivityRef.current = null;
+        }
       }, 180000);
     } catch (err) {
       console.error("Discovery error:", err);
@@ -477,6 +727,13 @@ export default function DiscoveryPage() {
     if (atLimit) {
       toast.error("Daily grant limit reached", {
         description: "Upgrade to Professional for unlimited grants.",
+      });
+      return;
+    }
+
+    if (!grant.title?.trim()) {
+      toast.error("Cannot add grant", {
+        description: "This grant has no title and cannot be added to the pipeline.",
       });
       return;
     }
@@ -556,9 +813,9 @@ export default function DiscoveryPage() {
             >
               <Filter className="h-4 w-4 mr-1" />
               Filters
-              {(orgType || profitStatus || industry || fundingCategory || location) && (
+              {[...orgType, ...profitStatus, ...industry, ...fundingCategory, ...location].length > 0 && (
                 <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">
-                  {[orgType, profitStatus, industry, fundingCategory, location].filter(Boolean).length}
+                  {orgType.length + profitStatus.length + industry.length + fundingCategory.length + location.length}
                 </Badge>
               )}
             </Button>
@@ -576,72 +833,33 @@ export default function DiscoveryPage() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Location</label>
-                <select
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">Any</option>
-                  {US_STATES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+            <div className="space-y-3 mt-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <MultiSelect label="Location" options={US_STATES} selected={location} onChange={setLocation} searchable />
+                <MultiSelect label="Organization Type" options={ORG_TYPES} selected={orgType} onChange={setOrgType} />
+                <MultiSelect label="Nonprofit / For-Profit" options={PROFIT_STATUSES} selected={profitStatus} onChange={setProfitStatus} />
+                <MultiSelect label="Industry" options={INDUSTRIES} selected={industry} onChange={setIndustry} />
+                <MultiSelect label="Funding Category" options={FUNDING_CATEGORIES} selected={fundingCategory} onChange={setFundingCategory} />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Organization Type</label>
-                <select
-                  value={orgType}
-                  onChange={(e) => setOrgType(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">Any</option>
-                  {ORG_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Nonprofit / For-Profit</label>
-                <select
-                  value={profitStatus}
-                  onChange={(e) => setProfitStatus(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">Any</option>
-                  {PROFIT_STATUSES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Industry</label>
-                <select
-                  value={industry}
-                  onChange={(e) => setIndustry(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">Any</option>
-                  {INDUSTRIES.map((i) => (
-                    <option key={i} value={i}>{i}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Funding Category</label>
-                <select
-                  value={fundingCategory}
-                  onChange={(e) => setFundingCategory(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">Any</option>
-                  {FUNDING_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
+              {(orgType.length + profitStatus.length + industry.length + fundingCategory.length + location.length) > 0 && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 gap-1 text-muted-foreground"
+                    onClick={() => {
+                      setOrgType([]);
+                      setProfitStatus([]);
+                      setIndustry([]);
+                      setFundingCategory([]);
+                      setLocation([]);
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                    Clear All Filters
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -721,22 +939,46 @@ export default function DiscoveryPage() {
             <h2 className="text-lg font-medium">
               Results{" "}
               <span className="text-muted-foreground font-normal">
-                ({results.length} found{loading ? " so far" : ""}){loading ? " — searching remaining sources" : ""}
+                ({visibleResults.length} found{loading ? " so far" : ""}
+                {expiredCount > 0 && hideExpired
+                  ? `, ${expiredCount} expired hidden`
+                  : ""}
+                ){loading ? " — searching remaining sources" : ""}
               </span>
             </h2>
+            {expiredCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setHideExpired((v) => !v)}
+                className="text-xs gap-1.5"
+              >
+                {hideExpired ? (
+                  <>
+                    <Eye className="h-3.5 w-3.5" />
+                    Show {expiredCount} Expired
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="h-3.5 w-3.5" />
+                    Hide Expired
+                  </>
+                )}
+              </Button>
+            )}
           </div>
 
           {searchComplete && !loading && (
             <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-4 py-2.5 text-sm text-green-700 dark:text-green-400">
               <CheckCheck className="h-4 w-4 shrink-0" />
               <span>
-                Search complete — showing {results.length} results. Additional sources are still being reviewed and may yield more matches.
+                Search complete — showing {visibleResults.length} results. Additional sources are still being reviewed and may yield more matches.
               </span>
             </div>
           )}
 
           <div className="grid gap-3">
-            {results.map((grant, index) => {
+            {visibleResults.map((grant, index) => {
               const grantKey = grant.title;
               const isAdded = addedGrants.has(grantKey);
               const isAdding = addingToPipeline === grantKey;
@@ -769,9 +1011,18 @@ export default function DiscoveryPage() {
                             </span>
                           )}
                           {grant.deadline && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5" />
+                            <span className={`flex items-center gap-1 ${isGrantExpired(grant.deadline) ? "text-red-500" : ""}`}>
+                              {isGrantExpired(grant.deadline) ? (
+                                <AlertTriangle className="h-3.5 w-3.5" />
+                              ) : (
+                                <Calendar className="h-3.5 w-3.5" />
+                              )}
                               {new Date(grant.deadline).toLocaleDateString()}
+                              {isGrantExpired(grant.deadline) && (
+                                <Badge variant="destructive" className="text-[10px] px-1 py-0 leading-tight">
+                                  Expired
+                                </Badge>
+                              )}
                             </span>
                           )}
                         </div>
