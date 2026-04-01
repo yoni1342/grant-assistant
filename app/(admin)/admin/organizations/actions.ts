@@ -48,6 +48,27 @@ export async function approveOrganization(orgId: string) {
       try {
         const stripe = getStripeClient()
 
+        // Validate stored customer ID still exists in Stripe (may be stale from test mode)
+        let customerId = orgData.stripe_customer_id
+        try {
+          await stripe.customers.retrieve(customerId)
+        } catch {
+          console.warn('[approveOrganization] Stored customer ID invalid (likely test mode), creating new one:', customerId)
+          const { data: ownerForEmail } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('org_id', orgId)
+            .eq('role', 'owner')
+            .single()
+          const customer = await stripe.customers.create({
+            email: ownerForEmail?.email,
+            metadata: { org_id: orgId },
+          })
+          customerId = customer.id
+          const adminClientForUpdate = createAdminClient()
+          await adminClientForUpdate.from('organizations').update({ stripe_customer_id: customerId }).eq('id', orgId)
+        }
+
         // For agency plan: create the agency record and link everything
         if (orgData.plan === 'agency') {
           const adminClient = createAdminClient()
@@ -67,7 +88,7 @@ export async function approveOrganization(orgId: string) {
               .insert({
                 name: (await adminClient.from('organizations').select('name').eq('id', orgId).single()).data?.name || 'Agency',
                 owner_user_id: ownerProfile.id,
-                stripe_customer_id: orgData.stripe_customer_id,
+                stripe_customer_id: customerId,
               })
               .select('id')
               .single()
@@ -79,7 +100,7 @@ export async function approveOrganization(orgId: string) {
 
               // Create subscription on the agency (not the org)
               const subscription = await stripe.subscriptions.create({
-                customer: orgData.stripe_customer_id,
+                customer: customerId,
                 items: [{ price: planConfig.stripePriceId }],
                 trial_period_days: TRIAL_DAYS,
                 metadata: { agency_id: agency.id, plan: 'agency' },
@@ -114,7 +135,7 @@ export async function approveOrganization(orgId: string) {
         } else {
           // Non-agency paid plan: create subscription on org directly
           const subscription = await stripe.subscriptions.create({
-            customer: orgData.stripe_customer_id,
+            customer: customerId,
             items: [{ price: planConfig.stripePriceId }],
             trial_period_days: TRIAL_DAYS,
             metadata: { org_id: orgId, plan: orgData.plan },

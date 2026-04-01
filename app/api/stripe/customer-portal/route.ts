@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import * as Sentry from '@sentry/nextjs'
 import { getStripeClient } from '@/lib/stripe/client'
 import { createClient, getUserOrgId, createAdminClient } from '@/lib/supabase/server'
 
@@ -43,6 +44,8 @@ export async function POST() {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error)
     console.error('[stripe/customer-portal] Error:', errMsg, error)
+    Sentry.captureException(error, { extra: { context: 'stripe-customer-portal' } })
+    await Sentry.flush(2000)
     return NextResponse.json(
       { error: `Failed to create portal session: ${errMsg}` },
       { status: 500 }

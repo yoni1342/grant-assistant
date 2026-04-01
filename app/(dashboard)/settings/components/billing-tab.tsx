@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import * as Sentry from "@sentry/nextjs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -55,19 +56,49 @@ export function BillingTab({
 
   const trialDaysRemaining = getTrialDaysRemaining()
 
+  const [error, setError] = useState<string | null>(null)
+
   async function handleUpgrade(plan: PlanId) {
     setLoading(plan)
+    setError(null)
+    console.log("[billing] handleUpgrade called:", { plan, orgId, email })
     try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 30000)
+
       const res = await fetch("/api/stripe/checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orgId, plan, email }),
+        signal: controller.signal,
       })
+      clearTimeout(timeout)
+
+      console.log("[billing] checkout response:", res.status)
       const data = await res.json()
+      if (!res.ok) {
+        const message = data.error || "Failed to create checkout session"
+        Sentry.captureException(new Error(`Stripe checkout failed: ${message}`), {
+          extra: { plan, orgId, status: res.status },
+        })
+        setError(message)
+        return
+      }
       if (data.url) {
         window.location.href = data.url
+      } else {
+        const message = "No checkout URL returned from Stripe"
+        Sentry.captureException(new Error(message), {
+          extra: { plan, orgId, responseData: data },
+        })
+        setError(message)
       }
     } catch (err) {
+      const message = err instanceof DOMException && err.name === "AbortError"
+        ? "Request timed out. Please try again."
+        : "Something went wrong. Please try again."
+      Sentry.captureException(err, { extra: { plan, orgId } })
+      setError(message)
       console.error("Checkout error:", err)
     } finally {
       setLoading(null)
@@ -76,15 +107,32 @@ export function BillingTab({
 
   async function handleManageBilling() {
     setLoading("portal")
+    setError(null)
     try {
       const res = await fetch("/api/stripe/customer-portal", {
         method: "POST",
       })
       const data = await res.json()
+      if (!res.ok) {
+        const message = data.error || "Failed to open billing portal"
+        Sentry.captureException(new Error(`Stripe portal failed: ${message}`), {
+          extra: { orgId, status: res.status },
+        })
+        setError(message)
+        return
+      }
       if (data.url) {
         window.location.href = data.url
+      } else {
+        const message = "No portal URL returned from Stripe"
+        Sentry.captureException(new Error(message), {
+          extra: { orgId, responseData: data },
+        })
+        setError(message)
       }
     } catch (err) {
+      Sentry.captureException(err, { extra: { orgId } })
+      setError("Something went wrong. Please try again.")
       console.error("Portal error:", err)
     } finally {
       setLoading(null)
@@ -132,6 +180,17 @@ export function BillingTab({
 
   return (
     <div className="space-y-6">
+      {/* Error Banner */}
+      {error && (
+        <div className="rounded-lg border-2 border-red-500 bg-red-500/10 text-red-700 dark:text-red-400 p-4 flex items-center gap-4">
+          <AlertTriangle className="h-6 w-6 shrink-0" />
+          <div>
+            <p className="font-bold text-base">Something went wrong</p>
+            <p className="text-sm mt-0.5 opacity-80">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* Trial Banner */}
       {isTrialing && trialDaysRemaining !== null && (
         <div className={`rounded-lg border-2 p-4 flex items-center gap-4 ${
