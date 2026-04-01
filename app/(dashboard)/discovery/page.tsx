@@ -397,6 +397,7 @@ export default function DiscoveryPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const channelRef = useRef<any>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const inactivityRef = useRef<ReturnType<typeof setTimeout>>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>(null);
   const seenTitlesRef = useRef<Set<string>>(new Set());
   const seenRowIdsRef = useRef<Set<string>>(new Set());
@@ -485,6 +486,7 @@ export default function DiscoveryPage() {
         supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
       }
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (inactivityRef.current) clearTimeout(inactivityRef.current);
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
@@ -539,6 +541,10 @@ export default function DiscoveryPage() {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
+    if (inactivityRef.current) {
+      clearTimeout(inactivityRef.current);
+      inactivityRef.current = null;
+    }
     if (pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;
@@ -570,14 +576,37 @@ export default function DiscoveryPage() {
       const searchId = data.search_id;
       const supabase = createClient();
 
+      // Inactivity timeout: if no data arrives for 15s, mark search as complete
+      const resetInactivityTimer = () => {
+        if (inactivityRef.current) clearTimeout(inactivityRef.current);
+        inactivityRef.current = setTimeout(() => {
+          setSearchComplete(true);
+          setLoading(false);
+          if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        }, 15000);
+      };
+
+      // Start the initial inactivity timer
+      resetInactivityTimer();
+
       // Helper: process a row from search_results (used by both Realtime and polling)
       const processRow = (row: { grant_data: unknown; is_complete: boolean; source_group: string }) => {
+        // Reset inactivity timer on any activity
+        resetInactivityTimer();
+
         if (row.is_complete) {
           setSearchComplete(true);
           setTimeout(() => setLoading(false), 600);
           if (pollRef.current) {
             clearInterval(pollRef.current);
             pollRef.current = null;
+          }
+          if (inactivityRef.current) {
+            clearTimeout(inactivityRef.current);
+            inactivityRef.current = null;
           }
           return;
         }
@@ -656,6 +685,10 @@ export default function DiscoveryPage() {
         if (pollRef.current) {
           clearInterval(pollRef.current);
           pollRef.current = null;
+        }
+        if (inactivityRef.current) {
+          clearTimeout(inactivityRef.current);
+          inactivityRef.current = null;
         }
       }, 180000);
     } catch (err) {
