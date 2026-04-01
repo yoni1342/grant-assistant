@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { Tables } from "@/lib/supabase/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   Dialog,
@@ -74,16 +78,28 @@ export function GrantDetail({
   const [title, setTitle] = useState(grant.title);
   const [funderName, setFunderName] = useState(grant.funder_name || "");
   const [amount, setAmount] = useState(grant.amount?.toString() || "");
+  const [ongoingDeadline, setOngoingDeadline] = useState(grant.deadline === "Ongoing");
   const [deadline, setDeadline] = useState(() => {
-    if (!grant.deadline) return "";
+    if (!grant.deadline || grant.deadline === "Ongoing") return "";
     const d = new Date(grant.deadline);
     return isNaN(d.getTime()) ? grant.deadline : d.toISOString().split("T")[0];
   });
   const [stage, setStage] = useState<string>(grant.stage || "discovery");
+  const [description, setDescription] = useState(grant.description || "");
+  const [sourceUrl, setSourceUrl] = useState(grant.source_url || "");
+  const metadata = (grant.metadata || {}) as Record<string, string>;
+  const [notes, setNotes] = useState(metadata.notes || "");
+  const [eligibilityRequirements, setEligibilityRequirements] = useState(metadata.eligibility_requirements || "");
+  const [focusAreas, setFocusAreas] = useState(metadata.focus_areas || "");
+  const [matchPercentage, setMatchPercentage] = useState(metadata.match_percentage || "");
+  const [contactInfo, setContactInfo] = useState(metadata.contact_info || "");
+  const [showAdditional, setShowAdditional] = useState(false);
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
   const [proposalStatus, setProposalStatus] = useState<"generating" | "done" | "error">("generating");
   const [proposalError, setProposalError] = useState<string | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const eligibility = (typeof grant.eligibility === "string"
     ? JSON.parse(grant.eligibility)
@@ -101,6 +117,15 @@ export function GrantDetail({
   } | null;
   const concerns = grant.concerns as string[] | null;
   const recommendations = grant.recommendations as { text?: string }[] | string[] | null;
+
+  async function handleDelete() {
+    setDeleting(true);
+    const supabase = createClient();
+    await supabase.from("grants").delete().eq("id", grant.id);
+    setDeleteDialogOpen(false);
+    setDeleting(false);
+    router.push("/pipeline");
+  }
 
   async function handleSave() {
     // If moving to drafting, require confirmation first
@@ -156,14 +181,24 @@ export function GrantDetail({
     setSaving(true);
     const supabase = createClient();
 
+    const updatedMetadata: Record<string, string> = { ...metadata };
+    if (notes) updatedMetadata.notes = notes; else delete updatedMetadata.notes;
+    if (eligibilityRequirements) updatedMetadata.eligibility_requirements = eligibilityRequirements; else delete updatedMetadata.eligibility_requirements;
+    if (focusAreas) updatedMetadata.focus_areas = focusAreas; else delete updatedMetadata.focus_areas;
+    if (matchPercentage) updatedMetadata.match_percentage = matchPercentage; else delete updatedMetadata.match_percentage;
+    if (contactInfo) updatedMetadata.contact_info = contactInfo; else delete updatedMetadata.contact_info;
+
     await supabase
       .from("grants")
       .update({
         title,
         funder_name: funderName || null,
         amount: amount || null,
-        deadline: deadline || null,
+        deadline: ongoingDeadline ? "Ongoing" : (deadline || null),
         stage,
+        description: description || null,
+        source_url: sourceUrl || null,
+        metadata: updatedMetadata,
       })
       .eq("id", grant.id);
 
@@ -194,14 +229,25 @@ export function GrantDetail({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Grant Details</CardTitle>
-          <Button onClick={handleSave} disabled={saving} size="sm">
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-1" />
-            )}
-            Save
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-red-800 dark:hover:bg-red-950"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+            <Button onClick={handleSave} disabled={saving} size="sm">
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-1" />
+              )}
+              Save
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -244,36 +290,129 @@ export function GrantDetail({
             </div>
             <div className="space-y-2">
               <Label>Deadline</Label>
-              <Input
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                placeholder="Not specified"
-              />
+              {ongoingDeadline ? (
+                <div className="flex items-center h-9 px-3 rounded-md border bg-muted/50 text-sm text-muted-foreground">
+                  Ongoing / Rolling
+                </div>
+              ) : (
+                <Input
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  placeholder="Not specified"
+                />
+              )}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={ongoingDeadline}
+                  onChange={(e) => {
+                    setOngoingDeadline(e.target.checked);
+                    if (e.target.checked) setDeadline("");
+                  }}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-xs text-muted-foreground">Ongoing / Rolling deadline</span>
+              </label>
             </div>
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
+          <div className="col-span-2 space-y-2">
             <Label>Description</Label>
-            <p className="text-sm text-muted-foreground leading-relaxed rounded-lg border p-3 bg-muted/30">
-              {grant.description || "No description available"}
-            </p>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description of the grant opportunity..."
+              rows={3}
+            />
           </div>
 
-          {/* Source Link */}
-          {grant.source_url && (
+          {/* Source URL */}
+          <div className="space-y-2">
+            <Label>Grant URL</Label>
             <div className="flex items-center gap-2">
-              <Label>Source</Label>
-              <a
-                href={grant.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1"
-              >
-                {grant.source_url}
-                <ExternalLink className="h-3 w-3" />
-              </a>
+              <Input
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder="https://..."
+                type="url"
+              />
+              {sourceUrl && (
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-blue-600 hover:text-blue-800"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label>Notes</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any additional notes..."
+              rows={2}
+            />
+          </div>
+
+          {/* Additional Information */}
+          <button
+            type="button"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setShowAdditional((v) => !v)}
+          >
+            {showAdditional ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+            Additional Information
+          </button>
+
+          {showAdditional && (
+            <div className="space-y-4 rounded-md border p-3">
+              <div className="space-y-2">
+                <Label>Eligibility Requirements</Label>
+                <Textarea
+                  value={eligibilityRequirements}
+                  onChange={(e) => setEligibilityRequirements(e.target.value)}
+                  placeholder="Who can apply, restrictions..."
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Focus Areas</Label>
+                <Input
+                  value={focusAreas}
+                  onChange={(e) => setFocusAreas(e.target.value)}
+                  placeholder="e.g., Health, Education, Environment"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Match Requirement</Label>
+                  <Input
+                    value={matchPercentage}
+                    onChange={(e) => setMatchPercentage(e.target.value)}
+                    placeholder="e.g., 20% match"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Contact Info</Label>
+                  <Input
+                    value={contactInfo}
+                    onChange={(e) => setContactInfo(e.target.value)}
+                    placeholder="Name or email"
+                  />
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
@@ -606,6 +745,41 @@ export function GrantDetail({
             </Button>
             <Button onClick={handleConfirmProposal}>
               Approve & Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Grant</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this grant? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border p-3 space-y-1">
+            <p className="text-sm font-medium">{grant.title || "Untitled Grant"}</p>
+            {grant.funder_name && (
+              <p className="text-xs text-muted-foreground">{grant.funder_name}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-1" />
+              )}
+              {deleting ? "Deleting..." : "Delete Grant"}
             </Button>
           </DialogFooter>
         </DialogContent>

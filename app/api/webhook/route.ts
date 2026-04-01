@@ -49,8 +49,20 @@ export async function POST(req: Request) {
 
   const agent = new https.Agent({ rejectUnauthorized: false });
 
-  // Enforce daily grant limit for add-to-pipeline
+  // Validate and enforce limits for add-to-pipeline
   if (service === "grant-screening") {
+    // Reject grants with no title
+    if (!data.title || !String(data.title).trim()) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Cannot add grant: missing title.",
+          code: "INVALID_GRANT",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     const adminSupabase = createAdminClient();
     const { data: org } = await adminSupabase
       .from("organizations")
