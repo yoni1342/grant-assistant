@@ -1,16 +1,25 @@
 'use client'
 
 import { useMemo, useState, useLayoutEffect, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { Pencil } from 'lucide-react'
 import { useExportPdf } from '@/app/(dashboard)/proposals/[id]/components/use-export-pdf'
+import { updateNarrative } from '../actions'
 
 export interface NarrativeDocumentViewerHandle {
   exportPdf: () => Promise<void>
+  startEdit: () => void
+  resetEdit: () => void
+  saveEdit: () => Promise<void>
+  isEditing: boolean
+  isSaving: boolean
 }
 
 interface NarrativeDocumentViewerProps {
   title: string
   content: string
   category?: string | null
+  narrativeId?: string
+  tags?: string[] | null
 }
 
 const PAGE_CONTENT_HEIGHT = 927
@@ -19,7 +28,7 @@ function formatInlineMarkdown(text: string): string {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
 }
 
-export const NarrativeDocumentViewer = forwardRef<NarrativeDocumentViewerHandle, NarrativeDocumentViewerProps>(function NarrativeDocumentViewer({ title, content, category }, ref) {
+export const NarrativeDocumentViewer = forwardRef<NarrativeDocumentViewerHandle, NarrativeDocumentViewerProps>(function NarrativeDocumentViewer({ title, content, category, narrativeId, tags }, ref) {
   const measureRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -27,13 +36,16 @@ export const NarrativeDocumentViewer = forwardRef<NarrativeDocumentViewerHandle,
   const thumbRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
   const [contentPages, setContentPages] = useState<string[][]>([])
   const [activePage, setActivePage] = useState(0)
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [renderKey, setRenderKey] = useState(0)
 
   // Build cover page HTML
   const coverHtml = useMemo(() => {
     const categoryLabel = category
       ? `<p>${category.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>`
       : ''
-    return `<h1>Organization Narrative</h1><p>${title}</p>${categoryLabel}`
+    return `<h1>Organization Narrative</h1><p data-field="title">${title}</p>${categoryLabel}`
   }, [title, category])
 
   // Parse content into individual elements for pagination
@@ -143,6 +155,75 @@ export const NarrativeDocumentViewer = forwardRef<NarrativeDocumentViewerHandle,
   // PDF export
   const { exportPdf } = useExportPdf()
 
+  // Toggle contenteditable on elements when edit mode changes
+  useEffect(() => {
+    if (!contentRef.current) return
+    const pages = contentRef.current.querySelectorAll('.doc-page')
+    pages.forEach((page, i) => {
+      const contentEl = page.querySelector('.doc-page-content')
+      if (!contentEl) return
+      if (i === 0) {
+        // Cover page: only make the title editable
+        const titleEl = contentEl.querySelector('[data-field="title"]')
+        if (titleEl) {
+          if (isEditing) {
+            titleEl.setAttribute('contenteditable', 'true')
+          } else {
+            titleEl.removeAttribute('contenteditable')
+          }
+        }
+      } else {
+        // Content pages: make the whole content area editable
+        if (isEditing) {
+          contentEl.setAttribute('contenteditable', 'true')
+        } else {
+          contentEl.removeAttribute('contenteditable')
+        }
+      }
+    })
+  }, [isEditing, allPages, renderKey])
+
+  const handleEdit = useCallback(() => {
+    setIsEditing(true)
+  }, [])
+
+  const handleReset = useCallback(() => {
+    setRenderKey(k => k + 1)
+    setIsEditing(false)
+  }, [])
+
+  const handleSave = useCallback(async () => {
+    if (!contentRef.current || !narrativeId) return
+    setIsSaving(true)
+    try {
+      // Extract edited title from cover page
+      const titleEl = contentRef.current.querySelector('[data-field="title"]')
+      const editedTitle = titleEl?.textContent?.trim() || title
+
+      // Extract edited content from all non-cover pages
+      const pages = contentRef.current.querySelectorAll('.doc-page:not(.doc-cover-page) .doc-page-content')
+      let html = ''
+      pages.forEach(page => {
+        html += page.innerHTML
+      })
+
+      const formData = new FormData()
+      formData.set('title', editedTitle)
+      formData.set('content', html)
+      formData.set('category', category || '')
+      formData.set('tags', tags?.join(', ') || '')
+
+      const result = await updateNarrative(narrativeId, formData)
+      if (result.error) {
+        console.error('Save failed:', result.error)
+      }
+      setIsEditing(false)
+      window.location.reload()
+    } finally {
+      setIsSaving(false)
+    }
+  }, [narrativeId, title, category, tags])
+
   useImperativeHandle(ref, () => ({
     exportPdf: async () => {
       await exportPdf({
@@ -152,7 +233,12 @@ export const NarrativeDocumentViewer = forwardRef<NarrativeDocumentViewerHandle,
         proposalTitle: title,
       })
     },
-  }), [exportPdf, allPages, totalPages, title])
+    startEdit: handleEdit,
+    resetEdit: handleReset,
+    saveEdit: handleSave,
+    isEditing,
+    isSaving,
+  }), [exportPdf, allPages, totalPages, title, handleEdit, handleReset, handleSave, isEditing, isSaving])
 
   // Track which page is in view using IntersectionObserver
   useEffect(() => {
@@ -219,6 +305,15 @@ export const NarrativeDocumentViewer = forwardRef<NarrativeDocumentViewerHandle,
 
   return (
     <div>
+      {/* Editing mode banner */}
+      {isEditing && (
+        <div className="flex items-center gap-2 px-4 py-2.5 mb-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <Pencil className="h-4 w-4 text-amber-600 shrink-0" />
+          <span className="text-sm font-medium text-amber-800">Editing Mode</span>
+          <span className="text-sm text-amber-600">— Click on any text to edit. Save when done or Reset to discard changes.</span>
+        </div>
+      )}
+
       <div className="pdf-browser">
         {/* Hidden measuring container */}
         <div
@@ -255,7 +350,7 @@ export const NarrativeDocumentViewer = forwardRef<NarrativeDocumentViewerHandle,
         </div>
 
         {/* Main content area */}
-        <div className="pdf-content" ref={contentRef}>
+        <div className="pdf-content" ref={contentRef} key={renderKey}>
           {allPages.map((html, i) => {
             const isCover = i === 0
             return (
@@ -272,6 +367,7 @@ export const NarrativeDocumentViewer = forwardRef<NarrativeDocumentViewerHandle,
                 )}
                 <div
                   className="doc-page-content"
+                  suppressContentEditableWarning
                   dangerouslySetInnerHTML={{ __html: html }}
                 />
                 {!isCover && (
@@ -658,5 +754,35 @@ const viewerStyles = `
 
   .doc-page-content li {
     margin: 0.15rem 0;
+  }
+
+  /* ── Editable Elements ── */
+  .doc-page-content [contenteditable="true"] {
+    outline: none;
+    cursor: text;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+    border-radius: 2px;
+  }
+
+  .doc-page-content [contenteditable="true"]:hover:not(:focus) {
+    background: #FFFDF0;
+  }
+
+  .doc-page-content [contenteditable="true"]:focus {
+    background: hsl(45 100% 95%);
+    box-shadow: inset 0 0 0 1px hsl(0 72% 51%);
+  }
+
+  .doc-cover-page .doc-page-content [data-field="title"][contenteditable="true"] {
+    cursor: text;
+  }
+
+  .doc-cover-page .doc-page-content [data-field="title"][contenteditable="true"]:hover:not(:focus) {
+    background: rgba(255, 253, 240, 0.5);
+  }
+
+  .doc-cover-page .doc-page-content [data-field="title"][contenteditable="true"]:focus {
+    background: rgba(255, 253, 240, 0.5);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
   }
 `
