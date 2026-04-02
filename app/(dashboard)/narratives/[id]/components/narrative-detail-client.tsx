@@ -471,10 +471,21 @@ export function NarrativeDetailClient({ narrative: initialNarrative }: Narrative
                       <Loader2 className="h-3 w-3 animate-spin" />
                       Loading history...
                     </div>
-                  ) : versions.length === 0 ? (
-                    <p className="text-xs text-muted-foreground py-2">No previous versions</p>
                   ) : (
-                    versions.map((v) => (
+                    <>
+                      {/* Current active version */}
+                      <div className="flex items-center justify-between rounded-md border border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950/40 px-2.5 py-1.5 text-xs">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate text-green-800 dark:text-green-300">v{narrative.version} (Current)</p>
+                          <p className="text-green-600 dark:text-green-400">Used for proposal generation</p>
+                          {narrative.updated_at && (
+                            <p className="text-muted-foreground">{format(new Date(narrative.updated_at), 'MMM d, yyyy h:mm a')}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Previous versions */}
+                      {versions.map((v) => (
                       <div key={v.id} className="flex items-center justify-between rounded-md border px-2.5 py-1.5 text-xs">
                         <div className="min-w-0">
                           <p className="font-medium truncate">v{v.version_number}</p>
@@ -495,7 +506,8 @@ export function NarrativeDetailClient({ narrative: initialNarrative }: Narrative
                           <span className="ml-1">Restore</span>
                         </Button>
                       </div>
-                    ))
+                    ))}
+                    </>
                   )}
                 </div>
               )}
