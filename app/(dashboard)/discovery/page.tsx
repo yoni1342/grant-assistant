@@ -36,6 +36,7 @@ import {
   EyeOff,
   X,
   ChevronDown,
+  Clock,
 } from "lucide-react";
 import {
   Popover,
@@ -403,6 +404,7 @@ export default function DiscoveryPage() {
   const seenRowIdsRef = useRef<Set<string>>(new Set());
 
   const [storageKey, setStorageKey] = useState<string | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   // Resolve org-specific storage key
   useEffect(() => {
@@ -421,6 +423,29 @@ export default function DiscoveryPage() {
         });
     });
   }, []);
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const saved = localStorage.getItem(`${storageKey}_recent`);
+      if (saved) setRecentSearches(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, [storageKey]);
+
+  function saveRecentSearch(q: string) {
+    if (!storageKey || !q.trim()) return;
+    const updated = [q.trim(), ...recentSearches.filter((s) => s !== q.trim())].slice(0, 8);
+    setRecentSearches(updated);
+    try { localStorage.setItem(`${storageKey}_recent`, JSON.stringify(updated)); } catch { /* ignore */ }
+  }
+
+  function removeRecentSearch(q: string) {
+    if (!storageKey) return;
+    const updated = recentSearches.filter((s) => s !== q);
+    setRecentSearches(updated);
+    try { localStorage.setItem(`${storageKey}_recent`, JSON.stringify(updated)); } catch { /* ignore */ }
+  }
 
   // Restore state from sessionStorage on mount (once storageKey is resolved)
   const hasRestored = useRef(false);
@@ -539,6 +564,7 @@ export default function DiscoveryPage() {
 
   async function triggerDiscovery() {
     if (!query.trim()) return;
+    saveRecentSearch(query);
     setLoading(true);
     setResults([]);
     setError(null);
@@ -831,6 +857,27 @@ export default function DiscoveryPage() {
               Discover
             </Button>
           </div>
+
+          {/* Recent Searches */}
+          {!loading && !searchComplete && recentSearches.length > 0 && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground">Recent:</span>
+              {recentSearches.map((s) => (
+                <button
+                  key={s}
+                  className="group inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                  onClick={() => { setQuery(s); }}
+                >
+                  {s}
+                  <X
+                    className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => { e.stopPropagation(); removeRecentSearch(s); }}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
 
           {showFilters && (
             <div className="space-y-3 mt-3">
