@@ -62,22 +62,27 @@ export function NarrativeDetailClient({ narrative: initialNarrative }: Narrative
   const [isSavingMeta, startMetaTransition] = useTransition()
 
   // Version history
-  const [versions, setVersions] = useState<{ id: string; title: string; category: string | null; version_number: number; created_at: string }[]>([])
+  const [versions, setVersions] = useState<{ id: string; title: string; category: string | null; version_number: number; created_at: string }[] | null>(null)
   const [showVersions, setShowVersions] = useState(false)
+  const [loadingVersions, setLoadingVersions] = useState(false)
   const [restoringVersion, setRestoringVersion] = useState<string | null>(null)
 
   useEffect(() => {
-    if (showVersions && versions.length === 0) {
-      getNarrativeVersions(narrative.id).then(setVersions)
+    if (showVersions && versions === null && !loadingVersions) {
+      setLoadingVersions(true)
+      getNarrativeVersions(narrative.id).then((data) => {
+        setVersions(data)
+        setLoadingVersions(false)
+      })
     }
-  }, [showVersions, narrative.id, versions.length])
+  }, [showVersions, narrative.id, versions, loadingVersions])
 
   async function handleRestore(versionId: string) {
     setRestoringVersion(versionId)
     const result = await restoreNarrativeVersion(narrative.id, versionId)
     if (result.success) {
       toast.success('Version restored')
-      setVersions([])
+      setVersions(null)
       window.location.reload()
     } else {
       toast.error(result.error || 'Failed to restore')
@@ -454,7 +459,12 @@ export function NarrativeDetailClient({ narrative: initialNarrative }: Narrative
               </button>
               {showVersions && (
                 <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-                  {versions.length === 0 ? (
+                  {loadingVersions || versions === null ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Loading history...
+                    </div>
+                  ) : versions.length === 0 ? (
                     <p className="text-xs text-muted-foreground py-2">No previous versions</p>
                   ) : (
                     versions.map((v) => (

@@ -277,11 +277,48 @@ How it works now:
 Grants that don't match the user's geographic filter are now discarded by the relevance filter before being shown in results.
 
 
+19. Recent Searches in Discovery (Medium Fix)
+
+Tester Reference: Round 2 #14 (recommendation), Round 3 #18 (recommendation)
+Tester said: "No saved searches or recent search history." and "Persist search results and filters within the session. Add 'Saved Searches' feature."
+
+What was done:
+- Created a `search_history` table in the database to store recent search queries per organization.
+- Added an API route (`/api/search-history`) for fetching, saving, and deleting search history.
+- Added clickable recent search chips below the search input on the Discovery page.
+- Searches are saved automatically when a search is triggered.
+- Users can click a chip to populate the search field, or hover and click X to remove it.
+- History is stored in the database (not browser storage), so it persists across devices and sessions.
+- Auto-trims to 8 most recent searches per org via a database trigger.
+
+How it works now:
+After searching, your recent queries appear as clickable chips below the search input. Click one to re-run that search. History follows you across devices since it's stored in the database.
+
+
+20. Narrative Version History (Medium Fix)
+
+Tester Reference: Round 2 #2 (recommendation)
+Tester said: "Add version control or 'active narrative' toggle." and "Monitor whether future proposal generation pulls from enhanced vs. original narrative versions."
+
+What was done:
+- Created a `narrative_versions` table to store snapshots of narratives on each edit.
+- Every time a narrative is saved, the previous content is automatically snapshotted with its version number, title, category, and tags.
+- Added a collapsible "Version History" section in the narrative detail sidebar showing all previous versions with timestamps.
+- Each version has a "Restore" button that restores the narrative to that version.
+- Restoring a version also snapshots the current state first, so nothing is ever lost.
+- Version numbers increment on each save, visible in the history.
+
+How it works now:
+Every edit is tracked. Open any narrative, expand "Version History" in the sidebar, and you can see all previous versions with timestamps. Click "Restore" on any version to revert to it — the current version is saved as a snapshot first, so you can always undo a restore.
+
+
 Database Migrations Run (April 2)
 
 1. `ALTER TYPE grant_stage ADD VALUE IF NOT EXISTS 'archived'` — Added "archived" to the grant stage enum.
 2. `ALTER TABLE grants ADD CONSTRAINT grants_title_not_empty CHECK (trim(title) <> '')` — Prevents empty titles at the database level.
 3. `CREATE TABLE grant_usage_log (...)` — Tracks daily grant additions independently of grant deletions/archives.
+4. `CREATE TABLE search_history (...)` — Stores recent Discovery search queries per org with auto-trim trigger.
+5. `CREATE TABLE narrative_versions (...)` — Stores narrative version snapshots on each edit.
 
 
 COMPLETE STATUS — All Tester Issues
@@ -339,9 +376,7 @@ Remaining Items (Not Yet Fixed)
 | 1 | Proposals not tied to grant requirements | High | R3-13, R3-17 | Proposals default to org narrative only. Grant description, eligibility, and funder requirements are not included in the proposal generation payload. This is an n8n workflow change — the frontend sends grantId, and the n8n workflow needs to fetch and use the full grant data when generating. |
 | 2 | GrantWatch vs Fundory coverage gap | High | R3-3 | GrantWatch returned 5 relevant results for the same search that Fundory returned 2. This is a database/content issue — needs more grant sources added to the n8n discovery workflows. Not a code fix. |
 | 3 | Discovery keyword language mismatch | Medium | R2-13 | Program-based language returns more results than service-based language. Tester recommended providing search guidance or auto-translating org profile tags into funder language. Could add search tips in the UI or improve n8n keyword expansion. |
-| 4 | Narrative version control | Medium | R2-2 (recommendation) | Tester recommended version control or "active narrative" toggle so users know which narrative version proposals use. Currently each edit overwrites the previous version with no history. |
-| 5 | Saved/Recent Searches in Discovery | Medium | R2-14 (recommendation) | Tester recommended "Saved Searches" or "Recent Searches" functionality. Currently only session persistence exists — no persistent search history. |
-| 6 | AI jargon in generated proposals | Low | R3-12 | Quality review tool detects jargon, but the proposal generation prompt still produces it. Requires n8n prompt tuning for the proposal generation workflow. |
+| 4 | AI jargon in generated proposals | Low | R3-12 | Quality review tool detects jargon, but the proposal generation prompt still produces it. Requires n8n prompt tuning for the proposal generation workflow. |
 
 
 Questions for the Tester (Carried Forward)
