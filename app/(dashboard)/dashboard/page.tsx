@@ -9,6 +9,8 @@ import {
   Clock,
   TrendingUp,
   ArrowRight,
+  CircleOff,
+  AlertTriangle,
 } from "lucide-react";
 import { GrantUsageCard } from "./grant-usage-card";
 
@@ -45,6 +47,7 @@ export default async function DashboardPage() {
     .from("grants")
     .select("id, title, funder_name, stage, amount, deadline")
     .eq("org_id", orgId)
+    .neq("stage", "archived")
     .order("created_at", { ascending: false });
 
   // Fetch recent activity
@@ -68,9 +71,14 @@ export default async function DashboardPage() {
   );
 
   // Metrics
+  const now = new Date();
   const totalGrants = allGrants.length;
-  const upcomingDeadlines = allGrants.filter(
-    (g) => g.deadline && new Date(g.deadline) > new Date()
+  const activeDeadlines = allGrants.filter(
+    (g) => g.deadline && (!isNaN(new Date(g.deadline).getTime()) ? new Date(g.deadline) > now : true)
+  ).length;
+  const noDeadlineGrants = allGrants.filter((g) => !g.deadline).length;
+  const pastDeadlineGrants = allGrants.filter(
+    (g) => g.deadline && !isNaN(new Date(g.deadline).getTime()) && new Date(g.deadline) <= now
   ).length;
 
   // Upcoming deadlines list (all, sorted by soonest first)
@@ -91,27 +99,52 @@ export default async function DashboardPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Grants</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalGrants}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pending Deadlines
-            </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{upcomingDeadlines}</div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Link href="/pipeline">
+          <Card className="cursor-pointer hover:bg-muted/50 transition-colors h-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Grants</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalGrants}</div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/deadlines">
+          <Card className="cursor-pointer hover:bg-muted/50 transition-colors h-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Active Deadlines</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{activeDeadlines}</div>
+              <p className="text-xs text-muted-foreground">Pending + Ongoing</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/no-deadline">
+          <Card className="cursor-pointer hover:bg-muted/50 transition-colors h-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">No Deadline</CardTitle>
+              <CircleOff className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{noDeadlineGrants}</div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/past-deadlines">
+          <Card className="cursor-pointer hover:bg-muted/50 transition-colors h-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Past Deadlines</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{pastDeadlineGrants}</div>
+            </CardContent>
+          </Card>
+        </Link>
         <GrantUsageCard />
       </div>
 

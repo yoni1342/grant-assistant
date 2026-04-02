@@ -76,17 +76,27 @@ export function ListView({ grants }: { grants: Grant[] }) {
               </TableCell>
               <TableCell>
                 {g.screening_score != null ? (
-                  <Badge
-                    variant={
-                      g.screening_score >= 80
-                        ? "default"
-                        : g.screening_score >= 50
-                          ? "secondary"
-                          : "destructive"
-                    }
-                  >
-                    {g.screening_score}%
-                  </Badge>
+                  (() => {
+                    const elig = (typeof g.eligibility === "string" ? JSON.parse(g.eligibility) : g.eligibility) as { data_quality?: string; score?: string } | null;
+                    const insufficient = elig?.data_quality === "insufficient" || elig?.score === "INSUFFICIENT_DATA";
+                    return insufficient ? (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                        Not Enough Info
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant={
+                          g.screening_score >= 80
+                            ? "default"
+                            : g.screening_score >= 50
+                              ? "secondary"
+                              : "destructive"
+                        }
+                      >
+                        {g.screening_score}%
+                      </Badge>
+                    );
+                  })()
                 ) : (
                   <span className="text-xs text-muted-foreground">—</span>
                 )}

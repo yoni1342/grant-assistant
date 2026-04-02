@@ -24,12 +24,12 @@ export async function GET() {
   const plan = (org?.plan as PlanId) || "free"
   const limit = org?.is_tester ? null : (PLANS[plan]?.dailyGrantLimit ?? null)
 
-  // Count grants added today
+  // Count grant additions today (not affected by deletes/archives)
   const now = new Date()
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
 
   const { count } = await adminSupabase
-    .from("grants")
+    .from("grant_usage_log")
     .select("*", { count: "exact", head: true })
     .eq("org_id", orgId)
     .gte("created_at", startOfDay)

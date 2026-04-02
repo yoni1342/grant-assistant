@@ -25,7 +25,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Trash2,
+  Archive,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -98,8 +98,8 @@ export function GrantDetail({
   const [proposalStatus, setProposalStatus] = useState<"generating" | "done" | "error">("generating");
   const [proposalError, setProposalError] = useState<string | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   const eligibility = (typeof grant.eligibility === "string"
     ? JSON.parse(grant.eligibility)
@@ -107,6 +107,7 @@ export function GrantDetail({
     score?: string;
     indicator?: string;
     confidence?: number;
+    data_quality?: string;
     dimension_scores?: {
       mission_alignment?: number;
       target_population?: number;
@@ -115,15 +116,16 @@ export function GrantDetail({
       organizational_capacity?: number;
     };
   } | null;
+  const isInsufficientData = eligibility?.data_quality === "insufficient" || eligibility?.score === "INSUFFICIENT_DATA";
   const concerns = grant.concerns as string[] | null;
   const recommendations = grant.recommendations as { text?: string }[] | string[] | null;
 
-  async function handleDelete() {
-    setDeleting(true);
+  async function handleArchive() {
+    setArchiving(true);
     const supabase = createClient();
-    await supabase.from("grants").delete().eq("id", grant.id);
-    setDeleteDialogOpen(false);
-    setDeleting(false);
+    await supabase.from("grants").update({ stage: "archived" }).eq("id", grant.id);
+    setArchiveDialogOpen(false);
+    setArchiving(false);
     router.push("/pipeline");
   }
 
@@ -131,6 +133,10 @@ export function GrantDetail({
     // If moving to drafting, require confirmation first
     const stageChangedToDrafting = stage === "drafting" && grant.stage !== "drafting";
     if (stageChangedToDrafting) {
+      if (!title.trim()) {
+        alert("A grant title is required before generating a proposal.");
+        return;
+      }
       setConfirmDialogOpen(true);
       return;
     }
@@ -230,15 +236,17 @@ export function GrantDetail({
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Grant Details</CardTitle>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-red-800 dark:hover:bg-red-950"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </Button>
+            {grant.stage !== "archived" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700 dark:border-orange-800 dark:hover:bg-orange-950"
+                onClick={() => setArchiveDialogOpen(true)}
+              >
+                <Archive className="h-4 w-4 mr-1" />
+                Archive
+              </Button>
+            )}
             <Button onClick={handleSave} disabled={saving} size="sm">
               {saving ? (
                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -429,22 +437,30 @@ export function GrantDetail({
             {grant.screening_score != null && (
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium">Score:</span>
-                <Badge
-                  variant={
-                    grant.screening_score >= 80
-                      ? "default"
-                      : grant.screening_score >= 50
-                        ? "secondary"
-                        : "destructive"
-                  }
-                  className="text-sm"
-                >
-                  {grant.screening_score}%
-                </Badge>
-                {eligibility?.score && (
-                  <span className="text-sm text-muted-foreground">
-                    ({eligibility.score})
-                  </span>
+                {isInsufficientData ? (
+                  <Badge variant="outline" className="text-sm bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                    Not Enough Info
+                  </Badge>
+                ) : (
+                  <>
+                    <Badge
+                      variant={
+                        grant.screening_score >= 80
+                          ? "default"
+                          : grant.screening_score >= 50
+                            ? "secondary"
+                            : "destructive"
+                      }
+                      className="text-sm"
+                    >
+                      {grant.screening_score}%
+                    </Badge>
+                    {eligibility?.score && (
+                      <span className="text-sm text-muted-foreground">
+                        ({eligibility.score})
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -750,13 +766,13 @@ export function GrantDetail({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* Archive Confirmation Dialog */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Grant</DialogTitle>
+            <DialogTitle>Archive Grant</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this grant? This action cannot be undone.
+              This grant will be moved to the archive. You can restore it later from the Archive page.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-lg border p-3 space-y-1">
@@ -766,20 +782,20 @@ export function GrantDetail({
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)}>
               Cancel
             </Button>
             <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
+              onClick={handleArchive}
+              disabled={archiving}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
             >
-              {deleting ? (
+              {archiving ? (
                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />
               ) : (
-                <Trash2 className="h-4 w-4 mr-1" />
+                <Archive className="h-4 w-4 mr-1" />
               )}
-              {deleting ? "Deleting..." : "Delete Grant"}
+              {archiving ? "Archiving..." : "Archive Grant"}
             </Button>
           </DialogFooter>
         </DialogContent>

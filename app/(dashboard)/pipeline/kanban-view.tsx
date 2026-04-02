@@ -21,19 +21,28 @@ const STAGES = [
   { key: "closed", label: "Closed", color: "bg-muted-foreground" },
 ] as const;
 
-function ScreeningScore({ score }: { score: number | null }) {
-  if (score == null) return null;
+function ScreeningScore({ grant }: { grant: Grant }) {
+  if (grant.screening_score == null) return null;
+  const elig = (typeof grant.eligibility === "string" ? JSON.parse(grant.eligibility) : grant.eligibility) as { data_quality?: string; score?: string } | null;
+  const insufficient = elig?.data_quality === "insufficient" || elig?.score === "INSUFFICIENT_DATA";
+  if (insufficient) {
+    return (
+      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">
+        Not Enough Info
+      </span>
+    );
+  }
   const color =
-    score >= 80
+    grant.screening_score >= 80
       ? "bg-green-100 text-green-800"
-      : score >= 50
+      : grant.screening_score >= 50
         ? "bg-yellow-100 text-yellow-800"
         : "bg-red-100 text-red-800";
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}
     >
-      {score}%
+      {grant.screening_score}%
     </span>
   );
 }
@@ -212,7 +221,7 @@ export function KanbanView({
                                 <ProposalQualityScore score={proposalQualityMap[grant.id]} />
                               </>
                             ) : (
-                              <ScreeningScore score={grant.screening_score} />
+                              <ScreeningScore grant={grant} />
                             )}
                           </div>
                           {grant.deadline && (

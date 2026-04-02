@@ -9,12 +9,12 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -5648,
-        -11136
+        -9600,
+        -9024
       ],
       "typeVersion": 1,
-      "id": "5863c4aa-2a9b-4688-937c-0c3b903db80a",
-      "name": "Sticky Note"
+      "id": "2c369300-e267-44d6-928d-9886cd2e8286",
+      "name": "Sticky Note1"
     },
     {
       "parameters": {
@@ -40,43 +40,43 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "= {{ JSON.stringify({\n    org_id: $json.org_id,\n    grant_id: $json.grant_id,\n    type: \"grant_not_eligible\",\n    title: \"Grant \\\"\" + ($json.details?.grant_name || \"Unknown\") + \"\\\" is not eligible\",\n    message: $json.details?.summary || \"Grant did not pass eligibility screening (RED score)\"\n  }) }}",
+        "body": "={{ JSON.stringify({\n      org_id: $json.org_id,\n      grant_id: $json.grant_id,\n      type: \"grant_not_eligible\",\n      title: \"Grant \\\"\" + ($json.details?.grant_name || \"Unknown\") + \"\\\" is not eligible\",\n      message: $json.details?.summary || \"Grant did not pass eligibility screening (RED score)\"\n    }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -1792,
-        -10688
+        -5744,
+        -8576
       ],
-      "id": "08e283e9-de75-4994-8f40-476db0d61cf0",
-      "name": "Notify Not Eligible"
+      "id": "df84a36b-303e-4e39-8962-9ae147d79b8f",
+      "name": "Notify Not Eligible1"
     },
     {
       "parameters": {
         "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.body.org_id,\n    grant_id: items[0].json.body.grantId || items[0].json.body.grant_id,\n    type: 'screening_started',\n    title: 'Screening started for \"' + (items[0].json.body.grantData?.title || items[0].json.body.grant_name || 'Unknown') + '\"'\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
       },
-      "id": "0f03e54a-a579-4f4b-896c-0eb73c7c47ef",
-      "name": "Notify Screening Started",
+      "id": "de759ef6-a1f3-4c12-b7c7-657029efc94a",
+      "name": "Notify Screening Started1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4912,
-        -10896
+        -8864,
+        -8784
       ],
       "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.org_id,\n    grant_id: items[0].json.grant_id,\n    type: 'screening_completed',\n    title: 'Screening completed for \"' + ($('update grant2').item.json.title|| 'Unknown') + '\"',\n    message: 'Score: ' + (items[0].json.eligibility?.score || 'N/A') + ' | Confidence: ' + (items[0].json.eligibility?.confidence || $('update grant2').item.json.eligibility?.confidence || 'N/A') + '% | ' + (items[0].json.screening_notes || '')\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
+        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.org_id,\n    grant_id: items[0].json.grant_id,\n    type: 'screening_completed',\n    title: 'Screening completed for \"' + ($('update grant5').item.json.title|| 'Unknown') + '\"',\n    message: 'Score: ' + (items[0].json.eligibility?.score || 'N/A') + ' | Confidence: ' + (items[0].json.eligibility?.confidence || $('update grant5').item.json.eligibility?.confidence || 'N/A') + '% | ' + (items[0].json.screening_notes || '')\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
       },
-      "id": "0189443c-e651-4874-87fa-b7dd2d9a9be5",
-      "name": "Notify Screening Completed",
+      "id": "53ac3e4c-e84c-47cf-b1f9-826fd7ae7f15",
+      "name": "Notify Screening Completed1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1728,
-        -11456
+        -5680,
+        -9344
       ],
       "continueOnFail": true
     },
@@ -87,13 +87,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "63dba57a-f740-4763-a243-53e29f711d77",
-      "name": "Webhook Trigger",
+      "id": "6828e256-2a81-4d25-83b6-215334ebc1da",
+      "name": "Webhook Trigger1",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -5152,
-        -10896
+        -9104,
+        -8784
       ],
       "webhookId": "grant-screener",
       "notesInFlow": true,
@@ -103,13 +103,13 @@
       "parameters": {
         "jsCode": "// Use pre-extracted grant data from scanner\nconst body = $input.first().json.body;\nconst grantData = body.grantData || {};\n\nreturn [{ \n  json: { \n    grantContent: `\nGrant Title: ${grantData.title || 'Not specified'}\nAgency: ${grantData.agency || 'Not specified'}\nAward Range: ${grantData.awardRange || 'Not specified'}\nDeadline: ${grantData.deadline || 'Not specified'}\nOpen Date: ${grantData.openDate || 'Not specified'}\nDescription: ${grantData.description || 'No description provided'}\nSource: ${grantData.source || 'Grant Scanner'}\nMatched Keywords: ${grantData.matchedKeywords || 'None'}\n`.trim(),\n    grantid: body.grantId || body.grantid || '',\n    sourceUrl: body.url || grantData.url || '',\n    sourceType: 'scanner',\n    fetchedAt: new Date().toISOString(),\n    originalGrantData: grantData\n  } \n}];"
       },
-      "id": "14528092-60b1-4f7a-ba3b-c0d911be3cdf",
-      "name": "Use Scanner Data",
+      "id": "167f5818-123c-457d-addc-a4f74d39378f",
+      "name": "Use Scanner Data1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3968,
-        -11088
+        -7920,
+        -8976
       ],
       "notesInFlow": true,
       "notes": "Use pre-extracted data from Grant Scanner"
@@ -138,13 +138,13 @@
         },
         "options": {}
       },
-      "id": "b0e048f9-73f9-4bfd-a191-9e29cb282b9b",
-      "name": "URL or Document?3",
+      "id": "c8a48cc9-2158-4a73-9c6e-9ea3f626dd19",
+      "name": "URL or Document?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -4416,
-        -10800
+        -8368,
+        -8688
       ]
     },
     {
@@ -158,13 +158,13 @@
           }
         }
       },
-      "id": "b85be3c3-f34c-4a73-b75f-1c2e89ddedf1",
-      "name": "Fetch Grant Page3",
+      "id": "2ee0a605-83fe-4e7e-8f2f-fa52a86d52dc",
+      "name": "Fetch Grant Page",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -4192,
-        -10896
+        -8144,
+        -8784
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -172,15 +172,15 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract text content from HTML\nconst item = $input.first();\nconst html = item.json.data || item.json.body || '';\nconst url = $('Webhook Trigger').first().json.body.url || '';\n\nif (!html || typeof html !== 'string') {\n  return [{ json: { error: true, message: 'Failed to fetch grant page', url: url } }];\n}\n\n// Remove scripts, styles, and extract text\nlet text = html\n  .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n  .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;/g, ' ')\n  .replace(/&amp;/g, '&')\n  .replace(/&lt;/g, '<')\n  .replace(/&gt;/g, '>')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\n// Limit to ~15000 chars for AI processing\nif (text.length > 15000) {\n  text = text.substring(0, 15000) + '... [truncated]';\n}\n\nreturn [{ \n  json: { \n    grantContent: text,\n    sourceUrl: url,\n    sourceType: 'url',\n    fetchedAt: new Date().toISOString()\n  } \n}];"
+        "jsCode": "// Extract text content from HTML\nconst item = $input.first();\nconst html = item.json.data || item.json.body || '';\nconst url = $('Webhook Trigger1').first().json.body.url || '';\n\nif (!html || typeof html !== 'string') {\n  return [{ json: { error: true, message: 'Failed to fetch grant page', url: url } }];\n}\n\n// Remove scripts, styles, and extract text\nlet text = html\n  .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n  .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;/g, ' ')\n  .replace(/&amp;/g, '&')\n  .replace(/&lt;/g, '<')\n  .replace(/&gt;/g, '>')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\n// Limit to ~15000 chars for AI processing\nif (text.length > 15000) {\n  text = text.substring(0, 15000) + '... [truncated]';\n}\n\nreturn [{ \n  json: { \n    grantContent: text,\n    sourceUrl: url,\n    sourceType: 'url',\n    fetchedAt: new Date().toISOString()\n  } \n}];"
       },
-      "id": "6dee8156-e80b-4fc1-82fd-fee212c386e4",
-      "name": "Extract Text from HTML3",
+      "id": "dff2f4af-8263-40a9-b8fa-f0a5588bd26b",
+      "name": "Extract Text from HTML",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3968,
-        -10896
+        -7920,
+        -8784
       ],
       "notesInFlow": true,
       "notes": "Parse HTML to plain text"
@@ -189,13 +189,13 @@
       "parameters": {
         "jsCode": "// Handle document input (base64 PDF or text)\nconst item = $input.first();\nconst body = item.json.body || {};\n\nlet content = '';\nlet filename = body.filename || 'document';\n\nif (body.document) {\n  if (body.documentText) {\n    content = body.documentText;\n  } else {\n    content = Buffer.from(body.document, 'base64').toString('utf-8');\n  }\n} else if (body.text) {\n  content = body.text;\n}\n\nif (!content || content.length < 50) {\n  return [{ json: { error: true, message: 'No valid document content provided' } }];\n}\n\nif (content.length > 15000) {\n  content = content.substring(0, 15000) + '... [truncated]';\n}\n\nreturn [{ \n  json: { \n    grantContent: content,\n    sourceUrl: filename,\n    sourceType: 'document',\n    fetchedAt: new Date().toISOString()\n  } \n}];"
       },
-      "id": "ecae5222-a996-4661-bd08-4313afef2add",
-      "name": "Process Document3",
+      "id": "1e892ce7-0d7f-4708-8e56-52d013cd7984",
+      "name": "Process Document",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3968,
-        -10704
+        -7920,
+        -8592
       ],
       "notesInFlow": true,
       "notes": "Handle uploaded document/text"
@@ -227,13 +227,13 @@
           "ignoreCase": true
         }
       },
-      "id": "88895760-cfe0-41af-bdec-9c6f7de6839b",
-      "name": "Has Pre-Extracted Data?1",
+      "id": "532f7d6a-bd03-4c8a-970b-b4e09a9c83c6",
+      "name": "Has Pre-Extracted Data?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -4640,
-        -10896
+        -8592,
+        -8784
       ]
     },
     {
@@ -254,34 +254,43 @@
                 "type": "string",
                 "operation": "notEquals"
               }
+            },
+            {
+              "id": "not-insufficient",
+              "leftValue": "={{ $json.data.eligibility.score }}",
+              "rightValue": "INSUFFICIENT_DATA",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
             }
           ],
           "combinator": "and"
         },
         "options": {}
       },
-      "id": "a255a248-1015-43cf-ba86-002108423a49",
-      "name": "Passes Eligibility?1",
+      "id": "830d6ac6-9727-4147-a0fa-a4e2ccb6f5a9",
+      "name": "Passes Eligibility?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -2512,
-        -10880
+        -6464,
+        -8768
       ],
       "notesInFlow": true,
       "notes": "GREEN or YELLOW passes"
     },
     {
       "parameters": {
-        "jsCode": "// Pass through grant data and extract org_id for narrative fetch\nconst grantData = $input.first().json;\nconst webhookBody = $('Webhook Trigger').first().json.body;\nconst org_id = webhookBody.org_id || webhookBody.grantData?.org_id || grantData.originalGrantData?.org_id || '';\n\nreturn [{ json: { ...grantData, org_id } }];"
+        "jsCode": "// Pass through grant data and extract org_id for narrative fetch\nconst grantData = $input.first().json;\nconst webhookBody = $('Webhook Trigger1').first().json.body;\nconst org_id = webhookBody.org_id || webhookBody.grantData?.org_id || grantData.originalGrantData?.org_id || '';\n\nreturn [{ json: { ...grantData, org_id } }];"
       },
-      "id": "4c92e887-400c-4fbb-8967-f3a72e46510a",
-      "name": "Prepare Grant Data",
+      "id": "c07f817a-3636-471a-9d79-4e708bd87aba",
+      "name": "Prepare Grant Data1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3744,
-        -10896
+        -7696,
+        -8784
       ],
       "notesInFlow": true,
       "notes": "Extract org_id for narrative fetch"
@@ -306,13 +315,13 @@
         },
         "options": {}
       },
-      "id": "e55d1805-2ec5-4a34-a7c1-581cf2c2885f",
-      "name": "Fetch Narratives",
+      "id": "11d09b1b-fbeb-454f-b6a3-2fbc472a2202",
+      "name": "Fetch Narratives1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -3552,
-        -10896
+        -7504,
+        -8784
       ],
       "alwaysOutputData": true,
       "notesInFlow": true,
@@ -326,15 +335,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const grantData = $('Prepare Grant Data').first().json;\n  const narrativeItems = $('Fetch Narratives').all();\n\n  let narrativeText = '';\n  for (const item of narrativeItems) {\n    const n = item.json;\n    if (n.title && n.extracted_text) {\n      narrativeText += `\\n\\n### ${n.title}\\n${n.extracted_text}`;\n    }\n  }\n\n  if (!narrativeText) {\n    narrativeText = 'No narratives available for this organization.';\n  }\n\n  return [{ json: { ...grantData, narrativeText: narrativeText.trim() } }];"
+        "jsCode": "const grantData = $('Prepare Grant Data1').first().json;\n  const narrativeItems = $('Fetch Narratives1').all();\n\n  let narrativeText = '';\n  for (const item of narrativeItems) {\n    const n = item.json;\n    if (n.title && n.extracted_text) {\n      narrativeText += `\\n\\n### ${n.title}\\n${n.extracted_text}`;\n    }\n  }\n\n  if (!narrativeText) {\n    narrativeText = 'No narratives available for this organization.';\n  }\n\n  return [{ json: { ...grantData, narrativeText: narrativeText.trim() } }];"
       },
-      "id": "d7c6fc58-047c-4cad-9522-d7b91410efdd",
-      "name": "Combine Context",
+      "id": "e1583447-e65f-44a6-bb54-a60e79dccf22",
+      "name": "Combine Context1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3344,
-        -10896
+        -7296,
+        -8784
       ],
       "notesInFlow": true,
       "notes": "Merge grant data + org narratives"
@@ -350,7 +359,7 @@
         "messages": {
           "values": [
             {
-              "content": "You are a grant eligibility analyst. You evaluate grant opportunities against a specific nonprofit organization's profile and programs.\n\n  ---\n\n  Using the organization's narratives given as \"ORGANIZATION PROFILE & PROGRAMS\" as your sole matching criteria, evaluate how strongly this grant aligns\n  with the organization.\n\n  **SCORING DIMENSIONS (total 0-100):**\n\n  1. **Mission Alignment (0-40):** Does the grant's purpose directly support the org's stated mission?\n     - 32-40: Grant purpose clearly supports the org's mission — the org would naturally pursue this\n     - 21-31: Meaningful overlap but the grant targets a different aspect than the org's core focus\n     - 11-20: Tangential connection — org could stretch to make a case\n     - 0-10: No meaningful connection\n\n  2. **Target Population Match (0-15):** Does the grant serve the same populations the org serves?\n     - 12-15: The org explicitly serves the population this grant targets\n     - 8-11: Overlapping but not identical (e.g., grant says \"seniors\", org serves \"adults with disabilities\" including seniors)\n     - 4-7: Broadly related but different primary focus\n     - 0-3: Different populations entirely\n\n  3. **Service/Program Fit (0-25):** Does the org already deliver the type of services the grant funds?\n     - 20-25: Org's existing programs directly match what the grant funds — no new program needed\n     - 13-19: Org has related programs that could be expanded or adapted\n     - 7-12: Org has general capacity but no existing matching program\n     - 0-6: No relevant programs or experience\n\n  4. **Geographic Alignment (0-10):** Does the org operate in the grant's target geography?\n     - 8-10: Grant is open nationwide/statewide and org qualifies, OR grant targets the org's exact service area\n     - 5-7: Overlapping but not exact service area match\n     - 3-4: Same state but different region, or grant restricts to areas org doesn't serve\n     - 0-2: Grant explicitly excludes the org's geography\n\n  5. **Organizational Capacity (0-10):** Based on the narratives, does the org appear capable of executing this grant?\n     - 8-10: Narratives show the org has done similar work — relevant programs, infrastructure, or past grants\n     - 5-7: Org has relevant infrastructure but no direct evidence of similar project execution\n     - 3-4: Limited evidence of capacity for this type of work\n     - 0-2: No evidence of capacity\n\n  **CRITICAL SCORING RULES:**\n  - Score each dimension independently based on evidence in the narratives.\n  - If a dimension is clearly a strong match, score it near the top of its range. Reserve mid-range for genuinely ambiguous cases where evidence is mixed.\n  Do NOT discount points because the narratives don't use the exact same terminology as the grant.\n  - If a grant has no geographic restriction or is open nationwide, geographic alignment is 8-10 by default.\n  - If the narratives are sparse on a dimension but nothing contradicts a match, score at mid-range, not lower.\n  - Be decisive: a strong match should score 85+, a poor match should score below 40. Scores of 50-70 should be rare — most grants are either a good fit or\n  they aren't.\n\n  **INDICATOR THRESHOLDS:**\n  - GREEN: Confidence Score above 80\n  - YELLOW: Confidence Score between 50 and 80\n  - RED: Confidence Score below 50\n\n  **CALIBRATION EXAMPLES:**\n\n  Example 1 — Strong match (score ~90):\n  A grant funding \"community health education for underserved populations\" evaluated against an org whose narratives describe \"health literacy programs for\n  low-income families in rural Georgia.\" Mission, population, services, and geography all clearly align → scores of 36, 13, 23, 9, 8 = 89.\n\n  Example 2 — Poor match (score ~20):\n  A grant funding \"marine biology research fellowships for PhD students\" evaluated against the same community health org. No overlap on any dimension →\n  scores of 3, 1, 2, 9, 3 = 18.\n\n  Example 3 — Partial match (score ~45):\n  A grant funding \"youth STEM education in urban schools\" evaluated against the community health org. The org serves a related population (families) and is\n  in the right geography, but doesn't run STEM programs → scores of 12, 8, 5, 9, 6 = 40.\n\n  **RETURN VALID JSON:**\n  {\n    \"grantid\": \"the unique grantid of the grant\",\n    \"org_id\": \"the unique orgid of the organization\",\n    \"overallScore\": \"GREEN\" | \"YELLOW\" | \"RED\",\n    \"confidence\": 0-100,\n    \"dimensionScores\": {\n      \"missionAlignment\": 0-40,\n      \"targetPopulation\": 0-15,\n      \"serviceFit\": 0-25,\n      \"geographicAlignment\": 0-10,\n      \"organizationalCapacity\": 0-10\n    },\n    \"dimensionReasoning\": {\n      \"missionAlignment\": \"1-sentence justification citing specific narrative evidence\",\n      \"targetPopulation\": \"1-sentence justification citing specific narrative evidence\",\n      \"serviceFit\": \"1-sentence justification citing specific narrative evidence\",\n      \"geographicAlignment\": \"1-sentence justification citing specific narrative evidence\",\n      \"organizationalCapacity\": \"1-sentence justification citing specific narrative evidence\"\n    },\n    \"summary\": \"2-sentence eligibility determination referencing specific org programs that match\",\n    \"matchedCategory\": \"Core Program Grants\" | \"Program Development & Capacity\" | \"None\",\n    \"grantTitle\": \"Extracted grant title\",\n    \"agency\": \"Funding agency name\",\n    \"deadline\": \"extract deadline from grant content; if no date, preserve original text like 'Ongoing'\",\n    \"fundingRange\": \"$X - $Y\",\n    \"categories\": {\n      \"category1Match\": true/false,\n      \"category2Match\": true/false,\n      \"matchedKeywords\": [\"keyword1\", \"keyword2\"]\n    },\n    \"keyRequirements\": [\"501c3 letter\", \"budget\", \"etc\"],\n    \"concerns\": [\"Any red flags\"],\n    \"recommendations\": [\"Next steps\"]\n  }",
+              "content": "You are a grant eligibility analyst. You evaluate grant opportunities against a specific nonprofit organization's profile and programs.\n\n  ---\n\n  Using the organization's narratives given as \"ORGANIZATION PROFILE & PROGRAMS\" as your sole matching criteria, evaluate how strongly this grant aligns\n  with the organization.\n\n  **SCORING DIMENSIONS (total 0-100):**\n\n  1. **Mission Alignment (0-40):** Does the grant's purpose directly support the org's stated mission?\n     - 32-40: Grant purpose clearly supports the org's mission — the org would naturally pursue this\n     - 21-31: Meaningful overlap but the grant targets a different aspect than the org's core focus\n     - 11-20: Tangential connection — org could stretch to make a case\n     - 0-10: No meaningful connection\n\n  2. **Target Population Match (0-15):** Does the grant serve the same populations the org serves?\n     - 12-15: The org explicitly serves the population this grant targets\n     - 8-11: Overlapping but not identical (e.g., grant says \"seniors\", org serves \"adults with disabilities\" including seniors)\n     - 4-7: Broadly related but different primary focus\n     - 0-3: Different populations entirely\n\n  3. **Service/Program Fit (0-25):** Does the org already deliver the type of services the grant funds?\n     - 20-25: Org's existing programs directly match what the grant funds — no new program needed\n     - 13-19: Org has related programs that could be expanded or adapted\n     - 7-12: Org has general capacity but no existing matching program\n     - 0-6: No relevant programs or experience\n\n  4. **Geographic Alignment (0-10):** Does the org operate in the grant's target geography?\n     - 8-10: Grant is open nationwide/statewide and org qualifies, OR grant targets the org's exact service area\n     - 5-7: Overlapping but not exact service area match\n     - 3-4: Same state but different region, or grant restricts to areas org doesn't serve\n     - 0-2: Grant explicitly excludes the org's geography\n\n  5. **Organizational Capacity (0-10):** Based on the narratives, does the org appear capable of executing this grant?\n     - 8-10: Narratives show the org has done similar work — relevant programs, infrastructure, or past grants\n     - 5-7: Org has relevant infrastructure but no direct evidence of similar project execution\n     - 3-4: Limited evidence of capacity for this type of work\n     - 0-2: No evidence of capacity\n\n  **CRITICAL SCORING RULES:**\n  - Score each dimension independently based on evidence in the narratives.\n  - If a dimension is clearly a strong match, score it near the top of its range. Reserve mid-range for genuinely ambiguous cases where evidence is mixed.\n  Do NOT discount points because the narratives don't use the exact same terminology as the grant.\n  - If a grant has no geographic restriction or is open nationwide, geographic alignment is 8-10 by default.\n  - If the narratives are sparse on a dimension but nothing contradicts a match, score at mid-range, not lower.\n  - Be decisive: a strong match should score 85+, a poor match should score below 40. Scores of 50-70 should be rare — most grants are either a good fit or\n  they aren't.\n  - If the grant content is too sparse to meaningfully evaluate (e.g., missing description, purpose, eligibility criteria, or target population), set dataQuality to \"insufficient\" and overallScore to \"INSUFFICIENT_DATA\" instead of scoring the org poorly. Only set dataQuality to \"sufficient\" when the grant provides enough detail to make a real assessment.\n\n  **INDICATOR THRESHOLDS:**\n  - GREEN: Confidence Score above 80\n  - YELLOW: Confidence Score between 50 and 80\n  - RED: Confidence Score below 50\n  - INSUFFICIENT_DATA: Grant lacks enough detail to evaluate\n\n  **CALIBRATION EXAMPLES:**\n\n  Example 1 — Strong match (score ~90):\n  A grant funding \"community health education for underserved populations\" evaluated against an org whose narratives describe \"health literacy programs for\n  low-income families in rural Georgia.\" Mission, population, services, and geography all clearly align → scores of 36, 13, 23, 9, 8 = 89.\n\n  Example 2 — Poor match (score ~20):\n  A grant funding \"marine biology research fellowships for PhD students\" evaluated against the same community health org. No overlap on any dimension →\n  scores of 3, 1, 2, 9, 3 = 18.\n\n  Example 3 — Partial match (score ~45):\n  A grant funding \"youth STEM education in urban schools\" evaluated against the community health org. The org serves a related population (families) and is\n  in the right geography, but doesn't run STEM programs → scores of 12, 8, 5, 9, 6 = 40.\n\n  **RETURN VALID JSON:**\n  {\n    \"grantid\": \"the unique grantid of the grant\",\n    \"org_id\": \"the unique orgid of the organization\",\n    \"dataQuality\": \"sufficient\" | \"insufficient\",\n    \"overallScore\": \"GREEN\" | \"YELLOW\" | \"RED\" | \"INSUFFICIENT_DATA\",\n    \"confidence\": 0-100,\n    \"dimensionScores\": {\n      \"missionAlignment\": 0-40,\n      \"targetPopulation\": 0-15,\n      \"serviceFit\": 0-25,\n      \"geographicAlignment\": 0-10,\n      \"organizationalCapacity\": 0-10\n    },\n    \"dimensionReasoning\": {\n      \"missionAlignment\": \"1-sentence justification citing specific narrative evidence\",\n      \"targetPopulation\": \"1-sentence justification citing specific narrative evidence\",\n      \"serviceFit\": \"1-sentence justification citing specific narrative evidence\",\n      \"geographicAlignment\": \"1-sentence justification citing specific narrative evidence\",\n      \"organizationalCapacity\": \"1-sentence justification citing specific narrative evidence\"\n    },\n    \"summary\": \"2-sentence eligibility determination referencing specific org programs that match\",\n    \"matchedCategory\": \"Core Program Grants\" | \"Program Development & Capacity\" | \"None\",\n    \"grantTitle\": \"Extracted grant title\",\n    \"agency\": \"Funding agency name\",\n    \"deadline\": \"extract deadline from grant content; if no date, preserve original text like 'Ongoing'\",\n    \"fundingRange\": \"$X - $Y\",\n    \"categories\": {\n      \"category1Match\": true/false,\n      \"category2Match\": true/false,\n      \"matchedKeywords\": [\"keyword1\", \"keyword2\"]\n    },\n    \"keyRequirements\": [\"501c3 letter\", \"budget\", \"etc\"],\n    \"concerns\": [\"Any red flags\"],\n    \"recommendations\": [\"Next steps\"]\n  }",
               "role": "system"
             },
             {
@@ -362,13 +371,13 @@
           "temperature": 0.3
         }
       },
-      "id": "c8c23beb-1983-4f01-aaa0-21657e1b0991",
-      "name": "AI Eligibility Analysis",
+      "id": "fdeeca39-1350-4658-a0b4-ee5f8932a94b",
+      "name": "AI Eligibility Analysis1",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        -3104,
-        -10896
+        -7056,
+        -8784
       ],
       "notesInFlow": true,
       "credentials": {
@@ -381,15 +390,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\n  const aiResponse = item.json;\n\n  let analysis = null;\n  let parseError = null;\n\n  // Extract JSON from AI response\n  try {\n    let responseText = '';\n\n    if (aiResponse.text) {\n      responseText = aiResponse.text;\n    } else if (aiResponse.message?.content) {\n      responseText = aiResponse.message.content;\n    } else if (aiResponse.output && Array.isArray(aiResponse.output)) {\n      responseText = aiResponse.output[0]?.content?.[0]?.text || '';\n    } else if (typeof aiResponse === 'string') {\n      responseText = aiResponse;\n    }\n\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);\n  } catch (e) {\n    parseError = e.message;\n  }\n\n  const originalData = $('Combine Context').first().json;\n  const scannerData = originalData.originalGrantData || {};\n\n  if (!analysis) {\n    return [{\n      json: {\n        success: false,\n        error: 'Failed to parse AI response',\n        parseError,\n        sourceUrl: originalData.sourceUrl,\n        sourceType: originalData.sourceType\n      }\n    }];\n  }\n\n  // ===== BUILD RESULT =====\n  const score = (analysis.overallScore || 'YELLOW').toLowerCase();\n  const allowedScores = ['green', 'yellow', 'red'];\n  const screening_result = allowedScores.includes(score) ? score : 'yellow';\n\n  // Calculate confidence from dimension scores if available\n  const dims = analysis.dimensionScores || {};\n  const hasAllDimensions = dims.missionAlignment != null\n    && dims.targetPopulation != null\n    && dims.serviceFit != null\n    && dims.geographicAlignment != null\n    && dims.organizationalCapacity != null;\n\n  const calculatedConfidence = hasAllDimensions\n    ? dims.missionAlignment + dims.targetPopulation + dims.serviceFit + dims.geographicAlignment + dims.organizationalCapacity\n    : (analysis.confidence || 50);\n\n  const result = {\n    success: true,\n    data: {\n      id: analysis.grantid,\n      org_id: analysis.org_id || originalData.org_id || scannerData.org_id,\n      title: analysis.grantTitle,\n      stage: score === 'red' ? 'screening' : 'pending_approval',\n      funder_name: analysis.agency || scannerData.agency || 'Unknown',\n      amount: analysis.fundingRange || scannerData.awardRange || null,\n      deadline: analysis.deadline || scannerData.deadline,\n\n      eligibility: {\n        score: score.toUpperCase(),\n        confidence: calculatedConfidence,\n        indicator: {\n          green: '🟢',\n          yellow: '🟡',\n          red: '🔴'\n        }[score] || '⚪',\n        dimension_scores: {\n          mission_alignment: dims.missionAlignment || 0,\n          target_population: dims.targetPopulation || 0,\n          service_fit: dims.serviceFit || 0,\n          geographic_alignment: dims.geographicAlignment || 0,\n          organizational_capacity: dims.organizationalCapacity || 0\n        }\n      },\n\n      screening_score: calculatedConfidence,\n\n      screening_notes: analysis.summary || 'Unable to determine eligibility',\n      categories: analysis.categories || {},\n      concerns: analysis.concerns || [],\n      recommendations: analysis.recommendations || [],\n\n      source: {\n        url: originalData.sourceUrl,\n        type: originalData.sourceType,\n        analyzedAt: new Date().toISOString()\n      }\n    }\n  };\n  return result;"
+        "jsCode": "const item = $input.first();\n  const aiResponse = item.json;\n\n  let analysis = null;\n  let parseError = null;\n\n  // Extract JSON from AI response\n  try {\n    let responseText = '';\n\n    if (aiResponse.text) {\n      responseText = aiResponse.text;\n    } else if (aiResponse.message?.content) {\n      responseText = aiResponse.message.content;\n    } else if (aiResponse.output && Array.isArray(aiResponse.output)) {\n      responseText = aiResponse.output[0]?.content?.[0]?.text || '';\n    } else if (typeof aiResponse === 'string') {\n      responseText = aiResponse;\n    }\n\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);\n  } catch (e) {\n    parseError = e.message;\n  }\n\n  const originalData = $('Combine Context1').first().json;\n  const scannerData = originalData.originalGrantData || {};\n\n  if (!analysis) {\n    return [{\n      json: {\n        success: false,\n        error: 'Failed to parse AI response',\n        parseError,\n        sourceUrl: originalData.sourceUrl,\n        sourceType: originalData.sourceType\n      }\n    }];\n  }\n\n  // ===== BUILD RESULT =====\n  const dataQuality = analysis.dataQuality || 'sufficient';\n  const isInsufficient = dataQuality === 'insufficient' || (analysis.overallScore || '').toUpperCase() === 'INSUFFICIENT_DATA';\n  const score = isInsufficient ? 'insufficient_data' : (analysis.overallScore || 'YELLOW').toLowerCase();\n  const allowedScores = ['green', 'yellow', 'red', 'insufficient_data'];\n  const screening_result = allowedScores.includes(score) ? score : 'yellow';\n\n  // Calculate confidence from dimension scores if available\n  const dims = analysis.dimensionScores || {};\n  const hasAllDimensions = dims.missionAlignment != null\n    && dims.targetPopulation != null\n    && dims.serviceFit != null\n    && dims.geographicAlignment != null\n    && dims.organizationalCapacity != null;\n\n  const calculatedConfidence = hasAllDimensions\n    ? dims.missionAlignment + dims.targetPopulation + dims.serviceFit + dims.geographicAlignment + dims.organizationalCapacity\n    : (analysis.confidence || 50);\n\n  const result = {\n    success: true,\n    data: {\n      id: analysis.grantid,\n      org_id: analysis.org_id || originalData.org_id || scannerData.org_id,\n      title: analysis.grantTitle,\n      stage: (score === 'red' || score === 'insufficient_data') ? 'screening' : 'pending_approval',\n      funder_name: (analysis.agency && analysis.agency !== 'Not specified') ? analysis.agency : (scannerData.funder_name || 'Unknown'),\n      amount: (analysis.fundingRange && analysis.fundingRange !== 'Not specified') ? analysis.fundingRange : (scannerData.amount || null),\n      deadline: (analysis.deadline && analysis.deadline !== 'Not specified') ? analysis.deadline : (scannerData.deadline || null),\n\n      eligibility: {\n        score: score.toUpperCase(),\n        confidence: calculatedConfidence,\n        data_quality: dataQuality,\n        indicator: {\n          green: '🟢',\n          yellow: '🟡',\n          red: '🔴',\n          insufficient_data: '⚪'\n        }[score] || '⚪',\n        dimension_scores: {\n          mission_alignment: dims.missionAlignment || 0,\n          target_population: dims.targetPopulation || 0,\n          service_fit: dims.serviceFit || 0,\n          geographic_alignment: dims.geographicAlignment || 0,\n          organizational_capacity: dims.organizationalCapacity || 0\n        }\n      },\n\n      screening_score: calculatedConfidence,\n\n      screening_notes: analysis.summary || 'Unable to determine eligibility',\n      categories: analysis.categories || {},\n      concerns: analysis.concerns || [],\n      recommendations: analysis.recommendations || [],\n\n      source: {\n        url: originalData.sourceUrl,\n        type: originalData.sourceType,\n        analyzedAt: new Date().toISOString()\n      }\n    }\n  };\n  return result;"
       },
-      "id": "48fe4ade-3183-416c-9222-e6e7ef3d8254",
-      "name": "Format Analysis Response",
+      "id": "a23e965c-49c8-445e-b1f9-d1d158e45703",
+      "name": "Format Analysis Response1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2736,
-        -10896
+        -6688,
+        -8784
       ],
       "notesInFlow": true,
       "notes": "Structure the final output"
@@ -398,13 +407,13 @@
       "parameters": {
         "jsCode": "return items.map(item => {\n    const grant = item.json;\n    const details = grant.details;\n\n    return {\n      json: {\n        success: true,\n        org_id: grant.org_id,\n        grant_id: grant.grant_id,\n        action: grant.action,\n        grant_name: details.grant_name,\n        funder: details.funder,\n        score: details.score,\n        confidence: details.confidence,\n        workflow: details.workflow,\n        summary: details.summary,\n        \"text\": \"New Grant Opportunity Found!\",\n      blocks: [  // ← THIS MUST BE HERE\n        {\n          type: \"header\",\n          text: {\n            type: \"plain_text\",\n            text: `${details.score || 'TBD'} New Grant Opportunity Found!`,\n            emoji: true\n          }\n        },\n        {\n          type: \"section\",\n          fields: [\n            {\n              type: \"mrkdwn\",\n              text: `*Grant:*\\n${details.grant_name || 'TBD'}`\n            },\n            {\n              type: \"mrkdwn\",\n              text: `*Funder:*\\n${details.funder || 'TBD'}`\n            }\n          ]\n        },\n        {\n          type: \"section\",\n          fields: [\n            {\n              type: \"mrkdwn\",\n              text: \"*Amount:*\\nTBD\"\n            },\n            {\n              type: \"mrkdwn\",\n              text: \"*Deadline:*\\nTBD\"\n            }\n          ]\n        },\n        {\n          type: \"section\",\n          fields: [\n            {\n              type: \"mrkdwn\",\n              text: `*Eligibility:*\\n${details.score || 'TBD'} (${details.confidence || 'TBD'}% confidence)`\n            },\n            {\n              type: \"mrkdwn\",\n              text: \"*Days Until Deadline:*\\nTBD\"\n            }\n          ]\n        },\n        {\n          type: \"section\",\n          text: {\n            type: \"mrkdwn\",\n            text: `*Summary:*\\n${details.summary || 'No summary available'}`\n          }\n        },\n        {\n          type: \"section\",\n          text: {\n            type: \"mrkdwn\",\n            text: \"*Start Prep By:* TBD\"\n          }\n        },\n        {\n          type: \"actions\",\n          elements: [\n            {\n              type: \"button\",\n              text: {\n                type: \"plain_text\",\n                text: \"View Grant\",\n                emoji: true\n              },\n              url: \"#\",\n              action_id: \"view_grant\"\n            }\n          ]\n        },\n        {\n          type: \"divider\"\n        },\n        {\n          type: \"context\",\n          elements: [\n            {\n              type: \"mrkdwn\",\n              text: \"Added to Grant Tracker | TBD\"\n            }\n          ]\n        }\n      ]  // ← blocks array ends here\n    }\n  };\n});"
       },
-      "id": "1e6b034c-d5d0-4d65-b46d-78bf1cf8d1ae",
-      "name": "Success Response3",
+      "id": "c400230c-06e0-421d-b51c-5e3585d30fc1",
+      "name": "Success Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1728,
-        -11216
+        -5680,
+        -9104
       ],
       "notesInFlow": true,
       "notes": "Return success with tracker confirmation"
@@ -418,7 +427,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n    grant_id: $('update grant2').first().json.id,\n    grantId: $('update grant2').first().json.id,\n    grant_name: $('update grant2').first().json.title,\n    org_id: $('update grant2').first().json.org_id,\n    workflow_id: $('update grant3').first().json.id || '',\n    grantData: $('update grant2').first().json\n  }) }}",
+        "body": "={{ JSON.stringify({\n    grant_id: $('update grant5').first().json.id,\n    grantId: $('update grant5').first().json.id,\n    grant_name: $('update grant5').first().json.title,\n    org_id: $('update grant5').first().json.org_id,\n    workflow_id: $('update grant6').first().json.id || '',\n    grantData: $('update grant5').first().json\n  }) }}",
         "options": {
           "allowUnauthorizedCerts": true,
           "timeout": 12000
@@ -427,11 +436,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -1232,
-        -11216
+        -5184,
+        -9104
       ],
-      "id": "230be448-5be7-42a9-a2e9-ddd6909b06d3",
-      "name": "Call proposal generator1",
+      "id": "007399b8-8657-47fc-a035-cc128bb1bd54",
+      "name": "Call proposal generator",
       "credentials": {
         "httpHeaderAuth": {
           "id": "58HU1FxffRqvjWUp",
@@ -450,11 +459,11 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -1488,
-        -11200
+        -5440,
+        -9088
       ],
-      "id": "518fd05a-dabc-484b-91c5-2326869c02a4",
-      "name": "Notify Screening Started2"
+      "id": "78da44d7-222e-4d48-9983-cda8909df0a6",
+      "name": "Notify Screening Started3"
     },
     {
       "parameters": {
@@ -488,11 +497,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2256,
-        -11264
+        -6208,
+        -9152
       ],
-      "id": "786ad4b1-5c71-413a-9c07-0df8971a0626",
-      "name": "update grant2",
+      "id": "f7af5582-cb5a-4ff4-9cdf-0de0bb8890d0",
+      "name": "update grant5",
       "credentials": {
         "httpHeaderAuth": {
           "id": "58HU1FxffRqvjWUp",
@@ -532,11 +541,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -1984,
-        -11456
+        -5936,
+        -9344
       ],
-      "id": "dba9ebec-7d86-4868-9392-6dab35b21444",
-      "name": "update grant3",
+      "id": "e9778e36-ef37-47d6-8b2f-10f60907cb09",
+      "name": "update grant6",
       "credentials": {
         "httpHeaderAuth": {
           "id": "58HU1FxffRqvjWUp",
@@ -553,11 +562,11 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        -1552,
-        -10688
+        -5504,
+        -8576
       ],
-      "id": "97f1c1af-aec5-41b2-a08f-4f2d866b4250",
-      "name": "Respond to Webhook"
+      "id": "25fd785c-e39e-4f94-bb02-0caceed122e1",
+      "name": "Respond to Webhook1"
     },
     {
       "parameters": {
@@ -591,11 +600,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2224,
-        -10656
+        -6176,
+        -8544
       ],
-      "id": "ef9cc561-f85f-490b-bf76-394028d5f441",
-      "name": "update grant",
+      "id": "9b716455-1986-493f-ba76-7c9d6c05c6ea",
+      "name": "update grant1",
       "credentials": {
         "httpHeaderAuth": {
           "id": "58HU1FxffRqvjWUp",
@@ -635,11 +644,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2000,
-        -10640
+        -5952,
+        -8528
       ],
-      "id": "c5e817da-65ea-4fe6-80a1-302f2a1f4051",
-      "name": "update grant4",
+      "id": "6ad71bc2-81df-4f00-a89b-7ce7ea11ea1d",
+      "name": "update grant7",
       "credentials": {
         "httpHeaderAuth": {
           "id": "58HU1FxffRqvjWUp",
@@ -650,255 +659,252 @@
   ],
   "pinData": {},
   "connections": {
-    "Notify Screening Started": {
+    "Notify Not Eligible1": {
       "main": [
         [
           {
-            "node": "Has Pre-Extracted Data?1",
+            "node": "Respond to Webhook1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Notify Screening Completed": {
+    "Notify Screening Started1": {
       "main": [
         [
           {
-            "node": "Success Response3",
+            "node": "Has Pre-Extracted Data?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Webhook Trigger": {
+    "Notify Screening Completed1": {
       "main": [
         [
           {
-            "node": "Notify Screening Started",
+            "node": "Success Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Use Scanner Data": {
+    "Webhook Trigger1": {
       "main": [
         [
           {
-            "node": "Prepare Grant Data",
+            "node": "Notify Screening Started1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "URL or Document?3": {
+    "Use Scanner Data1": {
       "main": [
         [
           {
-            "node": "Fetch Grant Page3",
+            "node": "Prepare Grant Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URL or Document?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Grant Page",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Process Document3",
+            "node": "Process Document",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Grant Page3": {
+    "Fetch Grant Page": {
       "main": [
         [
           {
-            "node": "Extract Text from HTML3",
+            "node": "Extract Text from HTML",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract Text from HTML3": {
+    "Extract Text from HTML": {
       "main": [
         [
           {
-            "node": "Prepare Grant Data",
+            "node": "Prepare Grant Data1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Process Document3": {
+    "Process Document": {
       "main": [
         [
           {
-            "node": "Prepare Grant Data",
+            "node": "Prepare Grant Data1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Has Pre-Extracted Data?1": {
+    "Has Pre-Extracted Data?": {
       "main": [
         [
           {
-            "node": "Use Scanner Data",
+            "node": "Use Scanner Data1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "URL or Document?3",
+            "node": "URL or Document?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Passes Eligibility?1": {
+    "Passes Eligibility?": {
       "main": [
         [
           {
-            "node": "update grant2",
+            "node": "update grant5",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "update grant",
+            "node": "update grant1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prepare Grant Data": {
+    "Prepare Grant Data1": {
       "main": [
         [
           {
-            "node": "Fetch Narratives",
+            "node": "Fetch Narratives1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Narratives": {
+    "Fetch Narratives1": {
       "main": [
         [
           {
-            "node": "Combine Context",
+            "node": "Combine Context1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Combine Context": {
+    "Combine Context1": {
       "main": [
         [
           {
-            "node": "AI Eligibility Analysis",
+            "node": "AI Eligibility Analysis1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "AI Eligibility Analysis": {
+    "AI Eligibility Analysis1": {
       "main": [
         [
           {
-            "node": "Format Analysis Response",
+            "node": "Format Analysis Response1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Format Analysis Response": {
+    "Format Analysis Response1": {
       "main": [
         [
           {
-            "node": "Passes Eligibility?1",
+            "node": "Passes Eligibility?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Success Response3": {
+    "Success Response": {
       "main": [
         [
           {
-            "node": "Notify Screening Started2",
+            "node": "Notify Screening Started3",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Notify Screening Started2": {
-      "main": []
-    },
-    "update grant2": {
+    "update grant5": {
       "main": [
         [
           {
-            "node": "update grant3",
+            "node": "update grant6",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "update grant3": {
+    "update grant6": {
       "main": [
         [
           {
-            "node": "Notify Screening Completed",
+            "node": "Notify Screening Completed1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Notify Not Eligible": {
+    "update grant1": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "update grant7",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "update grant": {
+    "update grant7": {
       "main": [
         [
           {
-            "node": "update grant4",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "update grant4": {
-      "main": [
-        [
-          {
-            "node": "Notify Not Eligible",
+            "node": "Notify Not Eligible1",
             "type": "main",
             "index": 0
           }
@@ -911,7 +917,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "6d41261c-bf65-4818-830f-4f05a4394517",
+  "versionId": "e6c65fda-10a3-49c8-a372-2ccdd4abbb45",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"

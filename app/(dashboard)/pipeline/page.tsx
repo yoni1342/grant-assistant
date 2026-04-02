@@ -20,6 +20,7 @@ export default async function PipelinePage() {
       .from("grants")
       .select("*")
       .eq("org_id", orgId)
+      .neq("stage", "archived")
       .order("created_at", { ascending: false }),
     adminDb
       .from("grant_fetch_status")
