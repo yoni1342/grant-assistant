@@ -138,6 +138,15 @@ These items were flagged during our internal review but are already covered by e
 
 ---
 
+## Grant Fetch Workflow — Source Expansion
+
+36 new source nodes were added to the Grant Fetch workflow, bringing the total to **41 source nodes** across 8 categories (Federal, State, International, Foundation, ProPublica Broad Searches, ProPublica Individual Orgs, and Other). Several sources have errors that are actively being fixed.
+
+> **Full source list, categories, and error details:** see [`docs/grant-fetch-sources.md`](grant-fetch-sources.md)
+> **Integration guide (API details for first 9 sources):** see [`docs/new-grant-sources.md`](new-grant-sources.md)
+
+---
+
 ## Next Steps
 
-The only remaining open item — grant database coverage — is actively being addressed by expanding the grant sources in the discovery system. All reported software, interface, and workflow issues from Round 2 and Round 3 testing have been resolved.
+The only remaining open item — grant database coverage — is actively being addressed by expanding the grant sources in the discovery system. 36 new source nodes have been added to the workflow; source errors are currently being resolved. All reported software, interface, and workflow issues from Round 2 and Round 3 testing have been resolved.
