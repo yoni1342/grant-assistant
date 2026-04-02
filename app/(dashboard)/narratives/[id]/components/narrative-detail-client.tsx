@@ -23,6 +23,7 @@ type Narrative = {
   tags: string[] | null
   embedding: string | null
   metadata: Record<string, unknown> | null
+  version: number
   created_at: string | null
   updated_at: string | null
 }
@@ -228,6 +229,7 @@ export function NarrativeDetailClient({ narrative: initialNarrative }: Narrative
             tags: (meta?.tags as string[]) || null,
             embedding: doc.embedding as string | null,
             metadata: meta,
+            version: (doc.version as number) || 1,
             created_at: doc.created_at as string | null,
             updated_at: doc.updated_at as string | null,
           })
@@ -427,6 +429,11 @@ export function NarrativeDetailClient({ narrative: initialNarrative }: Narrative
                     <span className="font-medium">{format(new Date(narrative.updated_at), 'MMM d, yyyy')}</span>
                   </div>
                 )}
+
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Current Version</span>
+                  <Badge variant="outline" className="text-xs">v{narrative.version}</Badge>
+                </div>
 
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status</span>

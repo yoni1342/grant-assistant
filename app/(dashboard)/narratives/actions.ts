@@ -94,6 +94,7 @@ export async function createNarrative(formData: FormData) {
     tags: ((doc.metadata as Record<string, unknown>)?.tags as string[]) || null,
     embedding: doc.embedding,
     metadata: doc.metadata,
+    version: doc.version || 1,
     created_at: doc.created_at,
     updated_at: doc.updated_at,
   }
@@ -174,6 +175,7 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
     tags: ((doc.metadata as Record<string, unknown>)?.tags as string[]) || null,
     embedding: doc.embedding,
     metadata: doc.metadata,
+    version: doc.version || 1,
     created_at: doc.created_at,
     updated_at: doc.updated_at,
   }
@@ -211,6 +213,7 @@ export async function getNarrative(narrativeId: string) {
     tags: ((doc.metadata as Record<string, unknown>)?.tags as string[]) || null,
     embedding: doc.embedding,
     metadata: doc.metadata,
+    version: doc.version || 1,
     created_at: doc.created_at,
     updated_at: doc.updated_at,
   }
