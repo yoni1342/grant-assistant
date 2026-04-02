@@ -151,6 +151,7 @@ export function PipelineClient({
 
   const filtered = useMemo(() => {
     return grants.filter((g) => {
+      if (g.stage === "archived") return false;
       const matchesSearch =
         !search ||
         g.title.toLowerCase().includes(search.toLowerCase()) ||

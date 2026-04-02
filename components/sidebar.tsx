@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   Bell,
   CreditCard,
+  Archive,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -31,6 +32,7 @@ const navItems = [
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/narratives", label: "Narratives", icon: BookOpen },
   { href: "/proposals", label: "Proposals", icon: PenTool },
+  { href: "/dashboard/archive", label: "Archive", icon: Archive },
   // { href: "/submissions", label: "Submissions", icon: Send },
   // { href: "/awards", label: "Awards", icon: Trophy },
   { href: "/notifications", label: "Notifications", icon: Bell },
