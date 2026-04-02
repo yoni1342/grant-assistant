@@ -61,8 +61,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        3456
+        -7488,
+        3600
       ],
       "notesInFlow": true,
       "notes": "Federal foster care grants"
@@ -90,8 +90,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        3680
+        -7488,
+        3792
       ],
       "notesInFlow": true,
       "notes": "Federal senior/aging grants"
@@ -119,8 +119,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        3872
+        -7488,
+        3984
       ],
       "notesInFlow": true,
       "notes": "Federal minority/equity grants"
@@ -148,8 +148,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        4064
+        -7488,
+        4176
       ],
       "notesInFlow": true,
       "notes": "Federal capacity building grants"
@@ -177,8 +177,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        4256
+        -7488,
+        4368
       ],
       "notesInFlow": true,
       "notes": "Federal child/family services grants"
@@ -193,8 +193,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        4448
+        -7488,
+        5800
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -210,8 +210,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        4640
+        -7488,
+        7200
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -227,8 +227,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        4832
+        -7488,
+        7392
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -244,8 +244,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        5024
+        -7488,
+        7584
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -261,8 +261,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        5216
+        -7488,
+        7776
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -278,8 +278,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        5408
+        -7488,
+        7968
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -295,8 +295,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        5600
+        -7488,
+        8160
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -312,8 +312,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        5792
+        -7488,
+        8352
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -335,8 +335,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        6176
+        -7488,
+        8800
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -358,8 +358,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        6368
+        -7488,
+        8992
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -381,8 +381,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        6560
+        -7488,
+        9184
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -404,8 +404,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        6752
+        -7488,
+        10200
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -421,8 +421,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7248,
-        7072
+        -7488,
+        7000
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -430,37 +430,37 @@
     },
     {
       "parameters": {
-        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=youth+foster+pennsylvania",
+        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=foundation&page=0",
         "options": {}
       },
       "id": "b24be5e8-9426-487d-a840-3e13c883dae8",
-      "name": "ProPublica Youth Orgs PA1",
+      "name": "ProPublica Foundation P1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        7072
+        -7488,
+        5992
       ],
       "notesInFlow": true,
       "continueOnFail": true,
-      "notes": "PA youth/foster nonprofits"
+      "notes": "Broad foundation search page 0"
     },
     {
       "parameters": {
-        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=senior+aging+pennsylvania",
+        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=foundation&page=1",
         "options": {}
       },
       "id": "4ad1ad6f-21d7-47a6-8dbc-f89aa233de57",
-      "name": "ProPublica Senior Orgs PA1",
+      "name": "ProPublica Foundation P2",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        7376
+        -7488,
+        6184
       ],
       "notesInFlow": true,
       "continueOnFail": true,
-      "notes": "PA senior/aging nonprofits"
+      "notes": "Broad foundation search page 1"
     },
     {
       "parameters": {
@@ -471,8 +471,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7120,
-        3488
+        -7168,
+        3900
       ],
       "notesInFlow": true,
       "notes": "Parse Grants.gov API response"
@@ -486,8 +486,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7248,
-        5632
+        -7168,
+        7584
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -502,8 +502,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7248,
-        6304
+        -7168,
+        8800
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -518,8 +518,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7248,
-        6496
+        -7168,
+        8992
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -534,8 +534,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7248,
-        6688
+        -7168,
+        9184
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -550,8 +550,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7248,
-        6880
+        -7168,
+        10200
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -562,12 +562,12 @@
         "jsCode": "// Add additional major philanthropic foundations\nconst foundations = [\n  {\n    name: 'Bezos Earth Fund',\n    ein: 'BEZOS',\n    focus: 'Climate change, nature conservation, environmental justice',\n    link: 'https://www.bezosearthfund.org/',\n    floor: 100000,\n    ceiling: 10000000\n  },\n  {\n    name: 'Chan Zuckerberg Initiative',\n    ein: 'CZI',\n    focus: 'Science, education, community',\n    link: 'https://chanzuckerberg.com/',\n    floor: 50000,\n    ceiling: 5000000\n  },\n  {\n    name: 'The Ballmer Group',\n    ein: 'BALLMER',\n    focus: 'Economic mobility for children and families',\n    link: 'https://www.ballmergroup.org/',\n    floor: 25000,\n    ceiling: 2000000\n  },\n  {\n    name: 'Arnold Ventures',\n    ein: 'ARNOLD',\n    focus: 'Criminal justice, education, health, public finance',\n    link: 'https://www.arnoldventures.org/',\n    floor: 50000,\n    ceiling: 3000000\n  },\n  {\n    name: 'The Kresge Foundation',\n    ein: '38-1359217',\n    focus: 'Expanding opportunity in American cities',\n    link: 'https://kresge.org/',\n    floor: 25000,\n    ceiling: 1000000\n  },\n  {\n    name: 'The Annie E. Casey Foundation',\n    ein: '52-0841143',\n    focus: 'Child welfare, juvenile justice, economic opportunity',\n    link: 'https://www.aecf.org/',\n    floor: 25000,\n    ceiling: 500000\n  },\n  {\n    name: 'The California Endowment',\n    ein: '95-4523232',\n    focus: 'Health equity, healthy communities',\n    link: 'https://www.calendow.org/',\n    floor: 25000,\n    ceiling: 1000000\n  },\n  {\n    name: 'The JPB Foundation',\n    ein: '27-6991959',\n    focus: 'Poverty, environment, medical research',\n    link: 'https://www.jpbfoundation.org/',\n    floor: 50000,\n    ceiling: 2000000\n  },\n  {\n    name: 'The Heinz Endowments',\n    ein: '25-1215856',\n    focus: 'Creativity, environment, learning - PITTSBURGH/PA FOCUSED',\n    link: 'https://www.heinz.org/',\n    floor: 10000,\n    ceiling: 500000\n  },\n  {\n    name: 'William Penn Foundation',\n    ein: '23-1503488',\n    focus: 'Creative communities, watershed, great learning - PHILADELPHIA FOCUSED',\n    link: 'https://williampennfoundation.org/',\n    floor: 10000,\n    ceiling: 1000000\n  },\n  {\n    name: 'The Philadelphia Foundation',\n    ein: '23-1365390',\n    focus: 'Arts, education, human services - GREATER PHILADELPHIA',\n    link: 'https://www.philafound.org/',\n    floor: 5000,\n    ceiling: 100000\n  },\n  {\n    name: 'The Pittsburgh Foundation',\n    ein: '25-0965466',\n    focus: 'Community development, education, human services - PITTSBURGH REGION',\n    link: 'https://pittsburghfoundation.org/',\n    floor: 5000,\n    ceiling: 100000\n  }\n];\n\nconst grants = foundations.map((f, i) => ({\n  json: {\n    id: f.ein + '-' + Date.now(),\n    oppNum: f.ein.replace(/-/g, ''),\n    title: f.name + ' - Philanthropic Foundation',\n    description: 'Focus areas: ' + f.focus + '. Research their current RFPs and funding priorities.',\n    link: f.link,\n    openDate: new Date().toISOString().split('T')[0],\n    closeDate: 'Ongoing - Check website',\n    agency: f.name,\n    agencyCode: f.ein,\n    category: 'Major Foundation',\n    source: 'Major Philanthropies',\n    awardFloor: f.floor,\n    awardCeiling: f.ceiling,\n    status: 'active'\n  }\n}));\n\nreturn grants;"
       },
       "id": "8e8a3311-f97c-4d55-bae9-f7aeb794c358",
-      "name": "Additional Major Foundations5",
+      "name": "Hardcoded Major Foundations",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7248,
-        7312
+        -7168,
+        9760
       ],
       "notesInFlow": true,
       "notes": "Bezos, CZI, PA-specific foundations, etc."
@@ -610,8 +610,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7472,
-        5984
+        -7488,
+        9568
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -619,15 +619,15 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse ProPublica 990 data to find grant-making foundations\nconst items = $input.all();\nconst foundations = [];\n\nfor (const item of items) {\n  const response = item.json;\n  \n  if (response.error || response.statusCode >= 400) continue;\n  \n  // Handle search results\n  const orgs = response.organizations || response.results || [];\n  \n  for (const org of orgs) {\n    const name = (org.name || '').toLowerCase();\n    const isFoundation = name.includes('foundation') || \n                         name.includes('trust') || \n                         name.includes('fund') ||\n                         name.includes('endowment') ||\n                         name.includes('philanthrop');\n    \n    if (!isFoundation) continue;\n    \n    const oppNum = 'PP-' + (org.ein || Date.now());\n    \n    foundations.push({\n      json: {\n        id: org.ein,\n        oppNum: oppNum,\n        title: org.name + ' - Potential Grant Source',\n        description: 'Tax-exempt organization in ' + (org.city || 'Pennsylvania') + ', ' + (org.state || 'PA') + '. Review their 990 for grant-making activity.',\n        link: 'https://projects.propublica.org/nonprofits/organizations/' + org.ein,\n        openDate: new Date().toISOString().split('T')[0],\n        closeDate: 'Ongoing - Contact directly',\n        agency: org.name,\n        agencyCode: '',\n        category: 'Foundation',\n        source: 'ProPublica 990',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'active'\n      }\n    });\n  }\n}\n\nreturn foundations.length > 0 ? foundations : [{ json: { empty: true, source: 'propublica' } }];"
+        "jsCode": "// Parse ProPublica 990 data to find grant-making foundations\nconst items = $input.all();\nconst foundations = [];\n\nfor (const item of items) {\n  let response = item.json;\n  \n  if (Array.isArray(response)) response = response[0];\n  if (!response || response.error || response.statusCode >= 400) continue;\n  \n  // Handle search results\n  const orgs = response.organizations || response.results || [];\n  \n  for (const org of orgs) {\n    const name = (org.name || '').toLowerCase();\n    const isFoundation = name.includes('foundation') || \n                         name.includes('trust') || \n                         name.includes('fund') ||\n                         name.includes('endowment') ||\n                         name.includes('philanthrop');\n    \n    if (!isFoundation) continue;\n    \n    const oppNum = 'PP-' + (org.ein || Date.now());\n    \n    foundations.push({\n      json: {\n        id: org.ein,\n        oppNum: oppNum,\n        title: org.name + ' - Potential Grant Source',\n        description: 'Tax-exempt organization in ' + (org.city || 'Pennsylvania') + ', ' + (org.state || 'PA') + '. Review their 990 for grant-making activity.',\n        link: 'https://projects.propublica.org/nonprofits/organizations/' + org.ein,\n        openDate: new Date().toISOString().split('T')[0],\n        closeDate: 'Ongoing - Contact directly',\n        agency: org.name,\n        agencyCode: '',\n        category: 'Foundation',\n        source: 'ProPublica 990',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'active'\n      }\n    });\n  }\n}\n\nreturn foundations.length > 0 ? foundations : [{ json: { empty: true, source: 'propublica' } }];"
       },
       "id": "b576d41f-e622-42e2-9cc2-bd91f97fec27",
       "name": "Extract ProPublica Foundations5",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7248,
-        5152
+        -7168,
+        7336
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -642,8 +642,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7248,
-        6112
+        -7168,
+        9568
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -694,7 +694,7 @@
       "typeVersion": 2,
       "position": [
         -6576,
-        6880
+        6500
       ]
     },
     {
@@ -728,7 +728,7 @@
       "typeVersion": 2,
       "position": [
         -6128,
-        6688
+        6500
       ]
     },
     {
@@ -741,7 +741,7 @@
       "typeVersion": 3.4,
       "position": [
         -6368,
-        6992
+        6700
       ]
     },
     {
@@ -754,7 +754,7 @@
       "typeVersion": 3.4,
       "position": [
         -5504,
-        6880
+        6700
       ]
     },
     {
@@ -763,12 +763,12 @@
         "options": {}
       },
       "id": "f7a4794b-7d27-41a5-945e-cfd1cd9aac68",
-      "name": "Grants.gov Foster Care3",
+      "name": "SAM.gov Scraper",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         -7488,
-        8144
+        10776
       ],
       "notesInFlow": true,
       "notes": "Federal foster care grants"
@@ -778,12 +778,12 @@
         "jsCode": "// Input: $input.all() contains items from the HTTP Request node\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n    const html = item.json.data; // raw HTML from SAM.gov opportunities page\n    if (!html) continue;\n\n    // Regex to extract each table row inside <tbody>\n    const rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/gi;\n    let match;\n\n    while ((match = rowRegex.exec(html)) !== null) {\n        const rowHtml = match[1];\n\n        // Extract each <td> content in this row\n        const tdRegex = /<td[^>]*>[\\s\\S]*?<div[^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?<\\/td>/gi;\n        let tdMatch;\n        const tds = [];\n        while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {\n            let value = tdMatch[1]\n                .replace(/<[^>]+>/g, '')  // remove inner HTML tags\n                .replace(/&nbsp;/g, ' ')\n                .trim();\n            tds.push(value);\n        }\n\n        // Check if row has at least the expected columns (Close date, Status, Title, Agency, Award min, Award max)\n        if (tds.length < 6) continue;\n\n        grants.push({\n            json: {\n                id: 'SAM-' + tds[2].replace(/\\s+/g, '-').substring(0, 50) + '-' + Date.now(),\n                title: tds[2] || 'No title',\n                description: '', // optional, could add opportunity number from hidden div if needed\n                link: 'https://sam.gov' + (tds[2].match(/href=\"([^\"]+)\"/) ? tds[2].match(/href=\"([^\"]+)\"/)[1] : ''),\n                openDate: '', // SAM.gov table doesn’t have open date directly\n                closeDate: tds[0] || 'Check site',\n                status: tds[1] || 'Unknown',\n                agency: tds[3] || 'Unknown',\n                awardFloor: tds[4] ? parseFloat(tds[4].replace(/[^0-9.]/g, '')) : 0,\n                awardCeiling: tds[5] ? parseFloat(tds[5].replace(/[^0-9.]/g, '')) : 0,\n                category: 'Federal Grant',\n                source: 'SAM.gov Opportunities',\n            }\n        });\n    }\n}\n\n// Return placeholder if no grants found\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'SAM.gov' } }];\n"
       },
       "id": "23fc70d9-c0b9-4735-84c4-509413458dcd",
-      "name": "Additional Major Foundations6",
+      "name": "Extract SAM Scraper",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         -7168,
-        8112
+        10776
       ],
       "notesInFlow": true,
       "notes": "Bezos, CZI, PA-specific foundations, etc."
@@ -793,12 +793,12 @@
         "jsCode": "// Get all input items\nconst items = $input.all();\n\n// Flatten all results arrays from each item\nconst results = items.flatMap(i => {\n    // i.json is the actual item object\n    const data = i.json.results || []; // ensure results exists\n    return data.map(item => ({\n        internal_id: item.internal_id,\n        award_id: item[\"Award ID\"],\n        recipient_name: item[\"Recipient Name\"],\n        award_amount: item[\"Award Amount\"],\n        base_obligation_date: item[\"Base Obligation Date\"],\n        description: item[\"Description\"],\n        generated_internal_id: item[\"generated_internal_id\"]\n    }));\n});\n\n// Return a single node output with all parsed results\nreturn results;\n"
       },
       "id": "7fbaf165-1e2a-425f-8139-9e23ea108fc1",
-      "name": "Additional Major Foundations7",
+      "name": "Extract USA Spending",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         -7168,
-        8640
+        4600
       ],
       "notesInFlow": true,
       "notes": "Bezos, CZI, PA-specific foundations, etc."
@@ -808,12 +808,12 @@
         "jsCode": "// Get all input items\nconst items = $input.all();\n\n// Flatten all results arrays from each item\nconst results = items.flatMap(i => {\n    // i.json is the actual item object\n    const data = i.json.results || []; // ensure results exists\n    return data.map(item => ({\n        appl_id: item.appl_id,\n        subproject_id: item.subproject_id,\n        fiscal_year: item.fiscal_year,\n        project_num: item.project_num,\n        organization: item.organization?.org_name || null,\n        org_city: item.organization?.org_city || null,\n        org_state: item.organization?.org_state || null,\n        org_country: item.organization?.org_country || null,\n        award_type: item.award_type || null,\n        activity_code: item.activity_code || null,\n        award_amount: item.award_amount,\n        is_active: item.is_active,\n        principal_investigators: item.principal_investigators?.map(pi => ({\n            profile_id: pi.profile_id,\n            first_name: pi.first_name,\n            last_name: pi.last_name,\n            full_name: pi.full_name,\n            is_contact_pi: pi.is_contact_pi\n        })) || [],\n        agency_ic_admin: item.agency_ic_admin?.name || null,\n        project_start_date: item.project_start_date,\n        project_end_date: item.project_end_date,\n        project_title: item.project_title,\n        abstract_text: item.abstract_text,\n        project_detail_url: item.project_detail_url\n    }));\n});\n\n// Return a single node output with all parsed results\nreturn results;\n"
       },
       "id": "3cc8f565-6d88-4a85-828f-4a500dd297de",
-      "name": "Additional Major Foundations8",
+      "name": "Extract NIH Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7184,
-        8832
+        -7168,
+        4792
       ],
       "notesInFlow": true,
       "notes": "Bezos, CZI, PA-specific foundations, etc."
@@ -823,12 +823,12 @@
         "jsCode": "// n8n Code node – Extract ALL data from \"Upcoming Funding Opportunity\" section on RWJF page\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  // Get HTML from common n8n HTTP Response locations\n  let html = item.json?.body || item.json?.data || item.json?.html || item.json || \"\";\n  if (typeof html !== 'string' || html.length < 500) {\n    results.push({\n      json: {\n        error: \"No valid HTML received\",\n        receivedType: typeof html,\n        length: html?.length || 0\n      }\n    });\n    continue;\n  }\n\n  // Normalize whitespace and remove script/style tags to make regex more reliable\n  html = html.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n             .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n             .replace(/\\s+/g, ' ');\n\n  // Find the \"Upcoming Funding Opportunity\" heading and grab content until next major section\n  // We look for the h3/p with \"Upcoming\" then the following card with h4 + paragraphs\n  const sectionRegex = /<h3[^>]*>Active Funding Opportunities<\\/h3>[\\s\\S]*?<p[^>]*><span[^>]*>Upcoming Funding Opportunity<\\/span><\\/p>[\\s\\S]*?(<div class=\"card image[^>]*>[\\s\\S]*?<div class=\"cmp-customcard[^>]*>[\\s\\S]*?<\\/div>)/i;\n\n  const sectionMatch = sectionRegex.exec(html);\n  if (!sectionMatch) {\n    results.push({\n      json: {\n        empty: true,\n        message: \"No 'Upcoming Funding Opportunity' section found in HTML\",\n        hint: \"Content may be loaded dynamically via JavaScript → check Network tab for JSON calls\"\n      }\n    });\n    continue;\n  }\n\n  const cardHtml = sectionMatch[1];\n\n  // Extract title (h4 with heading8-style or similar)\n  const titleMatch = cardHtml.match(/<h4[^>]*class=\"[^\"]*heading8-style[^\"]*\"[^>]*>([\\s\\S]*?)<\\/h4>/i);\n  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : \"No title found\";\n\n  // Extract all <p> paragraphs in the card (description + release date)\n  const descParagraphs = [];\n  const pRegex = /<p[^>]*>([\\s\\S]*?)<\\/p>/gi;\n  let pMatch;\n  while ((pMatch = pRegex.exec(cardHtml)) !== null) {\n    let text = pMatch[1]\n      .replace(/<[^>]+>/g, '')          // strip inner tags\n      .replace(/&nbsp;/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    if (text && text.length > 10) {      // ignore very short/empty\n      descParagraphs.push(text);\n    }\n  }\n\n  // Look for bold release date specifically\n  const releaseMatch = cardHtml.match(/<b>Release date:\\s*([^<]+)<\\/b>/i);\n  const releaseDate = releaseMatch ? releaseMatch[1].trim() : \"Not found\";\n\n  // Build clean output\n  results.push({\n    json: {\n      section: \"Upcoming Funding Opportunity\",\n      title: title,\n      releaseDate: releaseDate,\n      description: descParagraphs.join(\"\\n\\n\"),  // full text, paragraphs separated\n      sourceUrl: \"https://www.rwjf.org/en/grants/active-funding-opportunities.html\",\n      scrapedAt: new Date().toISOString(),\n      note: \"This is the static upcoming card. Active/open opportunities load via JS → see Network tab for JSON endpoint if you need more.\"\n    }\n  });\n}\n\n// If nothing was found at all\nif (results.length === 0) {\n  results.push({\n    json: {\n      empty: true,\n      message: \"No upcoming opportunity data extracted\"\n    }\n  });\n}\n\nreturn results;"
       },
       "id": "e16ff1b9-e5a1-481b-9843-1ff86fff3e39",
-      "name": "Additional Major Foundations9",
+      "name": "Extract RWJF Opportunities",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         -7168,
-        9024
+        9376
       ],
       "notesInFlow": true,
       "notes": "Bezos, CZI, PA-specific foundations, etc."
@@ -843,12 +843,12 @@
         "options": {}
       },
       "id": "f0b700cd-da14-40f0-a093-9ec8659718ae",
-      "name": "usa spending1",
+      "name": "USA Spending",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         -7488,
-        8640
+        4600
       ],
       "notesInFlow": true,
       "notes": "Federal foster care grants"
@@ -863,12 +863,12 @@
         "options": {}
       },
       "id": "aa380945-de95-4fd9-bdf6-6c652b6fb050",
-      "name": "reporter1",
+      "name": "NIH Reporter",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         -7488,
-        8832
+        4792
       ],
       "notesInFlow": true,
       "notes": "Federal foster care grants"
@@ -879,28 +879,15 @@
         "options": {}
       },
       "id": "935f8447-75ed-4701-b94a-31628ea6b507",
-      "name": "rwjf1",
+      "name": "RWJF Active Funding",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         -7488,
-        9024
+        9376
       ],
       "notesInFlow": true,
       "notes": "Federal foster care grants"
-    },
-    {
-      "parameters": {
-        "content": "## 4 additional sources"
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -7968,
-        7808
-      ],
-      "typeVersion": 1,
-      "id": "c2d60752-8c51-4f60-a506-eae85f557929",
-      "name": "Sticky Note"
     },
     {
       "parameters": {
@@ -923,7 +910,7 @@
       "typeVersion": 2,
       "position": [
         -6368,
-        6624
+        6500
       ],
       "id": "d6d998a6-ad40-4423-934b-f415b6b92f30",
       "name": "Check Already Tracked3"
@@ -936,7 +923,7 @@
       "typeVersion": 2,
       "position": [
         -5568,
-        6528
+        6500
       ],
       "id": "24276b2e-c4df-4bc3-9557-ac7490cf20d0",
       "name": "Code in JavaScript5",
@@ -985,27 +972,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7216,
-        7600
+        -7168,
+        10392
       ],
       "notesInFlow": true,
-      "continueOnFail": true,
-      "notes": "Parse Georgia state grants portal"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Parse Georgia Grants Management portal HTML\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n  const html = item.json.data || item.json.body || item.json;\n  \n  if (typeof html !== 'string') continue;\n  \n  // Look for grant opportunity patterns in HTML\n  const linkPatterns = html.match(/<a[^>]*href=\"([^\"]*grant[^\"]*)\"[^>]*>([^<]+)<\\/a>/gi) || [];\n  \n  // Extract from links\n  for (const linkHtml of linkPatterns) {\n    const hrefMatch = linkHtml.match(/href=\"([^\"]+)\"/);\n    const textMatch = linkHtml.match(/>([^<]+)</);\n    \n    if (!textMatch || !textMatch[1]) continue;\n    \n    const title = textMatch[1].trim();\n    if (title.length < 10) continue; // Skip short links\n    \n    const oppNum = 'GA-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);\n    let link = hrefMatch ? hrefMatch[1] : '';\n    if (link && !link.startsWith('http')) {\n      link = 'https://grantsmanagement.georgia.gov' + (link.startsWith('/') ? '' : '/') + link;\n    }\n    \n    grants.push({\n      json: {\n        id: oppNum,\n        oppNum: oppNum,\n        title: 'Georgia: ' + title,\n        description: 'State of Georgia grant opportunity. Visit the Georgia Grants Management portal for details.',\n        link: link || 'https://grantsmanagement.georgia.gov/grants',\n        openDate: new Date().toISOString().split('T')[0],\n        closeDate: 'See state portal',\n        agency: 'State of Georgia',\n        agencyCode: 'GA',\n        category: 'State Grant',\n        source: 'Georgia Grants Portal',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'posted'\n      }\n    });\n  }\n}\n\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'georgia-portal' } }];"
-      },
-      "id": "ca9d3bc1-6327-4502-bd39-3e70622fc7ec",
-      "name": "Extract Georgia Portal Grants6",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -15424,
-        10368
-      ],
-      "notesInFlow": true,
-      "disabled": true,
       "continueOnFail": true,
       "notes": "Parse Georgia state grants portal"
     },
@@ -1026,7 +996,7 @@
       "typeVersion": 4.2,
       "position": [
         -7488,
-        7616
+        10392
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -1042,7 +1012,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -7504,
+        -7488,
         3200
       ]
     },
@@ -1055,8 +1025,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -7152,
-        3216
+        -7168,
+        3200
       ]
     },
     {
@@ -1263,7 +1233,10 @@
       "name": "SBIR STTR Solicitations",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-7488, 9216],
+      "position": [
+        -7488,
+        4984
+      ],
       "continueOnFail": true,
       "notesInFlow": true,
       "notes": "SBIR/STTR small business grants"
@@ -1276,7 +1249,10 @@
       "name": "Extract SBIR Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-7248, 9216],
+      "position": [
+        -7168,
+        4984
+      ],
       "continueOnFail": true
     },
     {
@@ -1288,7 +1264,10 @@
       "name": "SAM Gov Opportunities",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-7488, 9408],
+      "position": [
+        -7488,
+        5176
+      ],
       "continueOnFail": true,
       "notesInFlow": true,
       "notes": "SAM.gov federal opportunities"
@@ -1301,7 +1280,10 @@
       "name": "Extract SAM Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-7248, 9408],
+      "position": [
+        -7168,
+        5176
+      ],
       "continueOnFail": true
     },
     {
@@ -1313,7 +1295,10 @@
       "name": "NSF Award Search",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-7488, 9600],
+      "position": [
+        -7488,
+        5368
+      ],
       "continueOnFail": true,
       "notesInFlow": true,
       "notes": "NSF science/education grants"
@@ -1326,7 +1311,10 @@
       "name": "Extract NSF Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-7248, 9600],
+      "position": [
+        -7168,
+        5368
+      ],
       "continueOnFail": true
     },
     {
@@ -1338,7 +1326,10 @@
       "name": "EU Funding Portal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-7488, 9792],
+      "position": [
+        -7488,
+        11200
+      ],
       "continueOnFail": true,
       "notesInFlow": true,
       "notes": "EU Horizon Europe + other programmes"
@@ -1351,21 +1342,34 @@
       "name": "Extract EU Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-7248, 9792],
+      "position": [
+        -7168,
+        11200
+      ],
       "continueOnFail": true
     },
     {
       "parameters": {
         "url": "https://gtr.ukri.org/gtr/api/funds?q=*&s=100&f=fund.end:gt:2026-01-01",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/json" }] },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "new-ukri-fetch",
       "name": "UKRI Gateway",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-7488, 9984],
+      "position": [
+        -7488,
+        11392
+      ],
       "continueOnFail": true,
       "notesInFlow": true,
       "notes": "UK Research & Innovation funds"
@@ -1378,7 +1382,10 @@
       "name": "Extract UKRI Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-7248, 9984],
+      "position": [
+        -7168,
+        11392
+      ],
       "continueOnFail": true
     },
     {
@@ -1390,7 +1397,10 @@
       "name": "California Grants Portal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-7488, 10176],
+      "position": [
+        -7488,
+        10584
+      ],
       "continueOnFail": true,
       "notesInFlow": true,
       "notes": "California state grants"
@@ -1403,19 +1413,31 @@
       "name": "Extract CA Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-7248, 10176],
+      "position": [
+        -7168,
+        10584
+      ],
       "continueOnFail": true
     },
     {
       "parameters": {
         "url": "https://www.grants.gov.au/Rss/Open",
-        "options": { "response": { "response": { "responseFormat": "text" } } }
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
       },
       "id": "new-au-fetch",
       "name": "Australia GrantConnect RSS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-7488, 10368],
+      "position": [
+        -7488,
+        11584
+      ],
       "continueOnFail": true,
       "notesInFlow": true,
       "notes": "Australian government grants RSS"
@@ -1428,7 +1450,10 @@
       "name": "Extract AU Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-7248, 10368],
+      "position": [
+        -7168,
+        11584
+      ],
       "continueOnFail": true
     },
     {
@@ -1440,7 +1465,10 @@
       "name": "Canada Open Data Grants",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-7488, 10560],
+      "position": [
+        -7488,
+        11776
+      ],
       "continueOnFail": true,
       "notesInFlow": true,
       "notes": "Canadian government grants"
@@ -1453,33 +1481,200 @@
       "name": "Extract Canada Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-7248, 10560],
+      "position": [
+        -7168,
+        11776
+      ],
       "continueOnFail": true
     },
     {
       "parameters": {
-        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=foundation+grant&page=0",
+        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=foundation&page=2",
         "options": {}
       },
       "id": "new-irs990-fetch",
-      "name": "IRS 990 Foundation Search",
+      "name": "ProPublica Foundation P3",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-7488, 10752],
+      "position": [
+        -7488,
+        6376
+      ],
       "continueOnFail": true,
       "notesInFlow": true,
-      "notes": "Enhanced ProPublica foundation discovery"
+      "notes": "Broad foundation search page 2"
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const orgs = data.organizations || [];\n  for (const org of orgs) {\n    const name = (org.name || '').toLowerCase();\n    const isGrantMaker = name.includes('foundation') || name.includes('trust') || name.includes('fund') || name.includes('endowment');\n    if (!isGrantMaker) continue;\n    if ((org.total_revenue || 0) < 100000) continue;\n    grants.push({\n      json: {\n        oppNum: 'IRS990-' + (org.ein || Date.now()),\n        title: org.name + ' — Potential Grant Source',\n        description: 'Tax-exempt foundation in ' + (org.city || 'Unknown') + ', ' + (org.state || 'US') + '. Total revenue: $' + (org.total_revenue || 0).toLocaleString() + '.',\n        link: 'https://projects.propublica.org/nonprofits/organizations/' + org.ein,\n        openDate: new Date().toISOString().split('T')[0],\n        closeDate: 'Ongoing — Contact directly',\n        agency: org.name,\n        agencyCode: org.ein || '',\n        category: 'Foundation',\n        source: 'IRS 990 / ProPublica',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'active'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'irs990' } }];"
+        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=trust&page=0",
+        "options": {}
       },
-      "id": "new-irs990-extract",
-      "name": "Extract IRS990 Foundations",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [-7248, 10752],
-      "continueOnFail": true
+      "id": "pp-broad-trust",
+      "name": "ProPublica Trust",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -7488,
+        6568
+      ],
+      "notesInFlow": true,
+      "continueOnFail": true,
+      "notes": "Broad charitable trust search"
+    },
+    {
+      "parameters": {
+        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=endowment&page=0",
+        "options": {}
+      },
+      "id": "pp-broad-endowment",
+      "name": "ProPublica Endowment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -7488,
+        6760
+      ],
+      "notesInFlow": true,
+      "continueOnFail": true,
+      "notes": "Broad endowment search"
+    },
+    {
+      "parameters": {
+        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=philanthrop&page=0",
+        "options": {}
+      },
+      "id": "pp-broad-philanthropy",
+      "name": "ProPublica Philanthropy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -7488,
+        6952
+      ],
+      "notesInFlow": true,
+      "continueOnFail": true,
+      "notes": "Broad philanthropy search"
+    },
+    {
+      "parameters": {
+        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=grant+fund&page=0",
+        "options": {}
+      },
+      "id": "pp-broad-grantfund",
+      "name": "ProPublica Grant Fund",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -7488,
+        7144
+      ],
+      "notesInFlow": true,
+      "continueOnFail": true,
+      "notes": "Broad grant fund search"
+    },
+    {
+      "parameters": {
+        "content": "## Aggregator"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7600,
+        3100
+      ],
+      "typeVersion": 1,
+      "id": "sticky-aggregator",
+      "name": "Sticky Note sticky-aggregator"
+    },
+    {
+      "parameters": {
+        "content": "## Grants.gov (Federal)"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7600,
+        3500
+      ],
+      "typeVersion": 1,
+      "id": "sticky-grantsgov",
+      "name": "Sticky Note sticky-grantsgov"
+    },
+    {
+      "parameters": {
+        "content": "## Other Federal APIs"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7600,
+        4500
+      ],
+      "typeVersion": 1,
+      "id": "sticky-otherfed",
+      "name": "Sticky Note sticky-otherfed"
+    },
+    {
+      "parameters": {
+        "content": "## ProPublica 990 Search"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7600,
+        5700
+      ],
+      "typeVersion": 1,
+      "id": "sticky-pp-search",
+      "name": "Sticky Note sticky-pp-search"
+    },
+    {
+      "parameters": {
+        "content": "## ProPublica Individual Orgs"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7600,
+        7100
+      ],
+      "typeVersion": 1,
+      "id": "sticky-pp-orgs",
+      "name": "Sticky Note sticky-pp-orgs"
+    },
+    {
+      "parameters": {
+        "content": "## Foundation Websites"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7600,
+        8700
+      ],
+      "typeVersion": 1,
+      "id": "sticky-foundation-web",
+      "name": "Sticky Note sticky-foundation-web"
+    },
+    {
+      "parameters": {
+        "content": "## State Grants"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7600,
+        10100
+      ],
+      "typeVersion": 1,
+      "id": "sticky-state",
+      "name": "Sticky Note sticky-state"
+    },
+    {
+      "parameters": {
+        "content": "## International"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -7600,
+        11100
+      ],
+      "typeVersion": 1,
+      "id": "sticky-intl",
+      "name": "Sticky Note sticky-intl"
     }
   ],
   "pinData": {
@@ -1733,7 +1928,7 @@
         ]
       ]
     },
-    "ProPublica Youth Orgs PA1": {
+    "ProPublica Foundation P1": {
       "main": [
         [
           {
@@ -1744,7 +1939,7 @@
         ]
       ]
     },
-    "ProPublica Senior Orgs PA1": {
+    "ProPublica Foundation P2": {
       "main": [
         [
           {
@@ -1821,7 +2016,7 @@
         ]
       ]
     },
-    "Additional Major Foundations5": {
+    "Hardcoded Major Foundations": {
       "main": [
         [
           {
@@ -1923,18 +2118,18 @@
         ]
       ]
     },
-    "Grants.gov Foster Care3": {
+    "SAM.gov Scraper": {
       "main": [
         [
           {
-            "node": "Additional Major Foundations6",
+            "node": "Extract SAM Scraper",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Additional Major Foundations6": {
+    "Extract SAM Scraper": {
       "main": [
         [
           {
@@ -1945,7 +2140,7 @@
         ]
       ]
     },
-    "Additional Major Foundations7": {
+    "Extract USA Spending": {
       "main": [
         [
           {
@@ -1956,7 +2151,7 @@
         ]
       ]
     },
-    "Additional Major Foundations8": {
+    "Extract NIH Grants": {
       "main": [
         [
           {
@@ -1967,7 +2162,7 @@
         ]
       ]
     },
-    "Additional Major Foundations9": {
+    "Extract RWJF Opportunities": {
       "main": [
         [
           {
@@ -1978,33 +2173,33 @@
         ]
       ]
     },
-    "usa spending1": {
+    "USA Spending": {
       "main": [
         [
           {
-            "node": "Additional Major Foundations7",
+            "node": "Extract USA Spending",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "reporter1": {
+    "NIH Reporter": {
       "main": [
         [
           {
-            "node": "Additional Major Foundations8",
+            "node": "Extract NIH Grants",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "rwjf1": {
+    "RWJF Active Funding": {
       "main": [
         [
           {
-            "node": "Additional Major Foundations9",
+            "node": "Extract RWJF Opportunities",
             "type": "main",
             "index": 0
           }
@@ -2191,32 +2386,32 @@
             "index": 0
           },
           {
-            "node": "ProPublica Youth Orgs PA1",
+            "node": "ProPublica Foundation P1",
             "type": "main",
             "index": 0
           },
           {
-            "node": "ProPublica Senior Orgs PA1",
+            "node": "ProPublica Foundation P2",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Additional Major Foundations5",
+            "node": "Hardcoded Major Foundations",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Grants.gov Foster Care3",
+            "node": "SAM.gov Scraper",
             "type": "main",
             "index": 0
           },
           {
-            "node": "reporter1",
+            "node": "NIH Reporter",
             "type": "main",
             "index": 0
           },
           {
-            "node": "rwjf1",
+            "node": "RWJF Active Funding",
             "type": "main",
             "index": 0
           },
@@ -2261,7 +2456,7 @@
             "index": 0
           },
           {
-            "node": "usa spending1",
+            "node": "USA Spending",
             "type": "main",
             "index": 0
           },
@@ -2311,7 +2506,27 @@
             "index": 0
           },
           {
-            "node": "IRS 990 Foundation Search",
+            "node": "ProPublica Foundation P3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Trust",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Endowment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Philanthropy",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ProPublica Grant Fund",
             "type": "main",
             "index": 0
           }
@@ -2330,58 +2545,191 @@
       ]
     },
     "SBIR STTR Solicitations": {
-      "main": [[{ "node": "Extract SBIR Grants", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract SBIR Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract SBIR Grants": {
-      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "SAM Gov Opportunities": {
-      "main": [[{ "node": "Extract SAM Grants", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract SAM Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract SAM Grants": {
-      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "NSF Award Search": {
-      "main": [[{ "node": "Extract NSF Grants", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract NSF Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract NSF Grants": {
-      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "EU Funding Portal": {
-      "main": [[{ "node": "Extract EU Grants", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract EU Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract EU Grants": {
-      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "UKRI Gateway": {
-      "main": [[{ "node": "Extract UKRI Grants", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract UKRI Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract UKRI Grants": {
-      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "California Grants Portal": {
-      "main": [[{ "node": "Extract CA Grants", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract CA Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract CA Grants": {
-      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Australia GrantConnect RSS": {
-      "main": [[{ "node": "Extract AU Grants", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract AU Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract AU Grants": {
-      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Canada Open Data Grants": {
-      "main": [[{ "node": "Extract Canada Grants", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract Canada Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract Canada Grants": {
-      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "IRS 990 Foundation Search": {
-      "main": [[{ "node": "Extract IRS990 Foundations", "type": "main", "index": 0 }]]
-    },
-    "Extract IRS990 Foundations": {
-      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    "ProPublica Foundation P3": {
+      "main": [
+        [
+          {
+            "node": "Extract ProPublica Foundations5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Has Results?": {
       "main": [
@@ -2395,6 +2743,50 @@
         [
           {
             "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProPublica Trust": {
+      "main": [
+        [
+          {
+            "node": "Extract ProPublica Foundations5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProPublica Endowment": {
+      "main": [
+        [
+          {
+            "node": "Extract ProPublica Foundations5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProPublica Philanthropy": {
+      "main": [
+        [
+          {
+            "node": "Extract ProPublica Foundations5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProPublica Grant Fund": {
+      "main": [
+        [
+          {
+            "node": "Extract ProPublica Foundations5",
             "type": "main",
             "index": 0
           }
