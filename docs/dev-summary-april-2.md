@@ -8,7 +8,7 @@
 
 ## Summary
 
-Over two days, we addressed **97% of all reported issues** across Round 2 (17 issues) and Round 3 (18 issues). The work covered the full stack: frontend UI, backend API, database constraints, n8n workflow prompts, and eligibility screening logic.
+Over two days, we addressed **97% of all reported issues** across Round 2 (17 issues) and Round 3 (18 issues). The work covered the entire platform: user interface, backend logic, data integrity, automated workflows, and eligibility screening.
 
 **By the numbers:**
 - **35 tester issues** across Round 2 and Round 3
@@ -31,7 +31,7 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 - Entire Narratives section redesigned — clean table list, dedicated edit pages
 - Content, tags, and category now save reliably and persist
 - Document viewer supports editing, saving, resetting, and PDF export
-- Live updates across tabs via Supabase Realtime
+- Live updates across tabs — changes sync automatically
 
 **How it works now:** Edit your narratives with confidence — your changes will persist correctly.
 
@@ -132,13 +132,13 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 
 ---
 
-### 9. n8n Workflow — "Add New Grants to Pipeline" Fix `Critical`
+### 9. Automated Grant Pipeline Workflow Fix `Critical`
 
 > **Tester Reference:** R2-15
-> **Tester said:** *"Error returned: 'Failed to add grant to pipeline — Workflow returned empty response — check n8n logs'."*
+> **Tester said:** *"Error returned: 'Failed to add grant to pipeline'."*
 
 **What was done:**
-- Reworked background workflow to eliminate circular issues
+- Reworked the background automation to eliminate errors when adding grants
 - System now correctly inserts grants and triggers eligibility screening
 
 **How it works now:** Adding grants flows reliably into the pipeline.
@@ -190,9 +190,9 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 > **Tester said:** *"System allowed full interaction with blank ghost grant... generated a 'Not specified Proposal' with funder shown as 'Not specified'."*
 
 **What was done:**
-- **Frontend:** Blocks "Drafting" stage change if title is empty
-- **Backend:** Webhook rejects proposal generation for grants without a title (400 error)
-- **Database:** `CHECK` constraint prevents empty/whitespace titles from being saved
+- **User Interface:** Blocks "Drafting" stage change if title is empty
+- **Server:** Rejects proposal generation for grants without a title
+- **Database:** Prevents empty or whitespace-only titles from being saved at the data level
 
 **How it works now:** Three layers of protection ensure proposal generation never runs on a grant without a title.
 
@@ -206,7 +206,7 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 **What was done:**
 - New "archived" stage added to grant lifecycle
 - Orange "Archive" button replaces red "Delete" on grant detail page
-- New **Archive page** (`/dashboard/archive`) with three actions per grant:
+- New **Archive page** with three actions per grant:
   - **View** — full grant detail under Archive tab
   - **Restore** — moves back to Discovery stage
   - **Delete Permanently** — hard delete with confirmation
@@ -224,8 +224,8 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 > **Tester said:** *"Dashboard still displayed '0/1 grant used today' even after grants were drafted. Counter did not update."*
 
 **What was done:**
-- New `grant_usage_log` table — append-only, tracks every grant addition
-- Webhook and usage API now count from `grant_usage_log` instead of `grants` table
+- New tracking system records every grant addition permanently — entries are never removed when grants are deleted or archived
+- Both the daily limit check and the usage display now count from this permanent log
 - Deleting or archiving a grant no longer resets the daily count
 
 **How it works now:** Daily limit based on additions today, regardless of later deletes or archives.
@@ -238,21 +238,21 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 > **Tester said:** *"Grant scored 28% overall... Scoring penalized KLH due to gaps in the grant's own data — not KLH's profile."*
 
 **What was done:**
-- n8n prompt now outputs `dataQuality: "sufficient" | "insufficient"` and `INSUFFICIENT_DATA` score
-- n8n routing treats `INSUFFICIENT_DATA` same as RED — stays in screening
-- Frontend shows blue **"Not Enough Info"** badge instead of red score (grant detail, list view, kanban view)
+- Screening now detects when a grant listing lacks sufficient detail to evaluate
+- Grants with insufficient data stay in "Screening" stage instead of advancing
+- A blue **"Not Enough Info"** badge replaces the red score across all views (grant detail, list, and kanban)
 
 **How it works now:** Grants with sparse data show a distinct blue badge — users immediately see the low score is due to missing grant data, not a poor fit.
 
 ---
 
-### 17. n8n Workflow — Field Fallback Fix `High`
+### 17. Screening Results — Field Preservation Fix `High`
 
 > **Tester Reference:** Related to R3-10
 
 **What was done:**
-- Fixed fallback field names: `scannerData.agency` → `scannerData.funder_name`, `scannerData.awardRange` → `scannerData.amount`
-- AI responses of "Not specified" now treated as empty — falls back to original grant data
+- Fixed an issue where manually entered funder name and amount were lost during screening
+- When the AI screening can't extract these fields, the system now correctly preserves the original values entered by the user
 
 **How it works now:** Manually entered funder and amount are preserved even if AI screening doesn't extract them.
 
@@ -264,7 +264,7 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 > **Tester said:** *"Result returned was 'U.S. Mission to Tunisia' — international diplomacy grant... Filter for Wisconsin was set — result still bypassed."*
 
 **What was done:**
-- Geographic filter rule added to n8n relevance prompt
+- Geographic filter rule added to the grant relevance screening
 - Grants restricted to other states/countries are now discarded
 
 **How it works now:** Location filter is enforced — irrelevant international/out-of-state grants no longer appear.
@@ -277,11 +277,11 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 > **Tester said:** *"No saved searches or recent search history."*
 
 **What was done:**
-- New `search_history` table — stores recent queries per org in the database
-- Clickable recent search chips below the search input
+- Recent search queries are now stored per organization in the database
+- Clickable recent search chips appear below the search input
 - Auto-saves on search, click to re-use, hover X to remove
-- Persists across devices and sessions (database-backed, not browser storage)
-- Auto-trims to 8 most recent per org
+- Persists across devices and sessions — not tied to a single browser
+- Keeps up to 8 most recent searches per organization
 
 **How it works now:** Recent queries appear as chips below the search input. Click to re-run. History follows you across devices.
 
@@ -293,7 +293,7 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 > **Tester said:** *"Add version control or 'active narrative' toggle. Monitor whether proposal generation pulls from enhanced vs. original narrative versions."*
 
 **What was done:**
-- New `narrative_versions` table — snapshots saved on every edit
+- Version snapshots are automatically saved on every edit
 - Collapsible **"Version History"** section in narrative detail sidebar
 - Current version highlighted in green: **"v{n} (Current) — Used for proposal generation"**
 - Current version number shown in the Info section
@@ -304,15 +304,15 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 
 ---
 
-## Database Migrations (April 2)
+## Data & Infrastructure Updates (April 2)
 
-| # | Migration | Purpose |
-|---|-----------|---------|
-| 1 | `ALTER TYPE grant_stage ADD VALUE 'archived'` | Archive stage for grants |
-| 2 | `ALTER TABLE grants ADD CONSTRAINT grants_title_not_empty` | Prevent empty titles at DB level |
-| 3 | `CREATE TABLE grant_usage_log` | Track daily grant additions (delete-proof) |
-| 4 | `CREATE TABLE search_history` | Persist recent Discovery searches per org |
-| 5 | `CREATE TABLE narrative_versions` | Narrative version snapshots on each edit |
+| # | Update | Purpose |
+|---|--------|---------|
+| 1 | New "Archived" grant stage | Enables the archive system for grants |
+| 2 | Title requirement enforced at data level | Prevents empty/blank grants from ever being created |
+| 3 | Grant usage tracking | Ensures daily limits can't be bypassed by deleting grants |
+| 4 | Search history storage | Persists recent Discovery searches across devices |
+| 5 | Narrative version snapshots | Tracks every edit to narratives for version history |
 
 ---
 
@@ -369,7 +369,7 @@ Over two days, we addressed **97% of all reported issues** across Round 2 (17 is
 
 | # | Issue | Severity | Tester Ref | Status | Notes |
 |---|-------|----------|------------|--------|-------|
-| 1 | **GrantWatch vs Fundory coverage gap** | High | R3-3 | **In Progress** | GrantWatch returned 5 relevant results for the same search that Fundory returned 2. This is a database/content issue — we are actively adding more grant sources to the n8n discovery workflows. Not a code fix — requires expanding the grant databases the system searches against. |
+| 1 | **GrantWatch vs Fundory coverage gap** | High | R3-3 | **In Progress** | GrantWatch returned 5 relevant results for the same search that Fundory returned 2. We are actively adding more grant sources to the discovery system. This is a data coverage issue, not a software fix — it requires expanding the grant databases the system searches against. |
 
 > **Note:** The only remaining open issue is grant database coverage, which is a content and data sourcing effort — not a code change. All code, UI, workflow, and prompt issues reported in Round 2 and Round 3 have been resolved.
 
@@ -381,13 +381,13 @@ These items were flagged during our internal review but turned out to be already
 
 | Issue | Ref | Why it's covered |
 |-------|-----|------------------|
-| **Pipeline stage validation** — grants advancing without required fields | R3-9, R3-14 | Tester's actual concern was ghost grants reaching proposal generation. Now addressed: title required at DB level (Fix #13), proposal generation blocked without title, ghost grants can't be created (Fix #6). |
+| **Pipeline stage validation** — grants advancing without required fields | R3-9, R3-14 | Tester's actual concern was ghost grants reaching proposal generation. Now addressed: title is required at the data level (Fix #13), proposal generation is blocked without a title, and ghost grants can no longer be created (Fix #6). |
 | **AI jargon in proposals** | R3-12 | Proposal prompt rewritten with explicit plain-language requirement. Quality review tool also flags remaining jargon. Significantly reduced vs Round 2/3. |
 | **Proposals not tied to grant requirements** | R3-13, R3-17, R3-11 | Proposal prompt completely rewritten. Now receives grant_title, grant_description, funder_name, amount, deadline alongside narratives. Explicitly mirrors funder language and aligns to grant priorities. |
-| **Discovery keyword language mismatch** | R2-13 | Program-based language returns more results than service-based language. This is an upstream search/indexing issue tied to the grant database coverage gap (remaining item #1). The geographic filter (Fix #18) and strict relevance rules already improve result quality. Further improvement will come as grant sources are expanded. |
+| **Discovery keyword language mismatch** | R2-13 | Program-based language returns more results than service-based language. This is a search indexing issue tied to the grant database coverage gap (remaining item #1). The geographic filter (Fix #18) and strict relevance rules already improve result quality. Further improvement will come as grant sources are expanded. |
 
 ---
 
 ## Next Steps
 
-The only remaining open item — grant database coverage — is actively being addressed by expanding the grant sources in the n8n discovery workflows. All reported code, UI, and workflow issues from Round 2 and Round 3 testing have been resolved.
+The only remaining open item — grant database coverage — is actively being addressed by expanding the grant sources in the discovery system. All reported software, interface, and workflow issues from Round 2 and Round 3 testing have been resolved.
