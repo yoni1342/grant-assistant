@@ -404,7 +404,7 @@ export default function DiscoveryPage() {
   const seenRowIdsRef = useRef<Set<string>>(new Set());
 
   const [storageKey, setStorageKey] = useState<string | null>(null);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<{ id: string; query: string }[]>([]);
 
   // Resolve org-specific storage key
   useEffect(() => {
@@ -424,27 +424,34 @@ export default function DiscoveryPage() {
     });
   }, []);
 
-  // Load recent searches from localStorage
+  // Load recent searches from database
   useEffect(() => {
-    if (!storageKey) return;
-    try {
-      const saved = localStorage.getItem(`${storageKey}_recent`);
-      if (saved) setRecentSearches(JSON.parse(saved));
-    } catch { /* ignore */ }
-  }, [storageKey]);
+    fetch("/api/search-history")
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setRecentSearches(data))
+      .catch(() => {});
+  }, []);
 
   function saveRecentSearch(q: string) {
-    if (!storageKey || !q.trim()) return;
-    const updated = [q.trim(), ...recentSearches.filter((s) => s !== q.trim())].slice(0, 8);
-    setRecentSearches(updated);
-    try { localStorage.setItem(`${storageKey}_recent`, JSON.stringify(updated)); } catch { /* ignore */ }
+    if (!q.trim()) return;
+    setRecentSearches((prev) => [
+      { id: "temp-" + Date.now(), query: q.trim() },
+      ...prev.filter((s) => s.query !== q.trim()),
+    ].slice(0, 8));
+    fetch("/api/search-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: q.trim() }),
+    }).catch(() => {});
   }
 
-  function removeRecentSearch(q: string) {
-    if (!storageKey) return;
-    const updated = recentSearches.filter((s) => s !== q);
-    setRecentSearches(updated);
-    try { localStorage.setItem(`${storageKey}_recent`, JSON.stringify(updated)); } catch { /* ignore */ }
+  function removeRecentSearch(id: string) {
+    setRecentSearches((prev) => prev.filter((s) => s.id !== id));
+    fetch("/api/search-history", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
   }
 
   // Restore state from sessionStorage on mount (once storageKey is resolved)
@@ -859,20 +866,20 @@ export default function DiscoveryPage() {
           </div>
 
           {/* Recent Searches */}
-          {!loading && !searchComplete && recentSearches.length > 0 && (
+          {!loading && recentSearches.length > 0 && (
             <div className="flex items-center gap-2 mt-3 flex-wrap">
               <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <span className="text-xs text-muted-foreground">Recent:</span>
               {recentSearches.map((s) => (
                 <button
-                  key={s}
+                  key={s.id}
                   className="group inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-                  onClick={() => { setQuery(s); }}
+                  onClick={() => { setQuery(s.query); }}
                 >
-                  {s}
+                  {s.query}
                   <X
                     className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => { e.stopPropagation(); removeRecentSearch(s); }}
+                    onClick={(e) => { e.stopPropagation(); removeRecentSearch(s.id); }}
                   />
                 </button>
               ))}

@@ -7,12 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Download, Loader2, Pencil, Save, RotateCcw, X } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Pencil, Save, RotateCcw, X, History, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { NarrativeDocumentViewer, NarrativeDocumentViewerHandle } from "../../components/narrative-document-viewer"
-import { updateNarrative } from "../../actions"
+import { updateNarrative, getNarrativeVersions, restoreNarrativeVersion } from "../../actions"
 
 type Narrative = {
   id: string
@@ -60,6 +60,30 @@ export function NarrativeDetailClient({ narrative: initialNarrative }: Narrative
   const [editTags, setEditTags] = useState(narrative.tags?.join(', ') || '')
   const [tagInput, setTagInput] = useState('')
   const [isSavingMeta, startMetaTransition] = useTransition()
+
+  // Version history
+  const [versions, setVersions] = useState<{ id: string; title: string; category: string | null; version_number: number; created_at: string }[]>([])
+  const [showVersions, setShowVersions] = useState(false)
+  const [restoringVersion, setRestoringVersion] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (showVersions && versions.length === 0) {
+      getNarrativeVersions(narrative.id).then(setVersions)
+    }
+  }, [showVersions, narrative.id, versions.length])
+
+  async function handleRestore(versionId: string) {
+    setRestoringVersion(versionId)
+    const result = await restoreNarrativeVersion(narrative.id, versionId)
+    if (result.success) {
+      toast.success('Version restored')
+      setVersions([])
+      window.location.reload()
+    } else {
+      toast.error(result.error || 'Failed to restore')
+    }
+    setRestoringVersion(null)
+  }
 
   // Sync sidebar state when narrative updates (e.g. from realtime)
   useEffect(() => {
@@ -414,6 +438,51 @@ export function NarrativeDetailClient({ narrative: initialNarrative }: Narrative
                 Saving...
               </div>
             )}
+
+            {/* Version History */}
+            <div className="border-t" />
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowVersions(!showVersions)}
+                className="flex items-center justify-between w-full text-sm font-semibold hover:text-foreground/80 transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <History className="h-3.5 w-3.5" />
+                  Version History
+                </span>
+                {showVersions ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+              {showVersions && (
+                <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                  {versions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2">No previous versions</p>
+                  ) : (
+                    versions.map((v) => (
+                      <div key={v.id} className="flex items-center justify-between rounded-md border px-2.5 py-1.5 text-xs">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">v{v.version_number}</p>
+                          <p className="text-muted-foreground">{format(new Date(v.created_at), 'MMM d, yyyy h:mm a')}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs shrink-0"
+                          onClick={() => handleRestore(v.id)}
+                          disabled={restoringVersion === v.id}
+                        >
+                          {restoringVersion === v.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RotateCcw className="h-3 w-3" />
+                          )}
+                          <span className="ml-1">Restore</span>
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

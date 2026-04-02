@@ -122,16 +122,31 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
 
   const adminDb = createAdminClient()
 
-  // Get existing metadata to merge
+  // Get existing document to snapshot before overwriting
   const { data: existing } = await adminDb
     .from('documents')
-    .select('metadata')
+    .select('metadata, extracted_text, title, ai_category, org_id, version')
     .eq('id', narrativeId)
     .single()
 
   const existingMeta = (existing?.metadata as Record<string, unknown>) || {}
+  const existingTags = (existingMeta.tags as string[]) || []
+  const currentVersion = (existing?.version as number) || 1
 
-  // Update document
+  // Save previous version snapshot
+  if (existing?.extracted_text) {
+    await adminDb.from('narrative_versions').insert({
+      document_id: narrativeId,
+      org_id: existing.org_id,
+      title: existing.title || '',
+      content: existing.extracted_text,
+      category: existing.ai_category || null,
+      tags: existingTags.length > 0 ? JSON.stringify(existingTags) : null,
+      version_number: currentVersion,
+    })
+  }
+
+  // Update document with incremented version
   const { data: doc, error } = await adminDb
     .from('documents')
     .update({
@@ -140,6 +155,7 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
       ai_category: category || null,
       extracted_text: content,
       metadata: { ...existingMeta, tags: tags.length > 0 ? tags : undefined },
+      version: currentVersion + 1,
     })
     .eq('id', narrativeId)
     .select()
@@ -243,6 +259,95 @@ export async function deleteNarrative(narrativeId: string) {
   }
 
   revalidatePath('/narratives')
+  return { success: true }
+}
+
+export async function getNarrativeVersions(narrativeId: string) {
+  const supabase = await createClient()
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) return []
+
+  const adminDb = createAdminClient()
+  const { data } = await adminDb
+    .from('narrative_versions')
+    .select('id, title, category, version_number, created_at')
+    .eq('document_id', narrativeId)
+    .eq('org_id', orgId)
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  return data || []
+}
+
+export async function getNarrativeVersion(versionId: string) {
+  const supabase = await createClient()
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) return null
+
+  const adminDb = createAdminClient()
+  const { data } = await adminDb
+    .from('narrative_versions')
+    .select('*')
+    .eq('id', versionId)
+    .eq('org_id', orgId)
+    .single()
+
+  return data
+}
+
+export async function restoreNarrativeVersion(narrativeId: string, versionId: string) {
+  const supabase = await createClient()
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) return { error: 'Not authenticated' }
+
+  const adminDb = createAdminClient()
+
+  // Get the version to restore
+  const { data: version } = await adminDb
+    .from('narrative_versions')
+    .select('*')
+    .eq('id', versionId)
+    .eq('org_id', orgId)
+    .single()
+
+  if (!version) return { error: 'Version not found' }
+
+  // Snapshot current state before restoring
+  const { data: current } = await adminDb
+    .from('documents')
+    .select('title, extracted_text, ai_category, metadata, version')
+    .eq('id', narrativeId)
+    .single()
+
+  if (current?.extracted_text) {
+    const currentMeta = (current.metadata as Record<string, unknown>) || {}
+    await adminDb.from('narrative_versions').insert({
+      document_id: narrativeId,
+      org_id: orgId,
+      title: current.title || '',
+      content: current.extracted_text,
+      category: current.ai_category || null,
+      tags: (currentMeta.tags as string[])?.length ? JSON.stringify(currentMeta.tags) : null,
+      version_number: (current.version as number) || 1,
+    })
+  }
+
+  const restoredTags = version.tags ? (typeof version.tags === 'string' ? JSON.parse(version.tags) : version.tags) : []
+
+  await adminDb
+    .from('documents')
+    .update({
+      title: version.title,
+      name: version.title,
+      extracted_text: version.content,
+      ai_category: version.category,
+      metadata: { ...((current?.metadata as Record<string, unknown>) || {}), tags: restoredTags.length > 0 ? restoredTags : undefined },
+      version: ((current?.version as number) || 1) + 1,
+    })
+    .eq('id', narrativeId)
+
+  revalidatePath('/narratives')
+  revalidatePath(`/narratives/${narrativeId}`)
   return { success: true }
 }
 
