@@ -1253,6 +1253,233 @@
         -4080,
         6304
       ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.sbir.gov/api/solicitations.json?keyword=&rows=100&start=0",
+        "options": {}
+      },
+      "id": "new-sbir-fetch",
+      "name": "SBIR STTR Solicitations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-7488, 9216],
+      "continueOnFail": true,
+      "notesInFlow": true,
+      "notes": "SBIR/STTR small business grants"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const solicitations = data.results || data || [];\n  if (!Array.isArray(solicitations)) continue;\n  for (const s of solicitations) {\n    grants.push({\n      json: {\n        oppNum: 'SBIR-' + (s.solicitation_id || s.id || Date.now()),\n        title: s.solicitation_title || s.title || 'Untitled',\n        description: (s.abstract || s.description || '').substring(0, 1000),\n        link: s.solicitation_url || s.url || 'https://www.sbir.gov',\n        openDate: s.open_date || s.release_date || '',\n        closeDate: s.close_date || s.deadline || '',\n        agency: s.agency || s.branch || 'SBIR/STTR',\n        agencyCode: s.agency_code || '',\n        category: 'Federal - SBIR/STTR',\n        source: 'SBIR.gov',\n        awardFloor: s.award_floor || 0,\n        awardCeiling: s.award_ceiling || 0,\n        status: s.status || 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'sbir' } }];"
+      },
+      "id": "new-sbir-extract",
+      "name": "Extract SBIR Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7248, 9216],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.sam.gov/opportunities/v2/search?limit=100&postedFrom=01/01/2026&api_key=REPLACE_WITH_SAM_API_KEY",
+        "options": {}
+      },
+      "id": "new-sam-fetch",
+      "name": "SAM Gov Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-7488, 9408],
+      "continueOnFail": true,
+      "notesInFlow": true,
+      "notes": "SAM.gov federal opportunities"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const opportunities = data.opportunitiesData || data.opportunities || [];\n  if (!Array.isArray(opportunities)) continue;\n  for (const opp of opportunities) {\n    grants.push({\n      json: {\n        oppNum: 'SAM-' + (opp.noticeId || opp.solicitationNumber || Date.now()),\n        title: opp.title || 'Untitled',\n        description: (opp.description || '').substring(0, 1000),\n        link: opp.uiLink || 'https://sam.gov/opp/' + (opp.noticeId || '') + '/view',\n        openDate: opp.postedDate || '',\n        closeDate: opp.responseDeadLine || opp.archiveDate || '',\n        agency: opp.fullParentPathName || opp.departmentName || 'Federal',\n        agencyCode: opp.solicitationNumber || '',\n        category: 'Federal',\n        source: 'SAM.gov',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: opp.active === 'Yes' ? 'posted' : 'closed'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'sam' } }];"
+      },
+      "id": "new-sam-extract",
+      "name": "Extract SAM Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7248, 9408],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.nsf.gov/services/v1/awards.json?keyword=community+health&dateStart=01/01/2026&printFields=id,title,abstractText,startDate,expDate,awardeeName,fundsObligatedAmt,fundProgramName&offset=0&rpp=100",
+        "options": {}
+      },
+      "id": "new-nsf-fetch",
+      "name": "NSF Award Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-7488, 9600],
+      "continueOnFail": true,
+      "notesInFlow": true,
+      "notes": "NSF science/education grants"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const awards = data.response?.award || [];\n  for (const a of awards) {\n    grants.push({\n      json: {\n        oppNum: 'NSF-' + (a.id || Date.now()),\n        title: a.title || 'Untitled',\n        description: (a.abstractText || '').substring(0, 1000),\n        link: 'https://www.nsf.gov/awardsearch/showAward?AWD_ID=' + (a.id || ''),\n        openDate: a.startDate || '',\n        closeDate: a.expDate || '',\n        agency: 'National Science Foundation',\n        agencyCode: a.fundProgramName || '',\n        category: 'Federal - NSF',\n        source: 'NSF Awards',\n        awardFloor: 0,\n        awardCeiling: parseInt(a.fundsObligatedAmt) || 0,\n        status: 'active'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'nsf' } }];"
+      },
+      "id": "new-nsf-extract",
+      "name": "Extract NSF Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7248, 9600],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=*&query=(status%3D%27OPEN%27)&pageSize=100&pageNumber=1",
+        "options": {}
+      },
+      "id": "new-eu-fetch",
+      "name": "EU Funding Portal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-7488, 9792],
+      "continueOnFail": true,
+      "notesInFlow": true,
+      "notes": "EU Horizon Europe + other programmes"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const results = data.results || [];\n  for (const r of results) {\n    const meta = r.metadata || {};\n    const id = meta.identifier?.fieldData || r.reference || Date.now();\n    grants.push({\n      json: {\n        oppNum: 'EU-' + id,\n        title: meta.title?.fieldData || 'Untitled',\n        description: (meta.description?.fieldData || '').substring(0, 1000),\n        link: 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/' + id,\n        openDate: meta.startDate?.fieldData || '',\n        closeDate: meta.deadlineDate?.fieldData || '',\n        agency: meta.programmePeriod?.fieldData || 'European Commission',\n        agencyCode: meta.callIdentifier?.fieldData || '',\n        category: 'International - EU',\n        source: 'EU Funding Portal',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'eu' } }];"
+      },
+      "id": "new-eu-extract",
+      "name": "Extract EU Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7248, 9792],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://gtr.ukri.org/gtr/api/funds?q=*&s=100&f=fund.end:gt:2026-01-01",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Accept", "value": "application/json" }] },
+        "options": {}
+      },
+      "id": "new-ukri-fetch",
+      "name": "UKRI Gateway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-7488, 9984],
+      "continueOnFail": true,
+      "notesInFlow": true,
+      "notes": "UK Research & Innovation funds"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const funds = data.fund || [];\n  for (const f of funds) {\n    grants.push({\n      json: {\n        oppNum: 'UKRI-' + (f.id || Date.now()),\n        title: f.valuePounds ? 'UKRI Fund - £' + Number(f.valuePounds.amount).toLocaleString() : 'UKRI Fund',\n        description: (f.abstractText || f.category || '').substring(0, 1000),\n        link: 'https://gtr.ukri.org/projects?ref=' + (f.id || ''),\n        openDate: f.start || '',\n        closeDate: f.end || '',\n        agency: (f.funder && f.funder.name) || 'UKRI',\n        agencyCode: '',\n        category: 'International - UK',\n        source: 'UKRI Gateway',\n        awardFloor: 0,\n        awardCeiling: (f.valuePounds && f.valuePounds.amount) || 0,\n        status: 'active'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'ukri' } }];"
+      },
+      "id": "new-ukri-extract",
+      "name": "Extract UKRI Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7248, 9984],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://www.grants.ca.gov/api/v1/grants?status=open&page=1&per_page=100",
+        "options": {}
+      },
+      "id": "new-ca-fetch",
+      "name": "California Grants Portal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-7488, 10176],
+      "continueOnFail": true,
+      "notesInFlow": true,
+      "notes": "California state grants"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const results = data.data || data.grants || (Array.isArray(data) ? data : []);\n  if (!Array.isArray(results)) continue;\n  for (const g of results) {\n    grants.push({\n      json: {\n        oppNum: 'CA-' + (g.id || g.grantID || Date.now()),\n        title: g.title || g.grantTitle || 'Untitled',\n        description: (g.description || g.grantDescription || '').substring(0, 1000),\n        link: g.url || g.link || 'https://www.grants.ca.gov',\n        openDate: g.openDate || g.postedDate || '',\n        closeDate: g.closeDate || g.deadline || '',\n        agency: g.grantorName || g.agency || 'California State',\n        agencyCode: '',\n        category: 'State - California',\n        source: 'CA Grants Portal',\n        awardFloor: g.estimatedAmountMin || 0,\n        awardCeiling: g.estimatedAmountMax || 0,\n        status: 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'ca-grants' } }];"
+      },
+      "id": "new-ca-extract",
+      "name": "Extract CA Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7248, 10176],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://www.grants.gov.au/Rss/Open",
+        "options": { "response": { "response": { "responseFormat": "text" } } }
+      },
+      "id": "new-au-fetch",
+      "name": "Australia GrantConnect RSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-7488, 10368],
+      "continueOnFail": true,
+      "notesInFlow": true,
+      "notes": "Australian government grants RSS"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const rss = item.json.data || item.json.body || (typeof item.json === 'string' ? item.json : '');\n  if (typeof rss !== 'string') continue;\n  const itemMatches = rss.match(/<item>([\\s\\S]*?)<\\/item>/gi) || [];\n  for (const itemXml of itemMatches) {\n    const titleMatch = itemXml.match(/<title>([^<]+)<\\/title>/);\n    const linkMatch = itemXml.match(/<link>([^<]+)<\\/link>/);\n    const descMatch = itemXml.match(/<description>([\\s\\S]*?)<\\/description>/);\n    const pubDateMatch = itemXml.match(/<pubDate>([^<]+)<\\/pubDate>/);\n    if (!titleMatch) continue;\n    const title = titleMatch[1].replace(/(<![CDATA[|]]>)/g, '').trim();\n    grants.push({\n      json: {\n        oppNum: 'AU-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),\n        title: title,\n        description: (descMatch ? descMatch[1].replace(/(<![CDATA[|]]>)/g, '').replace(/&amp;/g, '&').trim() : '').substring(0, 1000),\n        link: linkMatch ? linkMatch[1].trim() : '',\n        openDate: pubDateMatch ? pubDateMatch[1].trim() : '',\n        closeDate: 'See grant details',\n        agency: 'Australian Government',\n        agencyCode: '',\n        category: 'International - Australia',\n        source: 'GrantConnect AU',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'au-grants' } }];"
+      },
+      "id": "new-au-extract",
+      "name": "Extract AU Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7248, 10368],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://open.canada.ca/data/api/3/action/package_search?q=grant+contribution&rows=100&sort=metadata_modified+desc",
+        "options": {}
+      },
+      "id": "new-canada-fetch",
+      "name": "Canada Open Data Grants",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-7488, 10560],
+      "continueOnFail": true,
+      "notesInFlow": true,
+      "notes": "Canadian government grants"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const results = (data.result && data.result.results) || [];\n  for (const r of results) {\n    grants.push({\n      json: {\n        oppNum: 'CAN-' + (r.id || Date.now()),\n        title: r.title || 'Untitled',\n        description: (r.notes || '').substring(0, 1000),\n        link: 'https://open.canada.ca/data/en/dataset/' + (r.name || r.id),\n        openDate: r.metadata_created || '',\n        closeDate: '',\n        agency: (r.organization && r.organization.title) || 'Government of Canada',\n        agencyCode: '',\n        category: 'International - Canada',\n        source: 'Canada Open Data',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'canada' } }];"
+      },
+      "id": "new-canada-extract",
+      "name": "Extract Canada Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7248, 10560],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=foundation+grant&page=0",
+        "options": {}
+      },
+      "id": "new-irs990-fetch",
+      "name": "IRS 990 Foundation Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-7488, 10752],
+      "continueOnFail": true,
+      "notesInFlow": true,
+      "notes": "Enhanced ProPublica foundation discovery"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const orgs = data.organizations || [];\n  for (const org of orgs) {\n    const name = (org.name || '').toLowerCase();\n    const isGrantMaker = name.includes('foundation') || name.includes('trust') || name.includes('fund') || name.includes('endowment');\n    if (!isGrantMaker) continue;\n    if ((org.total_revenue || 0) < 100000) continue;\n    grants.push({\n      json: {\n        oppNum: 'IRS990-' + (org.ein || Date.now()),\n        title: org.name + ' — Potential Grant Source',\n        description: 'Tax-exempt foundation in ' + (org.city || 'Unknown') + ', ' + (org.state || 'US') + '. Total revenue: $' + (org.total_revenue || 0).toLocaleString() + '.',\n        link: 'https://projects.propublica.org/nonprofits/organizations/' + org.ein,\n        openDate: new Date().toISOString().split('T')[0],\n        closeDate: 'Ongoing — Contact directly',\n        agency: org.name,\n        agencyCode: org.ein || '',\n        category: 'Foundation',\n        source: 'IRS 990 / ProPublica',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'active'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'irs990' } }];"
+      },
+      "id": "new-irs990-extract",
+      "name": "Extract IRS990 Foundations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7248, 10752],
+      "continueOnFail": true
     }
   ],
   "pinData": {
@@ -2042,6 +2269,51 @@
             "node": "Fetch Grantivia Grants5",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "SBIR STTR Solicitations",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SAM Gov Opportunities",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "NSF Award Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "EU Funding Portal",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "UKRI Gateway",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "California Grants Portal",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Australia GrantConnect RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Canada Open Data Grants",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IRS 990 Foundation Search",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -2056,6 +2328,60 @@
           }
         ]
       ]
+    },
+    "SBIR STTR Solicitations": {
+      "main": [[{ "node": "Extract SBIR Grants", "type": "main", "index": 0 }]]
+    },
+    "Extract SBIR Grants": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "SAM Gov Opportunities": {
+      "main": [[{ "node": "Extract SAM Grants", "type": "main", "index": 0 }]]
+    },
+    "Extract SAM Grants": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "NSF Award Search": {
+      "main": [[{ "node": "Extract NSF Grants", "type": "main", "index": 0 }]]
+    },
+    "Extract NSF Grants": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "EU Funding Portal": {
+      "main": [[{ "node": "Extract EU Grants", "type": "main", "index": 0 }]]
+    },
+    "Extract EU Grants": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "UKRI Gateway": {
+      "main": [[{ "node": "Extract UKRI Grants", "type": "main", "index": 0 }]]
+    },
+    "Extract UKRI Grants": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "California Grants Portal": {
+      "main": [[{ "node": "Extract CA Grants", "type": "main", "index": 0 }]]
+    },
+    "Extract CA Grants": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "Australia GrantConnect RSS": {
+      "main": [[{ "node": "Extract AU Grants", "type": "main", "index": 0 }]]
+    },
+    "Extract AU Grants": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "Canada Open Data Grants": {
+      "main": [[{ "node": "Extract Canada Grants", "type": "main", "index": 0 }]]
+    },
+    "Extract Canada Grants": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "IRS 990 Foundation Search": {
+      "main": [[{ "node": "Extract IRS990 Foundations", "type": "main", "index": 0 }]]
+    },
+    "Extract IRS990 Foundations": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
     },
     "Has Results?": {
       "main": [
