@@ -107,6 +107,7 @@ export function GrantDetail({
     score?: string;
     indicator?: string;
     confidence?: number;
+    data_quality?: string;
     dimension_scores?: {
       mission_alignment?: number;
       target_population?: number;
@@ -115,6 +116,7 @@ export function GrantDetail({
       organizational_capacity?: number;
     };
   } | null;
+  const isInsufficientData = eligibility?.data_quality === "insufficient" || eligibility?.score === "INSUFFICIENT_DATA";
   const concerns = grant.concerns as string[] | null;
   const recommendations = grant.recommendations as { text?: string }[] | string[] | null;
 
@@ -435,22 +437,30 @@ export function GrantDetail({
             {grant.screening_score != null && (
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium">Score:</span>
-                <Badge
-                  variant={
-                    grant.screening_score >= 80
-                      ? "default"
-                      : grant.screening_score >= 50
-                        ? "secondary"
-                        : "destructive"
-                  }
-                  className="text-sm"
-                >
-                  {grant.screening_score}%
-                </Badge>
-                {eligibility?.score && (
-                  <span className="text-sm text-muted-foreground">
-                    ({eligibility.score})
-                  </span>
+                {isInsufficientData ? (
+                  <Badge variant="outline" className="text-sm bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                    Not Enough Info
+                  </Badge>
+                ) : (
+                  <>
+                    <Badge
+                      variant={
+                        grant.screening_score >= 80
+                          ? "default"
+                          : grant.screening_score >= 50
+                            ? "secondary"
+                            : "destructive"
+                      }
+                      className="text-sm"
+                    >
+                      {grant.screening_score}%
+                    </Badge>
+                    {eligibility?.score && (
+                      <span className="text-sm text-muted-foreground">
+                        ({eligibility.score})
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             )}
