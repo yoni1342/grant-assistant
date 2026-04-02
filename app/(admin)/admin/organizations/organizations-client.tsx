@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
-import { Eye, Trash2, Ban, RotateCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Eye, Trash2, Ban, RotateCcw, Search } from "lucide-react";
 import { approveOrganization, rejectOrganization, deleteOrganization, suspendOrganization, unsuspendOrganization } from "./actions";
 
 interface Organization {
@@ -72,6 +73,7 @@ export function OrganizationsClient({
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     type: "delete" | "suspend" | "unsuspend";
@@ -104,6 +106,16 @@ export function OrganizationsClient({
       if (billingFilter === "none") {
         if (o.subscription_status) return false;
       } else if (o.subscription_status !== billingFilter) return false;
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const match =
+        o.name?.toLowerCase().includes(q) ||
+        o.owner_email?.toLowerCase().includes(q) ||
+        o.owner_name?.toLowerCase().includes(q) ||
+        o.email?.toLowerCase().includes(q) ||
+        o.ein?.toLowerCase().includes(q);
+      if (!match) return false;
     }
     return true;
   });
@@ -225,6 +237,17 @@ export function OrganizationsClient({
             )}
           </Button>
         ))}
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by name, email, EIN..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       {/* Table */}

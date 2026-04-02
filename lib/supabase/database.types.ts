@@ -874,6 +874,7 @@ export type Database = {
         | "awarded"
         | "reporting"
         | "closed"
+        | "archived"
       org_status: "pending" | "approved" | "rejected"
       report_type: "interim" | "final"
       submission_method: "auto" | "manual"

@@ -12,6 +12,5 @@ Sentry.init({
 
   integrations: [Sentry.replayIntegration()],
 
-  // Set to false to disable in development
-  enabled: process.env.NODE_ENV === "production",
+  enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
 });

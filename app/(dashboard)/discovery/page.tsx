@@ -402,15 +402,33 @@ export default function DiscoveryPage() {
   const seenTitlesRef = useRef<Set<string>>(new Set());
   const seenRowIdsRef = useRef<Set<string>>(new Set());
 
-  const STORAGE_KEY = "fundory_discovery_state";
+  const [storageKey, setStorageKey] = useState<string | null>(null);
 
-  // Restore state from sessionStorage on mount
+  // Resolve org-specific storage key
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from("profiles")
+        .select("org_id")
+        .eq("id", user.id)
+        .single()
+        .then(({ data }) => {
+          if (data?.org_id) {
+            setStorageKey(`fundory_discovery_${data.org_id}`);
+          }
+        });
+    });
+  }, []);
+
+  // Restore state from sessionStorage on mount (once storageKey is resolved)
   const hasRestored = useRef(false);
   useEffect(() => {
-    if (hasRestored.current) return;
+    if (hasRestored.current || !storageKey) return;
     hasRestored.current = true;
     try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
+      const saved = sessionStorage.getItem(storageKey);
       if (!saved) return;
       const s = JSON.parse(saved);
       if (s.query) setQuery(s.query);
@@ -431,14 +449,14 @@ export default function DiscoveryPage() {
     } catch {
       // corrupted storage — ignore
     }
-  }, []);
+  }, [storageKey]);
 
   // Save state to sessionStorage on changes
   useEffect(() => {
-    if (!hasRestored.current) return;
+    if (!hasRestored.current || !storageKey) return;
     try {
       sessionStorage.setItem(
-        STORAGE_KEY,
+        storageKey,
         JSON.stringify({
           query,
           orgType,
@@ -453,7 +471,7 @@ export default function DiscoveryPage() {
     } catch {
       // storage full — ignore
     }
-  }, [query, orgType, profitStatus, industry, fundingCategory, location, results, addedGrants]);
+  }, [storageKey, query, orgType, profitStatus, industry, fundingCategory, location, results, addedGrants]);
 
   const atLimit = grantUsage !== null && grantUsage.limit !== null && grantUsage.used >= grantUsage.limit;
 
@@ -713,6 +731,13 @@ export default function DiscoveryPage() {
       return;
     }
 
+    if (!grant.title?.trim()) {
+      toast.error("Cannot add grant", {
+        description: "This grant has no title and cannot be added to the pipeline.",
+      });
+      return;
+    }
+
     const grantKey = grant.title;
     setAddingToPipeline(grantKey);
 
@@ -808,12 +833,33 @@ export default function DiscoveryPage() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
-              <MultiSelect label="Location" options={US_STATES} selected={location} onChange={setLocation} searchable />
-              <MultiSelect label="Organization Type" options={ORG_TYPES} selected={orgType} onChange={setOrgType} />
-              <MultiSelect label="Nonprofit / For-Profit" options={PROFIT_STATUSES} selected={profitStatus} onChange={setProfitStatus} />
-              <MultiSelect label="Industry" options={INDUSTRIES} selected={industry} onChange={setIndustry} />
-              <MultiSelect label="Funding Category" options={FUNDING_CATEGORIES} selected={fundingCategory} onChange={setFundingCategory} />
+            <div className="space-y-3 mt-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <MultiSelect label="Location" options={US_STATES} selected={location} onChange={setLocation} searchable />
+                <MultiSelect label="Organization Type" options={ORG_TYPES} selected={orgType} onChange={setOrgType} />
+                <MultiSelect label="Nonprofit / For-Profit" options={PROFIT_STATUSES} selected={profitStatus} onChange={setProfitStatus} />
+                <MultiSelect label="Industry" options={INDUSTRIES} selected={industry} onChange={setIndustry} />
+                <MultiSelect label="Funding Category" options={FUNDING_CATEGORIES} selected={fundingCategory} onChange={setFundingCategory} />
+              </div>
+              {(orgType.length + profitStatus.length + industry.length + fundingCategory.length + location.length) > 0 && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 gap-1 text-muted-foreground"
+                    onClick={() => {
+                      setOrgType([]);
+                      setProfitStatus([]);
+                      setIndustry([]);
+                      setFundingCategory([]);
+                      setLocation([]);
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                    Clear All Filters
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 

@@ -5,12 +5,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft,
-  Calendar,
-  Building2,
-  DollarSign,
-  ExternalLink,
-} from "lucide-react";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ArrowLeft } from "lucide-react";
+import { DeadlineFilter } from "./deadline-filter";
 
 const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovered",
@@ -30,7 +33,23 @@ function getDeadlineUrgency(deadline: string) {
   return { label: "", variant: "outline" as const };
 }
 
-export default async function DeadlinesPage() {
+function getFilterCutoff(filter: string): Date | null {
+  const now = new Date();
+  switch (filter) {
+    case "1w": return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    case "2w": return new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    case "1m": return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    case "3m": return new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+    default: return null;
+  }
+}
+
+export default async function DeadlinesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const { filter = "all" } = await searchParams;
   const supabase = await createClient();
   const { orgId } = await getUserOrgId(supabase);
   if (!orgId) redirect("/login");
@@ -41,11 +60,40 @@ export default async function DeadlinesPage() {
     .from("grants")
     .select("id, title, funder_name, stage, amount, deadline, description, source_url")
     .eq("org_id", orgId)
+    .neq("stage", "archived")
     .not("deadline", "is", null)
-    .gt("deadline", new Date().toISOString())
-    .order("deadline", { ascending: true });
+    .order("created_at", { ascending: false });
 
-  const deadlineGrants = grants || [];
+  const now = new Date();
+  const cutoff = getFilterCutoff(filter);
+
+  const allActive = (grants || []).filter((g) => {
+    const dl = new Date(g.deadline!);
+    const isValidDate = !isNaN(dl.getTime());
+    if (isValidDate) return dl > now;
+    return true;
+  });
+
+  const filtered = filter === "ongoing"
+    ? allActive.filter((g) => isNaN(new Date(g.deadline!).getTime()))
+    : cutoff
+      ? allActive.filter((g) => {
+          const dl = new Date(g.deadline!);
+          if (isNaN(dl.getTime())) return false;
+          return dl <= cutoff;
+        })
+      : allActive;
+
+  const sorted = [...filtered].sort((a, b) => {
+    const aDate = new Date(a.deadline!);
+    const bDate = new Date(b.deadline!);
+    const aValid = !isNaN(aDate.getTime());
+    const bValid = !isNaN(bDate.getTime());
+    if (aValid && bValid) return aDate.getTime() - bDate.getTime();
+    if (aValid) return -1;
+    if (bValid) return 1;
+    return 0;
+  });
 
   return (
     <div className="p-6 space-y-6 w-full min-w-0">
@@ -56,91 +104,83 @@ export default async function DeadlinesPage() {
             Dashboard
           </Button>
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="font-display text-2xl font-black uppercase tracking-tight">
-            Upcoming Deadlines
+            Active Deadlines
           </h1>
           <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
-            {deadlineGrants.length} grant{deadlineGrants.length === 1 ? "" : "s"} with upcoming deadlines
+            {sorted.length} grant{sorted.length === 1 ? "" : "s"}
           </p>
         </div>
+        <DeadlineFilter />
       </div>
 
-      {deadlineGrants.length === 0 ? (
+      {sorted.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-sm text-muted-foreground">No upcoming deadlines</p>
+            <p className="text-sm text-muted-foreground">No grants match this filter</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3">
-          {deadlineGrants.map((g) => {
-            const urgency = getDeadlineUrgency(g.deadline!);
-            return (
-              <Link key={g.id} href={`/pipeline/${g.id}?from=deadlines`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <h3 className="font-medium leading-tight truncate min-w-0">
-                            {g.title}
-                          </h3>
-                          {urgency.label && (
-                            <Badge variant={urgency.variant} className="shrink-0">
-                              {urgency.label}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                          {g.funder_name && (
-                            <span className="flex items-center gap-1">
-                              <Building2 className="h-3.5 w-3.5" />
-                              {g.funder_name}
-                            </span>
-                          )}
-                          {g.amount != null && (
-                            <span className="flex items-center gap-1">
-                              <DollarSign className="h-3.5 w-3.5" />
-                              {typeof g.amount === "number"
-                                ? `$${g.amount.toLocaleString()}`
-                                : String(g.amount)}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {new Date(g.deadline!).toLocaleDateString()}
-                          </span>
-                        </div>
-                        {g.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {g.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 pt-0.5">
-                          <Badge variant="outline" className="text-xs">
-                            {STAGE_LABELS[g.stage] || g.stage}
+        <Card className="overflow-hidden">
+          <Table className="table-fixed w-full">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[40%]">Title</TableHead>
+                <TableHead className="w-[20%]">Funder</TableHead>
+                <TableHead className="w-[20%]">Deadline</TableHead>
+                <TableHead className="w-[10%]">Amount</TableHead>
+                <TableHead className="w-[10%]">Stage</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sorted.map((g) => {
+                const dl = new Date(g.deadline!);
+                const isValidDate = !isNaN(dl.getTime());
+                const urgency = isValidDate ? getDeadlineUrgency(g.deadline!) : null;
+                return (
+                  <TableRow key={g.id}>
+                    <TableCell className="truncate">
+                      <Link href={`/pipeline/${g.id}?from=deadlines`} className="font-medium hover:underline">
+                        {g.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground truncate">
+                      {g.funder_name || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm">{isValidDate ? dl.toLocaleDateString() : g.deadline}</span>
+                        {isValidDate && urgency?.label && (
+                          <Badge variant={urgency.variant} className="text-xs">
+                            {urgency.label}
                           </Badge>
-                          {g.source_url && (
-                            <a
-                              href={g.source_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              Source
-                            </a>
-                          )}
-                        </div>
+                        )}
+                        {!isValidDate && (
+                          <Badge variant="secondary" className="text-xs">
+                            Rolling
+                          </Badge>
+                        )}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {g.amount != null
+                        ? typeof g.amount === "number"
+                          ? `$${g.amount.toLocaleString()}`
+                          : String(g.amount)
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {STAGE_LABELS[g.stage] || g.stage}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   );

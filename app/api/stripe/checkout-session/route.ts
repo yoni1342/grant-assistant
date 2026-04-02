@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import * as Sentry from '@sentry/nextjs'
 import { getStripeClient } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/server'
 
@@ -69,6 +70,16 @@ export async function POST(req: Request) {
 
     let customerId = existingCustomerId
 
+    // Validate existing customer ID still exists in Stripe (may be stale from test mode)
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId)
+      } catch {
+        console.warn('[stripe/checkout-session] Stored customer ID is invalid (likely from test mode), creating new one:', customerId)
+        customerId = null
+      }
+    }
+
     if (!customerId) {
       console.log('[stripe/checkout-session] Creating new Stripe customer for:', email)
       const metadata: Record<string, string> = entityType === 'agency' ? { agency_id: entityId } : { org_id: entityId }
@@ -78,7 +89,6 @@ export async function POST(req: Request) {
 
       if (entityType === 'agency') {
         await adminClient.from('agencies').update({ stripe_customer_id: customerId }).eq('id', entityId)
-        // Also update the agency's placeholder org
         await adminClient.from('organizations').update({ stripe_customer_id: customerId }).eq('agency_id', entityId)
       } else {
         await adminClient.from('organizations').update({ stripe_customer_id: customerId }).eq('id', entityId)
@@ -124,6 +134,8 @@ export async function POST(req: Request) {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error)
     console.error('[stripe/checkout-session] Error:', errMsg, error)
+    Sentry.captureException(error, { extra: { context: 'stripe-checkout-session' } })
+    await Sentry.flush(2000)
     return NextResponse.json(
       { error: `Failed to create checkout session: ${errMsg}` },
       { status: 500 }

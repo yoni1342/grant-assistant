@@ -49,8 +49,48 @@ export async function POST(req: Request) {
 
   const agent = new https.Agent({ rejectUnauthorized: false });
 
-  // Enforce daily grant limit for add-to-pipeline
+  // Validate grant exists and has a title before proposal generation
+  if (service === "proposal-generation") {
+    if (!data.grantId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Missing grantId.", code: "INVALID_GRANT" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    const adminSupabase = createAdminClient();
+    const { data: grant } = await adminSupabase
+      .from("grants")
+      .select("title")
+      .eq("id", data.grantId)
+      .eq("org_id", orgId)
+      .single();
+
+    if (!grant || !grant.title?.trim()) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Cannot generate proposal: grant is missing a title.",
+          code: "INVALID_GRANT",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+  }
+
+  // Validate and enforce limits for add-to-pipeline
   if (service === "grant-screening") {
+    // Reject grants with no title
+    if (!data.title || !String(data.title).trim()) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Cannot add grant: missing title.",
+          code: "INVALID_GRANT",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     const adminSupabase = createAdminClient();
     const { data: org } = await adminSupabase
       .from("organizations")
@@ -66,7 +106,7 @@ export async function POST(req: Request) {
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
       const { count } = await adminSupabase
-        .from("grants")
+        .from("grant_usage_log")
         .select("*", { count: "exact", head: true })
         .eq("org_id", orgId)
         .gte("created_at", startOfDay);
@@ -82,6 +122,9 @@ export async function POST(req: Request) {
         );
       }
     }
+
+    // Log this addition so deletes/archives don't reset the daily count
+    await adminSupabase.from("grant_usage_log").insert({ org_id: orgId });
   }
 
   // For grant-discovery, fire-and-forget to n8n.

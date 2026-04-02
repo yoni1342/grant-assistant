@@ -56,6 +56,7 @@ export function PipelineClient({
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [checkingLimit, setCheckingLimit] = useState(false);
   const [confirmGrant, setConfirmGrant] = useState<Grant | null>(null);
   const [orgName, setOrgName] = useState<string>("");
 
@@ -150,6 +151,7 @@ export function PipelineClient({
 
   const filtered = useMemo(() => {
     return grants.filter((g) => {
+      if (g.stage === "archived") return false;
       const matchesSearch =
         !search ||
         g.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -160,9 +162,30 @@ export function PipelineClient({
     });
   }, [grants, search, stageFilter]);
 
-  function handleGrantAdded(grant: Grant) {
-    setGrants((prev) => [grant, ...prev]);
+  function handleGrantAdded() {
     setShowAddDialog(false);
+  }
+
+  async function handleAddGrantClick() {
+    setCheckingLimit(true);
+    try {
+      const res = await fetch("/api/grants/usage");
+      if (res.ok) {
+        const usage = await res.json();
+        if (usage.limit !== null && usage.used >= usage.limit) {
+          toast.error("Daily grant limit reached", {
+            description: `You've used ${usage.used}/${usage.limit} grant${usage.limit === 1 ? "" : "s"} today. Upgrade to Professional for unlimited grants.`,
+          });
+          return;
+        }
+      }
+      setShowAddDialog(true);
+    } catch {
+      // If usage check fails, still allow opening the dialog
+      setShowAddDialog(true);
+    } finally {
+      setCheckingLimit(false);
+    }
   }
 
   const handleStageChange = useCallback(async (grantId: string, targetStage: string) => {
@@ -216,9 +239,9 @@ export function PipelineClient({
             {grants.length} grants in pipeline
           </p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} size="sm">
+        <Button onClick={handleAddGrantClick} disabled={checkingLimit} size="sm">
           <Plus className="h-4 w-4 mr-1" />
-          Add Grant
+          {checkingLimit ? "Checking..." : "Add Grant"}
         </Button>
       </div>
 
