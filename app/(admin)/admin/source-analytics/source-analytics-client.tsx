@@ -427,7 +427,8 @@ export function SourceAnalyticsClient() {
               No source data yet. Stats will appear after the first grant fetch runs.
             </p>
           ) : (
-            <Table>
+            <div className="[&_[data-slot=table-container]]:overflow-x-hidden">
+            <Table className="table-fixed">
               <colgroup>
                 <col className="w-[26%]" />
                 <col className="w-[11%]" />
@@ -495,6 +496,7 @@ export function SourceAnalyticsClient() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

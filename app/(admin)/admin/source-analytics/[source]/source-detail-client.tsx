@@ -330,7 +330,8 @@ export function SourceDetailClient({ source }: { source: string }) {
           ) : sortedGrants.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">No grants found for this source.</p>
           ) : (
-            <Table>
+            <div className="[&_[data-slot=table-container]]:overflow-x-hidden">
+            <Table className="table-fixed">
               <colgroup>
                 <col className="w-[40%]" />
                 <col className="w-[14%]" />
@@ -388,6 +389,7 @@ export function SourceDetailClient({ source }: { source: string }) {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
