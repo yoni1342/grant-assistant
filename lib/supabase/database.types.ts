@@ -307,6 +307,41 @@ export type Database = {
           },
         ]
       }
+      grant_source_stats: {
+        Row: {
+          id: string
+          org_id: string
+          source: string
+          raw_count: number
+          fetch_date: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          source: string
+          raw_count: number
+          fetch_date?: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          source?: string
+          raw_count?: number
+          fetch_date?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grant_source_stats_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grants: {
         Row: {
           amount: string | null
