@@ -144,7 +144,7 @@ export function SourceAnalyticsClient() {
   function SortHeader({ field, children }: { field: SortField; children: React.ReactNode }) {
     return (
       <TableHead
-        className="cursor-pointer select-none whitespace-nowrap"
+        className="cursor-pointer select-none text-xs px-2 py-1.5"
         onClick={() => handleSort(field)}
       >
         <div className="flex items-center gap-1">
@@ -159,12 +159,12 @@ export function SourceAnalyticsClient() {
 
   function StatCell({ total, filtered }: { total: number; filtered: number }) {
     return (
-      <TableCell className="text-right tabular-nums">
-        <span className="font-medium">{total.toLocaleString()}</span>
+      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+        <div className="font-medium">{total.toLocaleString()}</div>
         {hasFilter && (
-          <span className="ml-1.5 text-xs text-muted-foreground">
-            ({filtered.toLocaleString()})
-          </span>
+          <div className="text-[11px] text-muted-foreground">
+            {filtered.toLocaleString()}
+          </div>
         )}
       </TableCell>
     );
@@ -396,27 +396,26 @@ export function SourceAnalyticsClient() {
             <>
               {hasFilter && (
                 <p className="text-xs text-muted-foreground mb-3">
-                  Each cell shows <span className="font-medium">Total</span>{" "}
-                  <span className="text-muted-foreground">(filtered)</span>
+                  Each cell shows <span className="font-medium">Total</span> with filtered count below
                 </p>
               )}
-              <div className="overflow-x-auto">
-                <Table>
+              <div>
+                <Table className="w-full table-fixed">
                   <TableHeader>
                     <TableRow>
                       <SortHeader field="source">Source</SortHeader>
-                      <SortHeader field="raw_fetched_total">Raw Fetched</SortHeader>
+                      <SortHeader field="raw_fetched_total">Fetched</SortHeader>
                       <SortHeader field="stored_total">Stored</SortHeader>
                       <SortHeader field="eligible_total">Eligible</SortHeader>
                       <SortHeader field="pending_approval_total">Pending</SortHeader>
                       <SortHeader field="proposals_total">Proposals</SortHeader>
-                      <TableHead className="text-right whitespace-nowrap">Pass Rate</TableHead>
+                      <TableHead className="text-right text-xs px-2 py-1.5">Rate</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sortedSources.map((row) => (
                       <TableRow key={row.source}>
-                        <TableCell className="font-medium whitespace-nowrap">
+                        <TableCell className="font-medium text-xs px-2 py-1.5 truncate" title={row.source}>
                           {row.source}
                         </TableCell>
                         <StatCell total={row.raw_fetched_total} filtered={row.raw_fetched_filtered} />
@@ -424,7 +423,7 @@ export function SourceAnalyticsClient() {
                         <StatCell total={row.eligible_total} filtered={row.eligible_filtered} />
                         <StatCell total={row.pending_approval_total} filtered={row.pending_approval_filtered} />
                         <StatCell total={row.proposals_total} filtered={row.proposals_filtered} />
-                        <TableCell className="text-right tabular-nums text-muted-foreground">
+                        <TableCell className="text-right tabular-nums text-muted-foreground text-xs px-2 py-1.5">
                           {row.raw_fetched_total > 0
                             ? `${((row.stored_total / row.raw_fetched_total) * 100).toFixed(0)}%`
                             : "-"}
@@ -434,13 +433,13 @@ export function SourceAnalyticsClient() {
                     {/* Totals row */}
                     {totals && (
                       <TableRow className="border-t-2 font-semibold bg-muted/30">
-                        <TableCell>All Sources</TableCell>
+                        <TableCell className="text-xs px-2 py-1.5">All Sources</TableCell>
                         <StatCell total={totals.raw_fetched_total} filtered={totals.raw_fetched_filtered} />
                         <StatCell total={totals.stored_total} filtered={totals.stored_filtered} />
                         <StatCell total={totals.eligible_total} filtered={totals.eligible_filtered} />
                         <StatCell total={totals.pending_approval_total} filtered={totals.pending_approval_filtered} />
                         <StatCell total={totals.proposals_total} filtered={totals.proposals_filtered} />
-                        <TableCell className="text-right tabular-nums">
+                        <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
                           {totals.raw_fetched_total > 0
                             ? `${((totals.stored_total / totals.raw_fetched_total) * 100).toFixed(0)}%`
                             : "-"}
