@@ -59,13 +59,29 @@ function toLocalDate() {
   return d.toISOString().split("T")[0];
 }
 
+/** If source is a JSON string like {"url":"..."}, extract just the readable part */
+function cleanSource(source: string): string {
+  if (!source.startsWith("{")) return source;
+  try {
+    const parsed = JSON.parse(source);
+    if (parsed.url) {
+      const hostname = new URL(parsed.url).hostname.replace("www.", "");
+      return hostname;
+    }
+  } catch {
+    // not JSON
+  }
+  return source;
+}
+
 export function SourceAnalyticsClient() {
   const [sources, setSources] = useState<SourceStat[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<SortField>("raw_fetched_total");
+  const [sortField, setSortField] = useState<SortField>("stored_total");
   const [sortAsc, setSortAsc] = useState(false);
+  const [activePreset, setActivePreset] = useState<string>("today");
 
   const today = toLocalDate();
   const [fromDate, setFromDate] = useState(today);
@@ -95,10 +111,12 @@ export function SourceAnalyticsClient() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleApplyFilter() {
+    setActivePreset("custom");
     fetchStats(fromDate, toDate);
   }
 
   function setPreset(preset: "today" | "7d" | "30d" | "all") {
+    setActivePreset(preset);
     const t = toLocalDate();
     let f = "";
     if (preset === "today") {
@@ -139,18 +157,19 @@ export function SourceAnalyticsClient() {
     return sortAsc ? aVal - bVal : bVal - aVal;
   });
 
-  const hasFilter = fromDate || toDate;
+  // Only show filtered column when filter narrows down from all-time (i.e. not "all" preset)
+  const showFiltered = activePreset !== "all";
 
-  function SortHeader({ field, children }: { field: SortField; children: React.ReactNode }) {
+  function SortHeader({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) {
     return (
       <TableHead
-        className="cursor-pointer select-none text-xs px-2 py-1.5"
+        className={`cursor-pointer select-none text-xs px-2 py-1.5 ${className || ""}`}
         onClick={() => handleSort(field)}
       >
         <div className="flex items-center gap-1">
           {children}
           {sortField === field && (
-            <ArrowDownUp className="h-3 w-3 text-foreground" />
+            <ArrowDownUp className="h-3 w-3 text-foreground shrink-0" />
           )}
         </div>
       </TableHead>
@@ -158,14 +177,18 @@ export function SourceAnalyticsClient() {
   }
 
   function StatCell({ total, filtered }: { total: number; filtered: number }) {
+    // When showing filtered data and it differs from total, show "filtered / total"
+    if (showFiltered && filtered !== total) {
+      return (
+        <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+          <span className="font-medium">{filtered.toLocaleString()}</span>
+          <span className="text-muted-foreground"> / {total.toLocaleString()}</span>
+        </TableCell>
+      );
+    }
     return (
       <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-        <div className="font-medium">{total.toLocaleString()}</div>
-        {hasFilter && (
-          <div className="text-[11px] text-muted-foreground">
-            {filtered.toLocaleString()}
-          </div>
-        )}
+        <span className="font-medium">{total.toLocaleString()}</span>
       </TableCell>
     );
   }
@@ -232,18 +255,21 @@ export function SourceAnalyticsClient() {
               Apply
             </Button>
             <div className="flex gap-1.5">
-              <Button variant="outline" size="sm" onClick={() => setPreset("today")}>Today</Button>
-              <Button variant="outline" size="sm" onClick={() => setPreset("7d")}>7 days</Button>
-              <Button variant="outline" size="sm" onClick={() => setPreset("30d")}>30 days</Button>
-              <Button variant="outline" size="sm" onClick={() => setPreset("all")}>All time</Button>
+              {(["today", "7d", "30d", "all"] as const).map((p) => (
+                <Button
+                  key={p}
+                  variant={activePreset === p ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPreset(p)}
+                >
+                  {p === "today" ? "Today" : p === "7d" ? "7 days" : p === "30d" ? "30 days" : "All time"}
+                </Button>
+              ))}
             </div>
           </div>
-          {hasFilter && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Showing filtered counts for: <span className="font-medium text-foreground">{filterLabel()}</span>.
-              Totals always show all-time numbers.
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground mt-2">
+            Showing: <span className="font-medium text-foreground">{filterLabel()}</span>
+          </p>
         </CardContent>
       </Card>
 
@@ -260,7 +286,7 @@ export function SourceAnalyticsClient() {
             <CardContent>
               <p className="text-3xl font-bold">{totals.raw_fetched_total.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">total so far</p>
-              {hasFilter && (
+              {showFiltered && totals.raw_fetched_filtered !== totals.raw_fetched_total && (
                 <p className="text-sm font-semibold text-blue-600 mt-1">
                   {totals.raw_fetched_filtered.toLocaleString()}
                   <span className="text-xs font-normal text-muted-foreground ml-1">in range</span>
@@ -278,7 +304,7 @@ export function SourceAnalyticsClient() {
             <CardContent>
               <p className="text-3xl font-bold text-blue-600">{totals.stored_total.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">total so far</p>
-              {hasFilter && (
+              {showFiltered && totals.stored_filtered !== totals.stored_total && (
                 <p className="text-sm font-semibold text-blue-600 mt-1">
                   {totals.stored_filtered.toLocaleString()}
                   <span className="text-xs font-normal text-muted-foreground ml-1">in range</span>
@@ -296,7 +322,7 @@ export function SourceAnalyticsClient() {
             <CardContent>
               <p className="text-3xl font-bold text-green-600">{totals.eligible_total.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">total so far</p>
-              {hasFilter && (
+              {showFiltered && totals.eligible_filtered !== totals.eligible_total && (
                 <p className="text-sm font-semibold text-green-600 mt-1">
                   {totals.eligible_filtered.toLocaleString()}
                   <span className="text-xs font-normal text-muted-foreground ml-1">in range</span>
@@ -314,7 +340,7 @@ export function SourceAnalyticsClient() {
             <CardContent>
               <p className="text-3xl font-bold text-amber-600">{totals.pending_approval_total.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">total so far</p>
-              {hasFilter && (
+              {showFiltered && totals.pending_approval_filtered !== totals.pending_approval_total && (
                 <p className="text-sm font-semibold text-amber-600 mt-1">
                   {totals.pending_approval_filtered.toLocaleString()}
                   <span className="text-xs font-normal text-muted-foreground ml-1">in range</span>
@@ -332,7 +358,7 @@ export function SourceAnalyticsClient() {
             <CardContent>
               <p className="text-3xl font-bold text-purple-600">{totals.proposals_total.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">total so far</p>
-              {hasFilter && (
+              {showFiltered && totals.proposals_filtered !== totals.proposals_total && (
                 <p className="text-sm font-semibold text-purple-600 mt-1">
                   {totals.proposals_filtered.toLocaleString()}
                   <span className="text-xs font-normal text-muted-foreground ml-1">in range</span>
@@ -381,9 +407,16 @@ export function SourceAnalyticsClient() {
       {/* Per-source table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Per-Source Breakdown</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium">Per-Source Breakdown</CardTitle>
+            {showFiltered && (
+              <span className="text-[11px] text-muted-foreground">
+                Shows <span className="font-medium">filtered / total</span> when different
+              </span>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0">
           {loading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               Loading...
@@ -393,63 +426,63 @@ export function SourceAnalyticsClient() {
               No source data yet. Stats will appear after the first grant fetch runs.
             </p>
           ) : (
-            <>
-              {hasFilter && (
-                <p className="text-xs text-muted-foreground mb-3">
-                  Each cell shows <span className="font-medium">Total</span> with filtered count below
-                </p>
-              )}
-              <div>
-                <Table className="w-full table-fixed">
-                  <TableHeader>
-                    <TableRow>
-                      <SortHeader field="source">Source</SortHeader>
-                      <SortHeader field="raw_fetched_total">Fetched</SortHeader>
-                      <SortHeader field="stored_total">Stored</SortHeader>
-                      <SortHeader field="eligible_total">Eligible</SortHeader>
-                      <SortHeader field="pending_approval_total">Pending</SortHeader>
-                      <SortHeader field="proposals_total">Proposals</SortHeader>
-                      <TableHead className="text-right text-xs px-2 py-1.5">Rate</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedSources.map((row) => (
-                      <TableRow key={row.source}>
-                        <TableCell className="font-medium text-xs px-2 py-1.5 truncate" title={row.source}>
-                          {row.source}
-                        </TableCell>
-                        <StatCell total={row.raw_fetched_total} filtered={row.raw_fetched_filtered} />
-                        <StatCell total={row.stored_total} filtered={row.stored_filtered} />
-                        <StatCell total={row.eligible_total} filtered={row.eligible_filtered} />
-                        <StatCell total={row.pending_approval_total} filtered={row.pending_approval_filtered} />
-                        <StatCell total={row.proposals_total} filtered={row.proposals_filtered} />
-                        <TableCell className="text-right tabular-nums text-muted-foreground text-xs px-2 py-1.5">
-                          {row.raw_fetched_total > 0
-                            ? `${((row.stored_total / row.raw_fetched_total) * 100).toFixed(0)}%`
-                            : "-"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {/* Totals row */}
-                    {totals && (
-                      <TableRow className="border-t-2 font-semibold bg-muted/30">
-                        <TableCell className="text-xs px-2 py-1.5">All Sources</TableCell>
-                        <StatCell total={totals.raw_fetched_total} filtered={totals.raw_fetched_filtered} />
-                        <StatCell total={totals.stored_total} filtered={totals.stored_filtered} />
-                        <StatCell total={totals.eligible_total} filtered={totals.eligible_filtered} />
-                        <StatCell total={totals.pending_approval_total} filtered={totals.pending_approval_filtered} />
-                        <StatCell total={totals.proposals_total} filtered={totals.proposals_filtered} />
-                        <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-                          {totals.raw_fetched_total > 0
-                            ? `${((totals.stored_total / totals.raw_fetched_total) * 100).toFixed(0)}%`
-                            : "-"}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
+            <Table>
+              <colgroup>
+                <col className="w-[30%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[10%]" />
+              </colgroup>
+              <TableHeader>
+                <TableRow>
+                  <SortHeader field="source">Source</SortHeader>
+                  <SortHeader field="raw_fetched_total" className="text-right">Fetched</SortHeader>
+                  <SortHeader field="stored_total" className="text-right">Stored</SortHeader>
+                  <SortHeader field="eligible_total" className="text-right">Eligible</SortHeader>
+                  <SortHeader field="pending_approval_total" className="text-right">Pending</SortHeader>
+                  <SortHeader field="proposals_total" className="text-right">Proposals</SortHeader>
+                  <TableHead className="text-right text-xs px-2 py-1.5">Rate</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedSources.map((row) => (
+                  <TableRow key={row.source}>
+                    <TableCell className="font-medium text-xs px-2 py-1.5 truncate" title={row.source}>
+                      {cleanSource(row.source)}
+                    </TableCell>
+                    <StatCell total={row.raw_fetched_total} filtered={row.raw_fetched_filtered} />
+                    <StatCell total={row.stored_total} filtered={row.stored_filtered} />
+                    <StatCell total={row.eligible_total} filtered={row.eligible_filtered} />
+                    <StatCell total={row.pending_approval_total} filtered={row.pending_approval_filtered} />
+                    <StatCell total={row.proposals_total} filtered={row.proposals_filtered} />
+                    <TableCell className="text-right tabular-nums text-muted-foreground text-xs px-2 py-1.5">
+                      {row.raw_fetched_total > 0
+                        ? `${((row.stored_total / row.raw_fetched_total) * 100).toFixed(0)}%`
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {/* Totals row */}
+                {totals && (
+                  <TableRow className="border-t-2 font-semibold bg-muted/30">
+                    <TableCell className="text-xs px-2 py-1.5">All Sources</TableCell>
+                    <StatCell total={totals.raw_fetched_total} filtered={totals.raw_fetched_filtered} />
+                    <StatCell total={totals.stored_total} filtered={totals.stored_filtered} />
+                    <StatCell total={totals.eligible_total} filtered={totals.eligible_filtered} />
+                    <StatCell total={totals.pending_approval_total} filtered={totals.pending_approval_filtered} />
+                    <StatCell total={totals.proposals_total} filtered={totals.proposals_filtered} />
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                      {totals.raw_fetched_total > 0
+                        ? `${((totals.stored_total / totals.raw_fetched_total) * 100).toFixed(0)}%`
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
