@@ -160,13 +160,13 @@ export function SourceAnalyticsClient() {
   // Only show filtered column when filter narrows down from all-time (i.e. not "all" preset)
   const showFiltered = activePreset !== "all";
 
-  function SortHeader({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) {
+  function SortHeader({ field, children, align = "left" }: { field: SortField; children: React.ReactNode; align?: "left" | "right" }) {
     return (
       <TableHead
-        className={`cursor-pointer select-none text-xs px-2 py-1.5 ${className || ""}`}
+        className={`cursor-pointer select-none text-xs px-2 py-1.5 ${align === "right" ? "text-right" : ""}`}
         onClick={() => handleSort(field)}
       >
-        <div className="flex items-center gap-1">
+        <div className={`flex items-center gap-1 ${align === "right" ? "justify-end" : ""}`}>
           {children}
           {sortField === field && (
             <ArrowDownUp className="h-3 w-3 text-foreground shrink-0" />
@@ -439,11 +439,11 @@ export function SourceAnalyticsClient() {
               <TableHeader>
                 <TableRow>
                   <SortHeader field="source">Source</SortHeader>
-                  <SortHeader field="raw_fetched_total" className="text-right">Fetched</SortHeader>
-                  <SortHeader field="stored_total" className="text-right">Stored</SortHeader>
-                  <SortHeader field="eligible_total" className="text-right">Eligible</SortHeader>
-                  <SortHeader field="pending_approval_total" className="text-right">Pending</SortHeader>
-                  <SortHeader field="proposals_total" className="text-right">Proposals</SortHeader>
+                  <SortHeader field="raw_fetched_total" align="right">Fetched</SortHeader>
+                  <SortHeader field="stored_total" align="right">Stored</SortHeader>
+                  <SortHeader field="eligible_total" align="right">Eligible</SortHeader>
+                  <SortHeader field="pending_approval_total" align="right">Pending</SortHeader>
+                  <SortHeader field="proposals_total" align="right">Proposals</SortHeader>
                   <TableHead className="text-right text-xs px-2 py-1.5">Rate</TableHead>
                 </TableRow>
               </TableHeader>
