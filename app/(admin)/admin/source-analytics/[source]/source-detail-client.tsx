@@ -335,23 +335,23 @@ export function SourceDetailClient({ source }: { source: string }) {
             <div className="[&_[data-slot=table-container]]:overflow-x-hidden">
             <Table className="table-fixed">
               <colgroup>
-                <col className="w-[30%]" />
-                <col className="w-[10%]" />
-                <col className="w-[10%]" />
-                <col className="w-[10%]" />
+                <col className="w-[28%]" />
                 <col className="w-[12%]" />
-                <col className="w-[14%]" />
-                <col className="w-[14%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
               </colgroup>
               <TableHeader>
                 <TableRow>
                   <SortHeader field="title">Grant</SortHeader>
+                  <TableHead className="text-xs px-2 py-1.5 text-right">Raw Fetched</TableHead>
                   <TableHead className="text-xs px-2 py-1.5 text-right">Stored</TableHead>
                   <SortHeader field="is_eligible" align="right">Eligible</SortHeader>
                   <SortHeader field="is_pending" align="right">Pending</SortHeader>
                   <SortHeader field="proposals_count" align="right">Proposals</SortHeader>
-                  <SortHeader field="stage">Stage</SortHeader>
-                  <SortHeader field="created_at" align="right">Date</SortHeader>
+                  <TableHead className="text-xs px-2 py-1.5 text-right">Rate</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -372,6 +372,9 @@ export function SourceDetailClient({ source }: { source: string }) {
                         <span className="line-clamp-2" title={g.title}>{g.title}</span>
                       )}
                     </TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-muted-foreground">
+                      -
+                    </TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-green-600">
                       1
                     </TableCell>
@@ -384,13 +387,8 @@ export function SourceDetailClient({ source }: { source: string }) {
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
                       {g.proposals_count > 0 ? <span className="text-purple-600">{g.proposals_count}</span> : <span className="text-muted-foreground">0</span>}
                     </TableCell>
-                    <TableCell className="text-xs px-2 py-1.5">
-                      <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${stageBadgeColor[g.stage || ""] || ""}`}>
-                        {(g.stage || "unknown").replace("_", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right text-xs px-2 py-1.5 text-muted-foreground">
-                      {g.created_at ? new Date(g.created_at).toLocaleDateString() : "-"}
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-muted-foreground">
+                      -
                     </TableCell>
                   </TableRow>
                 ))}
@@ -398,12 +396,12 @@ export function SourceDetailClient({ source }: { source: string }) {
                 {summary && (
                   <TableRow className="border-t-2 font-semibold bg-muted/30">
                     <TableCell className="text-xs px-2 py-1.5">All Grants</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-muted-foreground">-</TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.stored_total}</TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.eligible_total}</TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.pending_approval_total}</TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.proposals_total}</TableCell>
-                    <TableCell />
-                    <TableCell />
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-muted-foreground">-</TableCell>
                   </TableRow>
                 )}
               </TableBody>
