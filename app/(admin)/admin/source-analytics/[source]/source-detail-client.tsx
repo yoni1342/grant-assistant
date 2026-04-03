@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   Card,
   CardContent,
@@ -81,8 +82,10 @@ export function SourceDetailClient({ source }: { source: string }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
+  const hasFetched = useRef(false);
+
   const fetchData = useCallback(async (from: string, to: string) => {
-    setLoading(true);
+    if (!hasFetched.current) setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams();
@@ -93,6 +96,7 @@ export function SourceDetailClient({ source }: { source: string }) {
       const data = await res.json();
       setGrants(data.grants || []);
       setSummary(data.summary || null);
+      hasFetched.current = true;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
@@ -100,8 +104,32 @@ export function SourceDetailClient({ source }: { source: string }) {
     }
   }, [source]);
 
+  const fromRef = useRef(fromDate);
+  const toRef = useRef(toDate);
+  useEffect(() => { fromRef.current = fromDate; }, [fromDate]);
+  useEffect(() => { toRef.current = toDate; }, [toDate]);
+
   useEffect(() => {
     fetchData(fromDate, toDate);
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`source-detail-${source}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "grant_source_stats" },
+        () => fetchData(fromRef.current, toRef.current)
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "grants" },
+        () => fetchData(fromRef.current, toRef.current)
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleApplyFilter() {
@@ -351,13 +379,13 @@ export function SourceDetailClient({ source }: { source: string }) {
             <div className="[&_[data-slot=table-container]]:overflow-x-hidden">
             <Table className="table-fixed">
               <colgroup>
-                <col className="w-[28%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
+                <col className="w-[40%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
               </colgroup>
               <TableHeader>
                 <TableRow>
@@ -373,20 +401,24 @@ export function SourceDetailClient({ source }: { source: string }) {
               <TableBody>
                 {sortedGrants.map((g) => (
                   <TableRow key={g.id} className={showFiltered && !g.in_range ? "opacity-40" : ""}>
-                    <TableCell className="text-xs px-2 py-1.5 font-medium">
-                      {g.source_url ? (
-                        <a
-                          href={g.source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:underline text-blue-600"
-                          title={g.source_url}
-                        >
-                          <span className="line-clamp-2">{g.title}</span>
-                        </a>
-                      ) : (
-                        <span className="line-clamp-2" title={g.title}>{g.title}</span>
-                      )}
+                    <TableCell className="text-xs px-2 py-1.5 font-medium whitespace-normal break-words">
+                      <div>
+                        {g.source_url ? (
+                          <a
+                            href={g.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline text-blue-600"
+                          >
+                            {g.title}
+                          </a>
+                        ) : (
+                          <span>{g.title}</span>
+                        )}
+                        {g.funder_name && (
+                          <div className="text-muted-foreground font-normal mt-0.5">{g.funder_name}</div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-muted-foreground">
                       -

@@ -37,26 +37,44 @@ export async function GET(
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
 
-  // Get raw fetch counts from grant_source_stats
+  // Normalize source names — JSON objects get grouped by domain
+  function normalizeSource(s: string): string {
+    if (!s) return "Unknown";
+    if (!s.startsWith("{")) return s;
+    try {
+      const parsed = JSON.parse(s);
+      if (parsed.url) {
+        const hostname = new URL(parsed.url).hostname.replace("www.", "");
+        if (hostname.includes("grants.gov")) return "Grants.gov";
+        return hostname;
+      }
+    } catch {
+      // not JSON
+    }
+    return s;
+  }
+
+  // Get raw fetch counts — fetch all then filter by normalized source
   const { data: allRawStats } = await adminClient
     .from("grant_source_stats")
-    .select("raw_count, fetch_date")
-    .eq("source", sourceName);
+    .select("source, raw_count, fetch_date");
 
-  const raw_fetched_total = (allRawStats || []).reduce((sum, r) => sum + r.raw_count, 0);
-  const raw_fetched_filtered = (allRawStats || []).filter((r) => {
+  const matchingRaw = (allRawStats || []).filter((r) => normalizeSource(r.source) === sourceName);
+  const raw_fetched_total = matchingRaw.reduce((sum, r) => sum + r.raw_count, 0);
+  const raw_fetched_filtered = matchingRaw.filter((r) => {
     const d = r.fetch_date;
     if (from && d < from) return false;
     if (to && d > to) return false;
     return true;
   }).reduce((sum, r) => sum + r.raw_count, 0);
 
-  // Get all grants for this source
-  const { data: grants } = await adminClient
+  // Get all grants then filter by normalized source
+  const { data: allGrants } = await adminClient
     .from("grants")
-    .select("id, title, funder_name, source_url, stage, screening_score, deadline, amount, created_at, org_id")
-    .eq("source", sourceName)
+    .select("id, title, funder_name, source, source_url, stage, screening_score, deadline, amount, created_at, org_id")
     .order("created_at", { ascending: false });
+
+  const grants = (allGrants || []).filter((g) => normalizeSource(g.source || "Unknown") === sourceName);
 
   // Get proposals linked to these grants
   const grantIds = (grants || []).map((g) => g.id);

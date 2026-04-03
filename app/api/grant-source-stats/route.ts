@@ -93,6 +93,24 @@ export async function GET(req: Request) {
   const from = url.searchParams.get("from"); // YYYY-MM-DD
   const to = url.searchParams.get("to"); // YYYY-MM-DD
 
+  // Normalize source names — JSON objects get grouped by domain
+  function normalizeSource(source: string): string {
+    if (!source) return "Unknown";
+    if (!source.startsWith("{")) return source;
+    try {
+      const parsed = JSON.parse(source);
+      if (parsed.url) {
+        const hostname = new URL(parsed.url).hostname.replace("www.", "");
+        // Map known domains to clean names
+        if (hostname.includes("grants.gov")) return "Grants.gov";
+        return hostname;
+      }
+    } catch {
+      // not JSON
+    }
+    return source;
+  }
+
   // 1. Raw fetch counts — all time
   const { data: allTimeRaw } = await adminClient
     .from("grant_source_stats")
@@ -116,10 +134,10 @@ export async function GET(req: Request) {
     .from("proposals")
     .select("id, grant_id, created_at");
 
-  // Build grant ID to source mapping
+  // Build grant ID to normalized source mapping
   const grantSourceMap: Record<string, string> = {};
   for (const g of allGrants || []) {
-    if (g.source) grantSourceMap[g.id] = g.source;
+    if (g.source) grantSourceMap[g.id] = normalizeSource(g.source);
   }
 
   interface Stats {
@@ -156,14 +174,16 @@ export async function GET(req: Request) {
 
   // Raw fetched — all time
   for (const row of allTimeRaw || []) {
-    ensureSource(row.source);
-    sourceStats[row.source].raw_fetched_total += row.raw_count;
+    const src = normalizeSource(row.source);
+    ensureSource(src);
+    sourceStats[src].raw_fetched_total += row.raw_count;
   }
 
   // Raw fetched — filtered date range
   for (const row of filteredRaw || []) {
-    ensureSource(row.source);
-    sourceStats[row.source].raw_fetched_filtered += row.raw_count;
+    const src = normalizeSource(row.source);
+    ensureSource(src);
+    sourceStats[src].raw_fetched_filtered += row.raw_count;
   }
 
   // Helper: check if a timestamp falls within the date range
@@ -188,7 +208,7 @@ export async function GET(req: Request) {
 
   // Grants — stored, eligible, pending_approval
   for (const g of allGrants || []) {
-    const src = g.source || "Unknown";
+    const src = normalizeSource(g.source || "Unknown");
     ensureSource(src);
     const inRange = isInRange(g.created_at);
 
