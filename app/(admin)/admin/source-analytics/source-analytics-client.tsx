@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Database, Filter, CheckCircle2, Clock, PenTool, ArrowDownUp, CalendarDays } from "lucide-react";
+import { Database, Filter, CheckCircle2, Clock, PenTool, ArrowDownUp, CalendarDays, ExternalLink } from "lucide-react";
+import Link from "next/link";
 
 interface SourceStat {
   source: string;
@@ -428,23 +429,25 @@ export function SourceAnalyticsClient() {
           ) : (
             <Table>
               <colgroup>
-                <col className="w-[30%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
+                <col className="w-[26%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[9%]" />
                 <col className="w-[10%]" />
               </colgroup>
               <TableHeader>
                 <TableRow>
                   <SortHeader field="source">Source</SortHeader>
-                  <SortHeader field="raw_fetched_total" align="right">Fetched</SortHeader>
+                  <SortHeader field="raw_fetched_total" align="right">Raw Fetched</SortHeader>
                   <SortHeader field="stored_total" align="right">Stored</SortHeader>
                   <SortHeader field="eligible_total" align="right">Eligible</SortHeader>
                   <SortHeader field="pending_approval_total" align="right">Pending</SortHeader>
                   <SortHeader field="proposals_total" align="right">Proposals</SortHeader>
                   <TableHead className="text-right text-xs px-2 py-1.5">Rate</TableHead>
+                  <TableHead className="text-right text-xs px-2 py-1.5"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -463,6 +466,14 @@ export function SourceAnalyticsClient() {
                         ? `${((row.stored_total / row.raw_fetched_total) * 100).toFixed(0)}%`
                         : "-"}
                     </TableCell>
+                    <TableCell className="text-right text-xs px-2 py-1.5">
+                      <Link
+                        href={`/admin/source-analytics/${encodeURIComponent(row.source)}`}
+                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        View <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {/* Totals row */}
@@ -479,6 +490,7 @@ export function SourceAnalyticsClient() {
                         ? `${((totals.stored_total / totals.raw_fetched_total) * 100).toFixed(0)}%`
                         : "-"}
                     </TableCell>
+                    <TableCell />
                   </TableRow>
                 )}
               </TableBody>
