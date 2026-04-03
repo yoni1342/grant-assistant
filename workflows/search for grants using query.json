@@ -2,35 +2,6 @@
   "name": "search for grants using query",
   "nodes": [
     {
-      "parameters": {},
-      "name": "Error Trigger",
-      "type": "n8n-nodes-base.errorTrigger",
-      "typeVersion": 1,
-      "position": [
-        81408,
-        79376
-      ],
-      "id": "5a797dbd-10e9-433b-9da0-07e03659ab46",
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: false, message: $json.execution?.error?.message || \"Proposal generation failed\" }) }}",
-        "options": {
-          "responseCode": 500
-        }
-      },
-      "name": "Error Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        81616,
-        79376
-      ],
-      "id": "be6727fe-63ac-48aa-9bb9-949a6e8afba7"
-    },
-    {
       "parameters": {
         "method": "POST",
         "url": "https://api.grants.gov/v1/api/search2",
@@ -1254,23 +1225,6 @@
     },
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "search-grant-with-query",
-        "options": {}
-      },
-      "id": "a80f25fd-6079-44fc-a269-442f97d06b0e",
-      "name": "search for proposal with query2",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        81872,
-        77792
-      ],
-      "webhookId": "generate-proposal",
-      "notes": "POST: { grantId, rfpText, funderName, funderFocus, deadline, planeIssueId }"
-    },
-    {
-      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -1298,8 +1252,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        85664,
-        72192
+        85552,
+        71840
       ]
     },
     {
@@ -1332,8 +1286,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        86080,
-        71984
+        86272,
+        72000
       ]
     },
     {
@@ -1369,8 +1323,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        85888,
-        71840
+        86112,
+        71808
       ],
       "id": "5c710b71-5663-465e-aa64-06126e0890dd",
       "name": "Check Already Tracked1"
@@ -1460,8 +1414,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        85664,
-        71840
+        85360,
+        71792
       ],
       "id": "b7f5acfc-027e-4cfc-8437-76e108f18c2d",
       "continueOnFail": true
@@ -1599,8 +1553,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        87552,
-        70752
+        86080,
+        71552
       ],
       "id": "285be2fa-7a2d-40f1-89ec-7374ba3124b6",
       "continueOnFail": true
@@ -1636,21 +1590,24 @@
       ],
       "webhookId": "generate-proposal",
       "notes": "POST: { grantId, rfpText, funderName, funderFocus, deadline, planeIssueId }"
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        85792,
+        71824
+      ],
+      "id": "af35e6bb-22e3-4e12-bfdc-eb34cf30f5d5",
+      "name": "Split In Batches1"
     }
   ],
   "pinData": {},
   "connections": {
-    "Error Trigger": {
-      "main": [
-        [
-          {
-            "node": "Error Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Grants.gov Foster Care2": {
       "main": [
         [
@@ -2337,7 +2294,7 @@
       "main": [
         [
           {
-            "node": "Check Already Tracked1",
+            "node": "Split In Batches1",
             "type": "main",
             "index": 0
           }
@@ -2512,7 +2469,7 @@
       "main": [
         [
           {
-            "node": "Write Search Complete2",
+            "node": "Split In Batches1",
             "type": "main",
             "index": 0
           }
@@ -2732,6 +2689,46 @@
           }
         ]
       ]
+    },
+    "Split In Batches1": {
+      "main": [
+        [
+          {
+            "node": "Write Search Complete2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Already Tracked1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Search Complete": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Search Complete1": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -2739,7 +2736,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "8d6146bb-41d9-46cf-98c8-cf0907d776c3",
+  "versionId": "308d7a02-46b2-4d0f-aa55-a3e6ff7a8f0c",
   "meta": {
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
   },
