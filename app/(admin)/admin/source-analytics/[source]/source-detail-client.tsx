@@ -38,6 +38,8 @@ interface GrantRow {
 }
 
 interface Summary {
+  raw_fetched_total: number;
+  raw_fetched_filtered: number;
   stored_total: number;
   stored_filtered: number;
   eligible_total: number;
@@ -48,7 +50,7 @@ interface Summary {
   proposals_filtered: number;
 }
 
-type SortField = "title" | "stage" | "created_at" | "proposals_count" | "screening_score";
+type SortField = "title" | "is_eligible" | "is_pending" | "proposals_count" | "stage" | "created_at";
 
 function toLocalDate() {
   return new Date().toISOString().split("T")[0];
@@ -143,14 +145,16 @@ export function SourceDetailClient({ source }: { source: string }) {
     switch (sortField) {
       case "title":
         return dir * (a.title || "").localeCompare(b.title || "");
+      case "is_eligible":
+        return dir * (Number(a.is_eligible) - Number(b.is_eligible));
+      case "is_pending":
+        return dir * (Number(a.is_pending) - Number(b.is_pending));
+      case "proposals_count":
+        return dir * (a.proposals_count - b.proposals_count);
       case "stage":
         return dir * (a.stage || "").localeCompare(b.stage || "");
       case "created_at":
         return dir * ((a.created_at || "").localeCompare(b.created_at || ""));
-      case "proposals_count":
-        return dir * (a.proposals_count - b.proposals_count);
-      case "screening_score":
-        return dir * ((a.screening_score || 0) - (b.screening_score || 0));
       default:
         return 0;
     }
@@ -259,7 +263,21 @@ export function SourceDetailClient({ source }: { source: string }) {
 
       {/* Summary cards */}
       {summary && (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Raw Fetched</CardTitle>
+              <ArrowDownUp className="h-4 w-4 text-gray-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-gray-700">{summary.raw_fetched_total || "-"}</p>
+              {showFiltered && summary.raw_fetched_filtered !== summary.raw_fetched_total && (
+                <p className="text-sm font-semibold text-gray-600 mt-1">
+                  {summary.raw_fetched_filtered} <span className="text-xs font-normal text-muted-foreground">in range</span>
+                </p>
+              )}
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Stored</CardTitle>
@@ -333,21 +351,23 @@ export function SourceDetailClient({ source }: { source: string }) {
             <div className="[&_[data-slot=table-container]]:overflow-x-hidden">
             <Table className="table-fixed">
               <colgroup>
-                <col className="w-[40%]" />
-                <col className="w-[14%]" />
-                <col className="w-[10%]" />
-                <col className="w-[10%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
+                <col className="w-[28%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
               </colgroup>
               <TableHeader>
                 <TableRow>
-                  <SortHeader field="title">Title</SortHeader>
-                  <SortHeader field="stage">Stage</SortHeader>
-                  <SortHeader field="screening_score" align="right">Score</SortHeader>
+                  <SortHeader field="title">Grant</SortHeader>
+                  <TableHead className="text-xs px-2 py-1.5 text-right">Raw Fetched</TableHead>
+                  <TableHead className="text-xs px-2 py-1.5 text-right">Stored</TableHead>
+                  <SortHeader field="is_eligible" align="right">Eligible</SortHeader>
+                  <SortHeader field="is_pending" align="right">Pending</SortHeader>
                   <SortHeader field="proposals_count" align="right">Proposals</SortHeader>
-                  <SortHeader field="created_at" align="right">Created</SortHeader>
-                  <TableHead className="text-xs px-2 py-1.5 text-right">Deadline</TableHead>
+                  <TableHead className="text-xs px-2 py-1.5 text-right">Rate</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -368,25 +388,42 @@ export function SourceDetailClient({ source }: { source: string }) {
                         <span className="line-clamp-2" title={g.title}>{g.title}</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs px-2 py-1.5">
-                      <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${stageBadgeColor[g.stage || ""] || ""}`}>
-                        {(g.stage || "unknown").replace("_", " ")}
-                      </Badge>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-muted-foreground">
+                      -
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-green-600">
+                      1
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-                      {g.screening_score != null ? g.screening_score : "-"}
+                      {g.is_eligible ? <span className="text-green-600">1</span> : <span className="text-muted-foreground">0</span>}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-                      {g.proposals_count || "-"}
+                      {g.is_pending ? <span className="text-amber-600">1</span> : <span className="text-muted-foreground">0</span>}
                     </TableCell>
-                    <TableCell className="text-right text-xs px-2 py-1.5 text-muted-foreground">
-                      {g.created_at ? new Date(g.created_at).toLocaleDateString() : "-"}
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                      {g.proposals_count > 0 ? <span className="text-purple-600">{g.proposals_count}</span> : <span className="text-muted-foreground">0</span>}
                     </TableCell>
-                    <TableCell className="text-right text-xs px-2 py-1.5 text-muted-foreground">
-                      {g.deadline || "-"}
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-muted-foreground">
+                      -
                     </TableCell>
                   </TableRow>
                 ))}
+                {/* Totals row */}
+                {summary && (
+                  <TableRow className="border-t-2 font-semibold bg-muted/30">
+                    <TableCell className="text-xs px-2 py-1.5">All Grants</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.raw_fetched_total || "-"}</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.stored_total}</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.eligible_total}</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.pending_approval_total}</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.proposals_total}</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                      {summary.raw_fetched_total > 0
+                        ? `${Math.round((summary.stored_total / summary.raw_fetched_total) * 100)}%`
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
             </div>
