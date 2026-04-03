@@ -332,18 +332,16 @@ export function SourceDetailClient({ source }: { source: string }) {
           ) : (
             <Table>
               <colgroup>
-                <col className="w-[30%]" />
-                <col className="w-[15%]" />
-                <col className="w-[12%]" />
+                <col className="w-[40%]" />
+                <col className="w-[14%]" />
                 <col className="w-[10%]" />
                 <col className="w-[10%]" />
                 <col className="w-[13%]" />
-                <col className="w-[10%]" />
+                <col className="w-[13%]" />
               </colgroup>
               <TableHeader>
                 <TableRow>
                   <SortHeader field="title">Title</SortHeader>
-                  <TableHead className="text-xs px-2 py-1.5">URL</TableHead>
                   <SortHeader field="stage">Stage</SortHeader>
                   <SortHeader field="screening_score" align="right">Score</SortHeader>
                   <SortHeader field="proposals_count" align="right">Proposals</SortHeader>
@@ -355,22 +353,18 @@ export function SourceDetailClient({ source }: { source: string }) {
                 {sortedGrants.map((g) => (
                   <TableRow key={g.id} className={showFiltered && !g.in_range ? "opacity-40" : ""}>
                     <TableCell className="text-xs px-2 py-1.5 font-medium">
-                      <span className="line-clamp-2" title={g.title}>{g.title}</span>
-                    </TableCell>
-                    <TableCell className="text-xs px-2 py-1.5">
                       {g.source_url ? (
                         <a
                           href={g.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-blue-600 hover:underline truncate max-w-[140px]"
+                          className="hover:underline text-blue-600"
                           title={g.source_url}
                         >
-                          {new URL(g.source_url).pathname.slice(0, 30) || "/"}
-                          <ExternalLink className="h-3 w-3 shrink-0" />
+                          <span className="line-clamp-2">{g.title}</span>
                         </a>
                       ) : (
-                        <span className="text-muted-foreground">-</span>
+                        <span className="line-clamp-2" title={g.title}>{g.title}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-xs px-2 py-1.5">
