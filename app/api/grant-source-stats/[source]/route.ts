@@ -37,6 +37,20 @@ export async function GET(
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
 
+  // Get raw fetch counts from grant_source_stats
+  const { data: allRawStats } = await adminClient
+    .from("grant_source_stats")
+    .select("raw_count, fetch_date")
+    .eq("source", sourceName);
+
+  const raw_fetched_total = (allRawStats || []).reduce((sum, r) => sum + r.raw_count, 0);
+  const raw_fetched_filtered = (allRawStats || []).filter((r) => {
+    const d = r.fetch_date;
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  }).reduce((sum, r) => sum + r.raw_count, 0);
+
   // Get all grants for this source
   const { data: grants } = await adminClient
     .from("grants")
@@ -113,6 +127,8 @@ export async function GET(
       source: sourceName,
       grants: rows,
       summary: {
+        raw_fetched_total,
+        raw_fetched_filtered,
         stored_total: total,
         stored_filtered: filtered,
         eligible_total,

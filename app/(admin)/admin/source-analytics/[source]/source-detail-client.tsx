@@ -38,6 +38,8 @@ interface GrantRow {
 }
 
 interface Summary {
+  raw_fetched_total: number;
+  raw_fetched_filtered: number;
   stored_total: number;
   stored_filtered: number;
   eligible_total: number;
@@ -261,7 +263,21 @@ export function SourceDetailClient({ source }: { source: string }) {
 
       {/* Summary cards */}
       {summary && (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Raw Fetched</CardTitle>
+              <ArrowDownUp className="h-4 w-4 text-gray-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-gray-700">{summary.raw_fetched_total || "-"}</p>
+              {showFiltered && summary.raw_fetched_filtered !== summary.raw_fetched_total && (
+                <p className="text-sm font-semibold text-gray-600 mt-1">
+                  {summary.raw_fetched_filtered} <span className="text-xs font-normal text-muted-foreground">in range</span>
+                </p>
+              )}
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Stored</CardTitle>
@@ -396,12 +412,16 @@ export function SourceDetailClient({ source }: { source: string }) {
                 {summary && (
                   <TableRow className="border-t-2 font-semibold bg-muted/30">
                     <TableCell className="text-xs px-2 py-1.5">All Grants</TableCell>
-                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-muted-foreground">-</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.raw_fetched_total || "-"}</TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.stored_total}</TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.eligible_total}</TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.pending_approval_total}</TableCell>
                     <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{summary.proposals_total}</TableCell>
-                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-muted-foreground">-</TableCell>
+                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                      {summary.raw_fetched_total > 0
+                        ? `${Math.round((summary.stored_total / summary.raw_fetched_total) * 100)}%`
+                        : "-"}
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>
