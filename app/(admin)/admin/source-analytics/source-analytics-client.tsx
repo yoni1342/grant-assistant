@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   Card,
   CardContent,
@@ -88,8 +89,10 @@ export function SourceAnalyticsClient() {
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
 
+  const hasFetched = useRef(false);
+
   const fetchStats = useCallback(async (from: string, to: string) => {
-    setLoading(true);
+    if (!hasFetched.current) setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams();
@@ -100,6 +103,7 @@ export function SourceAnalyticsClient() {
       const data = await res.json();
       setSources(data.sources || []);
       setTotals(data.totals || null);
+      hasFetched.current = true;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
@@ -107,8 +111,32 @@ export function SourceAnalyticsClient() {
     }
   }, []);
 
+  const fromRef = useRef(fromDate);
+  const toRef = useRef(toDate);
+  useEffect(() => { fromRef.current = fromDate; }, [fromDate]);
+  useEffect(() => { toRef.current = toDate; }, [toDate]);
+
   useEffect(() => {
     fetchStats(fromDate, toDate);
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel("source-analytics-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "grant_source_stats" },
+        () => fetchStats(fromRef.current, toRef.current)
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "grants" },
+        () => fetchStats(fromRef.current, toRef.current)
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleApplyFilter() {
