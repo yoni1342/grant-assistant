@@ -3,22 +3,6 @@
   "nodes": [
     {
       "parameters": {
-        "batchSize": 30,
-        "options": {
-          "reset": false
-        }
-      },
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        85792,
-        71824
-      ],
-      "id": "af35e6bb-22e3-4e12-bfdc-eb34cf30f5d5",
-      "name": "Split In Batches1"
-    },
-    {
-      "parameters": {
         "jsCode": "const items = $input.all();\n\n  if (items.length === 1 && (items[0].json.noResults || items[0].json.noNewGrants)) {\n    return items;\n  }\n\n  function extractDate(grant) {\n    const candidates = [\n      grant.closeDate,\n      grant.deadline,\n      grant.dueDate,\n      grant.due_date,\n      grant.endDate,\n      grant.end_date,\n      grant.applicationDeadline,\n      grant.application_deadline,\n    ];\n\n    for (const val of candidates) {\n      if (!val || typeof val !== 'string') continue;\n      const parsed = new Date(val);\n      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {\n        return parsed;\n      }\n    }\n\n    if (grant.description) {\n      const match = grant.description.match(/(\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4})|(\\w+ \\d{1,2},? \\d{4})/);\n      if (match) {\n        const parsed = new Date(match[0]);\n        if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {\n          return parsed;\n        }\n      }\n    }\n\n    return null;\n  }\n\n  const withDeadline = [];\n  const noDeadline = [];\n\n  for (const item of items) {\n    const date = extractDate(item.json);\n    if (date) {\n      item._sortDate = date;\n      withDeadline.push(item);\n    } else {\n      noDeadline.push(item);\n    }\n  }\n\n  withDeadline.sort((a, b) => a._sortDate - b._sortDate);\n\n  const combined = [...withDeadline, ...noDeadline];\n  return combined.map(item => ({ json: item.json }));"
       },
       "id": "c5dc9cbc-b0f2-440a-9dd0-4a62495a409e",
@@ -48,131 +32,6 @@
     },
     {
       "parameters": {
-        "options": {}
-      },
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        87104,
-        71312
-      ],
-      "id": "7723dee4-eb22-4b72-8346-024bb38ef817",
-      "name": "Split In Batches"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "name": "Replace Me",
-      "typeVersion": 1,
-      "position": [
-        87984,
-        71872
-      ],
-      "id": "bc14004e-12fc-4422-809d-819116c9271d"
-    },
-    {
-      "parameters": {
-        "jsCode": " const items = $input.all();\n  const hasResults = items.length > 0 && !items[0]?.json?.noRelevantGrants && !items[0]?.json?.error;\n\n  return items.map(item => ({\n    json: {\n      ...item.json,\n      hasResults\n    }\n  }));"
-      },
-      "name": "has results check",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        86608,
-        71840
-      ],
-      "id": "7be04c66-7529-44d7-96dd-3cff1e6d91fa",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const webhookData = $('search for proposal with query').first().json.body;\nconst searchId = webhookData.search_id;\nconst orgId = webhookData.org_id;\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/search_results';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst headers = {\n  'apikey': supabaseKey,\n  'Authorization': 'Bearer ' + supabaseKey,\n  'Content-Type': 'application/json',\n  'Prefer': 'return=minimal',\n};\n\nconst msg = $input.first()?.json?.message || 'No matching grants found for your search query. still looking...';\n\nawait this.helpers.httpRequest({\n  method: 'POST',\n  url: supabaseUrl,\n  headers,\n  body: JSON.stringify({\n    search_id: searchId,\n    org_id: orgId,\n    source_group: '__status__:no_results',\n    grant_data: { status: 'no_results', stage_message: msg },\n    is_complete: false,\n  }),\n});\n\nawait this.helpers.httpRequest({\n  method: 'POST',\n  url: supabaseUrl,\n  headers,\n  body: JSON.stringify({\n    search_id: searchId,\n    org_id: orgId,\n    source_group: '__done__',\n    grant_data: [],\n    is_complete: true,\n  }),\n});\n\nreturn [];"
-      },
-      "name": "Write Search Complete1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        87888,
-        72048
-      ],
-      "id": "37b2c6b2-7f3f-4cea-8c61-f793ac0dec15"
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "id": "55d3811d-2d1d-4c99-88ee-f3a46fab1963",
-      "name": "All Already Tracked",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        87664,
-        71856
-      ]
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "id": "b6bcd5fd-fd34-49af-8aa5-eb98141e3a5c",
-      "name": "No Results Found",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        87312,
-        72048
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "has-results",
-              "leftValue": "={{ $json.hasResults }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "f6dd3034-8a60-40bf-8b7d-79e6b3e8b2f5",
-      "name": "Has Results?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        86784,
-        71552
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.all();\nconst webhookData = $('search for proposal with query').first().json.body;\nconst searchId = webhookData.search_id;\nconst orgId = webhookData.org_id;\n\nif (!searchId || !orgId) return items;\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/search_results';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl,\n    headers: {\n      'apikey': supabaseKey,\n      'Authorization': 'Bearer ' + supabaseKey,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=minimal',\n    },\n    body: JSON.stringify({\n      search_id: searchId,\n      org_id: orgId,\n      source_group: '__status__:matching',\n      grant_data: { status: 'matching', stage_message: 'Matching grants to your organization...' },\n      is_complete: false,\n    }),\n  });\n} catch(e) {}\n\nreturn items;"
-      },
-      "name": "Status: Matching",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        86400,
-        71840
-      ],
-      "id": "36aa15ba-1c95-4b67-b704-dfd5c8696d0d",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
         "jsCode": "const items = $input.all();\nconst webhookData = $('search for proposal with query').first().json.body;\nconst searchId = webhookData.search_id;\nconst orgId = webhookData.org_id;\n\nif (!searchId || !orgId) return items;\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/search_results';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl,\n    headers: {\n      'apikey': supabaseKey,\n      'Authorization': 'Bearer ' + supabaseKey,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=minimal',\n    },\n    body: JSON.stringify({\n      search_id: searchId,\n      org_id: orgId,\n      source_group: '__status__:checking',\n      grant_data: { status: 'checking', stage_message: 'Checking for duplicates in your pipeline...' },\n      is_complete: false,\n    }),\n  });\n} catch(e) {}\n\nreturn items;"
       },
       "name": "Status: Checking",
@@ -184,143 +43,6 @@
       ],
       "id": "b7f5acfc-027e-4cfc-8437-76e108f18c2d",
       "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": "  const webhookData = $('search for proposal with query').first().json.body;\n  const searchId = webhookData.search_id;\n  const orgId = webhookData.org_id;\n\n  const supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/search_results';\n  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n  const headers = {\n    'apikey': supabaseKey,\n    'Authorization': 'Bearer ' + supabaseKey,\n    'Content-Type': 'application/json',\n    'Prefer': 'return=minimal',\n  };\n\n  const items = $input.all();\n  const grants = items.filter(i => i.json.hasResults && i.json.grant);\n\n  if (grants.length > 0) {\n    const grantData = grants.map(i => i.json.grant);\n\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: supabaseUrl,\n      headers,\n      body: JSON.stringify({\n        search_id: searchId,\n        org_id: orgId,\n        source_group: 'ai_filtered',\n        grant_data: grantData,\n        is_complete: false,\n      }),\n    });\n  }\n\n  return [];\n"
-      },
-      "name": "Save Search Results",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        88400,
-        71328
-      ],
-      "id": "c087cf6d-8b3d-4beb-ae64-bbf5c2ac49a5"
-    },
-    {
-      "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "gpt-4.1-mini",
-          "mode": "list",
-          "cachedResultName": "GPT-4.1-MINI"
-        },
-        "responses": {
-          "values": [
-            {
-              "content": "= Search Query: {{ $('search for proposal with query').first().json.body.searchQuery }}\n\n  Filters:\n  - Organization Type: {{ $('search for proposal with query').first().json.body.orgType || 'Any' }}\n  - Nonprofit/For-Profit: {{ $('search for proposal with query').first().json.body.profitStatus || 'Any' }}\n  - Industry/Sector: {{ $('search for proposal with query').first().json.body.industry || 'Any' }}\n  - Funding Category: {{ $('search for proposal with query').first().json.body.fundingCategory || 'Any' }}\n\n  Grants to evaluate:\n  {{ JSON.stringify($input.all().map(i => ({ id: i.json.grant?.oppNum || i.json.oppNum, title: i.json.grant?.title || i.json.title, description:\n  i.json.grant?.description || i.json.description, agency: i.json.grant?.agency || i.json.agency })), null, 2) }}\n"
-            },
-            {
-              "role": "system",
-              "content": "You are a grant relevance filter. You receive a search query, optional filters, and a list of grants. Your job is to decide which grants are genuinely\n  relevant to the user's search.\n\n  FILTERING RULES:\n  1. Analyze the search query to understand the specific domain, topic, and intent.\n\n  2. Keep a grant ONLY if its Title or Description directly relates to the query's core topic. The grant's primary purpose must clearly serve the searched\n  domain.\n \n  3. Discard a grant if the connection to the search query requires more than one logical hop or is only tangential.\n\n  4. When in doubt, DISCARD. Users prefer fewer, highly relevant results over many loosely related ones.\t\n\n  ADDITIONAL FILTERS (apply only if the value is provided and not \"Any\" or empty):\n  - Organization Type: Only keep grants whose eligible applicants include this org type.\n  - Nonprofit/For-Profit Status: If \"Nonprofit\", discard grants only for for-profits. If \"For-Profit\", discard grants only for nonprofits. If \"Either\" or\n  empty, skip.\n  - Industry/Sector: Only keep grants relevant to this sector. Use semantic matching.\n  - Funding Category: \"Federal Grant\" = only federal. \"Foundation / Private Grant\" = only philanthropic/foundation. If empty, skip.\n- Geographic Focus: If provided, only keep grants whose eligibility includes this geographic area (state, region, or \"Nationwide\"). Discard grants\n  restricted to other states/countries.\n\n   Return ONLY a valid JSON object with two properties:\n  - \"ids\": array of IDs of grants that pass ALL filters\n  - \"no_results\": boolean, true if no grants matched\n\n  Example with matches: {\"ids\": [\"361204\", \"358858\", \"352411\"], \"no_results\": false}\n  Example with no matches: {\"ids\": [], \"no_results\": true}\n\n  Do NOT return markdown or explanation. Just the JSON object.\n"
-            }
-          ]
-        },
-        "builtInTools": {},
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 2.1,
-      "position": [
-        87424,
-        71328
-      ],
-      "id": "6ca06056-8959-45d5-a6b3-50c7c895d7ba",
-      "name": "Filter based on search query",
-      "credentials": {
-        "openAiApi": {
-          "id": "XbaNaQyEtQBSUnml",
-          "name": "Brownmine"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "  const aiText = $input.first().json?.output?.[0]?.content?.[0]?.text\n      || $input.first().json?.text\n      || '[]';\n\n  let keepIds = [];\n  try {\n      const cleaned = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n      const parsed = JSON.parse(cleaned);\n      if (Array.isArray(parsed)) {\n          keepIds = parsed;\n      } else if (parsed.ids && Array.isArray(parsed.ids)) {\n          keepIds = parsed.ids;\n      } else {\n          keepIds = null;\n      }\n  } catch (e) {\n      keepIds = null;\n  }\n\n  // Get the original grant items from the Status: Matching node\n  const originalItems = $('Status: Matching').all();\n  const results = [];\n\n  for (const item of originalItems) {\n      const grant = item.json.grant || item.json;\n      const grantId = grant.oppNum || grant.id || grant.source_id || '';\n\n      if (keepIds !== null && !keepIds.includes(String(grantId))) {\n          continue;\n      }\n\n      results.push({\n          json: {\n              grant,\n              org_id: item.json.org_id,\n              newGrants: true,\n              status: 'new',\n              hasResults: true,\n          }\n      });\n  }\n\n  if (results.length === 0) {\n      return [{ json: { noRelevantGrants: true, message: 'No grants matched your search filters', hasResults: false } }];\n  }\n\n  return results;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        88080,
-        71360
-      ],
-      "id": "6ed73fff-53ab-478a-95dc-15680a715731",
-      "name": "Code in JavaScript3",
-      "alwaysOutputData": false
-    },
-    {
-      "parameters": {
-        "jsCode": "  const items = $input.all();\n  const results = [];\n\n  const supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants';\n  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\n  for (const item of items) {\n    const grant = item.json;\n    const oppNum = (grant.oppNum || '').trim();\n    const title = (grant.title || '').trim();\n\n    // Skip if no identifier at all\n    if (!oppNum && !title) continue;\n\n    let response;\n    try {\n      // Check by source_id (where oppNum is stored) first, fall back to title match\n      const queryParam = oppNum\n        ? `source_id=eq.${encodeURIComponent(oppNum)}`\n        : `title=eq.${encodeURIComponent(title)}`;\n\n      response = await this.helpers.httpRequest({\n        method: 'GET',\n        url: `${supabaseUrl}?${queryParam}&select=id,source_id,title`,\n        headers: {\n          'apikey': supabaseKey,\n          'Authorization': 'Bearer ' + supabaseKey,\n        },\n      });\n    } catch (e) {\n      // If fetch fails, include it so it can be retried manually\n      results.push({\n        json: {\n          grant,\n          newGrants: true,\n          status: 'error',\n          message: e.message,\n        },\n      });\n      continue;\n    }\n\n    if (!Array.isArray(response)) {\n      results.push({\n        json: {\n          grant,\n          newGrants: true,\n          status: 'invalid response',\n          message: 'Unexpected Supabase response',\n          rawResponse: response,\n        },\n      });\n      continue;\n    }\n\n    if (response.length === 0) {\n      // Only push NEW grants downstream\n      results.push({\n        json: {\n          grant,\n          newGrants: true,\n          status: 'new',\n          message: 'Grant not found in Supabase, will be added',\n        },\n      });\n    }\n    // Grants that already exist are silently filtered out\n  }\n\n  // If no new grants found\n  if (results.length === 0) {\n    return [{ json: { newGrants: false, noNewGrants: true, message: 'All grants already tracked' } }];\n  }\n\n  return results;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        86112,
-        71808
-      ],
-      "id": "5c710b71-5663-465e-aa64-06126e0890dd",
-      "name": "Check Already Tracked1"
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "id": "b7250683-f29c-44a0-829a-304ac6fe46a5",
-      "name": "All Already Tracked1",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        86240,
-        72448
-      ]
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "id": "29ebfc3f-bacd-4dff-845d-7b29637da476",
-      "name": "No Results Found1",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        85936,
-        72352
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "has-new-grants",
-              "leftValue": "={{ $json.newGrants }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "0896152e-bb4f-4198-b4fc-fa4932b0fb9d",
-      "name": "Has New Grants?1",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        86272,
-        72000
-      ]
     },
     {
       "parameters": {
@@ -1579,20 +1301,6 @@
     },
     {
       "parameters": {
-        "jsCode": "  const webhookData = $('search for proposal with query').first().json.body;\n  const searchId = webhookData.search_id;\n  const orgId = webhookData.org_id;\n\n  const supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/search_results';\n  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl,\n    headers: {\n      'apikey': supabaseKey,\n      'Authorization': 'Bearer ' + supabaseKey,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=minimal',\n    },\n    body: JSON.stringify({\n      search_id: searchId,\n      org_id: orgId,\n      source_group: '__status__:searching',\n      grant_data: { status: 'searching', stage_message: 'Some results are already in your pipeline \u2014 searching for new opportunities you have not seen yet...' },\n      is_complete: false,\n    }),\n  });\n\n  return [];\n"
-      },
-      "name": "Write Still looking...1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        86240,
-        72240
-      ],
-      "id": "ee333ad1-0309-4948-ad4c-ac921611caab",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
         "httpMethod": "POST",
         "path": "search-grant-with-query",
         "options": {}
@@ -1610,6 +1318,20 @@
     },
     {
       "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/grants';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\nfor (const item of items) {\n  const grant = item.json;\n  const oppNum = (grant.oppNum || '').trim();\n  const title = (grant.title || '').trim();\n  if (!oppNum && !title) continue;\n\n  try {\n    const queryParam = oppNum\n      ? 'source_id=eq.' + encodeURIComponent(oppNum)\n      : 'title=eq.' + encodeURIComponent(title);\n\n    const response = await this.helpers.httpRequest({\n      method: 'GET',\n      url: supabaseUrl + '?' + queryParam + '&select=id,source_id,title',\n      headers: {\n        'apikey': supabaseKey,\n        'Authorization': 'Bearer ' + supabaseKey,\n      },\n    });\n\n    if (Array.isArray(response) && response.length === 0) {\n      results.push({ json: { ...grant, _isNew: true } });\n    }\n  } catch (e) {\n    results.push({ json: { ...grant, _isNew: true } });\n  }\n}\n\nif (results.length === 0) {\n  return [{ json: { noNewGrants: true, message: 'All grants already tracked' } }];\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        86000,
+        71840
+      ],
+      "id": "check-dupes-001",
+      "name": "Check Duplicates",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -1619,13 +1341,12 @@
           },
           "conditions": [
             {
-              "id": "has-results",
-              "leftValue": "={{ JSON.parse($json.output[0].content[0].text).no_results }}",
+              "id": "has-new",
+              "leftValue": "={{ $json.noNewGrants }}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
-                "operation": "true",
-                "singleValue": true
+                "operation": "notEquals"
               }
             }
           ],
@@ -1633,119 +1354,109 @@
         },
         "options": {}
       },
-      "id": "01cac814-7249-4143-827f-63ef8c5b04d6",
-      "name": "Has Results?2",
+      "id": "has-new-001",
+      "name": "Has New Grants?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        87776,
-        71344
+        86200,
+        71840
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst BATCH_SIZE = 30;\nconst chunks = [];\n\nfor (let i = 0; i < items.length; i += BATCH_SIZE) {\n  const batch = items.slice(i, i + BATCH_SIZE);\n  chunks.push({\n    json: {\n      grants: batch.map(it => it.json),\n      batchIndex: Math.floor(i / BATCH_SIZE),\n      totalBatches: Math.ceil(items.length / BATCH_SIZE),\n      totalGrants: items.length\n    }\n  });\n}\n\nreturn chunks;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        86400,
+        71840
+      ],
+      "id": "split-chunks-001",
+      "name": "Split into Chunks"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst webhookData = $('search for proposal with query').first().json.body;\nconst searchId = webhookData.search_id;\nconst orgId = webhookData.org_id;\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/search_results';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\nconst batchIdx = item.json.batchIndex + 1;\nconst total = item.json.totalBatches;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl,\n    headers: {\n      'apikey': supabaseKey,\n      'Authorization': 'Bearer ' + supabaseKey,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=minimal',\n    },\n    body: JSON.stringify({\n      search_id: searchId,\n      org_id: orgId,\n      source_group: '__status__:filtering',\n      grant_data: { status: 'filtering', stage_message: 'Filtering grants... (batch ' + batchIdx + '/' + total + ')' },\n      is_complete: false,\n    }),\n  });\n} catch(e) {}\n\nreturn [item];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        86600,
+        71840
+      ],
+      "id": "status-matching-001",
+      "name": "Status: Matching",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "= Search Query: {{ $('search for proposal with query').first().json.body.searchQuery }}\n\n  Filters:\n  - Organization Type: {{ $('search for proposal with query').first().json.body.orgType || 'Any' }}\n  - Nonprofit/For-Profit: {{ $('search for proposal with query').first().json.body.profitStatus || 'Any' }}\n  - Industry/Sector: {{ $('search for proposal with query').first().json.body.industry || 'Any' }}\n  - Funding Category: {{ $('search for proposal with query').first().json.body.fundingCategory || 'Any' }}\n\n  Grants to evaluate:\n  {{ JSON.stringify($json.grants.map(g => ({ id: g.oppNum || g.id || '', title: g.title || '', description: (g.description || '').substring(0, 500), agency: g.agency || '' })), null, 2) }}\n"
+            },
+            {
+              "role": "system",
+              "content": "You are a grant relevance filter. You receive a search query, optional filters, and a list of grants. Your job is to decide which grants are genuinely relevant to the user's search.\n\n  FILTERING RULES:\n  1. Analyze the search query to understand the specific domain, topic, and intent.\n  2. Keep a grant ONLY if its Title or Description directly relates to the query's core topic.\n  3. Discard a grant if the connection to the search query requires more than one logical hop or is only tangential.\n  4. When in doubt, DISCARD. Users prefer fewer, highly relevant results over many loosely related ones.\n\n  ADDITIONAL FILTERS (apply only if the value is provided and not \"Any\" or empty):\n  - Organization Type: Only keep grants whose eligible applicants include this org type.\n  - Nonprofit/For-Profit Status: If \"Nonprofit\", discard grants only for for-profits. If \"For-Profit\", discard grants only for nonprofits. If \"Either\" or empty, skip.\n  - Industry/Sector: Only keep grants relevant to this sector. Use semantic matching.\n  - Funding Category: \"Federal Grant\" = only federal. \"Foundation / Private Grant\" = only philanthropic/foundation. If empty, skip.\n  - Geographic Focus: If provided, only keep grants whose eligibility includes this geographic area.\n\n  Return ONLY a valid JSON object with two properties:\n  - \"ids\": array of IDs of grants that pass ALL filters\n  - \"no_results\": boolean, true if no grants matched\n\n  Example with matches: {\"ids\": [\"361204\", \"358858\", \"352411\"], \"no_results\": false}\n  Example with no matches: {\"ids\": [], \"no_results\": true}\n\n  Do NOT return markdown or explanation. Just the JSON object.\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        86800,
+        71840
+      ],
+      "id": "ai-filter-001",
+      "name": "Filter based on search query",
+      "credentials": {
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "Brownmine"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookData = $('search for proposal with query').first().json.body;\nconst searchId = webhookData.search_id;\nconst orgId = webhookData.org_id;\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/search_results';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\n// Get AI response\nconst aiText = $input.first().json?.output?.[0]?.content?.[0]?.text || '[]';\n\nlet keepIds = [];\ntry {\n  const cleaned = aiText.replace(/\\`\\`\\`json\\n?/g, '').replace(/\\`\\`\\`\\n?/g, '').trim();\n  const parsed = JSON.parse(cleaned);\n  keepIds = Array.isArray(parsed) ? parsed : (parsed.ids || []);\n} catch(e) {\n  keepIds = [];\n}\n\n// Get the original grants from the Status: Matching node\nconst statusItem = $('Status: Matching').first();\nconst grants = statusItem.json.grants || [];\n\n// Filter by AI results\nconst matched = grants.filter(g => {\n  const grantId = String(g.oppNum || g.id || '');\n  return keepIds.includes(grantId);\n});\n\n// Write to Supabase if we have matches\nif (matched.length > 0) {\n  const grantData = matched.map(g => ({ ...g, funder_name: g.agency || g.funder_name || 'Unknown' }));\n  \n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl,\n    headers: {\n      'apikey': supabaseKey,\n      'Authorization': 'Bearer ' + supabaseKey,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=minimal',\n    },\n    body: JSON.stringify({\n      search_id: searchId,\n      org_id: orgId,\n      source_group: 'ai_filtered_' + (statusItem.json.batchIndex || 0),\n      grant_data: grantData,\n      is_complete: false,\n    }),\n  });\n}\n\nreturn [{ json: { matched: matched.length, total: grants.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        87000,
+        71840
+      ],
+      "id": "parse-save-001",
+      "name": "Parse & Save Results",
+      "continueOnFail": true
     },
     {
       "parameters": {
         "options": {}
       },
-      "id": "5a39a2c0-c6f9-40e2-9a8b-2849b28610f4",
-      "name": "All Already Tracked2",
+      "id": "no-results-001",
+      "name": "No Results Found",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        88048,
-        71104
+        86400,
+        72200
       ]
-    },
-    {
-      "parameters": {
-        "jsCode": "  const webhookData = $('search for proposal with query').first().json.body;\n  const searchId = webhookData.search_id;\n  const orgId = webhookData.org_id;\n\n  const supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/search_results';\n  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl,\n    headers: {\n      'apikey': supabaseKey,\n      'Authorization': 'Bearer ' + supabaseKey,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=minimal',\n    },\n    body: JSON.stringify({\n      search_id: searchId,\n      org_id: orgId,\n      source_group: '__status__:searching',\n      grant_data: { status: 'searching', stage_message: 'Still looking...' },\n      is_complete: false,\n    }),\n  });\n\n  return [];\n"
-      },
-      "name": "Write Still looking...2",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        88336,
-        71104
-      ],
-      "id": "42078ab2-1470-4575-a321-b83fd8526f76",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.all();\nreturn [{ json: { _TRACK: 'OUTER_DONE', _itemCount: items.length, _items: items.map((it, idx) => ({ index: idx, title: it.json?.title || it.json?.grant?.title || 'no title', oppNum: it.json?.oppNum || it.json?.grant?.oppNum || 'no oppNum' })) } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        85792,
-        71600
-      ],
-      "id": "track-outer-done-001",
-      "name": "TRACK: Outer Done",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.all();\nconst passthrough = items.map(i => ({ json: { ...i.json, _TRACK_OUTER_LOOP: true, _batchSize: items.length } }));\nreturn passthrough;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        85792,
-        72050
-      ],
-      "id": "track-outer-loop-001",
-      "name": "TRACK: Outer Loop Batch",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.all();\nreturn [{ json: { _TRACK: 'INNER_DONE', _itemCount: items.length, _items: items.map((it, idx) => ({ index: idx, title: it.json?.title || it.json?.grant?.title || 'no title' })).slice(0, 10) } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        87104,
-        71100
-      ],
-      "id": "track-inner-done-001",
-      "name": "TRACK: Inner Done",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.all();\nconst passthrough = items.map(i => ({ json: { ...i.json, _TRACK_INNER_LOOP: true, _batchSize: items.length } }));\nreturn passthrough;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        87104,
-        71550
-      ],
-      "id": "track-inner-loop-001",
-      "name": "TRACK: Inner Loop Batch",
-      "continueOnFail": true
     }
   ],
   "pinData": {},
   "connections": {
-    "Split In Batches1": {
-      "main": [
-        [
-          {
-            "node": "TRACK: Outer Done",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "TRACK: Outer Loop Batch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Combine & Deduplicate All Sources2": {
       "main": [
         [
@@ -1757,186 +1468,11 @@
         ]
       ]
     },
-    "Split In Batches": {
-      "main": [
-        [
-          {
-            "node": "TRACK: Inner Done",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "TRACK: Inner Loop Batch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "has results check": {
-      "main": [
-        [
-          {
-            "node": "Has Results?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Write Search Complete1": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "All Already Tracked": {
-      "main": [
-        [
-          {
-            "node": "Write Search Complete1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "No Results Found": {
-      "main": [
-        [
-          {
-            "node": "Write Search Complete1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has Results?": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "No Results Found",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Status: Matching": {
-      "main": [
-        [
-          {
-            "node": "has results check",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Status: Checking": {
       "main": [
         [
           {
-            "node": "Has Results?1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save Search Results": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter based on search query": {
-      "main": [
-        [
-          {
-            "node": "Has Results?2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript3": {
-      "main": [
-        [
-          {
-            "node": "Save Search Results",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Already Tracked1": {
-      "main": [
-        [
-          {
-            "node": "Has New Grants?1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "All Already Tracked1": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "No Results Found1": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has New Grants?1": {
-      "main": [
-        [
-          {
-            "node": "Status: Matching",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Write Still looking...1",
+            "node": "Check Duplicates",
             "type": "main",
             "index": 0
           }
@@ -1945,20 +1481,8 @@
     },
     "Has Results?1": {
       "main": [
-        [
-          {
-            "node": "Split In Batches1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "No Results Found1",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [],
+        []
       ]
     },
     "Extract Canada Grants1": {
@@ -2643,17 +2167,6 @@
         ]
       ]
     },
-    "Write Still looking...1": {
-      "main": [
-        [
-          {
-            "node": "All Already Tracked1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "search for proposal with query": {
       "main": [
         [
@@ -2850,47 +2363,69 @@
         ]
       ]
     },
-    "Has Results?2": {
+    "Check Duplicates": {
       "main": [
         [
           {
-            "node": "All Already Tracked2",
+            "node": "Has New Grants?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has New Grants?": {
+      "main": [
+        [
+          {
+            "node": "Split into Chunks",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Code in JavaScript3",
+            "node": "No Results Found",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "All Already Tracked2": {
+    "Split into Chunks": {
       "main": [
         [
           {
-            "node": "Write Still looking...2",
+            "node": "Status: Matching",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Write Still looking...2": {
+    "Status: Matching": {
       "main": [
         [
           {
-            "node": "Split In Batches",
+            "node": "Filter based on search query",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "TRACK: Outer Done": {
+    "Filter based on search query": {
+      "main": [
+        [
+          {
+            "node": "Parse & Save Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Save Results": {
       "main": [
         [
           {
@@ -2901,33 +2436,11 @@
         ]
       ]
     },
-    "TRACK: Outer Loop Batch": {
+    "No Results Found": {
       "main": [
         [
           {
-            "node": "Check Already Tracked1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "TRACK: Inner Done": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "TRACK: Inner Loop Batch": {
-      "main": [
-        [
-          {
-            "node": "Filter based on search query",
+            "node": "Write Search Complete2",
             "type": "main",
             "index": 0
           }
