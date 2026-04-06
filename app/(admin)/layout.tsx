@@ -24,9 +24,9 @@ export default async function AdminLayout({
   if (!profile?.is_platform_admin) redirect("/");
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-[100dvh] overflow-hidden bg-background">
       <AdminSidebar user={user} />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">{children}</main>
     </div>
   );
 }

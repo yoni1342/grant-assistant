@@ -23,9 +23,9 @@ export default async function AgencyLayout({
   if (!profile?.agency_id) redirect("/dashboard");
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-[100dvh] overflow-hidden bg-background">
       <AgencySidebar user={user} />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">{children}</main>
     </div>
   );
 }
