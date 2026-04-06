@@ -651,17 +651,19 @@ export default function DiscoveryPage() {
         resetInactivityTimer();
 
         if (row.is_complete) {
-          setSearchComplete(true);
-          setStageMessage(DEFAULT_STAGE);
-          setTimeout(() => setLoading(false), 600);
-          if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-          }
-          if (inactivityRef.current) {
-            clearTimeout(inactivityRef.current);
-            inactivityRef.current = null;
-          }
+          // Multiple source paths may each send __done__. Don't stop
+          // polling immediately — shorten the inactivity timer so we
+          // wait a bit for other paths to finish, then mark complete.
+          if (inactivityRef.current) clearTimeout(inactivityRef.current);
+          inactivityRef.current = setTimeout(() => {
+            setSearchComplete(true);
+            setLoading(false);
+            setStageMessage(DEFAULT_STAGE);
+            if (pollRef.current) {
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+            }
+          }, 8000);
           return;
         }
 
@@ -905,7 +907,7 @@ export default function DiscoveryPage() {
             </div>
           )}
 
-          {loading && (
+          {loading && !searchComplete && (
             <div className="mt-3 space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {(() => {
@@ -1010,11 +1012,20 @@ export default function DiscoveryPage() {
             )}
           </div>
 
-          {searchComplete && !loading && (
-            <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-4 py-2.5 text-sm text-green-700 dark:text-green-400">
+          {!searchComplete && results.length > 0 && (
+            <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-400">
+              <Sparkles className="h-4 w-4 shrink-0 animate-pulse" />
+              <span>
+                Showing {visibleResults.length} result{visibleResults.length === 1 ? "" : "s"} so far. Additional sources are still being reviewed and may yield more matches.
+              </span>
+            </div>
+          )}
+
+          {searchComplete && !loading && results.length > 0 && (
+            <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-400">
               <CheckCheck className="h-4 w-4 shrink-0" />
               <span>
-                Search complete — showing {visibleResults.length} results. Additional sources are still being reviewed and may yield more matches.
+                Found {visibleResults.length} grant{visibleResults.length === 1 ? "" : "s"} matching your search.
               </span>
             </div>
           )}
