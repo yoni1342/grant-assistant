@@ -397,7 +397,6 @@ export default function DiscoveryPage() {
   const [grantUsage, setGrantUsage] = useState<GrantUsage | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const channelRef = useRef<any>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
   const inactivityRef = useRef<ReturnType<typeof setTimeout>>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>(null);
   const seenTitlesRef = useRef<Set<string>>(new Set());
@@ -535,7 +534,6 @@ export default function DiscoveryPage() {
         const supabase = createClient();
         supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
       }
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
       if (pollRef.current) clearInterval(pollRef.current);
     };
@@ -545,8 +543,12 @@ export default function DiscoveryPage() {
     if (!data) return [];
 
     if (Array.isArray(data)) {
-      if (data.length > 0 && data[0]?.title && data[0]?.funder_name) {
-        return data as DiscoveredGrant[];
+      if (data.length > 0 && data[0]?.title && (data[0]?.funder_name || (data[0] as Record<string, unknown>)?.agency)) {
+        return data.map((item: unknown) => {
+          const obj = item as Record<string, unknown>;
+          if (!obj.funder_name && obj.agency) obj.funder_name = obj.agency;
+          return obj as unknown as DiscoveredGrant;
+        });
       }
       return data.flatMap((item: unknown) => extractGrants(item));
     }
@@ -554,7 +556,10 @@ export default function DiscoveryPage() {
     if (typeof data === "object" && data !== null) {
       const obj = data as Record<string, unknown>;
 
-      if (obj.title && obj.funder_name) {
+      if (obj.title && (obj.funder_name || obj.agency)) {
+        if (!obj.funder_name && obj.agency) {
+          obj.funder_name = obj.agency;
+        }
         return [obj as unknown as DiscoveredGrant];
       }
 
@@ -587,10 +592,6 @@ export default function DiscoveryPage() {
       const supabase = createClient();
       supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
       channelRef.current = null;
-    }
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
     }
     if (inactivityRef.current) {
       clearTimeout(inactivityRef.current);
@@ -627,17 +628,18 @@ export default function DiscoveryPage() {
       const searchId = data.search_id;
       const supabase = createClient();
 
-      // Inactivity timeout: if no data arrives for 15s, mark search as complete
+      // Inactivity timeout: if no data arrives for 60s, mark search as complete
       const resetInactivityTimer = () => {
         if (inactivityRef.current) clearTimeout(inactivityRef.current);
         inactivityRef.current = setTimeout(() => {
           setSearchComplete(true);
           setLoading(false);
+          setStageMessage(DEFAULT_STAGE);
           if (pollRef.current) {
             clearInterval(pollRef.current);
             pollRef.current = null;
           }
-        }, 15000);
+        }, 60000);
       };
 
       // Start the initial inactivity timer
@@ -650,6 +652,7 @@ export default function DiscoveryPage() {
 
         if (row.is_complete) {
           setSearchComplete(true);
+          setStageMessage(DEFAULT_STAGE);
           setTimeout(() => setLoading(false), 600);
           if (pollRef.current) {
             clearInterval(pollRef.current);
@@ -727,21 +730,6 @@ export default function DiscoveryPage() {
       pollForResults();
       pollRef.current = setInterval(pollForResults, 2000);
 
-      // Safety timeout: stop loading after 3 minutes
-      timeoutRef.current = setTimeout(() => {
-        setLoading(false);
-        setSearchComplete(true);
-        supabase.removeChannel(channel);
-        channelRef.current = null;
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
-        if (inactivityRef.current) {
-          clearTimeout(inactivityRef.current);
-          inactivityRef.current = null;
-        }
-      }, 180000);
     } catch (err) {
       console.error("Discovery error:", err);
       setError("Failed to trigger discovery. Check your n8n connection.");
