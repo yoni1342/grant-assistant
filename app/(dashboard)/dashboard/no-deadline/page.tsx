@@ -40,7 +40,7 @@ export default async function NoDeadlinePage() {
   const noDeadlineGrants = grants || [];
 
   return (
-    <div className="p-6 space-y-6 w-full min-w-0">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 w-full min-w-0">
       <div className="flex items-center gap-4">
         <Link href="/dashboard">
           <Button variant="ghost" size="sm" className="gap-1">

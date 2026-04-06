@@ -221,7 +221,7 @@ export function GrantDetail({
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
         <Link href={backHref}>
           <Button variant="ghost" size="sm">
@@ -233,7 +233,7 @@ export function GrantDetail({
 
       {/* Section 1: Grant Details */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle>Grant Details</CardTitle>
           <div className="flex items-center gap-2">
             {grant.stage !== "archived" && (
@@ -258,8 +258,8 @@ export function GrantDetail({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2 space-y-2">
               <Label>Title</Label>
               <Input
                 value={title}
@@ -403,7 +403,7 @@ export function GrantDetail({
                   placeholder="e.g., Health, Education, Environment"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Match Requirement</Label>
                   <Input

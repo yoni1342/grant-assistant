@@ -136,7 +136,7 @@ export function NotificationsClient({
   }, [orgId]);
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       <div>
         <h1 className="font-display text-2xl font-black uppercase tracking-tight">Notifications</h1>
         <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">

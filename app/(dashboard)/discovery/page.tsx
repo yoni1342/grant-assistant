@@ -806,7 +806,7 @@ export default function DiscoveryPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div>
         <h1 className="font-display text-2xl font-black uppercase tracking-tight">Grant Discovery</h1>
         <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
@@ -818,41 +818,44 @@ export default function DiscoveryPage() {
       {/* Search */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search for grants... (e.g., 'community health', 'STEM education')"
+                placeholder="Search for grants..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && triggerDiscovery()}
                 className="pl-9"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters((v) => !v)}
-              className="shrink-0"
-            >
-              <Filter className="h-4 w-4 mr-1" />
-              Filters
-              {[...orgType, ...profitStatus, ...industry, ...fundingCategory, ...location].length > 0 && (
-                <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">
-                  {orgType.length + profitStatus.length + industry.length + fundingCategory.length + location.length}
-                </Badge>
-              )}
-            </Button>
-            <Button
-              onClick={triggerDiscovery}
-              disabled={loading || !query.trim()}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Zap className="h-4 w-4 mr-1" />
-              )}
-              Discover
-            </Button>
+            <div className="flex gap-2 sm:gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters((v) => !v)}
+                className="shrink-0 flex-1 sm:flex-none"
+              >
+                <Filter className="h-4 w-4 mr-1" />
+                Filters
+                {[...orgType, ...profitStatus, ...industry, ...fundingCategory, ...location].length > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">
+                    {orgType.length + profitStatus.length + industry.length + fundingCategory.length + location.length}
+                  </Badge>
+                )}
+              </Button>
+              <Button
+                onClick={triggerDiscovery}
+                disabled={loading || !query.trim()}
+                className="shrink-0 flex-1 sm:flex-none"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Zap className="h-4 w-4 mr-1" />
+                )}
+                Discover
+              </Button>
+            </div>
           </div>
 
           {/* Recent Searches */}
@@ -878,7 +881,7 @@ export default function DiscoveryPage() {
 
           {showFilters && (
             <div className="space-y-3 mt-3">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                 <MultiSelect label="Location" options={US_STATES} selected={location} onChange={setLocation} searchable />
                 <MultiSelect label="Organization Type" options={ORG_TYPES} selected={orgType} onChange={setOrgType} />
                 <MultiSelect label="Nonprofit / For-Profit" options={PROFIT_STATUSES} selected={profitStatus} onChange={setProfitStatus} />
@@ -929,7 +932,7 @@ export default function DiscoveryPage() {
 
       {/* Grant Usage Indicator (free tier) */}
       {grantUsage && grantUsage.limit !== null && (
-        <div className={`rounded-lg border-2 p-4 flex items-center justify-between ${
+        <div className={`rounded-lg border-2 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
           atLimit
             ? "border-red-500 bg-red-500/10"
             : grantUsage.used >= grantUsage.limit - 1
@@ -1043,12 +1046,12 @@ export default function DiscoveryPage() {
                   onClick={() => setSelectedGrant(grant)}
                 >
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                       <div className="flex-1 min-w-0 space-y-1.5">
                         <h3 className="font-medium leading-tight">
                           {grant.title}
                         </h3>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm text-muted-foreground">
                           {grant.funder_name && (
                             <span className="flex items-center gap-1">
                               <Building2 className="h-3.5 w-3.5" />
@@ -1106,7 +1109,7 @@ export default function DiscoveryPage() {
                           e.stopPropagation();
                           addToPipeline(grant);
                         }}
-                        className="shrink-0"
+                        className="shrink-0 w-full sm:w-auto"
                       >
                         {isAdding ? (
                           <Loader2 className="h-4 w-4 mr-1 animate-spin" />

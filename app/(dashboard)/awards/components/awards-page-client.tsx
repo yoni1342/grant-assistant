@@ -54,7 +54,7 @@ export function AwardsPageClient({ initialAwards }: AwardsPageClientProps) {
   }, [initialAwards])
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-black uppercase tracking-tight">Awards</h1>
