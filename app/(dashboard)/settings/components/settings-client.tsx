@@ -32,12 +32,14 @@ export function SettingsClient({ data }: { data: SettingsData }) {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList variant="line">
-          <TabsTrigger value="profile">Profile & Account</TabsTrigger>
-          <TabsTrigger value="organization">Organization</TabsTrigger>
-          {isAdmin && <TabsTrigger value="integrations">Integrations</TabsTrigger>}
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4">
+          <TabsList variant="line" className="w-max sm:w-auto">
+            <TabsTrigger value="profile">Profile & Account</TabsTrigger>
+            <TabsTrigger value="organization">Organization</TabsTrigger>
+            {isAdmin && <TabsTrigger value="integrations">Integrations</TabsTrigger>}
+            <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="profile">
           <ProfileTab user={data.user} profile={data.profile} />
