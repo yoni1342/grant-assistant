@@ -163,7 +163,7 @@ export function KanbanView({
           onDragOver={(e) => handleDragOver(e, col.key)}
           onDragLeave={(e) => handleDragLeave(e, col.key)}
           onDrop={(e) => handleDrop(e, col.key)}
-          className={`flex w-64 shrink-0 flex-col rounded-lg transition-colors ${
+          className={`flex w-[75vw] sm:w-64 shrink-0 flex-col rounded-lg transition-colors ${
             dropTarget === col.key && draggedGrantId
               ? "bg-muted ring-2 ring-primary/40"
               : "bg-muted/50"

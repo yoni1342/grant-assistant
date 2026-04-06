@@ -67,7 +67,7 @@ export default async function PipelinePage() {
   return (
     <div>
       {activeFetchStatus && (
-        <div className="px-6 pt-6">
+        <div className="px-4 sm:px-6 pt-4 sm:pt-6">
           <GrantFetchBanner orgId={orgId} initialStatus={activeFetchStatus} />
         </div>
       )}

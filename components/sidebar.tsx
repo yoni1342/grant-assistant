@@ -19,6 +19,8 @@ import {
   Bell,
   CreditCard,
   Archive,
+  Menu,
+  X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -60,6 +62,7 @@ interface SidebarProps {
 export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const initials =
     user.user_metadata?.full_name
@@ -67,6 +70,21 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
       .map((n: string) => n[0])
       .join("")
       .toUpperCase() || user.email?.[0]?.toUpperCase() || "?";
+
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
 
   // Fetch unread count and subscribe to realtime updates
   useEffect(() => {
@@ -122,13 +140,8 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
   // Reset count when navigating to notifications page
   const displayCount = pathname.startsWith("/notifications") ? 0 : unreadCount;
 
-  return (
-    <aside
-      className={cn(
-        "flex h-full flex-col border-r border-border bg-card transition-all duration-200",
-        collapsed ? "w-16" : "w-56"
-      )}
-    >
+  const sidebarContent = (
+    <>
       {/* Header — Brand lockup */}
       <div className="flex h-14 items-center justify-between border-b border-border px-4">
         {!collapsed ? (
@@ -149,14 +162,22 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
             <FundoryMark className="text-foreground" />
           </Link>
         )}
+        {/* Desktop collapse button */}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
-            "rounded-md p-1 text-muted-foreground hover:bg-muted",
+            "hidden md:block rounded-md p-1 text-muted-foreground hover:bg-muted",
             collapsed && "hidden"
           )}
         >
           <ChevronLeft className="h-4 w-4" />
+        </button>
+        {/* Mobile close button */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="md:hidden rounded-md p-1 text-muted-foreground hover:bg-muted"
+        >
+          <X className="h-5 w-5" />
         </button>
       </div>
 
@@ -168,7 +189,7 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-0.5 p-2">
+      <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto">
         {navItems.filter((item) => !(agencyId && item.href === "/billing")).map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
@@ -178,7 +199,7 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                "flex items-center gap-3 rounded-md px-3 py-2.5 md:py-2 text-sm transition-colors",
                 isActive
                   ? "bg-foreground/[0.06] font-medium text-foreground"
                   : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
@@ -238,6 +259,58 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
           )}
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card px-4">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="rounded-md p-2 text-foreground hover:bg-muted -ml-2"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <FundoryMark className="text-foreground" />
+          <span className="font-display text-sm font-black uppercase tracking-[0.04em]">
+            Fundory
+          </span>
+        </Link>
+        <div className="w-9" /> {/* Spacer for centering */}
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-black/50"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile slide-out sidebar */}
+      <aside
+        className={cn(
+          "md:hidden fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-card transition-transform duration-200 ease-in-out",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside
+        className={cn(
+          "hidden md:flex h-full flex-col border-r border-border bg-card transition-all duration-200",
+          collapsed ? "w-16" : "w-56"
+        )}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile top bar spacer — pushes content below fixed top bar */}
+      <div className="md:hidden h-14 shrink-0 fixed top-0" />
+    </>
   );
 }

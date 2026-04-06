@@ -397,7 +397,6 @@ export default function DiscoveryPage() {
   const [grantUsage, setGrantUsage] = useState<GrantUsage | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const channelRef = useRef<any>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
   const inactivityRef = useRef<ReturnType<typeof setTimeout>>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>(null);
   const seenTitlesRef = useRef<Set<string>>(new Set());
@@ -535,7 +534,6 @@ export default function DiscoveryPage() {
         const supabase = createClient();
         supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
       }
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
       if (pollRef.current) clearInterval(pollRef.current);
     };
@@ -545,8 +543,12 @@ export default function DiscoveryPage() {
     if (!data) return [];
 
     if (Array.isArray(data)) {
-      if (data.length > 0 && data[0]?.title && data[0]?.funder_name) {
-        return data as DiscoveredGrant[];
+      if (data.length > 0 && data[0]?.title && (data[0]?.funder_name || (data[0] as Record<string, unknown>)?.agency)) {
+        return data.map((item: unknown) => {
+          const obj = item as Record<string, unknown>;
+          if (!obj.funder_name && obj.agency) obj.funder_name = obj.agency;
+          return obj as unknown as DiscoveredGrant;
+        });
       }
       return data.flatMap((item: unknown) => extractGrants(item));
     }
@@ -554,7 +556,10 @@ export default function DiscoveryPage() {
     if (typeof data === "object" && data !== null) {
       const obj = data as Record<string, unknown>;
 
-      if (obj.title && obj.funder_name) {
+      if (obj.title && (obj.funder_name || obj.agency)) {
+        if (!obj.funder_name && obj.agency) {
+          obj.funder_name = obj.agency;
+        }
         return [obj as unknown as DiscoveredGrant];
       }
 
@@ -587,10 +592,6 @@ export default function DiscoveryPage() {
       const supabase = createClient();
       supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
       channelRef.current = null;
-    }
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
     }
     if (inactivityRef.current) {
       clearTimeout(inactivityRef.current);
@@ -627,17 +628,18 @@ export default function DiscoveryPage() {
       const searchId = data.search_id;
       const supabase = createClient();
 
-      // Inactivity timeout: if no data arrives for 15s, mark search as complete
+      // Inactivity timeout: if no data arrives for 60s, mark search as complete
       const resetInactivityTimer = () => {
         if (inactivityRef.current) clearTimeout(inactivityRef.current);
         inactivityRef.current = setTimeout(() => {
           setSearchComplete(true);
           setLoading(false);
+          setStageMessage(DEFAULT_STAGE);
           if (pollRef.current) {
             clearInterval(pollRef.current);
             pollRef.current = null;
           }
-        }, 15000);
+        }, 60000);
       };
 
       // Start the initial inactivity timer
@@ -649,16 +651,19 @@ export default function DiscoveryPage() {
         resetInactivityTimer();
 
         if (row.is_complete) {
-          setSearchComplete(true);
-          setTimeout(() => setLoading(false), 600);
-          if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-          }
-          if (inactivityRef.current) {
-            clearTimeout(inactivityRef.current);
-            inactivityRef.current = null;
-          }
+          // Multiple source paths may each send __done__. Don't stop
+          // polling immediately — shorten the inactivity timer so we
+          // wait a bit for other paths to finish, then mark complete.
+          if (inactivityRef.current) clearTimeout(inactivityRef.current);
+          inactivityRef.current = setTimeout(() => {
+            setSearchComplete(true);
+            setLoading(false);
+            setStageMessage(DEFAULT_STAGE);
+            if (pollRef.current) {
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+            }
+          }, 8000);
           return;
         }
 
@@ -727,21 +732,6 @@ export default function DiscoveryPage() {
       pollForResults();
       pollRef.current = setInterval(pollForResults, 2000);
 
-      // Safety timeout: stop loading after 3 minutes
-      timeoutRef.current = setTimeout(() => {
-        setLoading(false);
-        setSearchComplete(true);
-        supabase.removeChannel(channel);
-        channelRef.current = null;
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
-        if (inactivityRef.current) {
-          clearTimeout(inactivityRef.current);
-          inactivityRef.current = null;
-        }
-      }, 180000);
     } catch (err) {
       console.error("Discovery error:", err);
       setError("Failed to trigger discovery. Check your n8n connection.");
@@ -816,7 +806,7 @@ export default function DiscoveryPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div>
         <h1 className="font-display text-2xl font-black uppercase tracking-tight">Grant Discovery</h1>
         <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
@@ -828,41 +818,44 @@ export default function DiscoveryPage() {
       {/* Search */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search for grants... (e.g., 'community health', 'STEM education')"
+                placeholder="Search for grants..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && triggerDiscovery()}
                 className="pl-9"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters((v) => !v)}
-              className="shrink-0"
-            >
-              <Filter className="h-4 w-4 mr-1" />
-              Filters
-              {[...orgType, ...profitStatus, ...industry, ...fundingCategory, ...location].length > 0 && (
-                <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">
-                  {orgType.length + profitStatus.length + industry.length + fundingCategory.length + location.length}
-                </Badge>
-              )}
-            </Button>
-            <Button
-              onClick={triggerDiscovery}
-              disabled={loading || !query.trim()}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Zap className="h-4 w-4 mr-1" />
-              )}
-              Discover
-            </Button>
+            <div className="flex gap-2 sm:gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters((v) => !v)}
+                className="shrink-0 flex-1 sm:flex-none"
+              >
+                <Filter className="h-4 w-4 mr-1" />
+                Filters
+                {[...orgType, ...profitStatus, ...industry, ...fundingCategory, ...location].length > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">
+                    {orgType.length + profitStatus.length + industry.length + fundingCategory.length + location.length}
+                  </Badge>
+                )}
+              </Button>
+              <Button
+                onClick={triggerDiscovery}
+                disabled={loading || !query.trim()}
+                className="shrink-0 flex-1 sm:flex-none"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Zap className="h-4 w-4 mr-1" />
+                )}
+                Discover
+              </Button>
+            </div>
           </div>
 
           {/* Recent Searches */}
@@ -888,7 +881,7 @@ export default function DiscoveryPage() {
 
           {showFilters && (
             <div className="space-y-3 mt-3">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                 <MultiSelect label="Location" options={US_STATES} selected={location} onChange={setLocation} searchable />
                 <MultiSelect label="Organization Type" options={ORG_TYPES} selected={orgType} onChange={setOrgType} />
                 <MultiSelect label="Nonprofit / For-Profit" options={PROFIT_STATUSES} selected={profitStatus} onChange={setProfitStatus} />
@@ -917,7 +910,7 @@ export default function DiscoveryPage() {
             </div>
           )}
 
-          {loading && (
+          {loading && !searchComplete && (
             <div className="mt-3 space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {(() => {
@@ -939,7 +932,7 @@ export default function DiscoveryPage() {
 
       {/* Grant Usage Indicator (free tier) */}
       {grantUsage && grantUsage.limit !== null && (
-        <div className={`rounded-lg border-2 p-4 flex items-center justify-between ${
+        <div className={`rounded-lg border-2 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
           atLimit
             ? "border-red-500 bg-red-500/10"
             : grantUsage.used >= grantUsage.limit - 1
@@ -1022,11 +1015,20 @@ export default function DiscoveryPage() {
             )}
           </div>
 
-          {searchComplete && !loading && (
-            <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-4 py-2.5 text-sm text-green-700 dark:text-green-400">
+          {!searchComplete && results.length > 0 && (
+            <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-400">
+              <Sparkles className="h-4 w-4 shrink-0 animate-pulse" />
+              <span>
+                Showing {visibleResults.length} result{visibleResults.length === 1 ? "" : "s"} so far. Additional sources are still being reviewed and may yield more matches.
+              </span>
+            </div>
+          )}
+
+          {searchComplete && !loading && results.length > 0 && (
+            <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-400">
               <CheckCheck className="h-4 w-4 shrink-0" />
               <span>
-                Search complete — showing {visibleResults.length} results. Additional sources are still being reviewed and may yield more matches.
+                Found {visibleResults.length} grant{visibleResults.length === 1 ? "" : "s"} matching your search.
               </span>
             </div>
           )}
@@ -1044,12 +1046,12 @@ export default function DiscoveryPage() {
                   onClick={() => setSelectedGrant(grant)}
                 >
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                       <div className="flex-1 min-w-0 space-y-1.5">
                         <h3 className="font-medium leading-tight">
                           {grant.title}
                         </h3>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm text-muted-foreground">
                           {grant.funder_name && (
                             <span className="flex items-center gap-1">
                               <Building2 className="h-3.5 w-3.5" />
@@ -1107,7 +1109,7 @@ export default function DiscoveryPage() {
                           e.stopPropagation();
                           addToPipeline(grant);
                         }}
-                        className="shrink-0"
+                        className="shrink-0 w-full sm:w-auto"
                       >
                         {isAdding ? (
                           <Loader2 className="h-4 w-4 mr-1 animate-spin" />

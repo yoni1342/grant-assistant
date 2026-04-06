@@ -261,35 +261,36 @@ export function SourceAnalyticsClient() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
+          <div className="flex flex-wrap items-end gap-2 sm:gap-3">
+            <div className="w-full sm:w-auto">
               <label className="text-xs text-muted-foreground mb-1 block">From</label>
               <Input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-40"
+                className="w-full sm:w-40"
               />
             </div>
-            <div>
+            <div className="w-full sm:w-auto">
               <label className="text-xs text-muted-foreground mb-1 block">To</label>
               <Input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="w-40"
+                className="w-full sm:w-40"
               />
             </div>
-            <Button onClick={handleApplyFilter} size="sm">
+            <Button onClick={handleApplyFilter} size="sm" className="w-full sm:w-auto">
               Apply
             </Button>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 w-full sm:w-auto">
               {(["today", "7d", "30d", "all"] as const).map((p) => (
                 <Button
                   key={p}
                   variant={activePreset === p ? "default" : "outline"}
                   size="sm"
                   onClick={() => setPreset(p)}
+                  className="flex-1 sm:flex-none"
                 >
                   {p === "today" ? "Today" : p === "7d" ? "7 days" : p === "30d" ? "30 days" : "All time"}
                 </Button>
@@ -455,8 +456,8 @@ export function SourceAnalyticsClient() {
               No source data yet. Stats will appear after the first grant fetch runs.
             </p>
           ) : (
-            <div className="[&_[data-slot=table-container]]:overflow-x-hidden">
-            <Table className="table-fixed">
+            <div className="overflow-x-auto">
+            <Table className="table-fixed min-w-[700px]">
               <colgroup>
                 <col className="w-[26%]" />
                 <col className="w-[11%]" />

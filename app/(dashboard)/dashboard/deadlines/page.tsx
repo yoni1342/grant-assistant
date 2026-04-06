@@ -96,7 +96,7 @@ export default async function DeadlinesPage({
   });
 
   return (
-    <div className="p-6 space-y-6 w-full min-w-0">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 w-full min-w-0">
       <div className="flex items-center gap-4">
         <Link href="/dashboard">
           <Button variant="ghost" size="sm" className="gap-1">
@@ -122,8 +122,8 @@ export default async function DeadlinesPage({
           </CardContent>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
-          <Table className="table-fixed w-full">
+        <Card className="overflow-hidden overflow-x-auto">
+          <Table className="table-fixed w-full min-w-[600px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[40%]">Title</TableHead>

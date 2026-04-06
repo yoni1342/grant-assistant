@@ -90,16 +90,16 @@ export default async function DashboardPage() {
     );
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Dashboard</h1>
+        <h1 className="font-display text-xl sm:text-2xl font-black uppercase tracking-tight">Dashboard</h1>
         <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
           Your grant pipeline at a glance
         </p>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         <Link href="/pipeline">
           <Card className="cursor-pointer hover:bg-muted/50 transition-colors h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -148,9 +148,9 @@ export default async function DashboardPage() {
         <GrantUsageCard />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 min-w-0">
         {/* Pipeline Overview */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-base">Pipeline Overview</CardTitle>
           </CardHeader>
@@ -168,8 +168,8 @@ export default async function DashboardPage() {
                       ? Math.round((count / totalGrants) * 100)
                       : 0;
                   return (
-                    <div key={stage} className="flex items-center gap-3">
-                      <span className="w-24 text-sm text-muted-foreground">
+                    <div key={stage} className="flex items-center gap-2 sm:gap-3">
+                      <span className="w-16 sm:w-24 text-xs sm:text-sm text-muted-foreground truncate">
                         {label}
                       </span>
                       <div className="flex-1 h-2 bg-muted">
@@ -190,7 +190,7 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Upcoming Deadlines */}
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Upcoming Deadlines</CardTitle>
             {deadlineGrants.length > 0 && (
@@ -209,7 +209,7 @@ export default async function DashboardPage() {
                 No upcoming deadlines
               </p>
             ) : (
-              <ScrollArea className="h-[340px] -mr-4 pr-4">
+              <ScrollArea className="h-[260px] sm:h-[340px] -mr-4 pr-4">
                 <div className="space-y-1">
                   {deadlineGrants.map((g) => {
                     const urgency = getDeadlineUrgency(g.deadline!);

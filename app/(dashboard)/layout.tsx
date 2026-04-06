@@ -75,13 +75,13 @@ export default async function DashboardLayout({
   const activeOrgId = profile?.agency_id ? await getActiveOrgId() : null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-[100dvh] overflow-hidden bg-background">
       <Sidebar
         user={user}
         agencyId={profile?.agency_id ?? null}
         activeOrgId={activeOrgId}
       />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">{children}</main>
     </div>
   );
 }
