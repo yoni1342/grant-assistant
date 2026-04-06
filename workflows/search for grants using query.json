@@ -1671,7 +1671,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconsole.log('[OUTER LOOP DONE] Items: ' + items.length);\nconsole.log('[OUTER LOOP DONE] First item:', JSON.stringify(items[0]?.json || {}).substring(0, 200));\nreturn items;"
+        "jsCode": "const items = $input.all();\nreturn [{ json: { _TRACK: 'OUTER_DONE', _itemCount: items.length, _items: items.map((it, idx) => ({ index: idx, title: it.json?.title || it.json?.grant?.title || 'no title', oppNum: it.json?.oppNum || it.json?.grant?.oppNum || 'no oppNum' })) } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1685,7 +1685,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconsole.log('[OUTER LOOP BATCH] Items: ' + items.length);\nconsole.log('[OUTER LOOP BATCH] First item:', JSON.stringify(items[0]?.json || {}).substring(0, 200));\nreturn items;"
+        "jsCode": "const items = $input.all();\nconst passthrough = items.map(i => ({ json: { ...i.json, _TRACK_OUTER_LOOP: true, _batchSize: items.length } }));\nreturn passthrough;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1699,7 +1699,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconsole.log('[INNER LOOP DONE] Items: ' + items.length);\nconsole.log('[INNER LOOP DONE] First item:', JSON.stringify(items[0]?.json || {}).substring(0, 200));\nreturn items;"
+        "jsCode": "const items = $input.all();\nreturn [{ json: { _TRACK: 'INNER_DONE', _itemCount: items.length, _items: items.map((it, idx) => ({ index: idx, title: it.json?.title || it.json?.grant?.title || 'no title' })).slice(0, 10) } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1713,7 +1713,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconsole.log('[INNER LOOP BATCH] Items: ' + items.length);\nconsole.log('[INNER LOOP BATCH] First item:', JSON.stringify(items[0]?.json || {}).substring(0, 200));\nreturn items;"
+        "jsCode": "const items = $input.all();\nconst passthrough = items.map(i => ({ json: { ...i.json, _TRACK_INNER_LOOP: true, _batchSize: items.length } }));\nreturn passthrough;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
