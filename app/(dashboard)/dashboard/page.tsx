@@ -148,9 +148,9 @@ export default async function DashboardPage() {
         <GrantUsageCard />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 min-w-0">
         {/* Pipeline Overview */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-base">Pipeline Overview</CardTitle>
           </CardHeader>
@@ -190,7 +190,7 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Upcoming Deadlines */}
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Upcoming Deadlines</CardTitle>
             {deadlineGrants.length > 0 && (
