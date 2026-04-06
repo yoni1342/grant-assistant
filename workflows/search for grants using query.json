@@ -1671,30 +1671,26 @@
       "continueOnFail": true
     },
     {
-      "parameters": {
-        "mode": "append"
-      },
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
       "position": [
         87104,
         71500
       ],
-      "id": "merge-inner-loop-001",
-      "name": "Merge Inner Loop"
+      "id": "noop-inner-loop-001",
+      "name": "Loop Back Inner"
     },
     {
-      "parameters": {
-        "mode": "append"
-      },
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
       "position": [
         85792,
         72100
       ],
-      "id": "merge-outer-loop-001",
-      "name": "Merge Outer Loop"
+      "id": "noop-outer-loop-001",
+      "name": "Loop Back Outer"
     }
   ],
   "pinData": {},
@@ -1732,7 +1728,7 @@
       "main": [
         [
           {
-            "node": "Merge Outer Loop",
+            "node": "Loop Back Outer",
             "type": "main",
             "index": 0
           }
@@ -1761,7 +1757,7 @@
       "main": [
         [
           {
-            "node": "Merge Outer Loop",
+            "node": "Loop Back Outer",
             "type": "main",
             "index": 0
           }
@@ -1794,7 +1790,7 @@
       "main": [
         [
           {
-            "node": "Split In Batches",
+            "node": "Loop Back Inner",
             "type": "main",
             "index": 0
           }
@@ -1834,7 +1830,7 @@
       "main": [
         [
           {
-            "node": "Merge Inner Loop",
+            "node": "Loop Back Inner",
             "type": "main",
             "index": 0
           }
@@ -1878,9 +1874,9 @@
       "main": [
         [
           {
-            "node": "Merge Outer Loop",
+            "node": "Loop Back Outer",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
@@ -1889,9 +1885,9 @@
       "main": [
         [
           {
-            "node": "Merge Outer Loop",
+            "node": "Loop Back Outer",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
@@ -1918,7 +1914,7 @@
       "main": [
         [
           {
-            "node": "Split In Batches1",
+            "node": "Loop Back Outer",
             "type": "main",
             "index": 0
           }
@@ -2854,14 +2850,14 @@
       "main": [
         [
           {
-            "node": "Merge Inner Loop",
+            "node": "Loop Back Inner",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
     },
-    "Merge Inner Loop": {
+    "Loop Back Inner": {
       "main": [
         [
           {
@@ -2872,7 +2868,7 @@
         ]
       ]
     },
-    "Merge Outer Loop": {
+    "Loop Back Outer": {
       "main": [
         [
           {
