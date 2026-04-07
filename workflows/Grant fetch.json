@@ -19,13 +19,13 @@
         "jsonBody": "{\n  \"rows\": 100,\n  \"keyword\": \"foster care youth transition\",\n  \"oppStatuses\": \"forecasted|posted\",\n  \"eligibilities\": \"12\",\n  \"fundingInstruments\": \"G\",\n  \"sortBy\": \"openDate|desc\"\n}",
         "options": {}
       },
-      "id": "952009d1-3aac-4e3c-8ef0-bcf6aff9c1b5",
+      "id": "689a2167-0d60-410e-8113-71ca56d4c176",
       "name": "Grants.gov Foster Care2",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4688,
-        18000
+        6704,
+        23984
       ],
       "notesInFlow": true,
       "notes": "Federal foster care grants"
@@ -48,13 +48,13 @@
         "jsonBody": "{\n  \"keyword\": \"senior elderly aging older adults\",\n  \"oppStatuses\": \"forecasted|posted\",\n  \"rows\": 50,\n  \"sortBy\": \"openDate|desc\"\n}",
         "options": {}
       },
-      "id": "ef984fdc-493e-4d11-a899-c962ee183586",
+      "id": "799ed447-8312-402c-90cf-d890b31308b8",
       "name": "Grants.gov Senior Services1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4688,
-        18192
+        6704,
+        24176
       ],
       "notesInFlow": true,
       "notes": "Federal senior/aging grants"
@@ -77,13 +77,13 @@
         "jsonBody": "{\n  \"keyword\": \"African American minority community underserved equity\",\n  \"oppStatuses\": \"forecasted|posted\",\n  \"rows\": 50,\n  \"sortBy\": \"openDate|desc\"\n}",
         "options": {}
       },
-      "id": "8fbc6935-9476-445b-ab21-8c78f5b1ff88",
+      "id": "252dcd3b-2dbd-405a-897f-8a293eb21660",
       "name": "Grants.gov Minority/Equity1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4688,
-        18384
+        6704,
+        24368
       ],
       "notesInFlow": true,
       "notes": "Federal minority/equity grants"
@@ -106,13 +106,13 @@
         "jsonBody": "{\n  \"keyword\": \"nonprofit capacity building organizational development\",\n  \"oppStatuses\": \"forecasted|posted\",\n  \"rows\": 50,\n  \"sortBy\": \"openDate|desc\"\n}",
         "options": {}
       },
-      "id": "74444ea7-5efa-4584-b2f8-fe58dcd7058d",
+      "id": "955c985b-2ebf-49dc-b3d8-5c366f7f8a5f",
       "name": "Grants.gov Capacity Building1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4688,
-        18576
+        6704,
+        24560
       ],
       "notesInFlow": true,
       "notes": "Federal capacity building grants"
@@ -135,13 +135,13 @@
         "jsonBody": "{\n  \"keyword\": \"child welfare family services social services\",\n  \"oppStatuses\": \"forecasted|posted\",\n  \"rows\": 50,\n  \"sortBy\": \"openDate|desc\"\n}",
         "options": {}
       },
-      "id": "a758980c-3478-4b47-88f2-a33ea0a78fef",
+      "id": "adeb1538-2569-4d07-a356-d8a6445bf6d1",
       "name": "Grants.gov Child Welfare1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4688,
-        18768
+        6704,
+        24752
       ],
       "notesInFlow": true,
       "notes": "Federal child/family services grants"
@@ -151,13 +151,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=pennsylvania+community+foundation&state%5Bid%5D=PA",
         "options": {}
       },
-      "id": "a2c5b286-800b-4adb-bf77-90194cfdfd5a",
+      "id": "3ea5bfb3-8846-4a11-a3ba-1b3164bf4871",
       "name": "ProPublica PA Foundations1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4752,
-        20608
+        6768,
+        26592
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -168,13 +168,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/organizations/562618866.json",
         "options": {}
       },
-      "id": "41982d64-7cf5-46e6-86d8-d84734982aea",
+      "id": "bcb1685a-8a3f-4772-b47d-ff897d697dd2",
       "name": "ProPublica Gates Foundation1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        22704
+        6720,
+        28688
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -185,13 +185,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/organizations/131684331.json",
         "options": {}
       },
-      "id": "b9479768-69d4-4b90-85da-761a0f319521",
+      "id": "9267a659-972a-4415-8125-8948756b56ca",
       "name": "ProPublica Ford Foundation1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        22864
+        6736,
+        28848
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -202,13 +202,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/organizations/131659629.json",
         "options": {}
       },
-      "id": "e3cb5cdd-8a8d-440e-a6c9-26f7e1e77c32",
+      "id": "7d8f452e-e781-442a-b6bf-ade1f35248a2",
       "name": "ProPublica Rockefeller Foundation1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        23056
+        6736,
+        29040
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -219,13 +219,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/organizations/381359264.json",
         "options": {}
       },
-      "id": "8530d528-be63-4eae-9725-e0659f5f9315",
+      "id": "87674711-a640-4b73-8a73-d9400428c283",
       "name": "ProPublica Kellogg Foundation1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        23248
+        6736,
+        29232
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -236,13 +236,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/organizations/222540900.json",
         "options": {}
       },
-      "id": "ec89948f-9ba4-4917-91b2-5c44b67d120e",
+      "id": "cb1790b5-fc7f-4092-b551-aa30d46d9ea0",
       "name": "ProPublica RWJF1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        23440
+        6736,
+        29424
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -253,13 +253,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/organizations/205765965.json",
         "options": {}
       },
-      "id": "ca769527-9c81-477d-84eb-74dfd9a198ae",
+      "id": "7bcaf34a-84c8-463c-b40e-545305bc6d48",
       "name": "ProPublica Bloomberg Philanthropies1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        23632
+        6736,
+        29616
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -270,13 +270,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/organizations/136529943.json",
         "options": {}
       },
-      "id": "b322a17c-2a5a-4948-a201-dbdcfdf2b0d6",
+      "id": "abf69f7e-b693-4b97-a0af-a9b5dd73913e",
       "name": "ProPublica Walton Family Foundation1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        23824
+        6736,
+        29808
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -293,13 +293,13 @@
           }
         }
       },
-      "id": "122ae2f9-ae21-4fce-acf0-953f7052afc2",
+      "id": "a92af7a3-3773-40fb-ad82-9cc79dc02233",
       "name": "Gates Foundation Grants Page1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        24592
+        6736,
+        30576
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -316,13 +316,13 @@
           }
         }
       },
-      "id": "979ca4e3-3f70-4484-9696-303a53356196",
+      "id": "f0da5bf2-c62e-4295-9402-c07db88286f3",
       "name": "Ford Foundation Grants Page1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        24784
+        6736,
+        30768
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -339,13 +339,13 @@
           }
         }
       },
-      "id": "39d294cb-6bff-45b2-946b-b4302a5dd6bd",
+      "id": "4ea7aac5-29b4-44e5-bf11-b69c84e98580",
       "name": "Yield Giving (MacKenzie Scott)1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        24976
+        6736,
+        30960
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -362,13 +362,13 @@
           }
         }
       },
-      "id": "a9b56428-4c9f-466e-b2cc-5e72a6ad6b31",
+      "id": "8b828e6d-d11f-44db-aa7d-e11ba448cd2b",
       "name": "PA DCED Programs1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        26208
+        6720,
+        32192
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -379,13 +379,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=foundation&page=0",
         "options": {}
       },
-      "id": "0faa1a41-d005-458e-b37f-be9039a5fcfc",
+      "id": "20ba58f8-f021-4c00-8021-7fafd3d5459e",
       "name": "ProPublica Foundation P1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4752,
-        20800
+        6768,
+        26784
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -396,13 +396,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=foundation&page=1",
         "options": {}
       },
-      "id": "f2785ca4-0ee0-4c92-a2ae-86c97028cba2",
+      "id": "6409ded2-7932-4592-bdc1-b2788fa8ce38",
       "name": "ProPublica Foundation P2",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4752,
-        20992
+        6768,
+        26976
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -410,15 +410,15 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract grants from Grants.gov search2 API response\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n  const response = item.json;\n  \n  let oppHits = [];\n  if (response.data && response.data.oppHits) {\n    oppHits = response.data.oppHits;\n  } else if (response.oppHits) {\n    oppHits = response.oppHits;\n  } else if (Array.isArray(response)) {\n    oppHits = response;\n  }\n  \n  for (const opp of oppHits) {\n    if (!opp || !opp.title) continue;\n    \n    const oppNum = opp.number || opp.opportunityNumber || 'GG-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);\n    \n    grants.push({\n      json: {\n        id: opp.id || opp.opportunityId,\n        oppNum: oppNum,\n        title: opp.title,\n        description: opp.synopsis || opp.description || '',\n        link: 'https://www.grants.gov/search-results-detail/' + (opp.id || opp.opportunityId),\n        openDate: opp.openDate || opp.postedDate || '',\n        closeDate: opp.closeDate || 'See listing',\n        agency: opp.agency || opp.agencyName || '',\n        agencyCode: opp.agencyCode || '',\n        category: opp.category || '',\n        source: 'Grants.gov',\n        awardFloor: parseInt(opp.awardFloor) || 0,\n        awardCeiling: parseInt(opp.awardCeiling) || 0,\n        status: opp.oppStatus || opp.status || ''\n      }\n    });\n  }\n}\n\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'grants.gov' } }];"
+        "jsCode": "  // Extract grants from Grants.gov search2 API response\n  const items = $input.all();\n  const grants = [];\n\n  for (const item of items) {\n    const response = item.json;\n\n    let oppHits = [];\n    if (response.data && response.data.oppHits) {\n      oppHits = response.data.oppHits;\n    } else if (response.oppHits) {\n      oppHits = response.oppHits;\n    } else if (Array.isArray(response)) {\n      oppHits = response;\n    }\n\n    for (const opp of oppHits) {\n      if (!opp || !opp.title) continue;\n\n      const oppNum = opp.number || opp.opportunityNumber || 'GG-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);\n      const oppId = opp.id || opp.opportunityId;\n\n      let description = '';\n      let awardCeiling = parseInt(opp.awardCeiling) || 0;\n      let awardFloor = parseInt(opp.awardFloor) || 0;\n      let eligibility = '';\n      let additionalEligibility = '';\n      let estimatedFunding = '';\n      let costSharing = '';\n      let categoryOfFunding = '';\n      let closeDate = opp.closeDate || 'See listing';\n      let postedDate = opp.openDate || opp.postedDate || '';\n      let cfdaNumbers = opp.cfdaList || [];\n      let numberOfAwards = '';\n      let fundingInstruments = '';\n      let contactInfo = '';\n      let archiveDate = '';\n      let responseDateDesc = '';\n      let fundingDescLink = '';\n\n      // Fetch full details from Grants.gov REST API\n      if (oppId) {\n        try {\n          const detail = await this.helpers.httpRequest({\n            method: 'POST',\n            url: 'https://apply07.grants.gov/grantsws/rest/opportunity/details',\n            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n            body: 'oppId=' + oppId,\n          });\n\n          if (detail && detail.synopsis) {\n            const syn = detail.synopsis;\n            description = (syn.synopsisDesc || '').replace(/<[^>]+>/g, '').trim();\n            const ceil = parseInt(syn.awardCeiling);\n            const floor = parseInt(syn.awardFloor);\n            if (!isNaN(ceil)) awardCeiling = ceil;\n            if (!isNaN(floor)) awardFloor = floor;\n            estimatedFunding = syn.estimatedFunding || '';\n            costSharing = syn.costSharing ? 'Yes' : 'No';\n            numberOfAwards = syn.numberOfAwards || '';\n            if (syn.responseDate) closeDate = syn.responseDate;\n            responseDateDesc = syn.responseDateDesc || '';\n            if (syn.postingDate) postedDate = syn.postingDate;\n            archiveDate = syn.archiveDate || '';\n            fundingDescLink = syn.fundingDescLinkUrl || '';\n            if (syn.agencyContactDesc) contactInfo = syn.agencyContactDesc;\n            if (syn.agencyContactEmail) contactInfo += ' | ' + syn.agencyContactEmail;\n            if (syn.applicantTypes && syn.applicantTypes.length > 0) {\n              eligibility = syn.applicantTypes.map(t => t.description).join('; ');\n            }\n            additionalEligibility = syn.applicantEligibilityDesc || '';\n            if (syn.fundingActivityCategories && syn.fundingActivityCategories.length > 0) {\n              categoryOfFunding = syn.fundingActivityCategories.map(c => c.description).join('; ');\n            }\n            if (syn.fundingInstruments && syn.fundingInstruments.length > 0) {\n              fundingInstruments = syn.fundingInstruments.map(f => f.description).join('; ');\n            }\n          }\n          if (detail.cfdas && detail.cfdas.length > 0) {\n            cfdaNumbers = detail.cfdas.map(c => c.cfdaNumber + ' -- ' + (c.programTitle || ''));\n          }\n        } catch(e) {\n          // API fetch failed, continue with basic data\n        }\n      }\n\n      grants.push({\n        json: {\n          id: oppId,\n          oppNum: oppNum,\n          title: opp.title,\n          description: description || (opp.synopsis || opp.description || ''),\n          link: 'https://www.grants.gov/search-results-detail/' + oppId,\n          openDate: postedDate,\n          closeDate: closeDate,\n          agency: opp.agency || opp.agencyName || '',\n          agencyCode: opp.agencyCode || '',\n          category: opp.category || '',\n          source: 'Grants.gov',\n          awardFloor: awardFloor,\n          awardCeiling: awardCeiling,\n          status: opp.oppStatus || opp.status || '',\n          metadata: {\n            eligibility: eligibility || null,\n            additionalEligibility: additionalEligibility || null,\n            estimatedFunding: estimatedFunding || null,\n            costSharing: costSharing || null,\n            numberOfAwards: numberOfAwards || null,\n            categoryOfFunding: categoryOfFunding || null,\n            fundingInstruments: fundingInstruments || null,\n            responseDateDesc: responseDateDesc || null,\n            archiveDate: archiveDate || null,\n            fundingDescLink: fundingDescLink || null,\n            contactInfo: contactInfo || null,\n            cfdaNumbers: cfdaNumbers.length > 0 ? cfdaNumbers : null,\n          }\n        }\n      });\n    }\n  }\n\n  return grants.length > 0 ? grants : [{ json: { empty: true, source: 'grants.gov' } }];\n"
       },
-      "id": "e56cad1a-3146-473c-8675-a0137a05d747",
+      "id": "d21e90a1-821c-4816-9f1d-020dfd3af58c",
       "name": "Extract Grants.gov Results1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5008,
-        18288
+        7024,
+        24272
       ],
       "notesInFlow": true,
       "notes": "Parse Grants.gov API response"
@@ -427,13 +427,13 @@
       "parameters": {
         "jsCode": "// Extract major foundation info from ProPublica single-org lookups\nconst items = $input.all();\nconst foundations = [];\n\nconst majorFoundations = {\n  '562618866': { name: 'Bill & Melinda Gates Foundation', focus: 'Global health, education, poverty' },\n  '131684331': { name: 'Ford Foundation', focus: 'Social justice, human rights, democracy' },\n  '131659629': { name: 'Rockefeller Foundation', focus: 'Health, food, economic opportunity' },\n  '381359264': { name: 'W.K. Kellogg Foundation', focus: 'Children, families, communities' },\n  '222540900': { name: 'Robert Wood Johnson Foundation', focus: 'Health equity, well-being' },\n  '205765965': { name: 'Bloomberg Philanthropies', focus: 'Environment, public health, education' },\n  '136529943': { name: 'Walton Family Foundation', focus: 'Education, environment, communities' }\n};\n\nfor (const item of items) {\n  const org = item.json.organization || item.json;\n  \n  if (!org || !org.ein) continue;\n  \n  const ein = org.ein.toString().replace(/-/g, '');\n  const majorInfo = majorFoundations[ein];\n  \n  if (!majorInfo) continue;\n  \n  const oppNum = 'MF-' + ein;\n  const totalAssets = org.totassetsend || org.total_assets || 0;\n  const totalGrants = org.grantspaidcd || 0;\n  \n  foundations.push({\n    json: {\n      id: ein,\n      oppNum: oppNum,\n      title: majorInfo.name + ' - Major Philanthropic Foundation',\n      description: 'Focus areas: ' + majorInfo.focus + '. Total assets: $' + totalAssets.toLocaleString() + '. Research their giving priorities and RFPs.',\n      link: 'https://projects.propublica.org/nonprofits/organizations/' + ein,\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: 'Ongoing - Check foundation website',\n      agency: majorInfo.name,\n      agencyCode: ein,\n      category: 'Major Foundation',\n      source: 'ProPublica Major Foundations',\n      awardFloor: 10000,\n      awardCeiling: 1000000,\n      status: 'active'\n    }\n  });\n}\n\nreturn foundations.length > 0 ? foundations : [{ json: { empty: true, source: 'major-foundations' } }];"
       },
-      "id": "1926942a-e94f-4d07-aa73-1d4e95ed4d6d",
+      "id": "441a69ab-616a-4315-af2b-c03f4522ea95",
       "name": "Extract Major Foundations1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5040,
-        23056
+        7056,
+        29040
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -443,13 +443,13 @@
       "parameters": {
         "jsCode": "// Extract info from Gates Foundation grants page\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n  const html = item.json.data || item.json.body || item.json;\n  \n  if (typeof html !== 'string') continue;\n  \n  // Create a reference to Gates Foundation\n  grants.push({\n    json: {\n      id: 'gates-' + Date.now(),\n      oppNum: 'GATES-001',\n      title: 'Bill & Melinda Gates Foundation - Active Grantmaker',\n      description: 'The Gates Foundation awards grants in: Global Health, Global Development, Global Growth & Opportunity, US Program (education, economic mobility). Visit their committed grants database and RFP portal for current opportunities.',\n      link: 'https://www.gatesfoundation.org/about/how-we-work/grant-opportunities',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: 'Ongoing - Check RFP portal',\n      agency: 'Bill & Melinda Gates Foundation',\n      agencyCode: '56-2618866',\n      category: 'Major Foundation',\n      source: 'Gates Foundation',\n      awardFloor: 50000,\n      awardCeiling: 5000000,\n      status: 'active'\n    }\n  });\n}\n\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'gates' } }];"
       },
-      "id": "632e8b2d-8338-41c7-93e3-78e530ae2fb7",
+      "id": "52e05f43-fc25-4105-a132-ecc4be862088",
       "name": "Extract Gates Info1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5040,
-        24592
+        7056,
+        30576
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -459,13 +459,13 @@
       "parameters": {
         "jsCode": "// Extract info from Ford Foundation grants page\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n  grants.push({\n    json: {\n      id: 'ford-' + Date.now(),\n      oppNum: 'FORD-001',\n      title: 'Ford Foundation - Social Justice Grantmaker',\n      description: 'Ford Foundation focuses on: Civic Engagement & Government, Creativity & Free Expression, Gender Racial & Ethnic Justice, Natural Resources & Climate Change, Technology & Society. They publish their grants database publicly.',\n      link: 'https://www.fordfoundation.org/work/our-grants/awarded-grants/grants-database/',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: 'Ongoing - By invitation/LOI',\n      agency: 'Ford Foundation',\n      agencyCode: '13-1684331',\n      category: 'Major Foundation',\n      source: 'Ford Foundation',\n      awardFloor: 25000,\n      awardCeiling: 2000000,\n      status: 'active'\n    }\n  });\n}\n\nreturn grants;"
       },
-      "id": "f8265fb5-34ea-4dcd-ae1e-97f0c5331288",
+      "id": "4c47cd55-36eb-4304-b7f6-a9df46817236",
       "name": "Extract Ford Info1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5040,
-        24784
+        7056,
+        30768
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -475,13 +475,13 @@
       "parameters": {
         "jsCode": "// Extract info from Yield Giving (MacKenzie Scott)\nconst items = $input.all();\nconst grants = [];\n\ngrants.push({\n  json: {\n    id: 'yield-' + Date.now(),\n    oppNum: 'YIELD-001',\n    title: 'Yield Giving (MacKenzie Scott) - Unrestricted Funding',\n    description: 'MacKenzie Scott has given $26B+ to nonprofits since 2019. Yield Giving provides unrestricted funding through two models: Quiet Research (invitation-only) and Open Call (periodic applications). Focus on organizations serving communities with greatest need.',\n    link: 'https://yieldgiving.com/',\n    openDate: new Date().toISOString().split('T')[0],\n    closeDate: 'Open Call announced periodically',\n    agency: 'Yield Giving / MacKenzie Scott',\n    agencyCode: 'YIELD',\n    category: 'Major Philanthropist',\n    source: 'Yield Giving',\n    awardFloor: 100000,\n    awardCeiling: 10000000,\n    status: 'active'\n  }\n});\n\nreturn grants;"
       },
-      "id": "71ca4415-57c6-41fa-99c1-a029a3564ee3",
+      "id": "5e83696b-29de-43c4-9120-82a17abd9c40",
       "name": "Extract Yield Giving Info1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5040,
-        24976
+        7056,
+        30960
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -491,32 +491,17 @@
       "parameters": {
         "jsCode": "// Parse Pennsylvania DCED programs page\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n  const html = item.json.data || item.json.body || item.json;\n  \n  if (typeof html !== 'string') continue;\n  \n  // Look for program links in HTML\n  const linkPatterns = html.match(/<a[^>]*href=\"([^\"]*program[^\"]*)\"[^>]*>([^<]+)<\\/a>/gi) || [];\n  \n  for (const linkHtml of linkPatterns.slice(0, 10)) {\n    const hrefMatch = linkHtml.match(/href=\"([^\"]+)\"/);\n    const textMatch = linkHtml.match(/>([^<]+)</);\n    \n    if (!textMatch || !textMatch[1]) continue;\n    \n    const title = textMatch[1].trim();\n    if (title.length < 5) continue;\n    \n    const oppNum = 'PA-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);\n    let link = hrefMatch ? hrefMatch[1] : '';\n    if (link && !link.startsWith('http')) {\n      link = 'https://dced.pa.gov' + (link.startsWith('/') ? '' : '/') + link;\n    }\n    \n    grants.push({\n      json: {\n        id: oppNum,\n        oppNum: oppNum,\n        title: 'Pennsylvania: ' + title,\n        description: 'State of Pennsylvania program. Visit PA DCED for eligibility and application details.',\n        link: link || 'https://dced.pa.gov/programs-funding/',\n        openDate: new Date().toISOString().split('T')[0],\n        closeDate: 'See state portal',\n        agency: 'PA Dept of Community & Economic Development',\n        agencyCode: 'PA-DCED',\n        category: 'State Grant',\n        source: 'Pennsylvania DCED',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'posted'\n      }\n    });\n  }\n}\n\n// Always include a reference to PA DCED\nif (grants.length === 0) {\n  grants.push({\n    json: {\n      id: 'pa-dced-ref',\n      oppNum: 'PA-DCED-001',\n      title: 'Pennsylvania DCED - State Funding Programs',\n      description: 'PA Department of Community & Economic Development offers various programs including Community Services Block Grant, capacity building, and economic development funding.',\n      link: 'https://dced.pa.gov/programs-funding/',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: 'Various deadlines',\n      agency: 'PA Dept of Community & Economic Development',\n      agencyCode: 'PA-DCED',\n      category: 'State Grant',\n      source: 'Pennsylvania DCED',\n      awardFloor: 5000,\n      awardCeiling: 500000,\n      status: 'posted'\n    }\n  });\n}\n\nreturn grants;"
       },
-      "id": "669bbde2-7fae-4038-8871-1f4caf3ee9ab",
+      "id": "04054954-a7f6-4bb7-b163-ae39f1b89f28",
       "name": "Extract PA DCED Programs1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        26208
+        7040,
+        32192
       ],
       "notesInFlow": true,
       "continueOnFail": true,
       "notes": "Pennsylvania state programs"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Add additional major philanthropic foundations\nconst foundations = [\n  {\n    name: 'Bezos Earth Fund',\n    ein: 'BEZOS',\n    focus: 'Climate change, nature conservation, environmental justice',\n    link: 'https://www.bezosearthfund.org/',\n    floor: 100000,\n    ceiling: 10000000\n  },\n  {\n    name: 'Chan Zuckerberg Initiative',\n    ein: 'CZI',\n    focus: 'Science, education, community',\n    link: 'https://chanzuckerberg.com/',\n    floor: 50000,\n    ceiling: 5000000\n  },\n  {\n    name: 'The Ballmer Group',\n    ein: 'BALLMER',\n    focus: 'Economic mobility for children and families',\n    link: 'https://www.ballmergroup.org/',\n    floor: 25000,\n    ceiling: 2000000\n  },\n  {\n    name: 'Arnold Ventures',\n    ein: 'ARNOLD',\n    focus: 'Criminal justice, education, health, public finance',\n    link: 'https://www.arnoldventures.org/',\n    floor: 50000,\n    ceiling: 3000000\n  },\n  {\n    name: 'The Kresge Foundation',\n    ein: '38-1359217',\n    focus: 'Expanding opportunity in American cities',\n    link: 'https://kresge.org/',\n    floor: 25000,\n    ceiling: 1000000\n  },\n  {\n    name: 'The Annie E. Casey Foundation',\n    ein: '52-0841143',\n    focus: 'Child welfare, juvenile justice, economic opportunity',\n    link: 'https://www.aecf.org/',\n    floor: 25000,\n    ceiling: 500000\n  },\n  {\n    name: 'The California Endowment',\n    ein: '95-4523232',\n    focus: 'Health equity, healthy communities',\n    link: 'https://www.calendow.org/',\n    floor: 25000,\n    ceiling: 1000000\n  },\n  {\n    name: 'The JPB Foundation',\n    ein: '27-6991959',\n    focus: 'Poverty, environment, medical research',\n    link: 'https://www.jpbfoundation.org/',\n    floor: 50000,\n    ceiling: 2000000\n  },\n  {\n    name: 'The Heinz Endowments',\n    ein: '25-1215856',\n    focus: 'Creativity, environment, learning - PITTSBURGH/PA FOCUSED',\n    link: 'https://www.heinz.org/',\n    floor: 10000,\n    ceiling: 500000\n  },\n  {\n    name: 'William Penn Foundation',\n    ein: '23-1503488',\n    focus: 'Creative communities, watershed, great learning - PHILADELPHIA FOCUSED',\n    link: 'https://williampennfoundation.org/',\n    floor: 10000,\n    ceiling: 1000000\n  },\n  {\n    name: 'The Philadelphia Foundation',\n    ein: '23-1365390',\n    focus: 'Arts, education, human services - GREATER PHILADELPHIA',\n    link: 'https://www.philafound.org/',\n    floor: 5000,\n    ceiling: 100000\n  },\n  {\n    name: 'The Pittsburgh Foundation',\n    ein: '25-0965466',\n    focus: 'Community development, education, human services - PITTSBURGH REGION',\n    link: 'https://pittsburghfoundation.org/',\n    floor: 5000,\n    ceiling: 100000\n  }\n];\n\nconst grants = foundations.map((f, i) => ({\n  json: {\n    id: f.ein + '-' + Date.now(),\n    oppNum: f.ein.replace(/-/g, ''),\n    title: f.name + ' - Philanthropic Foundation',\n    description: 'Focus areas: ' + f.focus + '. Research their current RFPs and funding priorities.',\n    link: f.link,\n    openDate: new Date().toISOString().split('T')[0],\n    closeDate: 'Ongoing - Check website',\n    agency: f.name,\n    agencyCode: f.ein,\n    category: 'Major Foundation',\n    source: 'Major Philanthropies',\n    awardFloor: f.floor,\n    awardCeiling: f.ceiling,\n    status: 'active'\n  }\n}));\n\nreturn grants;"
-      },
-      "id": "5055c74b-56ec-4340-99f0-d33c0f96bf8e",
-      "name": "Hardcoded Major Foundations",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        5024,
-        22256
-      ],
-      "notesInFlow": true,
-      "notes": "Bezos, CZI, PA-specific foundations, etc."
     },
     {
       "parameters": {
@@ -529,13 +514,13 @@
           }
         }
       },
-      "id": "9a1925bd-78c5-4a8e-9993-221e55fe99c5",
+      "id": "ca5f81dd-36c7-47ec-97a2-d408ae6be472",
       "name": "Philanthropy News Digest RFPs5",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        25360
+        6736,
+        31344
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -545,13 +530,13 @@
       "parameters": {
         "jsCode": "// Parse ProPublica 990 data to find grant-making foundations\nconst items = $input.all();\nconst foundations = [];\n\nfor (const item of items) {\n  let response = item.json;\n  \n  if (Array.isArray(response)) response = response[0];\n  if (!response || response.error || response.statusCode >= 400) continue;\n  \n  // Handle search results\n  const orgs = response.organizations || response.results || [];\n  \n  for (const org of orgs) {\n    const name = (org.name || '').toLowerCase();\n    const isFoundation = name.includes('foundation') || \n                         name.includes('trust') || \n                         name.includes('fund') ||\n                         name.includes('endowment') ||\n                         name.includes('philanthrop');\n    \n    if (!isFoundation) continue;\n    \n    const oppNum = 'PP-' + (org.ein || Date.now());\n    \n    foundations.push({\n      json: {\n        id: org.ein,\n        oppNum: oppNum,\n        title: org.name + ' - Potential Grant Source',\n        description: 'Tax-exempt organization in ' + (org.city || 'Pennsylvania') + ', ' + (org.state || 'PA') + '. Review their 990 for grant-making activity.',\n        link: 'https://projects.propublica.org/nonprofits/organizations/' + org.ein,\n        openDate: new Date().toISOString().split('T')[0],\n        closeDate: 'Ongoing - Contact directly',\n        agency: org.name,\n        agencyCode: '',\n        category: 'Foundation',\n        source: 'ProPublica 990',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'active'\n      }\n    });\n  }\n}\n\nreturn foundations.length > 0 ? foundations : [{ json: { empty: true, source: 'propublica' } }];"
       },
-      "id": "e96b6f89-bcb5-437b-9a0b-f84ed0f21db1",
+      "id": "012f29c7-f07c-410b-baf2-2da2657a74a0",
       "name": "Extract ProPublica Foundations5",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        22032
+        7104,
+        27008
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -561,13 +546,13 @@
       "parameters": {
         "jsCode": "// Parse Philanthropy News Digest RSS for RFPs\nconst items = $input.all();\nconst rfps = [];\n\nfor (const item of items) {\n  const rss = item.json.data || item.json.body || item.json;\n  \n  if (typeof rss !== 'string') continue;\n  \n  // Extract items from RSS\n  const itemMatches = rss.match(/<item>([\\s\\S]*?)<\\/item>/gi) || [];\n  \n  for (const itemXml of itemMatches) {\n    const titleMatch = itemXml.match(/<title>([^<]+)<\\/title>/);\n    const linkMatch = itemXml.match(/<link>([^<]+)<\\/link>/);\n    const descMatch = itemXml.match(/<description>([^<]+)<\\/description>/);\n    const pubDateMatch = itemXml.match(/<pubDate>([^<]+)<\\/pubDate>/);\n    \n    if (!titleMatch) continue;\n    \n    const title = titleMatch[1].replace(/<!\\[CDATA\\[|\\]\\]>/g, '').trim();\n    const link = linkMatch ? linkMatch[1].trim() : '';\n    const desc = descMatch ? descMatch[1].replace(/<!\\[CDATA\\[|\\]\\]>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim() : '';\n    const pubDate = pubDateMatch ? pubDateMatch[1].trim() : '';\n    \n    const oppNum = 'PND-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);\n    \n    rfps.push({\n      json: {\n        id: oppNum,\n        oppNum: oppNum,\n        title: title,\n        description: desc.substring(0, 500),\n        link: link,\n        openDate: pubDate || new Date().toISOString().split('T')[0],\n        closeDate: 'See RFP details',\n        agency: 'Foundation (via PND)',\n        agencyCode: '',\n        category: 'Foundation RFP',\n        source: 'Philanthropy News Digest',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'posted'\n      }\n    });\n  }\n}\n\nreturn rfps.length > 0 ? rfps : [{ json: { empty: true, source: 'pnd-rss' } }];"
       },
-      "id": "b0c68c90-f355-4373-8eda-95f88ffa7284",
+      "id": "a69fde72-0791-4e23-aa97-9135da809c46",
       "name": "Extract PND RFPs3",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5040,
-        25360
+        7056,
+        31344
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -577,13 +562,13 @@
       "parameters": {
         "jsCode": "const items = $input.all();\n\n  if (items.length === 1 && (items[0].json.noResults || items[0].json.noNewGrants)) {\n    return items;\n  }\n\n  function extractDate(grant) {\n    const candidates = [\n      grant.closeDate,\n      grant.deadline,\n      grant.dueDate,\n      grant.due_date,\n      grant.endDate,\n      grant.end_date,\n      grant.applicationDeadline,\n      grant.application_deadline,\n    ];\n\n    for (const val of candidates) {\n      if (!val || typeof val !== 'string') continue;\n      const parsed = new Date(val);\n      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {\n        return parsed;\n      }\n    }\n\n    if (grant.description) {\n      const match = grant.description.match(/(\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4})|(\\w+ \\d{1,2},? \\d{4})/);\n      if (match) {\n        const parsed = new Date(match[0]);\n        if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) {\n          return parsed;\n        }\n      }\n    }\n\n    return null;\n  }\n\n  const withDeadline = [];\n  const noDeadline = [];\n\n  for (const item of items) {\n    const date = extractDate(item.json);\n    if (date) {\n      item._sortDate = date;\n      withDeadline.push(item);\n    } else {\n      noDeadline.push(item);\n    }\n  }\n\n  withDeadline.sort((a, b) => a._sortDate - b._sortDate);\n\n  const combined = [...withDeadline, ...noDeadline];\n  return combined.map(item => ({ json: item.json }));"
       },
-      "id": "e2fe58d6-de26-489f-a4a1-0a9d99718333",
+      "id": "15e02481-dd1f-4b46-9e38-b64d7dca754a",
       "name": "Combine & Deduplicate All Sources5",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5280,
-        21840
+        7296,
+        27824
       ],
       "notesInFlow": true,
       "notes": "Merge all sources, remove duplicates"
@@ -612,26 +597,26 @@
         },
         "options": {}
       },
-      "id": "15c948d0-b24a-4d8a-ba04-c17740f1ae52",
+      "id": "22791ea7-9d57-4c62-bdd1-efa5c903085e",
       "name": "Has Results?3",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        5536,
-        21840
+        7552,
+        27824
       ]
     },
     {
       "parameters": {
         "options": {}
       },
-      "id": "492f126c-868c-4ba2-9cf4-eba69f3f2e14",
+      "id": "2f5ecf87-e658-45eb-9de3-b1d79549d80b",
       "name": "No Results Found3",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        5840,
-        22032
+        7856,
+        28016
       ]
     },
     {
@@ -639,28 +624,28 @@
         "url": "https://simpler.grants.gov/search?utm_source=Grants.gov",
         "options": {}
       },
-      "id": "792cf412-394a-46e4-a93d-4b7581e7b3ca",
+      "id": "a25d5573-c68f-4efa-a247-a51174f4e916",
       "name": "SAM.gov Scraper",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        26784
+        6720,
+        32768
       ],
       "notesInFlow": true,
       "notes": "Federal foster care grants"
     },
     {
       "parameters": {
-        "jsCode": "// Input: $input.all() contains items from the HTTP Request node\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n    const html = item.json.data; // raw HTML from SAM.gov opportunities page\n    if (!html) continue;\n\n    // Regex to extract each table row inside <tbody>\n    const rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/gi;\n    let match;\n\n    while ((match = rowRegex.exec(html)) !== null) {\n        const rowHtml = match[1];\n\n        // Extract each <td> content in this row\n        const tdRegex = /<td[^>]*>[\\s\\S]*?<div[^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?<\\/td>/gi;\n        let tdMatch;\n        const tds = [];\n        while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {\n            let value = tdMatch[1]\n                .replace(/<[^>]+>/g, '')  // remove inner HTML tags\n                .replace(/&nbsp;/g, ' ')\n                .trim();\n            tds.push(value);\n        }\n\n        // Check if row has at least the expected columns (Close date, Status, Title, Agency, Award min, Award max)\n        if (tds.length < 6) continue;\n\n        grants.push({\n            json: {\n                id: 'SAM-' + tds[2].replace(/\\s+/g, '-').substring(0, 50) + '-' + Date.now(),\n                title: tds[2] || 'No title',\n                description: '', // optional, could add opportunity number from hidden div if needed\n                link: 'https://sam.gov' + (tds[2].match(/href=\"([^\"]+)\"/) ? tds[2].match(/href=\"([^\"]+)\"/)[1] : ''),\n                openDate: '', // SAM.gov table doesn\u2019t have open date directly\n                closeDate: tds[0] || 'Check site',\n                status: tds[1] || 'Unknown',\n                agency: tds[3] || 'Unknown',\n                awardFloor: tds[4] ? parseFloat(tds[4].replace(/[^0-9.]/g, '')) : 0,\n                awardCeiling: tds[5] ? parseFloat(tds[5].replace(/[^0-9.]/g, '')) : 0,\n                category: 'Federal Grant',\n                source: 'SAM.gov Opportunities',\n            }\n        });\n    }\n}\n\n// Return placeholder if no grants found\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'SAM.gov' } }];\n"
+        "jsCode": "// Input: $input.all() contains items from the HTTP Request node\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n    const html = item.json.data; // raw HTML from SAM.gov opportunities page\n    if (!html) continue;\n\n    // Regex to extract each table row inside <tbody>\n    const rowRegex = /<tr[^>]*>([\\s\\S]*?)<\\/tr>/gi;\n    let match;\n\n    while ((match = rowRegex.exec(html)) !== null) {\n        const rowHtml = match[1];\n\n        // Extract each <td> content in this row\n        const tdRegex = /<td[^>]*>[\\s\\S]*?<div[^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?<\\/td>/gi;\n        let tdMatch;\n        const tds = [];\n        while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {\n            let value = tdMatch[1]\n                .replace(/<[^>]+>/g, '')  // remove inner HTML tags\n                .replace(/&nbsp;/g, ' ')\n                .trim();\n            tds.push(value);\n        }\n\n        // Check if row has at least the expected columns (Close date, Status, Title, Agency, Award min, Award max)\n        if (tds.length < 6) continue;\n\n        grants.push({\n            json: {\n                id: 'SAM-' + tds[2].replace(/\\s+/g, '-').substring(0, 50) + '-' + Date.now(),\n                title: tds[2] || 'No title',\n                description: '', // optional, could add opportunity number from hidden div if needed\n                link: 'https://sam.gov' + (tds[2].match(/href=\"([^\"]+)\"/) ? tds[2].match(/href=\"([^\"]+)\"/)[1] : ''),\n                openDate: '', // SAM.gov table doesn’t have open date directly\n                closeDate: tds[0] || 'Check site',\n                status: tds[1] || 'Unknown',\n                agency: tds[3] || 'Unknown',\n                awardFloor: tds[4] ? parseFloat(tds[4].replace(/[^0-9.]/g, '')) : 0,\n                awardCeiling: tds[5] ? parseFloat(tds[5].replace(/[^0-9.]/g, '')) : 0,\n                category: 'Federal Grant',\n                source: 'SAM.gov Opportunities',\n            }\n        });\n    }\n}\n\n// Return placeholder if no grants found\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'SAM.gov' } }];\n"
       },
-      "id": "cdbecbcd-b78f-425a-91d3-cb4a425ed129",
+      "id": "e3f946fd-7497-4107-a88a-08a98a31fed5",
       "name": "Extract SAM Scraper",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        26784
+        7040,
+        32768
       ],
       "notesInFlow": true,
       "notes": "Bezos, CZI, PA-specific foundations, etc."
@@ -669,13 +654,13 @@
       "parameters": {
         "jsCode": "// Get all input items\nconst items = $input.all();\n\n// Flatten all results arrays from each item\nconst results = items.flatMap(i => {\n    // i.json is the actual item object\n    const data = i.json.results || []; // ensure results exists\n    return data.map(item => ({\n        internal_id: item.internal_id,\n        award_id: item[\"Award ID\"],\n        recipient_name: item[\"Recipient Name\"],\n        award_amount: item[\"Award Amount\"],\n        base_obligation_date: item[\"Base Obligation Date\"],\n        description: item[\"Description\"],\n        generated_internal_id: item[\"generated_internal_id\"]\n    }));\n});\n\n// Return a single node output with all parsed results\nreturn results;\n"
       },
-      "id": "930dd702-d554-4ee0-ace4-7eec9fb1be7b",
+      "id": "74fd4035-0cba-484b-a306-80bb063e71aa",
       "name": "Extract USA Spending",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        19280
+        7040,
+        25264
       ],
       "notesInFlow": true,
       "notes": "Bezos, CZI, PA-specific foundations, etc."
@@ -684,28 +669,28 @@
       "parameters": {
         "jsCode": "// Get all input items\nconst items = $input.all();\n\n// Flatten all results arrays from each item\nconst results = items.flatMap(i => {\n    // i.json is the actual item object\n    const data = i.json.results || []; // ensure results exists\n    return data.map(item => ({\n        appl_id: item.appl_id,\n        subproject_id: item.subproject_id,\n        fiscal_year: item.fiscal_year,\n        project_num: item.project_num,\n        organization: item.organization?.org_name || null,\n        org_city: item.organization?.org_city || null,\n        org_state: item.organization?.org_state || null,\n        org_country: item.organization?.org_country || null,\n        award_type: item.award_type || null,\n        activity_code: item.activity_code || null,\n        award_amount: item.award_amount,\n        is_active: item.is_active,\n        principal_investigators: item.principal_investigators?.map(pi => ({\n            profile_id: pi.profile_id,\n            first_name: pi.first_name,\n            last_name: pi.last_name,\n            full_name: pi.full_name,\n            is_contact_pi: pi.is_contact_pi\n        })) || [],\n        agency_ic_admin: item.agency_ic_admin?.name || null,\n        project_start_date: item.project_start_date,\n        project_end_date: item.project_end_date,\n        project_title: item.project_title,\n        abstract_text: item.abstract_text,\n        project_detail_url: item.project_detail_url\n    }));\n});\n\n// Return a single node output with all parsed results\nreturn results;\n"
       },
-      "id": "a40b598d-1a8a-444b-82d1-17d48dea6e7f",
+      "id": "f18e9c30-2f9d-4444-9488-2f65a83101f0",
       "name": "Extract NIH Grants",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        19472
+        7040,
+        25456
       ],
       "notesInFlow": true,
       "notes": "Bezos, CZI, PA-specific foundations, etc."
     },
     {
       "parameters": {
-        "jsCode": "// n8n Code node \u2013 Extract ALL data from \"Upcoming Funding Opportunity\" section on RWJF page\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  // Get HTML from common n8n HTTP Response locations\n  let html = item.json?.body || item.json?.data || item.json?.html || item.json || \"\";\n  if (typeof html !== 'string' || html.length < 500) {\n    results.push({\n      json: {\n        error: \"No valid HTML received\",\n        receivedType: typeof html,\n        length: html?.length || 0\n      }\n    });\n    continue;\n  }\n\n  // Normalize whitespace and remove script/style tags to make regex more reliable\n  html = html.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n             .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n             .replace(/\\s+/g, ' ');\n\n  // Find the \"Upcoming Funding Opportunity\" heading and grab content until next major section\n  // We look for the h3/p with \"Upcoming\" then the following card with h4 + paragraphs\n  const sectionRegex = /<h3[^>]*>Active Funding Opportunities<\\/h3>[\\s\\S]*?<p[^>]*><span[^>]*>Upcoming Funding Opportunity<\\/span><\\/p>[\\s\\S]*?(<div class=\"card image[^>]*>[\\s\\S]*?<div class=\"cmp-customcard[^>]*>[\\s\\S]*?<\\/div>)/i;\n\n  const sectionMatch = sectionRegex.exec(html);\n  if (!sectionMatch) {\n    results.push({\n      json: {\n        empty: true,\n        message: \"No 'Upcoming Funding Opportunity' section found in HTML\",\n        hint: \"Content may be loaded dynamically via JavaScript \u2192 check Network tab for JSON calls\"\n      }\n    });\n    continue;\n  }\n\n  const cardHtml = sectionMatch[1];\n\n  // Extract title (h4 with heading8-style or similar)\n  const titleMatch = cardHtml.match(/<h4[^>]*class=\"[^\"]*heading8-style[^\"]*\"[^>]*>([\\s\\S]*?)<\\/h4>/i);\n  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : \"No title found\";\n\n  // Extract all <p> paragraphs in the card (description + release date)\n  const descParagraphs = [];\n  const pRegex = /<p[^>]*>([\\s\\S]*?)<\\/p>/gi;\n  let pMatch;\n  while ((pMatch = pRegex.exec(cardHtml)) !== null) {\n    let text = pMatch[1]\n      .replace(/<[^>]+>/g, '')          // strip inner tags\n      .replace(/&nbsp;/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    if (text && text.length > 10) {      // ignore very short/empty\n      descParagraphs.push(text);\n    }\n  }\n\n  // Look for bold release date specifically\n  const releaseMatch = cardHtml.match(/<b>Release date:\\s*([^<]+)<\\/b>/i);\n  const releaseDate = releaseMatch ? releaseMatch[1].trim() : \"Not found\";\n\n  // Build clean output\n  results.push({\n    json: {\n      section: \"Upcoming Funding Opportunity\",\n      title: title,\n      releaseDate: releaseDate,\n      description: descParagraphs.join(\"\\n\\n\"),  // full text, paragraphs separated\n      sourceUrl: \"https://www.rwjf.org/en/grants/active-funding-opportunities.html\",\n      scrapedAt: new Date().toISOString(),\n      note: \"This is the static upcoming card. Active/open opportunities load via JS \u2192 see Network tab for JSON endpoint if you need more.\"\n    }\n  });\n}\n\n// If nothing was found at all\nif (results.length === 0) {\n  results.push({\n    json: {\n      empty: true,\n      message: \"No upcoming opportunity data extracted\"\n    }\n  });\n}\n\nreturn results;"
+        "jsCode": "// n8n Code node – Extract ALL data from \"Upcoming Funding Opportunity\" section on RWJF page\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  // Get HTML from common n8n HTTP Response locations\n  let html = item.json?.body || item.json?.data || item.json?.html || item.json || \"\";\n  if (typeof html !== 'string' || html.length < 500) {\n    results.push({\n      json: {\n        error: \"No valid HTML received\",\n        receivedType: typeof html,\n        length: html?.length || 0\n      }\n    });\n    continue;\n  }\n\n  // Normalize whitespace and remove script/style tags to make regex more reliable\n  html = html.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n             .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n             .replace(/\\s+/g, ' ');\n\n  // Find the \"Upcoming Funding Opportunity\" heading and grab content until next major section\n  // We look for the h3/p with \"Upcoming\" then the following card with h4 + paragraphs\n  const sectionRegex = /<h3[^>]*>Active Funding Opportunities<\\/h3>[\\s\\S]*?<p[^>]*><span[^>]*>Upcoming Funding Opportunity<\\/span><\\/p>[\\s\\S]*?(<div class=\"card image[^>]*>[\\s\\S]*?<div class=\"cmp-customcard[^>]*>[\\s\\S]*?<\\/div>)/i;\n\n  const sectionMatch = sectionRegex.exec(html);\n  if (!sectionMatch) {\n    results.push({\n      json: {\n        empty: true,\n        message: \"No 'Upcoming Funding Opportunity' section found in HTML\",\n        hint: \"Content may be loaded dynamically via JavaScript → check Network tab for JSON calls\"\n      }\n    });\n    continue;\n  }\n\n  const cardHtml = sectionMatch[1];\n\n  // Extract title (h4 with heading8-style or similar)\n  const titleMatch = cardHtml.match(/<h4[^>]*class=\"[^\"]*heading8-style[^\"]*\"[^>]*>([\\s\\S]*?)<\\/h4>/i);\n  const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : \"No title found\";\n\n  // Extract all <p> paragraphs in the card (description + release date)\n  const descParagraphs = [];\n  const pRegex = /<p[^>]*>([\\s\\S]*?)<\\/p>/gi;\n  let pMatch;\n  while ((pMatch = pRegex.exec(cardHtml)) !== null) {\n    let text = pMatch[1]\n      .replace(/<[^>]+>/g, '')          // strip inner tags\n      .replace(/&nbsp;/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    if (text && text.length > 10) {      // ignore very short/empty\n      descParagraphs.push(text);\n    }\n  }\n\n  // Look for bold release date specifically\n  const releaseMatch = cardHtml.match(/<b>Release date:\\s*([^<]+)<\\/b>/i);\n  const releaseDate = releaseMatch ? releaseMatch[1].trim() : \"Not found\";\n\n  // Build clean output\n  results.push({\n    json: {\n      section: \"Upcoming Funding Opportunity\",\n      title: title,\n      releaseDate: releaseDate,\n      description: descParagraphs.join(\"\\n\\n\"),  // full text, paragraphs separated\n      sourceUrl: \"https://www.rwjf.org/en/grants/active-funding-opportunities.html\",\n      scrapedAt: new Date().toISOString(),\n      note: \"This is the static upcoming card. Active/open opportunities load via JS → see Network tab for JSON endpoint if you need more.\"\n    }\n  });\n}\n\n// If nothing was found at all\nif (results.length === 0) {\n  results.push({\n    json: {\n      empty: true,\n      message: \"No upcoming opportunity data extracted\"\n    }\n  });\n}\n\nreturn results;"
       },
-      "id": "42582e6e-683c-421f-a46e-a34c1a4d6512",
+      "id": "80a85719-db94-46db-892d-7c5791953e06",
       "name": "Extract RWJF Opportunities",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5040,
-        25168
+        7056,
+        31152
       ],
       "notesInFlow": true,
       "notes": "Bezos, CZI, PA-specific foundations, etc."
@@ -719,13 +704,13 @@
         "jsonBody": "{\n  \"filters\": {\n    \"award_type_codes\": [\"02\",\"03\",\"04\",\"05\"]\n  },\n  \"fields\": [\n    \"Award ID\",\n    \"Recipient Name\",\n    \"Award Amount\",\n    \"Base Obligation Date\",\n    \"Description\"\n  ],\n  \"limit\": 50\n}\n",
         "options": {}
       },
-      "id": "b6812079-8b35-4923-9e8c-749e3e13e9cf",
+      "id": "717ec60f-53f8-4da7-9975-b873c3a6fb6a",
       "name": "USA Spending",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        19280
+        6720,
+        25264
       ],
       "notesInFlow": true,
       "notes": "Federal foster care grants"
@@ -739,13 +724,13 @@
         "jsonBody": "{\n  \"criteria\": {\n    \"orgNames\": [\"HARVARD MEDICAL SCHOOL\"],\n    \"awardNoticeDate\": {\n      \"fromDate\": \"2020-01-01\",\n      \"toDate\": \"2021-12-31\"\n    }\n  },\n  \"includeFields\": [\n    \"ApplId\",\n    \"FiscalYear\",\n    \"Organization\",\n    \"ProjectNum\",\n    \"ContactPiName\",\n    \"ProjectStartDate\",\n    \"ProjectEndDate\",\n    \"AwardAmount\",\n    \"ProjectTitle\"\n  ],\n  \"offset\": 0,\n  \"limit\": 25,\n  \"sortField\": \"project_start_date\",\n  \"sortOrder\": \"desc\"\n}",
         "options": {}
       },
-      "id": "b0e0f6f7-0ccb-4371-8b17-107f6c32a18e",
+      "id": "c7a61771-f1fd-4d06-b711-a6e731a5fd5f",
       "name": "NIH Reporter",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        19472
+        6720,
+        25456
       ],
       "notesInFlow": true,
       "notes": "Federal foster care grants"
@@ -755,13 +740,13 @@
         "url": "https://www.rwjf.org/en/grants/active-funding-opportunities.html?us=1",
         "options": {}
       },
-      "id": "1f75593a-6b1b-47aa-b331-a31dea93d08e",
+      "id": "18ad77dc-4016-4c34-bf0d-fe011a9fa3d8",
       "name": "RWJF Active Funding",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        25168
+        6736,
+        31152
       ],
       "notesInFlow": true,
       "notes": "Federal foster care grants"
@@ -778,22 +763,22 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        4128,
-        24448
+        6144,
+        30432
       ],
-      "id": "c37096f1-ecd9-45c1-a142-170acf31ffa4"
+      "id": "220a03a0-662c-4896-badd-a2d0b5ed34f1"
     },
     {
       "parameters": {
         "jsCode": "// Parse Georgia Grants Management portal HTML\nconst items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n  const html = item.json.data || item.json.body || item.json;\n  \n  if (typeof html !== 'string') continue;\n  \n  // Look for grant opportunity patterns in HTML\n  const linkPatterns = html.match(/<a[^>]*href=\"([^\"]*grant[^\"]*)\"[^>]*>([^<]+)<\\/a>/gi) || [];\n  \n  // Extract from links\n  for (const linkHtml of linkPatterns) {\n    const hrefMatch = linkHtml.match(/href=\"([^\"]+)\"/);\n    const textMatch = linkHtml.match(/>([^<]+)</);\n    \n    if (!textMatch || !textMatch[1]) continue;\n    \n    const title = textMatch[1].trim();\n    if (title.length < 10) continue; // Skip short links\n    \n    const oppNum = 'GA-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);\n    let link = hrefMatch ? hrefMatch[1] : '';\n    if (link && !link.startsWith('http')) {\n      link = 'https://grantsmanagement.georgia.gov' + (link.startsWith('/') ? '' : '/') + link;\n    }\n    \n    grants.push({\n      json: {\n        id: oppNum,\n        oppNum: oppNum,\n        title: 'Georgia: ' + title,\n        description: 'State of Georgia grant opportunity. Visit the Georgia Grants Management portal for details.',\n        link: link || 'https://grantsmanagement.georgia.gov/grants',\n        openDate: new Date().toISOString().split('T')[0],\n        closeDate: 'See state portal',\n        agency: 'State of Georgia',\n        agencyCode: 'GA',\n        category: 'State Grant',\n        source: 'Georgia Grants Portal',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'posted'\n      }\n    });\n  }\n}\n\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'georgia-portal' } }];"
       },
-      "id": "f97b784c-963d-490a-965b-31f11e5efa88",
+      "id": "c80fd81c-88ad-4a80-b442-6cd547de88e2",
       "name": "Extract Georgia Portal Grants5",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        26400
+        7040,
+        32384
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -810,13 +795,13 @@
           }
         }
       },
-      "id": "03dfee0d-0373-4268-b1bf-311de68796fb",
+      "id": "fe41501a-c4cb-435c-9e8d-d88ece23c956",
       "name": "Georgia Grants Management4",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        26400
+        6720,
+        32384
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -827,26 +812,26 @@
         "url": "https://grantivia.com/grants.json",
         "options": {}
       },
-      "id": "fa5a1b3e-65ed-420e-9e04-2736b2367f62",
+      "id": "0f102839-bdca-4375-9cd1-b4b4b7b5d280",
       "name": "Fetch Grantivia Grants5",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        17248
+        6720,
+        23232
       ]
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const response = item.json;\n  const grantList = response.grants || [];\n  for (const g of grantList) {\n    if (!g || !g.title) continue;\n    grants.push({\n      json: {\n        oppNum: g.opportunity_number || g.id || 'GV-' + Date.now(),\n        title: g.title,\n        description: g.funding_instrument + ' - ' + (g.source_level || 'federal') + ' level',\n        link: g.source_url || 'https://grantivia.com',\n        openDate: g.open_date || '',\n        closeDate: g.deadline_type === 'rolling' ? 'Rolling' : (g.close_date || 'See listing'),\n        agency: g.agency || '',\n        source: 'Grantivia',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: g.status || ''\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'grantivia' } }];"
+        "jsCode": "  const items = $input.all();\n  const grants = [];\n\n  for (const item of items) {\n    const response = item.json;\n    const grantList = response.grants || [];\n\n    for (const g of grantList) {\n      if (!g || !g.title) continue;\n\n      let description = '';\n      let awardCeiling = 0;\n      let awardFloor = 0;\n      let eligibility = '';\n      let additionalEligibility = '';\n      let estimatedFunding = '';\n      let costSharing = '';\n      let categoryOfFunding = '';\n      let closeDate = g.deadline_type === 'rolling' ? 'Rolling' : (g.close_date || 'See listing');\n      let postedDate = g.open_date || '';\n      let cfdaNumbers = g.cfda_numbers || [];\n      let numberOfAwards = '';\n      let fundingInstruments = '';\n      let contactInfo = '';\n      let archiveDate = '';\n      let responseDateDesc = '';\n      let fundingDescLink = '';\n\n      // Fetch full details from Grants.gov REST API for grants.gov sourced grants\n      const sourceUrl = g.source_url || '';\n      if (sourceUrl.includes('grants.gov')) {\n        const idMatch = sourceUrl.match(/\\/(\\d+)$/);\n        if (idMatch) {\n          try {\n            const detail = await this.helpers.httpRequest({\n              method: 'POST',\n              url: 'https://apply07.grants.gov/grantsws/rest/opportunity/details',\n              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n              body: 'oppId=' + idMatch[1],\n            });\n\n            if (detail && detail.synopsis) {\n              const syn = detail.synopsis;\n              description = (syn.synopsisDesc || '').replace(/<[^>]+>/g, '').trim();\n              const ceil = parseInt(syn.awardCeiling);\n              const floor = parseInt(syn.awardFloor);\n              if (!isNaN(ceil)) awardCeiling = ceil;\n              if (!isNaN(floor)) awardFloor = floor;\n              estimatedFunding = syn.estimatedFunding || '';\n              costSharing = syn.costSharing ? 'Yes' : 'No';\n              numberOfAwards = syn.numberOfAwards || '';\n              if (syn.responseDate) closeDate = syn.responseDate;\n              responseDateDesc = syn.responseDateDesc || '';\n              if (syn.postingDate) postedDate = syn.postingDate;\n              archiveDate = syn.archiveDate || '';\n              fundingDescLink = syn.fundingDescLinkUrl || '';\n              if (syn.agencyContactDesc) contactInfo = syn.agencyContactDesc;\n              if (syn.agencyContactEmail) contactInfo += ' | ' + syn.agencyContactEmail;\n              if (syn.applicantTypes && syn.applicantTypes.length > 0) {\n                eligibility = syn.applicantTypes.map(t => t.description).join('; ');\n              }\n              additionalEligibility = syn.applicantEligibilityDesc || '';\n              if (syn.fundingActivityCategories && syn.fundingActivityCategories.length > 0) {\n                categoryOfFunding = syn.fundingActivityCategories.map(c => c.description).join('; ');\n              }\n              if (syn.fundingInstruments && syn.fundingInstruments.length > 0) {\n                fundingInstruments = syn.fundingInstruments.map(f => f.description).join('; ');\n              }\n            }\n            if (detail.cfdas && detail.cfdas.length > 0) {\n              cfdaNumbers = detail.cfdas.map(c => c.cfdaNumber + ' -- ' + (c.programTitle || ''));\n            }\n          } catch(e) {\n            // API fetch failed, continue with basic data\n          }\n        }\n      }\n\n      grants.push({\n        json: {\n          oppNum: g.opportunity_number || g.id || 'GV-' + Date.now(),\n          title: g.title,\n          description: description || (g.funding_instrument + ' - ' + (g.source_level || 'federal') + ' level'),\n          link: g.source_url || 'https://grantivia.com',\n          openDate: postedDate || g.open_date || '',\n          closeDate: closeDate,\n          agency: g.agency || '',\n          source: 'Grantivia',\n          awardFloor: awardFloor,\n          awardCeiling: awardCeiling,\n          status: g.status || '',\n          metadata: {\n            eligibility: eligibility || null,\n            additionalEligibility: additionalEligibility || null,\n            estimatedFunding: estimatedFunding || null,\n            costSharing: costSharing || null,\n            numberOfAwards: numberOfAwards || null,\n            categoryOfFunding: categoryOfFunding || null,\n            fundingInstruments: fundingInstruments || null,\n            responseDateDesc: responseDateDesc || null,\n            archiveDate: archiveDate || null,\n            fundingDescLink: fundingDescLink || null,\n            contactInfo: contactInfo || null,\n            cfdaNumbers: cfdaNumbers.length > 0 ? cfdaNumbers : null,\n            fundingInstrument: g.funding_instrument || null,\n            sourceLevel: g.source_level || null,\n            agencyCode: g.agency_code || null,\n            slug: g.slug || null,\n            lastVerifiedAt: g.last_verified_at || null,\n          }\n        }\n      });\n    }\n  }\n\n  return grants.length > 0 ? grants : [{ json: { empty: true, source: 'grantivia' } }];"
       },
-      "id": "c80c15d4-eebb-4a7a-8f4f-c33fdb97c835",
+      "id": "ec5e3b29-a895-403c-ac36-23fae6990a84",
       "name": "Extract Grantivia Grants5",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        17248
+        7040,
+        23232
       ]
     },
     {
@@ -859,10 +844,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        2256,
-        20352
+        4272,
+        26336
       ],
-      "id": "bac91260-3668-463b-b884-eb27a64fbc50",
+      "id": "1fe6676e-ca1c-46ce-a84e-938859a82541",
       "name": "Fetch Grants Webhook",
       "webhookId": "fetch-grants"
     },
@@ -877,10 +862,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        2704,
-        20176
+        4720,
+        26160
       ],
-      "id": "2d1f7878-f066-460e-ba5a-1ff74a728794",
+      "id": "1b891463-e469-401f-88f5-b99e361bc4bf",
       "name": "Webhook OK Response"
     },
     {
@@ -890,10 +875,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4272,
-        20272
+        6288,
+        26256
       ],
-      "id": "cd4c801e-eec7-4b6f-b98c-be40e79ce145",
+      "id": "3df2402c-d13e-4521-b984-ff79895829a8",
       "name": "Status: Searching",
       "continueOnFail": true
     },
@@ -902,13 +887,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=foundation&page=2",
         "options": {}
       },
-      "id": "8c06f973-4545-4606-af5a-db6b7ad84f35",
+      "id": "ac18e91e-8a96-4444-9052-6f40322cd2ef",
       "name": "ProPublica Foundation P3",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4752,
-        21184
+        6768,
+        27168
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -919,13 +904,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=trust&page=0",
         "options": {}
       },
-      "id": "ae23a490-7d80-49d9-8d0e-577d4e79dbb5",
+      "id": "f9fe1ee5-74b9-43a2-83d2-0537d827c8a1",
       "name": "ProPublica Trust",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4752,
-        21376
+        6768,
+        27360
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -936,13 +921,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=endowment&page=0",
         "options": {}
       },
-      "id": "7ff38cb1-1992-4aa6-ac03-e9947804b581",
+      "id": "80afd1d0-edd6-4743-ad23-cfd43b795903",
       "name": "ProPublica Endowment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4752,
-        21568
+        6768,
+        27552
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -953,13 +938,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=philanthrop&page=0",
         "options": {}
       },
-      "id": "ad855664-5384-401c-a27f-687a86096ad4",
+      "id": "01701099-d062-4fce-a224-b5d77099b061",
       "name": "ProPublica Philanthropy",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4752,
-        21792
+        6768,
+        27776
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -970,13 +955,13 @@
         "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=grant+fund&page=0",
         "options": {}
       },
-      "id": "58fd3fa5-a4ad-4d04-a0df-f0df7cedf32d",
+      "id": "e75e8147-44b8-4f0d-a77c-9eee3bd46e7f",
       "name": "ProPublica Grant Fund",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4720,
-        22560
+        6736,
+        28544
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -988,11 +973,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4592,
-        17136
+        6608,
+        23120
       ],
       "typeVersion": 1,
-      "id": "4690f466-36a1-4248-9ae6-0d8477099d4c",
+      "id": "3a56b172-a3b2-41ff-a0fa-9dcfffcbaae8",
       "name": "Sticky Note sticky-aggregator"
     },
     {
@@ -1001,11 +986,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4576,
-        17888
+        6592,
+        23872
       ],
       "typeVersion": 1,
-      "id": "3876088c-dbf1-4b83-9d28-638ade029a32",
+      "id": "177edcde-6462-46c8-88c7-f01c6a7a46b3",
       "name": "Sticky Note sticky-grantsgov"
     },
     {
@@ -1014,11 +999,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4592,
-        19184
+        6608,
+        25168
       ],
       "typeVersion": 1,
-      "id": "45d14d3d-204a-4449-80aa-9964df1b603a",
+      "id": "0193380d-580d-4c83-b46b-4e748ac9047d",
       "name": "Sticky Note sticky-otherfed"
     },
     {
@@ -1027,11 +1012,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4640,
-        20512
+        6656,
+        26496
       ],
       "typeVersion": 1,
-      "id": "9f47cdbf-d6ca-4ca8-986f-526b9c0c4658",
+      "id": "1f8d09d6-a4dc-4bdd-b806-1396d8118acb",
       "name": "Sticky Note sticky-pp-search"
     },
     {
@@ -1040,11 +1025,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4592,
-        22400
+        6608,
+        28384
       ],
       "typeVersion": 1,
-      "id": "d0dd0e9c-da4c-490e-9e76-8723b4c763fd",
+      "id": "0c7fd353-5255-4826-8588-c1983b1bc3b2",
       "name": "Sticky Note sticky-pp-orgs"
     },
     {
@@ -1053,11 +1038,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4608,
-        24480
+        6624,
+        30464
       ],
       "typeVersion": 1,
-      "id": "597e1344-b034-42f9-9c36-e43a4deb5e33",
+      "id": "29bd3b34-64c1-4dc9-99ae-a0497073054c",
       "name": "Sticky Note sticky-foundation-web"
     },
     {
@@ -1066,11 +1051,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4592,
-        26112
+        6608,
+        32096
       ],
       "typeVersion": 1,
-      "id": "d7fa3cd1-0af8-433b-bc4f-e075ebbded53",
+      "id": "268577e5-c891-40bf-80ab-8c2168d3dcc9",
       "name": "Sticky Note sticky-state"
     },
     {
@@ -1079,25 +1064,25 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        4688,
-        28304
+        6704,
+        34288
       ],
       "typeVersion": 1,
-      "id": "4cbadbf6-09d7-40f5-bf0f-a51d8dfc7a84",
+      "id": "10e994c5-4ea7-4c7d-a0bf-e9bcbe7c4297",
       "name": "Sticky Note sticky-intl"
     },
     {
       "parameters": {
-        "url": "https://www.sbir.gov/api/solicitations.json?keyword=&rows=100&start=0",
+        "url": "https://api.www.sbir.gov/public/api/solicitations?keyword=&rows=500&start=0",
         "options": {}
       },
-      "id": "57c56bd8-bf6a-4b2d-ad60-5ac0792a8502",
+      "id": "79b55261-5d47-43b9-aa43-68785aecbb37",
       "name": "SBIR STTR Solicitations1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        19664
+        6720,
+        25648
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -1107,13 +1092,13 @@
       "parameters": {
         "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const solicitations = data.results || data || [];\n  if (!Array.isArray(solicitations)) continue;\n  for (const s of solicitations) {\n    grants.push({\n      json: {\n        oppNum: 'SBIR-' + (s.solicitation_id || s.id || Date.now()),\n        title: s.solicitation_title || s.title || 'Untitled',\n        description: (s.abstract || s.description || '').substring(0, 1000),\n        link: s.solicitation_url || s.url || 'https://www.sbir.gov',\n        openDate: s.open_date || s.release_date || '',\n        closeDate: s.close_date || s.deadline || '',\n        agency: s.agency || s.branch || 'SBIR/STTR',\n        agencyCode: s.agency_code || '',\n        category: 'Federal - SBIR/STTR',\n        source: 'SBIR.gov',\n        awardFloor: s.award_floor || 0,\n        awardCeiling: s.award_ceiling || 0,\n        status: s.status || 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'sbir' } }];"
       },
-      "id": "8bb01467-4a87-488e-832c-ed63d2eb0faf",
+      "id": "b565b96c-f25c-4fd3-ad7e-34b8c845427d",
       "name": "Extract SBIR Grants1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        19664
+        7040,
+        25648
       ],
       "continueOnFail": true
     },
@@ -1122,13 +1107,13 @@
         "url": "https://api.sam.gov/opportunities/v2/search?limit=100&postedFrom=01/01/2026&api_key=REPLACE_WITH_SAM_API_KEY",
         "options": {}
       },
-      "id": "79faa730-bcf9-49fd-b721-f1d9c2fd82af",
+      "id": "dd17d248-4962-4b40-84e4-f27768ea7350",
       "name": "SAM Gov Opportunities1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        19856
+        6720,
+        25840
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -1138,13 +1123,13 @@
       "parameters": {
         "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const opportunities = data.opportunitiesData || data.opportunities || [];\n  if (!Array.isArray(opportunities)) continue;\n  for (const opp of opportunities) {\n    grants.push({\n      json: {\n        oppNum: 'SAM-' + (opp.noticeId || opp.solicitationNumber || Date.now()),\n        title: opp.title || 'Untitled',\n        description: (opp.description || '').substring(0, 1000),\n        link: opp.uiLink || 'https://sam.gov/opp/' + (opp.noticeId || '') + '/view',\n        openDate: opp.postedDate || '',\n        closeDate: opp.responseDeadLine || opp.archiveDate || '',\n        agency: opp.fullParentPathName || opp.departmentName || 'Federal',\n        agencyCode: opp.solicitationNumber || '',\n        category: 'Federal',\n        source: 'SAM.gov',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: opp.active === 'Yes' ? 'posted' : 'closed'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'sam' } }];"
       },
-      "id": "75096a31-61c0-4cda-96d9-c3c91936e948",
+      "id": "94c6ee83-790a-485d-b9e8-baa3f09fdf7d",
       "name": "Extract SAM Grants1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        19856
+        7040,
+        25840
       ],
       "continueOnFail": true
     },
@@ -1153,13 +1138,13 @@
         "url": "https://api.nsf.gov/services/v1/awards.json?keyword=community+health&dateStart=01/01/2026&printFields=id,title,abstractText,startDate,expDate,awardeeName,fundsObligatedAmt,fundProgramName&offset=0&rpp=100",
         "options": {}
       },
-      "id": "5e073cbb-11e1-4d33-9738-774e034da4c9",
+      "id": "4b56cad9-b625-47d1-b327-47e5d822b105",
       "name": "NSF Award Search1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        20048
+        6720,
+        26032
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -1169,13 +1154,13 @@
       "parameters": {
         "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const awards = data.response?.award || [];\n  for (const a of awards) {\n    grants.push({\n      json: {\n        oppNum: 'NSF-' + (a.id || Date.now()),\n        title: a.title || 'Untitled',\n        description: (a.abstractText || '').substring(0, 1000),\n        link: 'https://www.nsf.gov/awardsearch/showAward?AWD_ID=' + (a.id || ''),\n        openDate: a.startDate || '',\n        closeDate: a.expDate || '',\n        agency: 'National Science Foundation',\n        agencyCode: a.fundProgramName || '',\n        category: 'Federal - NSF',\n        source: 'NSF Awards',\n        awardFloor: 0,\n        awardCeiling: parseInt(a.fundsObligatedAmt) || 0,\n        status: 'active'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'nsf' } }];"
       },
-      "id": "8f032d3a-b399-4509-a603-0667b27868a6",
+      "id": "3dc177fb-edb1-4c71-b8ef-f2315e28252c",
       "name": "Extract NSF Grants1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        20048
+        7040,
+        26032
       ],
       "continueOnFail": true
     },
@@ -1184,13 +1169,13 @@
         "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=*&query=(status%3D%27OPEN%27)&pageSize=100&pageNumber=1",
         "options": {}
       },
-      "id": "a044d93d-2e21-41cd-a3c5-400253ed0bcc",
+      "id": "7a1f2d7e-36a1-477d-acc2-8d233dcaf391",
       "name": "EU Funding Portal1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4800,
-        28416
+        6816,
+        34400
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -1200,13 +1185,13 @@
       "parameters": {
         "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const results = data.results || [];\n  for (const r of results) {\n    const meta = r.metadata || {};\n    const id = meta.identifier?.fieldData || r.reference || Date.now();\n    grants.push({\n      json: {\n        oppNum: 'EU-' + id,\n        title: meta.title?.fieldData || 'Untitled',\n        description: (meta.description?.fieldData || '').substring(0, 1000),\n        link: 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/' + id,\n        openDate: meta.startDate?.fieldData || '',\n        closeDate: meta.deadlineDate?.fieldData || '',\n        agency: meta.programmePeriod?.fieldData || 'European Commission',\n        agencyCode: meta.callIdentifier?.fieldData || '',\n        category: 'International - EU',\n        source: 'EU Funding Portal',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'eu' } }];"
       },
-      "id": "ef475d10-f409-49b8-a442-939899c5bc97",
+      "id": "95b1af33-9c30-4180-9a42-3ef4916912fb",
       "name": "Extract EU Grants1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5120,
-        28416
+        7136,
+        34400
       ],
       "continueOnFail": true
     },
@@ -1224,13 +1209,13 @@
         },
         "options": {}
       },
-      "id": "4b7f6b65-e813-43ee-8833-ac89e2543ffd",
+      "id": "10efbbaa-527a-4591-a3d5-59cb25f3724e",
       "name": "UKRI Gateway1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4800,
-        28608
+        6816,
+        34592
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -1238,15 +1223,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const funds = data.fund || [];\n  for (const f of funds) {\n    grants.push({\n      json: {\n        oppNum: 'UKRI-' + (f.id || Date.now()),\n        title: f.valuePounds ? 'UKRI Fund - \u00a3' + Number(f.valuePounds.amount).toLocaleString() : 'UKRI Fund',\n        description: (f.abstractText || f.category || '').substring(0, 1000),\n        link: 'https://gtr.ukri.org/projects?ref=' + (f.id || ''),\n        openDate: f.start || '',\n        closeDate: f.end || '',\n        agency: (f.funder && f.funder.name) || 'UKRI',\n        agencyCode: '',\n        category: 'International - UK',\n        source: 'UKRI Gateway',\n        awardFloor: 0,\n        awardCeiling: (f.valuePounds && f.valuePounds.amount) || 0,\n        status: 'active'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'ukri' } }];"
+        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const funds = data.fund || [];\n  for (const f of funds) {\n    grants.push({\n      json: {\n        oppNum: 'UKRI-' + (f.id || Date.now()),\n        title: f.valuePounds ? 'UKRI Fund - £' + Number(f.valuePounds.amount).toLocaleString() : 'UKRI Fund',\n        description: (f.abstractText || f.category || '').substring(0, 1000),\n        link: 'https://gtr.ukri.org/projects?ref=' + (f.id || ''),\n        openDate: f.start || '',\n        closeDate: f.end || '',\n        agency: (f.funder && f.funder.name) || 'UKRI',\n        agencyCode: '',\n        category: 'International - UK',\n        source: 'UKRI Gateway',\n        awardFloor: 0,\n        awardCeiling: (f.valuePounds && f.valuePounds.amount) || 0,\n        status: 'active'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'ukri' } }];"
       },
-      "id": "037b075d-d30a-4198-9aed-1c5977972764",
+      "id": "545876a0-760a-48b8-8c4f-85d565f9ebf6",
       "name": "Extract UKRI Grants1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5120,
-        28608
+        7136,
+        34592
       ],
       "continueOnFail": true
     },
@@ -1255,13 +1240,13 @@
         "url": "https://www.grants.ca.gov/api/v1/grants?status=open&page=1&per_page=100",
         "options": {}
       },
-      "id": "641f5f9f-58c3-4207-9483-9bd066762ea2",
+      "id": "458cb50d-0e14-4784-bbd3-e6047ac2a7f1",
       "name": "California Grants Portal1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4704,
-        26592
+        6720,
+        32576
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -1271,13 +1256,13 @@
       "parameters": {
         "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const results = data.data || data.grants || (Array.isArray(data) ? data : []);\n  if (!Array.isArray(results)) continue;\n  for (const g of results) {\n    grants.push({\n      json: {\n        oppNum: 'CA-' + (g.id || g.grantID || Date.now()),\n        title: g.title || g.grantTitle || 'Untitled',\n        description: (g.description || g.grantDescription || '').substring(0, 1000),\n        link: g.url || g.link || 'https://www.grants.ca.gov',\n        openDate: g.openDate || g.postedDate || '',\n        closeDate: g.closeDate || g.deadline || '',\n        agency: g.grantorName || g.agency || 'California State',\n        agencyCode: '',\n        category: 'State - California',\n        source: 'CA Grants Portal',\n        awardFloor: g.estimatedAmountMin || 0,\n        awardCeiling: g.estimatedAmountMax || 0,\n        status: 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'ca-grants' } }];"
       },
-      "id": "80f09047-dfe9-4d18-86a4-2eb77684e546",
+      "id": "b23d5b93-d7ef-4b7c-ab59-23971dec7783",
       "name": "Extract CA Grants1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5024,
-        26592
+        7040,
+        32576
       ],
       "continueOnFail": true
     },
@@ -1292,13 +1277,13 @@
           }
         }
       },
-      "id": "d2aaea58-db1e-43b3-914c-bf503f047568",
+      "id": "bd711f08-42ad-4315-b1b9-d07d545cb668",
       "name": "Australia GrantConnect RSS1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4800,
-        28800
+        6816,
+        34784
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -1308,13 +1293,13 @@
       "parameters": {
         "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const rss = item.json.data || item.json.body || (typeof item.json === 'string' ? item.json : '');\n  if (typeof rss !== 'string') continue;\n  const itemMatches = rss.match(/<item>([\\s\\S]*?)<\\/item>/gi) || [];\n  for (const itemXml of itemMatches) {\n    const titleMatch = itemXml.match(/<title>([^<]+)<\\/title>/);\n    const linkMatch = itemXml.match(/<link>([^<]+)<\\/link>/);\n    const descMatch = itemXml.match(/<description>([\\s\\S]*?)<\\/description>/);\n    const pubDateMatch = itemXml.match(/<pubDate>([^<]+)<\\/pubDate>/);\n    if (!titleMatch) continue;\n    const title = titleMatch[1].replace(/(<![CDATA[|]]>)/g, '').trim();\n    grants.push({\n      json: {\n        oppNum: 'AU-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),\n        title: title,\n        description: (descMatch ? descMatch[1].replace(/(<![CDATA[|]]>)/g, '').replace(/&amp;/g, '&').trim() : '').substring(0, 1000),\n        link: linkMatch ? linkMatch[1].trim() : '',\n        openDate: pubDateMatch ? pubDateMatch[1].trim() : '',\n        closeDate: 'See grant details',\n        agency: 'Australian Government',\n        agencyCode: '',\n        category: 'International - Australia',\n        source: 'GrantConnect AU',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'au-grants' } }];"
       },
-      "id": "fe95d58c-672d-4a15-983d-05308daac941",
+      "id": "d8a1c33e-67b3-4ef3-80d9-a28583d2cbba",
       "name": "Extract AU Grants1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5120,
-        28800
+        7136,
+        34784
       ],
       "continueOnFail": true
     },
@@ -1323,13 +1308,13 @@
         "url": "https://open.canada.ca/data/api/3/action/package_search?q=grant+contribution&rows=100&sort=metadata_modified+desc",
         "options": {}
       },
-      "id": "f19c5be1-9ffd-429b-8ab3-55845bf48bb5",
+      "id": "57defb9c-263d-4acd-b878-ede34651e632",
       "name": "Canada Open Data Grants1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4800,
-        28992
+        6816,
+        34976
       ],
       "notesInFlow": true,
       "continueOnFail": true,
@@ -1339,133 +1324,15 @@
       "parameters": {
         "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const results = (data.result && data.result.results) || [];\n  for (const r of results) {\n    grants.push({\n      json: {\n        oppNum: 'CAN-' + (r.id || Date.now()),\n        title: r.title || 'Untitled',\n        description: (r.notes || '').substring(0, 1000),\n        link: 'https://open.canada.ca/data/en/dataset/' + (r.name || r.id),\n        openDate: r.metadata_created || '',\n        closeDate: '',\n        agency: (r.organization && r.organization.title) || 'Government of Canada',\n        agencyCode: '',\n        category: 'International - Canada',\n        source: 'Canada Open Data',\n        awardFloor: 0,\n        awardCeiling: 0,\n        status: 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'canada' } }];"
       },
-      "id": "a8fab30d-33ab-420f-be59-6037b919a77b",
+      "id": "9edec958-adda-429e-84f9-a3fb9c87e08a",
       "name": "Extract Canada Grants1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5120,
-        28992
+        7136,
+        34976
       ],
       "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": " const items = $input.all();\n\n  let orgId;\n  try {\n    orgId = $('Fetch Grants Webhook').first().json.body.org_id;\n  } catch(e) {}\n\n  if (!orgId || items.length === 0) return items;\n\n  if (items.length === 1 && (items[0].json.noResults || items[0].json.noNewGrants)) {\n    return items;\n  }\n\n  const sourceCounts = {};\n  for (const item of items) {\n    const source = item.json.source || 'Unknown';\n    sourceCounts[source] = (sourceCounts[source] || 0) + 1;\n  }\n\n  const supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\n  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n  const headers = {\n    'apikey': supabaseKey,\n    'Authorization': 'Bearer ' + supabaseKey,\n    'Content-Type': 'application/json',\n    'Prefer': 'return=minimal'\n  };\n\n  const today = new Date().toISOString().split('T')[0];\n  const rows = Object.entries(sourceCounts).map(([source, raw_count]) => ({\n    org_id: orgId,\n    source,\n    raw_count,\n    fetch_date: today\n  }));\n\n  try {\n    await this.helpers.httpRequest({\n      method: 'DELETE',\n      url: supabaseUrl + '/grant_source_stats?org_id=eq.' + orgId + '&fetch_date=eq.' + today,\n      headers\n    });\n\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: supabaseUrl + '/grant_source_stats',\n      headers,\n      body: rows\n    });\n  } catch(e) {}\n\n  return items;\n"
-      },
-      "name": "Log Raw Source Counts1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        8272,
-        17760
-      ],
-      "id": "13bb9fab-2c7a-45b1-804b-24f174be28cd"
-    },
-    {
-      "parameters": {
-        "jsCode": "  const items = $input.all();\n\n  if (items.length === 1 && (items[0].json.noResults || items[0].json.noNewGrants)) {\n    return items;\n  }\n\n  function extractDate(grant) {\n    const candidates = [\n      grant.closeDate, grant.deadline, grant.dueDate, grant.due_date,\n      grant.endDate, grant.end_date, grant.applicationDeadline, grant.application_deadline,\n    ];\n    for (const val of candidates) {\n      if (!val || typeof val !== 'string') continue;\n      const parsed = new Date(val);\n      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) return parsed;\n    }\n    if (grant.description) {\n      const match = grant.description.match(/(\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4})|(\\w+ \\d{1,2},? \\d{4})/);\n      if (match) {\n        const parsed = new Date(match[0]);\n        if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2000) return parsed;\n      }\n    }\n    return null;\n  }\n\n  const withDeadline = [];\n  const noDeadline = [];\n\n  for (const item of items) {\n    const date = extractDate(item.json);\n    if (date) {\n      item._sortDate = date;\n      withDeadline.push(item);\n    } else {\n      noDeadline.push(item);\n    }\n  }\n\n  withDeadline.sort((a, b) => a._sortDate - b._sortDate);\n\n  const combined = [...withDeadline, ...noDeadline];\n  return combined.map(item => ({ json: item.json }));\n"
-      },
-      "id": "c7c12d43-d4bc-4923-be13-b66400f10a15",
-      "name": "Combine & Deduplicate All Sources",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        8064,
-        17760
-      ],
-      "notesInFlow": true,
-      "notes": "Merge all sources, remove duplicates"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Status callback helper: only sends status if callback_url exists (new org registration)\n// This node is placed at different stages of the pipeline\nconst items = $input.all();\n\n// Try to get webhook data\nlet callbackUrl, orgId, webhookSecret;\ntry {\n  const webhookData = $('Fetch Grants Webhook1').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  webhookSecret = webhookData?.is_new_org;\n} catch(e) {\n  // Not triggered via webhook (scheduled run) - skip status updates\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      org_id: orgId,\n      status: 'searching',\n      stage_message: 'Searching Grants.gov and federal databases...'\n    }\n  });\n} catch(e) {\n  // Don't fail the workflow if status update fails\n}\n\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7088,
-        17792
-      ],
-      "id": "a5a8ac50-099b-4d8e-a6b9-33bf3d3b082d",
-      "name": "Status: Searching1",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\"success\": true}",
-        "options": {
-          "responseCode": 200
-        }
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        6832,
-        17600
-      ],
-      "id": "485aab9d-719f-4743-8c7a-99ae4b3e325e",
-      "name": "Webhook OK Response1"
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "fetch-grants",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        6384,
-        17776
-      ],
-      "id": "f4cd255c-a75b-4dcc-b9b9-073f7fd55b5c",
-      "name": "Fetch Grants Webhook1",
-      "webhookId": "fetch-grants"
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.all();\nconst grants = [];\n\nfor (const item of items) {\n  const response = item.json;\n  const grantList = response.grants || [];\n\n  for (const g of grantList) {\n    if (!g || !g.title) continue;\n\n    let description = '';\n    let awardCeiling = 0;\n    let awardFloor = 0;\n    let eligibility = '';\n    let additionalEligibility = '';\n    let estimatedFunding = '';\n    let costSharing = '';\n    let categoryOfFunding = '';\n    let closeDate = g.deadline_type === 'rolling' ? 'Rolling' : (g.close_date || 'See listing');\n    let postedDate = g.open_date || '';\n    let cfdaNumbers = g.cfda_numbers || [];\n    let numberOfAwards = '';\n    let fundingInstruments = '';\n    let contactInfo = '';\n    let archiveDate = '';\n    let responseDateDesc = '';\n    let fundingDescLink = '';\n\n    // Fetch full details from Grants.gov REST API for grants.gov sourced grants\n    const sourceUrl = g.source_url || '';\n    if (sourceUrl.includes('grants.gov')) {\n      const idMatch = sourceUrl.match(/\\/(\\d+)$/);\n      if (idMatch) {\n        try {\n          const detail = await this.helpers.httpRequest({\n            method: 'POST',\n            url: 'https://apply07.grants.gov/grantsws/rest/opportunity/details',\n            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n            body: 'oppId=' + idMatch[1],\n          });\n\n          if (detail && detail.synopsis) {\n            const syn = detail.synopsis;\n            description = (syn.synopsisDesc || '').replace(/<[^>]+>/g, '').trim();\n            const ceil = parseInt(syn.awardCeiling);\n            const floor = parseInt(syn.awardFloor);\n            if (!isNaN(ceil)) awardCeiling = ceil;\n            if (!isNaN(floor)) awardFloor = floor;\n            estimatedFunding = syn.estimatedFunding || '';\n            costSharing = syn.costSharing ? 'Yes' : 'No';\n            numberOfAwards = syn.numberOfAwards || '';\n            if (syn.responseDate) closeDate = syn.responseDate;\n            responseDateDesc = syn.responseDateDesc || '';\n            if (syn.postingDate) postedDate = syn.postingDate;\n            archiveDate = syn.archiveDate || '';\n            fundingDescLink = syn.fundingDescLinkUrl || '';\n            if (syn.agencyContactDesc) contactInfo = syn.agencyContactDesc;\n            if (syn.agencyContactEmail) contactInfo += ' | ' + syn.agencyContactEmail;\n            if (syn.applicantTypes && syn.applicantTypes.length > 0) {\n              eligibility = syn.applicantTypes.map(t => t.description).join('; ');\n            }\n            additionalEligibility = syn.applicantEligibilityDesc || '';\n            if (syn.fundingActivityCategories && syn.fundingActivityCategories.length > 0) {\n              categoryOfFunding = syn.fundingActivityCategories.map(c => c.description).join('; ');\n            }\n            if (syn.fundingInstruments && syn.fundingInstruments.length > 0) {\n              fundingInstruments = syn.fundingInstruments.map(f => f.description).join('; ');\n            }\n          }\n          if (detail.cfdas && detail.cfdas.length > 0) {\n            cfdaNumbers = detail.cfdas.map(c => c.cfdaNumber + ' -- ' + (c.programTitle || ''));\n          }\n        } catch(e) {\n          // API fetch failed, continue with basic data\n        }\n      }\n    }\n\n    grants.push({\n      json: {\n        oppNum: g.opportunity_number || g.id || 'GV-' + Date.now(),\n        title: g.title,\n        description: description || (g.funding_instrument + ' - ' + (g.source_level || 'federal') + ' level'),\n        link: g.source_url || 'https://grantivia.com',\n        openDate: postedDate || g.open_date || '',\n        closeDate: closeDate,\n        agency: g.agency || '',\n        source: 'Grantivia',\n        awardFloor: awardFloor,\n        awardCeiling: awardCeiling,\n        status: g.status || '',\n        metadata: {\n          eligibility: eligibility || null,\n          additionalEligibility: additionalEligibility || null,\n          estimatedFunding: estimatedFunding || null,\n          costSharing: costSharing || null,\n          numberOfAwards: numberOfAwards || null,\n          categoryOfFunding: categoryOfFunding || null,\n          fundingInstruments: fundingInstruments || null,\n          responseDateDesc: responseDateDesc || null,\n          archiveDate: archiveDate || null,\n          fundingDescLink: fundingDescLink || null,\n          contactInfo: contactInfo || null,\n          cfdaNumbers: cfdaNumbers.length > 0 ? cfdaNumbers : null,\n          fundingInstrument: g.funding_instrument || null,\n          sourceLevel: g.source_level || null,\n          agencyCode: g.agency_code || null,\n          slug: g.slug || null,\n          lastVerifiedAt: g.last_verified_at || null,\n        }\n      }\n    });\n  }\n}\n\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'grantivia' } }];"
-      },
-      "id": "9c0e39c4-95b6-4d97-b598-5718e0d06043",
-      "name": "Extract Grantivia Grants",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        7648,
-        17744
-      ],
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "url": "https://grantivia.com/grants.json",
-        "options": {}
-      },
-      "id": "380313c4-ca20-43bb-8077-70b3b70f6f41",
-      "name": "Fetch Grantivia Grants",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        7376,
-        17744
-      ]
-    },
-    {
-      "parameters": {
-        "batchSize": 50,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        7840,
-        17744
-      ],
-      "id": "7cf7dc0d-de9e-4c75-8465-5cdcb4205821",
-      "name": "Loop Over Items"
     },
     {
       "parameters": {
@@ -1479,25 +1346,73 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        7168,
-        20992
+        9184,
+        26976
       ],
-      "id": "3d00fb16-19a3-4ce4-9a8b-957fb7d8a45e"
+      "id": "19737576-7b0e-491d-9de5-d0963fa84574"
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================\n// Filter, Insert & Screen Grants (Internal Loop)\n// ============================================================\n// Replaces Loop Over Items3, Check Already Tracked, Has New Grants,\n// Log Raw Source Counts, and 11 downstream nodes.\n// n8n's Split In Batches node loses items when the data shape\n// changes between iterations (AI response vs grant objects).\n// This node loops internally in JS for reliable processing.\n// ============================================================\n\nconst BATCH_SIZE = 10;\nconst DEDUP_BATCH = 500;\nconst items = $input.all();\n\n// Get webhook data\nlet orgId, callbackUrl;\ntry {\n  const webhookData = $('Fetch Grants Webhook').first().json.body;\n  orgId = webhookData?.org_id;\n  callbackUrl = webhookData?.callback_url;\n} catch(e) {}\n\nif (!orgId) {\n  return [{ json: { error: true, message: 'No org_id provided' } }];\n}\n\nconst openAiKey = 'YOUR_OPENAI_API_KEY_HERE';\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst supaHeaders = {\n  'apikey': supabaseKey,\n  'Authorization': 'Bearer ' + supabaseKey,\n  'Content-Type': 'application/json',\n};\nconst supaReadHeaders = {\n  'apikey': supabaseKey,\n  'Authorization': 'Bearer ' + supabaseKey,\n};\nconst webhookHeaders = {\n  'Content-Type': 'application/json',\n  'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n};\n\n// Helper: send status callback\nasync function sendStatus(status, stage_message) {\n  if (!callbackUrl || !orgId) return;\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: callbackUrl,\n      headers: webhookHeaders,\n      body: { org_id: orgId, status, stage_message }\n    });\n  } catch(e) {}\n}\n\n// --- STEP 1: Batched Dedup Check ---\nawait sendStatus.call(this, 'checking', 'Checking for duplicates in your pipeline...');\n\nconst allItems = items.map(i => i.json);\nconst oppNums = allItems\n  .map(g => (g.oppNum || '').trim())\n  .filter(id => id.length > 0);\n\nconst existingOppNums = new Set();\n\nfor (let i = 0; i < oppNums.length; i += DEDUP_BATCH) {\n  const chunk = oppNums.slice(i, i + DEDUP_BATCH);\n  const filter = chunk.map(id => '\"' + id.replace(/\"/g, '') + '\"').join(',');\n\n  await sendStatus.call(this, 'checking', 'Checking duplicates \u2014 ' + Math.min(i + DEDUP_BATCH, oppNums.length) + ' of ' + oppNums.length + ' grants...');\n\n  try {\n    const response = await this.helpers.httpRequest({\n      method: 'GET',\n      url: supabaseUrl + '/grants?source_id=in.(' + filter + ')&org_id=eq.' + orgId + '&select=source_id',\n      headers: supaReadHeaders,\n    });\n    if (Array.isArray(response)) {\n      for (const r of response) {\n        existingOppNums.add((r.source_id || '').trim());\n      }\n    }\n  } catch(e) {}\n}\n\n// Filter to new grants only\nconst newGrants = [];\nfor (const grant of allItems) {\n  const oppNum = (grant.oppNum || '').trim();\n  if (!oppNum || existingOppNums.has(oppNum)) continue;\n  newGrants.push(grant);\n}\n\n// --- STEP 2: If no new grants, mark complete and exit ---\nif (newGrants.length === 0) {\n  await sendStatus.call(this, 'complete', 'Grant search complete!');\n  return [{ json: { success: true, message: 'All grants already tracked', totalInserted: 0 } }];\n}\n\n// --- STEP 3: Log source counts ---\nconst sourceCounts = {};\nfor (const grant of newGrants) {\n  const source = grant.source || 'Unknown';\n  sourceCounts[source] = (sourceCounts[source] || 0) + 1;\n}\n\nconst today = new Date().toISOString().split('T')[0];\ntry {\n  await this.helpers.httpRequest({\n    method: 'DELETE',\n    url: supabaseUrl + '/grant_source_stats?org_id=eq.' + orgId + '&fetch_date=eq.' + today,\n    headers: supaHeaders,\n  });\n\n  const rows = Object.entries(sourceCounts).map(([source, raw_count]) => ({\n    org_id: orgId, source, raw_count, fetch_date: today\n  }));\n\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl + '/grant_source_stats',\n    headers: supaHeaders,\n    body: JSON.stringify(rows),\n  });\n} catch(e) {}\n\n// --- STEP 4: Fetch org data (once) ---\nconst orgs = await this.helpers.httpRequest({\n  method: 'GET',\n  url: supabaseUrl + '/organizations?id=eq.' + encodeURIComponent(orgId) + '&select=id,geographic_focus,address',\n  headers: supaReadHeaders,\n});\n\nif (!Array.isArray(orgs) || orgs.length === 0) {\n  return [{ json: { error: true, message: 'Organization not found: ' + orgId } }];\n}\nconst org = orgs[0];\n\n// Fetch org narratives (once)\nconst narratives = await this.helpers.httpRequest({\n  method: 'GET',\n  url: supabaseUrl + '/documents?org_id=eq.' + encodeURIComponent(orgId) + '&select=title,extracted_text,category&order=updated_at.desc&limit=10',\n  headers: supaReadHeaders,\n});\n\nlet nicheSummary = '';\nif (Array.isArray(narratives) && narratives.length > 0) {\n  nicheSummary = narratives.map(n => {\n    return (n.title || n.category || '') + ': ' + (n.extracted_text || '');\n  }).join('\\n\\n');\n}\n\n// Build grants list for AI processing\nconst allGrantsForAI = newGrants.map(grant => ({\n  title: grant.title || '',\n  agency: grant.agency || null,\n  agencyCode: grant.agencyCode || '',\n  description: grant.description || '',\n  awardFloor: grant.awardFloor || 0,\n  awardCeiling: grant.awardCeiling || 0,\n  openDate: grant.openDate || '',\n  closeDate: grant.closeDate || '',\n  status: grant.status || '',\n  source: grant.source || 'Grant Scanner',\n  source_id: grant.oppNum || grant.source_id,\n  source_url: grant.link || grant.source_url,\n}));\n\n// --- STEP 5: Process in AI batches ---\nconst totalBatches = Math.ceil(allGrantsForAI.length / BATCH_SIZE);\nlet totalInserted = 0;\nlet totalScreened = 0;\n\nconst systemPrompt = `You are a grant eligibility and classification assistant. Given a grant, an organization with its location, and the organization's narratives (which describe its mission, programs, and focus areas), first classify the grant type, then determine if the organization is eligible by location, then evaluate niche alignment.\n\nSTEP 1 - CLASSIFY THE GRANT TYPE:\n- Federal: Funded by federal agencies (HHS, SAMHSA, ACF, DOL, ED, HUD, USDA, etc.) or listed on Grants.gov. grant_state = null.\n - State grants: The organization is ONLY eligible if it operates in, is headquartered in, or serves communities in the grant's state.\n    1. Identify the grant's state by reading the full grant details - look at the funding agency, program description, and any geographic restrictions.\n    2. Check the organization's geographic_focus and address fields.\n    3. The org is eligible if ANY of the following match the grant's state:\n       - The org's address/headquarters is in that state\n       - The org's geographic_focus includes that state or regions/counties within it\n       - The org explicitly states it serves that state's communities\n    4. Matching rules: Accept abbreviations (PA = Pennsylvania, NJ = New Jersey), typos, partial matches, and county/city-level references within the state.\n    5. The org is NOT eligible if its geographic_focus and address clearly indicate a different state with no overlap.\n    6. If the org has no location data at all, mark eligible and note that location could not be verified.\n- Philanthropic: From private foundations, trusts, corporate giving programs, or nonprofits (e.g. Gates Foundation, Ford Foundation). grant_state = null.\n\nSTEP 2 - DETERMINE LOCATION ELIGIBILITY:\n- Federal grants: The organization IS eligible.\n- Philanthropic grants: The organization IS eligible.\n- State grants: The organization is ONLY eligible if it is located in or serves that state. Check geographic_focus and address. Be flexible with matching - abbreviations (NJ = New Jersey), typos, and partial matches count. If the org has no location data, give benefit of the doubt and mark eligible.\n\nSTEP 3 - EVALUATE NICHE ALIGNMENT:\nUse the organization's narratives to understand what the org actually does \u2014 its mission, programs, populations served, and sector/industry focus. Then compare against the grant's purpose and description.\n\n- If the grant's focus area clearly matches the org's niche (e.g., both are about health, youth services, disability, education, etc.), mark niche_aligned = true.\n- If the grant is clearly for a completely different sector that the org does NOT work in (e.g., org does health/disability services but grant is for agriculture, military, mining, forestry, or commercial fishing), mark niche_aligned = false.\n- Be GENEROUS with alignment \u2014 if there is any reasonable overlap or the org could plausibly apply, mark niche_aligned = true. Only reject obvious mismatches.\n- If no narratives are available, default niche_aligned = true (benefit of the doubt).\n\nThe grant must pass BOTH location eligibility AND niche alignment to be marked eligible.\n\nReturn ONLY valid JSON \u2014 an array with one object per grant in the same order, each with:\n{\n  \"grant_type\": \"federal\" or \"state\" or \"philanthropic\",\n  \"grant_state\": \"Full state name if state grant, otherwise null\",\n  \"location_eligible\": true or false,\n  \"niche_aligned\": true or false,\n  \"eligible\": true or false,\n  \"reason\": \"brief explanation\"\n}`;\n\nfor (let b = 0; b < totalBatches; b++) {\n  const start = b * BATCH_SIZE;\n  const batch = allGrantsForAI.slice(start, start + BATCH_SIZE);\n\n  // Status: Matching\n  await sendStatus.call(this, 'filtering', 'Matching grants to your organization... (' + (start + batch.length) + ' of ' + allGrantsForAI.length + ')');\n\n  // Build AI prompt\n  const userPrompt = `\n  Organization:\n  - ID: ${org.id}\n  - Location: ${org.geographic_focus ? (Array.isArray(org.geographic_focus) ? org.geographic_focus.join(', ') : org.geographic_focus) : 'Not set'}\n  - Address: ${org.address || 'Not set'}\n\n  Organization Narratives (niche/focus context):\n  ${nicheSummary || 'No narratives available'}\n\n  Evaluate EACH grant below against the organization above. For each grant, classify its type, determine location eligibility, and evaluate niche alignment per your instructions.\n\n  Grants:\n  ${JSON.stringify(batch, null, 2)}`;\n\n  // Call OpenAI\n  let parsedResults = [];\n  try {\n    const aiResponse = await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.openai.com/v1/chat/completions',\n      headers: {\n        'Authorization': 'Bearer ' + openAiKey,\n        'Content-Type': 'application/json',\n      },\n      body: JSON.stringify({\n        model: 'gpt-4.1-mini',\n        messages: [\n          { role: 'system', content: systemPrompt },\n          { role: 'user', content: userPrompt }\n        ],\n        temperature: 0,\n      }),\n    });\n\n    const aiText = aiResponse.choices?.[0]?.message?.content || '[]';\n    const cleaned = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    const parsed = JSON.parse(cleaned);\n    parsedResults = Array.isArray(parsed) ? parsed : [parsed];\n  } catch(e) {\n    parsedResults = batch.map(() => ({\n      grant_type: 'federal', grant_state: null,\n      location_eligible: true, niche_aligned: true,\n      eligible: true, reason: 'AI parse failed, defaulting to eligible'\n    }));\n  }\n\n  // Build insert payloads for eligible grants\n  const toInsert = [];\n  batch.forEach((grant, index) => {\n    const parsed = parsedResults[index] || parsedResults[0] || {\n      grant_type: 'federal', grant_state: null,\n      location_eligible: true, niche_aligned: true,\n      eligible: true, reason: 'No AI result for this grant'\n    };\n\n    if (parsed.eligible === false) return;\n\n    const description = grant.description || '';\n    const descriptionHtml = '<div><h3>Grant Opportunity</h3>' +\n      '<p><strong>Source:</strong> ' + (grant.source || '') + '</p>' +\n      '<p><strong>Agency:</strong> ' + (grant.agency || '') + '</p>' +\n      '<p><strong>Type:</strong> ' + (parsed.grant_type || 'unknown') + '</p>' +\n      (parsed.grant_state ? '<p><strong>State:</strong> ' + parsed.grant_state + '</p>' : '') +\n      '<p><strong>Award Range:</strong> $' + (grant.awardFloor || 0) + ' - $' + (grant.awardCeiling || 0) + '</p>' +\n      '<p><strong>Open Date:</strong> ' + (grant.openDate || '') + '</p>' +\n      '<p><strong>Deadline:</strong> ' + (grant.closeDate || '') + '</p>' +\n      '<hr><h4>Description:</h4>' +\n      '<p>' + description + '</p>' +\n      '<p><em>Location Filter: ' + (parsed.reason || 'N/A') + '</em></p>' +\n      '<hr>' +\n      '<p><a href=\"' + (grant.source_url || grant.link || '') + '\">View Original Listing</a></p>' +\n      '</div>';\n\n    let deadlineValue = null;\n    if (grant.closeDate && grant.closeDate !== 'See listing' && grant.closeDate !== 'Not specified' && grant.closeDate !== 'Rolling') {\n      const d = new Date(grant.closeDate);\n      if (!isNaN(d.getTime())) {\n        const yyyy = d.getUTCFullYear();\n        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');\n        const dd = String(d.getUTCDate()).padStart(2, '0');\n        deadlineValue = yyyy + '-' + mm + '-' + dd + 'T00:00:00.000Z';\n      } else {\n        deadlineValue = grant.closeDate;\n      }\n    }\n\n    toInsert.push({\n      org_id: org.id,\n      title: grant.title || '',\n      funder_name: grant.agency || null,\n      description: description,\n      amount: grant.awardCeiling > 0 ? grant.awardCeiling : null,\n      deadline: deadlineValue,\n      stage: 'discovery',\n      source: grant.source || 'Grant Scanner',\n      source_id: grant.source_id || grant.oppNum,\n      source_url: grant.source_url || grant.link,\n      metadata: {\n        grants_gov_id: grant.id,\n        agency_code: grant.agencyCode,\n        open_date: grant.openDate,\n        award_floor: grant.awardFloor,\n        award_ceiling: grant.awardCeiling,\n        grant_type: parsed.grant_type || 'unknown',\n        grant_state: parsed.grant_state || null,\n        location_filter_reason: parsed.reason || '',\n        location_eligible: parsed.location_eligible !== false,\n        niche_aligned: parsed.niche_aligned !== false,\n        priority: 'medium',\n        description_html: descriptionHtml\n      }\n    });\n  });\n\n  // Insert eligible grants to Supabase\n  if (toInsert.length > 0) {\n    await sendStatus.call(this, 'inserting', 'Adding matched grants to your pipeline... (' + (start + batch.length) + ' of ' + allGrantsForAI.length + ')');\n\n    for (const grant of toInsert) {\n      try {\n        await this.helpers.httpRequest({\n          method: 'POST',\n          url: supabaseUrl + '/grants?on_conflict=org_id,source_id',\n          headers: {\n            ...supaHeaders,\n            'Prefer': 'return=representation,resolution=ignore-duplicates',\n          },\n          body: JSON.stringify(grant),\n        });\n        totalInserted++;\n      } catch(e) {}\n    }\n  }\n\n  // Call eligibility screener for each inserted grant\n  for (const grant of toInsert) {\n    try {\n      await this.helpers.httpRequest({\n        method: 'POST',\n        url: 'https://n8n.thebrownmine.com/webhook/screen-grant',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify({\n          url: grant.source_url || '',\n          grantid: '',\n          orgId: grant.org_id || '',\n          grantData: {\n            title: grant.title || '',\n            agency: grant.funder_name || '',\n            awardRange: grant.amount ? String(grant.amount) : 'Not specified',\n            deadline: grant.deadline || '',\n            description: grant.description || '',\n            source: grant.source || '',\n            org_id: grant.org_id || ''\n          }\n        }),\n        timeout: 60000,\n      });\n      totalScreened++;\n    } catch(e) {}\n  }\n}\n\n// --- STEP 6: Status Complete ---\nawait sendStatus.call(this, 'complete', 'Grant search complete!');\n\nreturn [{ json: { success: true, totalInserted, totalScreened, totalGrants: allGrantsForAI.length, batches: totalBatches } }];"
+        "jsCode": "// ============================================================\n// Filter, Insert & Screen Grants (Internal Loop)\n// ============================================================\n// Replaces Loop Over Items3, Check Already Tracked, Has New Grants,\n// Log Raw Source Counts, and 11 downstream nodes.\n// n8n's Split In Batches node loses items when the data shape\n// changes between iterations (AI response vs grant objects).\n// This node loops internally in JS for reliable processing.\n// ============================================================\n\nconst BATCH_SIZE = 10;\nconst DEDUP_BATCH = 500;\nconst items = $input.all();\n\n// Get webhook data\nlet orgId, callbackUrl;\ntry {\n  const webhookData = $('Fetch Grants Webhook').first().json.body;\n  orgId = webhookData?.org_id;\n  callbackUrl = webhookData?.callback_url;\n} catch(e) {}\n\nif (!orgId) {\n  return [{ json: { error: true, message: 'No org_id provided' } }];\n}\n\nconst openAiKey = 'YOUR_OPENAI_API_KEY_HERE';\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst supaHeaders = {\n  'apikey': supabaseKey,\n  'Authorization': 'Bearer ' + supabaseKey,\n  'Content-Type': 'application/json',\n};\nconst supaReadHeaders = {\n  'apikey': supabaseKey,\n  'Authorization': 'Bearer ' + supabaseKey,\n};\nconst webhookHeaders = {\n  'Content-Type': 'application/json',\n  'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n};\n\n// Helper: send status callback\nasync function sendStatus(status, stage_message) {\n  if (!callbackUrl || !orgId) return;\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: callbackUrl,\n      headers: webhookHeaders,\n      body: { org_id: orgId, status, stage_message }\n    });\n  } catch(e) {}\n}\n\n// --- STEP 1: Batched Dedup Check ---\nawait sendStatus.call(this, 'checking', 'Checking for duplicates in your pipeline...');\n\nconst allItems = items.map(i => i.json);\nconst oppNums = allItems\n  .map(g => (g.oppNum || '').trim())\n  .filter(id => id.length > 0);\n\nconst existingOppNums = new Set();\n\nfor (let i = 0; i < oppNums.length; i += DEDUP_BATCH) {\n  const chunk = oppNums.slice(i, i + DEDUP_BATCH);\n  const filter = chunk.map(id => '\"' + id.replace(/\"/g, '') + '\"').join(',');\n\n  await sendStatus.call(this, 'checking', 'Checking duplicates — ' + Math.min(i + DEDUP_BATCH, oppNums.length) + ' of ' + oppNums.length + ' grants...');\n\n  try {\n    const response = await this.helpers.httpRequest({\n      method: 'GET',\n      url: supabaseUrl + '/grants?source_id=in.(' + filter + ')&org_id=eq.' + orgId + '&select=source_id',\n      headers: supaReadHeaders,\n    });\n    if (Array.isArray(response)) {\n      for (const r of response) {\n        existingOppNums.add((r.source_id || '').trim());\n      }\n    }\n  } catch(e) {}\n}\n\n// Filter to new grants only\nconst newGrants = [];\nfor (const grant of allItems) {\n  const oppNum = (grant.oppNum || '').trim();\n  if (!oppNum || existingOppNums.has(oppNum)) continue;\n  newGrants.push(grant);\n}\n\n// --- STEP 2: If no new grants, mark complete and exit ---\nif (newGrants.length === 0) {\n  await sendStatus.call(this, 'complete', 'Grant search complete!');\n  return [{ json: { success: true, message: 'All grants already tracked', totalInserted: 0 } }];\n}\n\n// --- STEP 3: Log source counts ---\nconst sourceCounts = {};\nfor (const grant of newGrants) {\n  const source = grant.source || 'Unknown';\n  sourceCounts[source] = (sourceCounts[source] || 0) + 1;\n}\n\nconst today = new Date().toISOString().split('T')[0];\ntry {\n  await this.helpers.httpRequest({\n    method: 'DELETE',\n    url: supabaseUrl + '/grant_source_stats?org_id=eq.' + orgId + '&fetch_date=eq.' + today,\n    headers: supaHeaders,\n  });\n\n  const rows = Object.entries(sourceCounts).map(([source, raw_count]) => ({\n    org_id: orgId, source, raw_count, fetch_date: today\n  }));\n\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl + '/grant_source_stats',\n    headers: supaHeaders,\n    body: JSON.stringify(rows),\n  });\n} catch(e) {}\n\n// --- STEP 4: Fetch org data (once) ---\nconst orgs = await this.helpers.httpRequest({\n  method: 'GET',\n  url: supabaseUrl + '/organizations?id=eq.' + encodeURIComponent(orgId) + '&select=id,geographic_focus,address',\n  headers: supaReadHeaders,\n});\n\nif (!Array.isArray(orgs) || orgs.length === 0) {\n  return [{ json: { error: true, message: 'Organization not found: ' + orgId } }];\n}\nconst org = orgs[0];\n\n// Fetch org narratives (once)\nconst narratives = await this.helpers.httpRequest({\n  method: 'GET',\n  url: supabaseUrl + '/documents?org_id=eq.' + encodeURIComponent(orgId) + '&select=title,extracted_text,category&order=updated_at.desc&limit=10',\n  headers: supaReadHeaders,\n});\n\nlet nicheSummary = '';\nif (Array.isArray(narratives) && narratives.length > 0) {\n  nicheSummary = narratives.map(n => {\n    return (n.title || n.category || '') + ': ' + (n.extracted_text || '');\n  }).join('\\n\\n');\n}\n\n// Build grants list for AI processing\nconst allGrantsForAI = newGrants.map(grant => ({\n  title: grant.title || '',\n  agency: grant.agency || null,\n  agencyCode: grant.agencyCode || '',\n  description: grant.description || '',\n  awardFloor: grant.awardFloor || 0,\n  awardCeiling: grant.awardCeiling || 0,\n  openDate: grant.openDate || '',\n  closeDate: grant.closeDate || '',\n  status: grant.status || '',\n  source: grant.source || 'Grant Scanner',\n  source_id: grant.oppNum || grant.source_id,\n  source_url: grant.link || grant.source_url,\n}));\n\n// --- STEP 5: Process in AI batches ---\nconst totalBatches = Math.ceil(allGrantsForAI.length / BATCH_SIZE);\nlet totalInserted = 0;\nlet totalScreened = 0;\n\nconst systemPrompt = `You are a grant eligibility and classification assistant. Given a grant, an organization with its location, and the organization's narratives (which describe its mission, programs, and focus areas), first classify the grant type, then determine if the organization is eligible by location, then evaluate niche alignment.\n\nSTEP 1 - CLASSIFY THE GRANT TYPE:\n- Federal: Funded by federal agencies (HHS, SAMHSA, ACF, DOL, ED, HUD, USDA, etc.) or listed on Grants.gov. grant_state = null.\n - State grants: The organization is ONLY eligible if it operates in, is headquartered in, or serves communities in the grant's state.\n    1. Identify the grant's state by reading the full grant details - look at the funding agency, program description, and any geographic restrictions.\n    2. Check the organization's geographic_focus and address fields.\n    3. The org is eligible if ANY of the following match the grant's state:\n       - The org's address/headquarters is in that state\n       - The org's geographic_focus includes that state or regions/counties within it\n       - The org explicitly states it serves that state's communities\n    4. Matching rules: Accept abbreviations (PA = Pennsylvania, NJ = New Jersey), typos, partial matches, and county/city-level references within the state.\n    5. The org is NOT eligible if its geographic_focus and address clearly indicate a different state with no overlap.\n    6. If the org has no location data at all, mark eligible and note that location could not be verified.\n- Philanthropic: From private foundations, trusts, corporate giving programs, or nonprofits (e.g. Gates Foundation, Ford Foundation). grant_state = null.\n\nSTEP 2 - DETERMINE LOCATION ELIGIBILITY:\n- Federal grants: The organization IS eligible.\n- Philanthropic grants: The organization IS eligible.\n- State grants: The organization is ONLY eligible if it is located in or serves that state. Check geographic_focus and address. Be flexible with matching - abbreviations (NJ = New Jersey), typos, and partial matches count. If the org has no location data, give benefit of the doubt and mark eligible.\n\nSTEP 3 - EVALUATE NICHE ALIGNMENT:\nUse the organization's narratives to understand what the org actually does — its mission, programs, populations served, and sector/industry focus. Then compare against the grant's purpose and description.\n\n- If the grant's focus area clearly matches the org's niche (e.g., both are about health, youth services, disability, education, etc.), mark niche_aligned = true.\n- If the grant is clearly for a completely different sector that the org does NOT work in (e.g., org does health/disability services but grant is for agriculture, military, mining, forestry, or commercial fishing), mark niche_aligned = false.\n- Be GENEROUS with alignment — if there is any reasonable overlap or the org could plausibly apply, mark niche_aligned = true. Only reject obvious mismatches.\n- If no narratives are available, default niche_aligned = true (benefit of the doubt).\n\nThe grant must pass BOTH location eligibility AND niche alignment to be marked eligible.\n\nReturn ONLY valid JSON — an array with one object per grant in the same order, each with:\n{\n  \"grant_type\": \"federal\" or \"state\" or \"philanthropic\",\n  \"grant_state\": \"Full state name if state grant, otherwise null\",\n  \"location_eligible\": true or false,\n  \"niche_aligned\": true or false,\n  \"eligible\": true or false,\n  \"reason\": \"brief explanation\"\n}`;\n\nfor (let b = 0; b < totalBatches; b++) {\n  const start = b * BATCH_SIZE;\n  const batch = allGrantsForAI.slice(start, start + BATCH_SIZE);\n\n  // Status: Matching\n  await sendStatus.call(this, 'filtering', 'Matching grants to your organization... (' + (start + batch.length) + ' of ' + allGrantsForAI.length + ')');\n\n  // Build AI prompt\n  const userPrompt = `\n  Organization:\n  - ID: ${org.id}\n  - Location: ${org.geographic_focus ? (Array.isArray(org.geographic_focus) ? org.geographic_focus.join(', ') : org.geographic_focus) : 'Not set'}\n  - Address: ${org.address || 'Not set'}\n\n  Organization Narratives (niche/focus context):\n  ${nicheSummary || 'No narratives available'}\n\n  Evaluate EACH grant below against the organization above. For each grant, classify its type, determine location eligibility, and evaluate niche alignment per your instructions.\n\n  Grants:\n  ${JSON.stringify(batch, null, 2)}`;\n\n  // Call OpenAI\n  let parsedResults = [];\n  try {\n    const aiResponse = await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.openai.com/v1/chat/completions',\n      headers: {\n        'Authorization': 'Bearer ' + openAiKey,\n        'Content-Type': 'application/json',\n      },\n      body: JSON.stringify({\n        model: 'gpt-4.1-mini',\n        messages: [\n          { role: 'system', content: systemPrompt },\n          { role: 'user', content: userPrompt }\n        ],\n        temperature: 0,\n      }),\n    });\n\n    const aiText = aiResponse.choices?.[0]?.message?.content || '[]';\n    const cleaned = aiText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    const parsed = JSON.parse(cleaned);\n    parsedResults = Array.isArray(parsed) ? parsed : [parsed];\n  } catch(e) {\n    parsedResults = batch.map(() => ({\n      grant_type: 'federal', grant_state: null,\n      location_eligible: true, niche_aligned: true,\n      eligible: true, reason: 'AI parse failed, defaulting to eligible'\n    }));\n  }\n\n  // Build insert payloads for eligible grants\n  const toInsert = [];\n  batch.forEach((grant, index) => {\n    const parsed = parsedResults[index] || parsedResults[0] || {\n      grant_type: 'federal', grant_state: null,\n      location_eligible: true, niche_aligned: true,\n      eligible: true, reason: 'No AI result for this grant'\n    };\n\n    if (parsed.eligible === false) return;\n\n    const description = grant.description || '';\n    const descriptionHtml = '<div><h3>Grant Opportunity</h3>' +\n      '<p><strong>Source:</strong> ' + (grant.source || '') + '</p>' +\n      '<p><strong>Agency:</strong> ' + (grant.agency || '') + '</p>' +\n      '<p><strong>Type:</strong> ' + (parsed.grant_type || 'unknown') + '</p>' +\n      (parsed.grant_state ? '<p><strong>State:</strong> ' + parsed.grant_state + '</p>' : '') +\n      '<p><strong>Award Range:</strong> $' + (grant.awardFloor || 0) + ' - $' + (grant.awardCeiling || 0) + '</p>' +\n      '<p><strong>Open Date:</strong> ' + (grant.openDate || '') + '</p>' +\n      '<p><strong>Deadline:</strong> ' + (grant.closeDate || '') + '</p>' +\n      '<hr><h4>Description:</h4>' +\n      '<p>' + description + '</p>' +\n      '<p><em>Location Filter: ' + (parsed.reason || 'N/A') + '</em></p>' +\n      '<hr>' +\n      '<p><a href=\"' + (grant.source_url || grant.link || '') + '\">View Original Listing</a></p>' +\n      '</div>';\n\n    let deadlineValue = null;\n    if (grant.closeDate && grant.closeDate !== 'See listing' && grant.closeDate !== 'Not specified' && grant.closeDate !== 'Rolling') {\n      const d = new Date(grant.closeDate);\n      if (!isNaN(d.getTime())) {\n        const yyyy = d.getUTCFullYear();\n        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');\n        const dd = String(d.getUTCDate()).padStart(2, '0');\n        deadlineValue = yyyy + '-' + mm + '-' + dd + 'T00:00:00.000Z';\n      } else {\n        deadlineValue = grant.closeDate;\n      }\n    }\n\n    toInsert.push({\n      org_id: org.id,\n      title: grant.title || '',\n      funder_name: grant.agency || null,\n      description: description,\n      amount: grant.awardCeiling > 0 ? grant.awardCeiling : null,\n      deadline: deadlineValue,\n      stage: 'discovery',\n      source: grant.source || 'Grant Scanner',\n      source_id: grant.source_id || grant.oppNum,\n      source_url: grant.source_url || grant.link,\n      metadata: {\n        grants_gov_id: grant.id,\n        agency_code: grant.agencyCode,\n        open_date: grant.openDate,\n        award_floor: grant.awardFloor,\n        award_ceiling: grant.awardCeiling,\n        grant_type: parsed.grant_type || 'unknown',\n        grant_state: parsed.grant_state || null,\n        location_filter_reason: parsed.reason || '',\n        location_eligible: parsed.location_eligible !== false,\n        niche_aligned: parsed.niche_aligned !== false,\n        priority: 'medium',\n        description_html: descriptionHtml\n      }\n    });\n  });\n\n  // Insert eligible grants to Supabase\n  if (toInsert.length > 0) {\n    await sendStatus.call(this, 'inserting', 'Adding matched grants to your pipeline... (' + (start + batch.length) + ' of ' + allGrantsForAI.length + ')');\n\n    for (const grant of toInsert) {\n      try {\n        await this.helpers.httpRequest({\n          method: 'POST',\n          url: supabaseUrl + '/grants?on_conflict=org_id,source_id',\n          headers: {\n            ...supaHeaders,\n            'Prefer': 'return=representation,resolution=ignore-duplicates',\n          },\n          body: JSON.stringify(grant),\n        });\n        totalInserted++;\n      } catch(e) {}\n    }\n  }\n\n  // Call eligibility screener for each inserted grant\n  for (const grant of toInsert) {\n    try {\n      await this.helpers.httpRequest({\n        method: 'POST',\n        url: 'https://n8n.thebrownmine.com/webhook/screen-grant',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify({\n          url: grant.source_url || '',\n          grantid: '',\n          orgId: grant.org_id || '',\n          grantData: {\n            title: grant.title || '',\n            agency: grant.funder_name || '',\n            awardRange: grant.amount ? String(grant.amount) : 'Not specified',\n            deadline: grant.deadline || '',\n            description: grant.description || '',\n            source: grant.source || '',\n            org_id: grant.org_id || ''\n          }\n        }),\n        timeout: 60000,\n      });\n      totalScreened++;\n    } catch(e) {}\n  }\n}\n\n// --- STEP 6: Status Complete ---\nawait sendStatus.call(this, 'complete', 'Grant search complete!');\n\nreturn [{ json: { success: true, totalInserted, totalScreened, totalGrants: allGrantsForAI.length, batches: totalBatches } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6800,
-        21856
+        8816,
+        27840
       ],
-      "id": "filter-insert-screen-001",
+      "id": "df2ae099-c293-4c24-9f35-b6b4c8890047",
       "name": "Filter Insert & Screen Grants",
       "notesInFlow": true,
-      "notes": "Replaces Loop Over Items3 + 11 nodes. Loops internally to avoid n8n loop node data shape bug.",
+      "continueOnFail": true,
+      "notes": "Replaces Loop Over Items3 + 11 nodes. Loops internally to avoid n8n loop node data shape bug."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fetch-grants",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        5648,
+        20208
+      ],
+      "id": "f0b2ff77-f093-421a-8559-8b6676856533",
+      "name": "Fetch Grants Webhook1",
+      "webhookId": "fetch-grants"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"success\": true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        6096,
+        20032
+      ],
+      "id": "c8c8e379-c156-4888-80e0-b87b89c18e5b",
+      "name": "Webhook OK Response1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Status callback helper: only sends status if callback_url exists (new org registration)\n// This node is placed at different stages of the pipeline\nconst items = $input.all();\n\n// Try to get webhook data\nlet callbackUrl, orgId, webhookSecret;\ntry {\n  const webhookData = $('Fetch Grants Webhook1').first().json.body;\n  callbackUrl = webhookData?.callback_url;\n  orgId = webhookData?.org_id;\n  webhookSecret = webhookData?.is_new_org;\n} catch(e) {\n  // Not triggered via webhook (scheduled run) - skip status updates\n  return items;\n}\n\nif (!callbackUrl || !orgId) return items;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: callbackUrl,\n    headers: {\n      'Content-Type': 'application/json',\n      'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n    },\n    body: {\n      org_id: orgId,\n      status: 'searching',\n      stage_message: 'Searching Grants.gov and federal databases...'\n    }\n  });\n} catch(e) {\n  // Don't fail the workflow if status update fails\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7664,
+        20128
+      ],
+      "id": "c00a465c-ee3a-4933-88c5-7de16dc27ca1",
+      "name": "Status: Searching1",
       "continueOnFail": true
     }
   ],
@@ -1512,8 +1427,10 @@
             "accept": "*/*",
             "accept-encoding": "br, gzip, deflate",
             "accept-language": "*",
+            "baggage": "sentry-environment=development,sentry-release=cbb84a213143767547a4c518917e3e341977765f,sentry-public_key=5e531138974eb3f74d744d1ee7ee41cc,sentry-trace_id=5b80debb747ce28da7cdfd1081c6e6a4,sentry-org_id=4511133622140928,sentry-transaction=GET%20%2Fpipeline,sentry-sampled=true,sentry-sample_rand=0.17606294671985623,sentry-sample_rate=1",
             "content-type": "application/json",
             "sec-fetch-mode": "cors",
+            "sentry-trace": "5b80debb747ce28da7cdfd1081c6e6a4-31c4337647b92201-1",
             "via": "1.1 Caddy",
             "x-forwarded-for": "152.53.91.134",
             "x-forwarded-host": "n8n.thebrownmine.com",
@@ -1523,7 +1440,7 @@
           "params": {},
           "query": {},
           "body": {
-            "org_id": "61661a4f-2188-40af-beb1-fd5992f061f7"
+            "org_id": "8795287f-7c6f-467a-b06c-a7b26a4884f7"
           },
           "webhookUrl": "https://n8n.thebrownmine.com/webhook-test/fetch-grants",
           "executionMode": "test"
@@ -1797,17 +1714,6 @@
       ]
     },
     "Extract PA DCED Programs1": {
-      "main": [
-        [
-          {
-            "node": "Combine & Deduplicate All Sources5",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Hardcoded Major Foundations": {
       "main": [
         [
           {
@@ -2092,11 +1998,6 @@
             "index": 0
           },
           {
-            "node": "Hardcoded Major Foundations",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "SAM.gov Scraper",
             "type": "main",
             "index": 0
@@ -2223,6 +2124,11 @@
           },
           {
             "node": "ProPublica Grant Fund",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combine & Deduplicate All Sources5",
             "type": "main",
             "index": 0
           }
@@ -2460,11 +2366,16 @@
         ]
       ]
     },
-    "Combine & Deduplicate All Sources": {
+    "Fetch Grants Webhook1": {
       "main": [
         [
           {
-            "node": "Log Raw Source Counts1",
+            "node": "Webhook OK Response1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Status: Searching1",
             "type": "main",
             "index": 0
           }
@@ -2473,74 +2384,7 @@
     },
     "Status: Searching1": {
       "main": [
-        [
-          {
-            "node": "Fetch Grantivia Grants",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch Grants Webhook1": {
-      "main": [
-        [
-          {
-            "node": "Status: Searching1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Webhook OK Response1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Grantivia Grants": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch Grantivia Grants": {
-      "main": [
-        [
-          {
-            "node": "Extract Grantivia Grants",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Log Raw Source Counts1": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Over Items": {
-      "main": [
-        [],
-        [
-          {
-            "node": "Combine & Deduplicate All Sources",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     }
   },
@@ -2551,7 +2395,7 @@
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "4aa0fb83-7116-4888-bbf0-e5cda5cd85a1",
+  "versionId": "32a326c1-3e9c-47f3-bceb-74444ba5167b",
   "meta": {
     "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
   },
