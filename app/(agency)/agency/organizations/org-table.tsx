@@ -103,15 +103,15 @@ export function OrgTable({ initialOrgs, grantCounts }: OrgTableProps) {
 
   return (
     <>
-      <div className="border border-border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="border border-border rounded-lg overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="border-b border-border bg-muted/50">
               <th className="text-left px-4 py-3 font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</th>
-              <th className="text-left px-4 py-3 font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">Sector</th>
+              <th className="text-left px-4 py-3 font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground hidden md:table-cell">Sector</th>
               <th className="text-left px-4 py-3 font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</th>
               <th className="text-left px-4 py-3 font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">Grants</th>
-              <th className="text-left px-4 py-3 font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground">Created</th>
+              <th className="text-left px-4 py-3 font-mono text-xs font-medium uppercase tracking-wide text-muted-foreground hidden lg:table-cell">Created</th>
               <th className="text-right px-4 py-3"></th>
             </tr>
           </thead>
@@ -131,10 +131,10 @@ export function OrgTable({ initialOrgs, grantCounts }: OrgTableProps) {
                       <p className="text-xs text-muted-foreground mt-0.5 ml-6 line-clamp-1">{org.mission}</p>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{org.sector || "\u2014"}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{org.sector || "\u2014"}</td>
                   <td className="px-4 py-3">{statusBadge(org.status)}</td>
                   <td className="px-4 py-3 text-muted-foreground">{grantCounts[org.id] || 0}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{new Date(org.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{new Date(org.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       {isSuspended ? (

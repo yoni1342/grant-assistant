@@ -43,14 +43,14 @@ const STAGES: StageFilter[] = ["all", "discovery", "screening", "pending_approva
 function stageBadge(stage: string | null) {
   if (!stage) return <span className="text-muted-foreground">—</span>;
   const colors: Record<string, string> = {
-    discovery: "bg-blue-100 text-blue-800",
-    screening: "bg-yellow-100 text-yellow-800",
-    pending_approval: "bg-amber-100 text-amber-800",
-    drafting: "bg-purple-100 text-purple-800",
-    submission: "bg-orange-100 text-orange-800",
-    awarded: "bg-green-100 text-green-800",
-    reporting: "bg-teal-100 text-teal-800",
-    closed: "bg-gray-100 text-gray-800",
+    discovery: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
+    screening: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300",
+    pending_approval: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+    drafting: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300",
+    submission: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300",
+    awarded: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+    reporting: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300",
+    closed: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
   };
   const labels: Record<string, string> = {
     discovery: "Discovered",
@@ -70,10 +70,10 @@ function scoreBadge(score: number | null) {
   if (score == null) return <span className="text-muted-foreground">—</span>;
   const color =
     score >= 80
-      ? "bg-green-100 text-green-800"
+      ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
       : score >= 50
-        ? "bg-yellow-100 text-yellow-800"
-        : "bg-red-100 text-red-800";
+        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300"
+        : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300";
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
       {score}%
@@ -124,7 +124,7 @@ export function GrantsClient({
       <h2 className="text-2xl font-semibold">Grants</h2>
 
       {/* Stage stat cards */}
-      <div className="grid grid-cols-3 gap-4 md:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-7">
         {STAGES.filter((s) => s !== "all").map((stage) => (
           <Card
             key={stage}
@@ -144,8 +144,8 @@ export function GrantsClient({
       </div>
 
       {/* Search + filter */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="space-y-3">
+        <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search grants by title, funder, or organization..."
@@ -154,7 +154,7 @@ export function GrantsClient({
             className="pl-9"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {STAGES.map((s) => (
             <Button
               key={s}
@@ -172,17 +172,18 @@ export function GrantsClient({
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <div className="overflow-x-auto">
+          <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
                 <TableHead>Funder</TableHead>
-                <TableHead>Organization</TableHead>
+                <TableHead className="hidden lg:table-cell">Organization</TableHead>
                 <TableHead>Stage</TableHead>
                 <TableHead>Score</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Deadline</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead className="hidden md:table-cell">Amount</TableHead>
+                <TableHead className="hidden md:table-cell">Deadline</TableHead>
+                <TableHead className="hidden lg:table-cell">Created</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -194,29 +195,29 @@ export function GrantsClient({
                 </TableRow>
               ) : (
                 filtered.map((grant) => (
-                  <TableRow key={grant.id}>
-                    <TableCell className="font-medium max-w-[250px] truncate">
+                  <TableRow key={grant.id} className="hover:bg-muted/50">
+                    <TableCell className="font-medium max-w-[250px] truncate" title={grant.title}>
                       {grant.title}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {grant.funder_name || "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-sm text-muted-foreground hidden lg:table-cell">
                       {orgMap[grant.org_id] || "Unknown"}
                     </TableCell>
                     <TableCell>{stageBadge(grant.stage)}</TableCell>
                     <TableCell>{scoreBadge(grant.screening_score)}</TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm hidden md:table-cell">
                       {grant.amount ? `$${Number(grant.amount).toLocaleString()}` : "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
                       {grant.deadline
                         ? isNaN(new Date(grant.deadline).getTime())
                           ? grant.deadline
                           : new Date(grant.deadline).toLocaleDateString()
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-sm text-muted-foreground hidden lg:table-cell">
                       {grant.created_at
                         ? new Date(grant.created_at).toLocaleDateString()
                         : "—"}
@@ -226,6 +227,7 @@ export function GrantsClient({
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

@@ -317,7 +317,7 @@ export function OverviewClient({
       </div>
 
       {/* Billing Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -491,7 +491,7 @@ export function OverviewClient({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-green-300 text-green-700 hover:bg-green-50"
+                      className="border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950"
                       onClick={() => handleApprove(org.id)}
                       disabled={loading === org.id}
                     >
