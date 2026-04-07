@@ -542,13 +542,20 @@ export default function DiscoveryPage() {
   const extractGrants = useCallback((data: unknown): DiscoveredGrant[] => {
     if (!data) return [];
 
+    // Normalise source-specific field names to DiscoveredGrant schema
+    const normalise = (obj: Record<string, unknown>) => {
+      if (!obj.funder_name && obj.agency) obj.funder_name = obj.agency;
+      if (!obj.source_url && obj.link) obj.source_url = obj.link;
+      if (!obj.source_id && obj.id) obj.source_id = String(obj.id);
+      if (!obj.deadline && obj.closeDate) obj.deadline = obj.closeDate;
+      if (obj.amount == null && obj.awardCeiling && Number(obj.awardCeiling) > 0) obj.amount = Number(obj.awardCeiling);
+      if (!obj.source_id && obj.oppNum) obj.source_id = String(obj.oppNum);
+      return obj as unknown as DiscoveredGrant;
+    };
+
     if (Array.isArray(data)) {
       if (data.length > 0 && data[0]?.title && (data[0]?.funder_name || (data[0] as Record<string, unknown>)?.agency)) {
-        return data.map((item: unknown) => {
-          const obj = item as Record<string, unknown>;
-          if (!obj.funder_name && obj.agency) obj.funder_name = obj.agency;
-          return obj as unknown as DiscoveredGrant;
-        });
+        return data.map((item: unknown) => normalise(item as Record<string, unknown>));
       }
       return data.flatMap((item: unknown) => extractGrants(item));
     }
@@ -557,10 +564,7 @@ export default function DiscoveryPage() {
       const obj = data as Record<string, unknown>;
 
       if (obj.title && (obj.funder_name || obj.agency)) {
-        if (!obj.funder_name && obj.agency) {
-          obj.funder_name = obj.agency;
-        }
-        return [obj as unknown as DiscoveredGrant];
+        return [normalise(obj)];
       }
 
       if (Array.isArray(obj.grants)) {
@@ -628,18 +632,18 @@ export default function DiscoveryPage() {
       const searchId = data.search_id;
       const supabase = createClient();
 
-      // Inactivity timeout: if no data arrives for 60s, mark search as complete
+      // Inactivity timeout: if no data arrives for 5 min, stop loading
+      // but do NOT mark searchComplete — only the workflow's __done__ signal does that
       const resetInactivityTimer = () => {
         if (inactivityRef.current) clearTimeout(inactivityRef.current);
         inactivityRef.current = setTimeout(() => {
-          setSearchComplete(true);
           setLoading(false);
           setStageMessage(DEFAULT_STAGE);
           if (pollRef.current) {
             clearInterval(pollRef.current);
             pollRef.current = null;
           }
-        }, 60000);
+        }, 300000);
       };
 
       // Start the initial inactivity timer
@@ -765,10 +769,41 @@ export default function DiscoveryPage() {
     setAddingToPipeline(grantKey);
 
     try {
+      // Only send fields that exist in the grants table — raw discovery
+      // results carry extra source fields (agency, agencyCode, oppNum, etc.)
+      // that would cause a Supabase insert error (PGRST204).
+      const raw = grant as unknown as Record<string, unknown>;
+
+      // Parse deadline: source may use closeDate, openDate, or deadline.
+      // Values like "See listing" are not valid dates — treat as null.
+      const rawDeadline = grant.deadline || raw.closeDate || raw.openDate;
+      const parsedDeadline = rawDeadline && !isNaN(new Date(String(rawDeadline)).getTime())
+        ? String(rawDeadline)
+        : null;
+
+      // Amount may come as amount, awardCeiling, or awardFloor — take first non-zero value
+      const rawAmount = grant.amount
+        || (raw.awardCeiling && Number(raw.awardCeiling) > 0 ? Number(raw.awardCeiling) : null)
+        || (raw.awardFloor && Number(raw.awardFloor) > 0 ? Number(raw.awardFloor) : null)
+        || null;
+
+      const grantPayload = {
+        title: grant.title,
+        funder_name: grant.funder_name || (raw.agency as string) || null,
+        description: grant.description || null,
+        amount: rawAmount,
+        deadline: parsedDeadline,
+        stage: "discovery",
+        source: grant.source || null,
+        source_id: grant.source_id || null,
+        source_url: grant.source_url || null,
+        metadata: grant.metadata || null,
+      };
+
       const response = await fetch("/api/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ service: "grant-screening", ...grant }),
+        body: JSON.stringify({ service: "grant-screening", ...grantPayload }),
       });
 
       const text = await response.text();
@@ -1073,7 +1108,9 @@ export default function DiscoveryPage() {
                               ) : (
                                 <Calendar className="h-3.5 w-3.5" />
                               )}
-                              {new Date(grant.deadline).toLocaleDateString()}
+                              {isNaN(new Date(grant.deadline).getTime())
+                                ? grant.deadline
+                                : new Date(grant.deadline).toLocaleDateString()}
                               {isGrantExpired(grant.deadline) && (
                                 <Badge variant="destructive" className="text-[10px] px-1 py-0 leading-tight">
                                   Expired
