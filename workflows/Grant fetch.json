@@ -1237,8 +1237,14 @@
     },
     {
       "parameters": {
-        "url": "https://www.grants.ca.gov/api/v1/grants?status=open&page=1&per_page=100",
-        "options": {}
+        "url": "https://www.grants.ca.gov/?s=&grant_status=open",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
       },
       "id": "458cb50d-0e14-4784-bbd3-e6047ac2a7f1",
       "name": "California Grants Portal1",
@@ -1250,11 +1256,11 @@
       ],
       "notesInFlow": true,
       "continueOnFail": true,
-      "notes": "California state grants"
+      "notes": "California open grants search page"
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst grants = [];\nfor (const item of items) {\n  const data = item.json;\n  const results = data.data || data.grants || (Array.isArray(data) ? data : []);\n  if (!Array.isArray(results)) continue;\n  for (const g of results) {\n    grants.push({\n      json: {\n        oppNum: 'CA-' + (g.id || g.grantID || Date.now()),\n        title: g.title || g.grantTitle || 'Untitled',\n        description: (g.description || g.grantDescription || '').substring(0, 1000),\n        link: g.url || g.link || 'https://www.grants.ca.gov',\n        openDate: g.openDate || g.postedDate || '',\n        closeDate: g.closeDate || g.deadline || '',\n        agency: g.grantorName || g.agency || 'California State',\n        agencyCode: '',\n        category: 'State - California',\n        source: 'CA Grants Portal',\n        awardFloor: g.estimatedAmountMin || 0,\n        awardCeiling: g.estimatedAmountMax || 0,\n        status: 'posted'\n      }\n    });\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'ca-grants' } }];"
+        "jsCode": "// CA Grants Portal Scraper\n// Paginates through search results for open grants, then scrapes each detail page\nconst grants = [];\nconst allGrantUrls = [];\n\n// Step 1: Paginate through search results to collect all grant URLs\nfor (let page = 1; page <= 10; page++) {\n  try {\n    const html = await this.helpers.httpRequest({\n      method: 'GET',\n      url: 'https://www.grants.ca.gov/?s=&grant_status=open&paged=' + page,\n      headers: { 'User-Agent': 'Mozilla/5.0' },\n    });\n    if (typeof html !== 'string') break;\n    const links = html.match(/href=\"(https:\\/\\/www\\.grants\\.ca\\.gov\\/grants\\/[^\"]+)\"/g) || [];\n    const pageUrls = links.map(l => l.match(/href=\"([^\"]+)\"/)[1]).filter((v, i, a) => a.indexOf(v) === i);\n    if (pageUrls.length === 0) break;\n    allGrantUrls.push(...pageUrls);\n  } catch(e) { break; }\n}\n\n// Deduplicate URLs\nconst uniqueUrls = [...new Set(allGrantUrls)];\n\n// Step 2: Fetch each grant detail page and extract data\nfor (const url of uniqueUrls) {\n  try {\n    const html = await this.helpers.httpRequest({\n      method: 'GET',\n      url: url,\n      headers: { 'User-Agent': 'Mozilla/5.0' },\n    });\n    if (typeof html !== 'string') continue;\n\n    // Extract title\n    const titleMatch = html.match(/<h1[^>]*>([^<]+)<\\/h1>/i);\n    const title = titleMatch ? titleMatch[1].trim() : '';\n    if (!title) continue;\n\n    // Extract grantor/agency\n    const agencyMatch = html.match(/[Gg]rantor[^<]*<\\/(?:dt|th|strong|b|span)>\\s*(?:<[^>]+>)*\\s*([^<]+)/i)\n      || html.match(/[Aa]gency[^<]*<\\/(?:dt|th|strong|b|span)>\\s*(?:<[^>]+>)*\\s*([^<]+)/i);\n    const agency = agencyMatch ? agencyMatch[1].replace(/&amp;/g, '&').trim() : 'California State';\n\n    // Extract description from paragraphs\n    const descMatch = html.match(/[Dd]escription[^<]*<\\/(?:h[2-4]|dt|th|strong)>\\s*(?:<[^>]+>)*\\s*([\\s\\S]*?)(?=<\\/div>|<h[2-4]|<dt)/i);\n    let description = '';\n    if (descMatch) {\n      description = descMatch[1].replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim().substring(0, 1000);\n    }\n    if (!description) {\n      const paragraphs = html.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/gi) || [];\n      description = paragraphs.slice(0, 3).map(p => p.replace(/<[^>]+>/g, '').trim()).filter(p => p.length > 30).join(' ').substring(0, 1000);\n    }\n\n    // Extract deadline\n    let deadline = 'See listing';\n    const deadlineMatch = html.match(/[Dd]eadline[^<]*<\\/(?:dt|th|strong|b|span)>\\s*(?:<[^>]+>)*\\s*([^<]+)/i)\n      || html.match(/[Cc]lose[^<]*[Dd]ate[^<]*<\\/(?:dt|th|strong|b|span)>\\s*(?:<[^>]+>)*\\s*([^<]+)/i)\n      || html.match(/([\\d]{1,2}\\/[\\d]{1,2}\\/[\\d]{2,4})\\s*(?:at|by)/i);\n    if (deadlineMatch && deadlineMatch[1]) {\n      deadline = deadlineMatch[1].trim();\n    }\n\n    // Extract funding amounts\n    let awardFloor = 0;\n    let awardCeiling = 0;\n    const amountMatches = html.match(/\\$([\\d,]+(?:\\.\\d{2})?)/g) || [];\n    const amounts = amountMatches.map(a => parseInt(a.replace(/[$,]/g, ''))).filter(a => !isNaN(a) && a > 0 && a < 1000000000);\n    if (amounts.length > 0) {\n      awardFloor = Math.min(...amounts);\n      awardCeiling = Math.max(...amounts);\n    }\n\n    // Extract eligibility\n    let eligibility = '';\n    const eligMatch = html.match(/[Ee]ligib[a-z]*[^<]*<\\/(?:h[2-4]|dt|th|strong|b)>\\s*(?:<[^>]+>)*\\s*([\\s\\S]*?)(?=<\\/div>|<h[2-4]|<dt)/i);\n    if (eligMatch) {\n      eligibility = eligMatch[1].replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim().substring(0, 500);\n    }\n\n    // Extract category\n    const catMatch = html.match(/[Cc]ategor[a-z]*[^<]*<\\/(?:dt|th|strong|b|span)>\\s*(?:<[^>]+>)*\\s*([^<]+)/i);\n    const category = catMatch ? catMatch[1].trim() : 'State - California';\n\n    // Generate stable oppNum from URL slug\n    const slug = url.replace('https://www.grants.ca.gov/grants/', '').replace(/\\/$/, '');\n    const oppNum = 'CA-' + slug;\n\n    grants.push({\n      json: {\n        id: oppNum,\n        oppNum: oppNum,\n        title: title,\n        description: description || ('California state grant. Visit ' + url + ' for full details.'),\n        link: url,\n        openDate: new Date().toISOString().split('T')[0],\n        closeDate: deadline,\n        agency: agency,\n        agencyCode: '',\n        category: category,\n        source: 'CA Grants Portal',\n        awardFloor: awardFloor,\n        awardCeiling: awardCeiling,\n        status: 'posted',\n        metadata: {\n          eligibility: eligibility || null,\n          sourceLevel: 'state',\n          state: 'California'\n        }\n      }\n    });\n  } catch(e) {\n    // Skip failed pages\n  }\n}\n\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'ca-grants' } }];"
       },
       "id": "b23d5b93-d7ef-4b7c-ab59-23971dec7783",
       "name": "Extract CA Grants1",
@@ -1264,7 +1270,9 @@
         7040,
         32576
       ],
-      "continueOnFail": true
+      "notesInFlow": true,
+      "continueOnFail": true,
+      "notes": "Paginates CA open grants search, scrapes each detail page for descriptions, deadlines, amounts, eligibility"
     },
     {
       "parameters": {
