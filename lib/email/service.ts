@@ -7,11 +7,15 @@ import type {
   OrganizationApprovedEmailParams,
   OrganizationRejectedEmailParams,
   TrialEndingEmailParams,
+  CompleteProfileEmailParams,
+  GrantEligibleEmailParams,
 } from './types'
 import WelcomeEmail from './templates/welcome'
 import OrganizationApprovedEmail from './templates/organization-approved'
 import OrganizationRejectedEmail from './templates/organization-rejected'
 import TrialEndingEmail from './templates/trial-ending'
+import CompleteProfileEmail from './templates/complete-profile'
+import GrantEligibleEmail from './templates/grant-eligible'
 
 const FROM_EMAIL = process.env.AWS_SES_FROM_EMAIL || 'noreply@fundory.ai'
 const FROM_NAME = process.env.AWS_SES_FROM_NAME || 'Fundory'
@@ -135,6 +139,51 @@ export async function sendTrialEndedEmail(
   const htmlBody = await render(TrialEndingEmail(params), { pretty: true })
   const textBody = await render(TrialEndingEmail(params), { plainText: true })
   console.log('[sendTrialEndedEmail] Template rendered, html length:', htmlBody.length, 'text length:', textBody.length)
+
+  await sendEmail({
+    to: params.toEmail,
+    subject,
+    htmlBody,
+    textBody,
+  })
+}
+
+/**
+ * Send profile completion reminder email
+ */
+export async function sendCompleteProfileEmail(
+  params: CompleteProfileEmailParams
+): Promise<void> {
+  console.log('[sendCompleteProfileEmail] Sending reminder to:', { toEmail: params.toEmail, fullName: params.fullName, org: params.organizationName, day: params.daysSinceRegistration })
+
+  const isFinal = params.daysSinceRegistration >= 12
+  const subject = isFinal
+    ? 'Final Reminder: Complete Your Fundory Profile'
+    : 'Complete Your Fundory Profile for Better Grant Matches'
+
+  const htmlBody = await render(CompleteProfileEmail(params), { pretty: true })
+  const textBody = await render(CompleteProfileEmail(params), { plainText: true })
+
+  await sendEmail({
+    to: params.toEmail,
+    subject,
+    htmlBody,
+    textBody,
+  })
+}
+
+/**
+ * Send grant eligible / pending approval email
+ */
+export async function sendGrantEligibleEmail(
+  params: GrantEligibleEmailParams
+): Promise<void> {
+  console.log('[sendGrantEligibleEmail] Sending to:', { toEmail: params.toEmail, grant: params.grantTitle, org: params.organizationName })
+
+  const subject = `Eligible Grant: ${params.grantTitle}`
+
+  const htmlBody = await render(GrantEligibleEmail(params), { pretty: true })
+  const textBody = await render(GrantEligibleEmail(params), { plainText: true })
 
   await sendEmail({
     to: params.toEmail,

@@ -92,7 +92,7 @@ function GrantDetailBody({
         <DialogTitle className="leading-tight pr-6">{grant.title}</DialogTitle>
       </DialogHeader>
 
-      <ScrollArea className="max-h-[60vh]">
+      <ScrollArea className="max-h-[75vh] sm:max-h-[60vh]">
         <div className="space-y-4 pr-4">
           <div className="grid grid-cols-2 gap-3">
             {grant.funder_name && (

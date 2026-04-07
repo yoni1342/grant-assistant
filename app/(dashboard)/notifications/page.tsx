@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { NotificationsClient } from "./notifications-client";
@@ -32,9 +33,11 @@ export default async function NotificationsPage() {
     .eq("is_read", false);
 
   return (
-    <NotificationsClient
-      initialNotifications={notifications || []}
-      orgId={profile.org_id}
-    />
+    <Suspense>
+      <NotificationsClient
+        initialNotifications={notifications || []}
+        orgId={profile.org_id}
+      />
+    </Suspense>
   );
 }

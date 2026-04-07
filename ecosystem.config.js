@@ -10,5 +10,14 @@ module.exports = {
         PORT: 3000,
       },
     },
+    {
+      name: "notification-email-listener",
+      script: "node_modules/.bin/tsx",
+      args: "scripts/notification-email-listener.ts",
+      cwd: "/root/grant-assistant",
+      env_file: ".env.local",
+      restart_delay: 5000,
+      max_restarts: 10,
+    },
   ],
 };

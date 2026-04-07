@@ -189,7 +189,7 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto">
+      <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
         {navItems.filter((item) => !(agencyId && item.href === "/billing")).map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
@@ -278,7 +278,7 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
             Fundory
           </span>
         </Link>
-        <div className="w-9" /> {/* Spacer for centering */}
+        <div className="w-9 shrink-0" /> {/* Spacer for centering */}
       </div>
 
       {/* Mobile overlay */}
@@ -302,7 +302,7 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "hidden md:flex h-full flex-col border-r border-border bg-card transition-all duration-200",
+          "hidden md:flex h-full flex-col border-r border-border bg-card transition-all duration-200 ease-in-out",
           collapsed ? "w-16" : "w-56"
         )}
       >

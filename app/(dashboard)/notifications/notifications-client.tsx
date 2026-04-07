@@ -12,8 +12,60 @@ import {
   XCircle,
   ArrowRight,
   Loader2,
+  Clock,
+  ChevronLeft,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import {
+  formatDistanceToNow,
+  isToday,
+  isYesterday,
+  differenceInMinutes,
+  differenceInDays,
+} from "date-fns";
+import { useRouter, useSearchParams } from "next/navigation";
+
+type TimeBucket =
+  | "Now"
+  | "Earlier Today"
+  | "Yesterday"
+  | "This Week"
+  | "This Month"
+  | "Older";
+
+function getTimeBucket(dateStr: string | null): TimeBucket {
+  if (!dateStr) return "Older";
+  const date = new Date(dateStr);
+  const now = new Date();
+  if (differenceInMinutes(now, date) < 15) return "Now";
+  if (isToday(date)) return "Earlier Today";
+  if (isYesterday(date)) return "Yesterday";
+  if (differenceInDays(now, date) < 7) return "This Week";
+  if (differenceInDays(now, date) < 30) return "This Month";
+  return "Older";
+}
+
+const BUCKET_ORDER: TimeBucket[] = [
+  "Now",
+  "Earlier Today",
+  "Yesterday",
+  "This Week",
+  "This Month",
+  "Older",
+];
+
+function groupNotifications(notifications: Notification[]) {
+  const groups = new Map<TimeBucket, Notification[]>();
+  for (const notif of notifications) {
+    const bucket = getTimeBucket(notif.created_at);
+    const list = groups.get(bucket) || [];
+    list.push(notif);
+    groups.set(bucket, list);
+  }
+  return BUCKET_ORDER.filter((b) => groups.has(b)).map((bucket) => ({
+    bucket,
+    items: groups.get(bucket)!,
+  }));
+}
 
 type Notification = {
   id: string;
@@ -74,86 +126,114 @@ const DEFAULT_CONFIG = {
   badgeVariant: "outline" as const,
 };
 
-export function NotificationsClient({
-  initialNotifications,
-  orgId,
+const BUCKET_ICONS: Record<TimeBucket, typeof Bell> = {
+  "Now": Bell,
+  "Earlier Today": Clock,
+  "Yesterday": Clock,
+  "This Week": Clock,
+  "This Month": Clock,
+  "Older": Clock,
+};
+
+function BucketTiles({
+  notifications,
 }: {
-  initialNotifications: Notification[];
-  orgId: string;
+  notifications: Notification[];
 }) {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(initialNotifications);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    async function fetchNotifications() {
-      const { data } = await supabase
-        .from("notifications")
-        .select("*, grants(title, funder_name, stage)")
-        .eq("org_id", orgId)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (data) {
-        setNotifications(data as Notification[]);
-        // Mark unread ones as read since user is on the page
-        const unreadIds = data.filter((n) => !n.is_read).map((n) => n.id);
-        if (unreadIds.length > 0) {
-          supabase
-            .from("notifications")
-            .update({ is_read: true })
-            .in("id", unreadIds)
-            .then();
-        }
-      }
-    }
-
-    // Poll every 10 seconds for reliable updates
-    const interval = setInterval(fetchNotifications, 10_000);
-
-    // Also keep realtime subscription for instant updates when it works
-    const channel = supabase
-      .channel("notifications-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `org_id=eq.${orgId}`,
-        },
-        () => {
-          // Fetch the full notification with grants join
-          fetchNotifications();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      clearInterval(interval);
-      supabase.removeChannel(channel);
-    };
-  }, [orgId]);
+  const groups = groupNotifications(notifications);
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
-      <div>
-        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Notifications</h1>
-        <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
-          Grant status updates and workflow progress
-        </p>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {groups.map(({ bucket, items }) => {
+        const unreadCount = items.filter((n) => !n.is_read).length;
+        const BucketIcon = BUCKET_ICONS[bucket];
+        // Get a preview of notification types in this bucket
+        const typeCounts = new Map<string, number>();
+        for (const item of items) {
+          const config = TYPE_CONFIG[item.type] || DEFAULT_CONFIG;
+          typeCounts.set(config.badge, (typeCounts.get(config.badge) || 0) + 1);
+        }
+
+        return (
+          <Link
+            key={bucket}
+            href={`/notifications?bucket=${encodeURIComponent(bucket)}`}
+            className="block"
+          >
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <BucketIcon className={`h-5 w-5 ${bucket === "Now" ? "text-blue-500" : "text-muted-foreground"}`} />
+                    <h2 className="font-mono text-sm font-semibold tracking-wide uppercase">
+                      {bucket}
+                    </h2>
+                  </div>
+                  {unreadCount > 0 && (
+                    <Badge variant="default" className="text-xs h-5 px-1.5">
+                      {unreadCount} new
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-2xl font-bold mb-2">{items.length}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {Array.from(typeCounts.entries()).map(([type, count]) => (
+                    <span
+                      key={type}
+                      className="text-xs text-muted-foreground"
+                    >
+                      {count} {type}
+                    </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+function BucketDetail({
+  bucket,
+  notifications,
+}: {
+  bucket: TimeBucket;
+  notifications: Notification[];
+}) {
+  const items = notifications.filter(
+    (n) => getTimeBucket(n.created_at) === bucket
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Link
+          href="/notifications"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back
+        </Link>
+        <h2 className="font-mono text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+          {bucket}
+        </h2>
+        <span className="font-mono text-xs text-muted-foreground/60">
+          ({items.length})
+        </span>
       </div>
 
-      {notifications.length === 0 ? (
+      {items.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Bell className="h-10 w-10 mb-3 opacity-40" />
-            <p className="text-sm">No notifications yet</p>
+            <p className="text-sm">No notifications in this period</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-2">
-          {notifications.map((notif) => {
+          {items.map((notif) => {
             const isStale =
               (notif.type === "screening_started" || notif.type === "proposal_started") &&
               notif.created_at &&
@@ -232,6 +312,90 @@ export function NotificationsClient({
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+export function NotificationsClient({
+  initialNotifications,
+  orgId,
+}: {
+  initialNotifications: Notification[];
+  orgId: string;
+}) {
+  const [notifications, setNotifications] =
+    useState<Notification[]>(initialNotifications);
+  const searchParams = useSearchParams();
+  const selectedBucket = searchParams.get("bucket") as TimeBucket | null;
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function fetchNotifications() {
+      const { data } = await supabase
+        .from("notifications")
+        .select("*, grants(title, funder_name, stage)")
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (data) {
+        setNotifications(data as Notification[]);
+        const unreadIds = data.filter((n) => !n.is_read).map((n) => n.id);
+        if (unreadIds.length > 0) {
+          supabase
+            .from("notifications")
+            .update({ is_read: true })
+            .in("id", unreadIds)
+            .then();
+        }
+      }
+    }
+
+    const interval = setInterval(fetchNotifications, 10_000);
+
+    const channel = supabase
+      .channel("notifications-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `org_id=eq.${orgId}`,
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, [orgId]);
+
+  return (
+    <div className="p-4 sm:p-6 space-y-4">
+      <div>
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Notifications</h1>
+        <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
+          Grant status updates and workflow progress
+        </p>
+      </div>
+
+      {notifications.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Bell className="h-10 w-10 mb-3 opacity-40" />
+            <p className="text-sm">No notifications yet</p>
+          </CardContent>
+        </Card>
+      ) : selectedBucket && BUCKET_ORDER.includes(selectedBucket) ? (
+        <BucketDetail bucket={selectedBucket} notifications={notifications} />
+      ) : (
+        <BucketTiles notifications={notifications} />
       )}
     </div>
   );
