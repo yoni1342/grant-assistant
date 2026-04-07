@@ -22,9 +22,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { Eye, Trash2, Ban, RotateCcw, Search } from "lucide-react";
+import { Eye, Trash2, Ban, RotateCcw, Search, MoreHorizontal, CheckCircle2, XCircle } from "lucide-react";
 import { approveOrganization, rejectOrganization, deleteOrganization, suspendOrganization, unsuspendOrganization } from "./actions";
 
 interface Organization {
@@ -198,45 +205,48 @@ export function OrganizationsClient({
       <h2 className="text-2xl font-semibold">Organizations</h2>
 
       {/* Filter tabs */}
-      <div className="flex flex-wrap gap-2">
-        {filters.map((f) => (
-          <Button
-            key={f.value}
-            variant={filter === f.value ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter(f.value)}
-          >
-            {f.label}
-            {f.count !== undefined && (
-              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-primary/15 text-primary px-2 py-0.5 text-xs font-bold tabular-nums min-w-[1.5rem]">
-                {f.count}
-              </span>
-            )}
-          </Button>
-        ))}
-        <span className="mx-1 self-center text-muted-foreground text-xs">|</span>
-        {([
-          { label: "All Billing", value: "all" as BillingFilter },
-          { label: "Active", value: "active" as BillingFilter, count: billingCounts.active },
-          { label: "Trialing", value: "trialing" as BillingFilter, count: billingCounts.trialing },
-          { label: "Past Due", value: "past_due" as BillingFilter, count: billingCounts.past_due },
-          { label: "Canceled", value: "canceled" as BillingFilter, count: billingCounts.canceled },
-          { label: "No Sub", value: "none" as BillingFilter, count: billingCounts.none },
-        ]).map((f) => (
-          <Button
-            key={f.value}
-            variant={billingFilter === f.value ? "default" : "outline"}
-            size="sm"
-            onClick={() => setBillingFilter(f.value)}
-          >
-            {f.label}
-            {f.count !== undefined && (
-              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-primary/15 text-primary px-2 py-0.5 text-xs font-bold tabular-nums min-w-[1.5rem]">
-                {f.count}
-              </span>
-            )}
-          </Button>
-        ))}
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {filters.map((f) => (
+            <Button
+              key={f.value}
+              variant={filter === f.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter(f.value)}
+            >
+              {f.label}
+              {f.count !== undefined && (
+                <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-primary/15 text-primary px-2 py-0.5 text-xs font-bold tabular-nums min-w-[1.5rem]">
+                  {f.count}
+                </span>
+              )}
+            </Button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {([
+            { label: "All Billing", value: "all" as BillingFilter },
+            { label: "Active", value: "active" as BillingFilter, count: billingCounts.active },
+            { label: "Trialing", value: "trialing" as BillingFilter, count: billingCounts.trialing },
+            { label: "Past Due", value: "past_due" as BillingFilter, count: billingCounts.past_due },
+            { label: "Canceled", value: "canceled" as BillingFilter, count: billingCounts.canceled },
+            { label: "No Sub", value: "none" as BillingFilter, count: billingCounts.none },
+          ]).map((f) => (
+            <Button
+              key={f.value}
+              variant={billingFilter === f.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setBillingFilter(f.value)}
+            >
+              {f.label}
+              {f.count !== undefined && (
+                <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-primary/15 text-primary px-2 py-0.5 text-xs font-bold tabular-nums min-w-[1.5rem]">
+                  {f.count}
+                </span>
+              )}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Search */}
@@ -253,16 +263,17 @@ export function OrganizationsClient({
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <div className="overflow-x-auto">
+          <Table className="min-w-[700px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Organization</TableHead>
                 <TableHead>Owner</TableHead>
-                <TableHead>Sector</TableHead>
+                <TableHead className="hidden lg:table-cell">Sector</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Billing</TableHead>
-                <TableHead>Registered</TableHead>
+                <TableHead className="hidden md:table-cell">Plan</TableHead>
+                <TableHead className="hidden md:table-cell">Billing</TableHead>
+                <TableHead className="hidden lg:table-cell">Registered</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -275,7 +286,7 @@ export function OrganizationsClient({
                 </TableRow>
               ) : (
                 filtered.map((org) => (
-                  <TableRow key={org.id}>
+                  <TableRow key={org.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
                       <Link
                         href={`/admin/organizations/${org.id}`}
@@ -290,9 +301,9 @@ export function OrganizationsClient({
                         {org.owner_email && <p className="text-xs text-muted-foreground">{org.owner_email}</p>}
                       </div>
                     </TableCell>
-                    <TableCell>{org.sector || "-"}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{org.sector || "-"}</TableCell>
                     <TableCell>{statusBadge(org.status)}</TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm hidden md:table-cell">
                       {org.plan || "free"}
                       {org.is_tester && (
                         <Badge variant="outline" className="ml-1 text-xs border-purple-300 text-purple-700 dark:text-purple-400 bg-purple-500/10">
@@ -300,7 +311,7 @@ export function OrganizationsClient({
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {(() => {
                         const s = org.subscription_status;
                         if (!s) return <span className="text-xs text-muted-foreground">-</span>;
@@ -317,7 +328,7 @@ export function OrganizationsClient({
                         );
                       })()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       {org.created_at
                         ? new Date(org.created_at).toLocaleDateString()
                         : "-"}
@@ -330,76 +341,75 @@ export function OrganizationsClient({
                             View
                           </Link>
                         </Button>
-                        {org.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-green-700 border-green-300 hover:bg-green-50"
-                              onClick={() => handleApprove(org.id)}
-                              disabled={loading === org.id}
-                            >
-                              {loading === org.id ? "..." : "Approve"}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="outline" disabled={loading === org.id}>
+                              {loading === org.id ? "..." : <MoreHorizontal className="h-4 w-4" />}
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-red-700 border-red-300 hover:bg-red-50"
-                              onClick={() => openRejectDialog(org.id)}
-                              disabled={loading === org.id}
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {org.status === "pending" && (
+                              <>
+                                <DropdownMenuItem
+                                  className="text-green-700 dark:text-green-400"
+                                  onClick={() => handleApprove(org.id)}
+                                >
+                                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                                  Approve
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-red-700 dark:text-red-400"
+                                  onClick={() => openRejectDialog(org.id)}
+                                >
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Reject
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            {org.status === "suspended" ? (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setConfirmDialog({
+                                    type: "unsuspend",
+                                    orgId: org.id,
+                                    name: org.name,
+                                  })
+                                }
+                              >
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Unsuspend
+                              </DropdownMenuItem>
+                            ) : org.status !== "pending" ? (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setConfirmDialog({
+                                    type: "suspend",
+                                    orgId: org.id,
+                                    name: org.name,
+                                  })
+                                }
+                              >
+                                <Ban className="mr-2 h-4 w-4" />
+                                Suspend
+                              </DropdownMenuItem>
+                            ) : null}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() =>
+                                setConfirmDialog({
+                                  type: "delete",
+                                  orgId: org.id,
+                                  name: org.name,
+                                })
+                              }
                             >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                        {org.status === "suspended" ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              setConfirmDialog({
-                                type: "unsuspend",
-                                orgId: org.id,
-                                name: org.name,
-                              })
-                            }
-                            disabled={loading === org.id}
-                          >
-                            <RotateCcw className="mr-1 h-3 w-3" />
-                            Unsuspend
-                          </Button>
-                        ) : org.status !== "pending" ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              setConfirmDialog({
-                                type: "suspend",
-                                orgId: org.id,
-                                name: org.name,
-                              })
-                            }
-                            disabled={loading === org.id}
-                          >
-                            <Ban className="mr-1 h-3 w-3" />
-                            Suspend
-                          </Button>
-                        ) : null}
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() =>
-                            setConfirmDialog({
-                              type: "delete",
-                              orgId: org.id,
-                              name: org.name,
-                            })
-                          }
-                          disabled={loading === org.id}
-                        >
-                          <Trash2 className="mr-1 h-3 w-3" />
-                          Delete
-                        </Button>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -407,6 +417,7 @@ export function OrganizationsClient({
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

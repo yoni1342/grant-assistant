@@ -105,7 +105,7 @@ export function AppearanceTab({ preferences }: AppearanceTabProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Theme */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="space-y-0.5">
             <Label>Theme</Label>
             <p className="text-sm text-muted-foreground">
@@ -113,7 +113,7 @@ export function AppearanceTab({ preferences }: AppearanceTabProps) {
             </p>
           </div>
           <Select value={theme || "system"} onValueChange={handleThemeChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -125,7 +125,7 @@ export function AppearanceTab({ preferences }: AppearanceTabProps) {
         </div>
 
         {/* Timezone */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="space-y-0.5">
             <Label>Timezone</Label>
             <p className="text-sm text-muted-foreground">
@@ -133,7 +133,7 @@ export function AppearanceTab({ preferences }: AppearanceTabProps) {
             </p>
           </div>
           <Select value={timezone} onValueChange={handleTimezoneChange}>
-            <SelectTrigger className="w-[220px]">
+            <SelectTrigger className="w-full sm:w-[220px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -147,7 +147,7 @@ export function AppearanceTab({ preferences }: AppearanceTabProps) {
         </div>
 
         {/* Date Format */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="space-y-0.5">
             <Label>Date Format</Label>
             <p className="text-sm text-muted-foreground">
@@ -155,7 +155,7 @@ export function AppearanceTab({ preferences }: AppearanceTabProps) {
             </p>
           </div>
           <Select value={dateFormat} onValueChange={handleDateFormatChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

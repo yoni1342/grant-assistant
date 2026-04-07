@@ -110,15 +110,16 @@ export function DocumentTable({ initialData }: DocumentTableProps) {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
         <Input
           placeholder="Search documents..."
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="max-w-sm"
+          aria-label="Search documents"
         />
         <Select onValueChange={handleCategoryFilterChange} defaultValue="all">
-          <SelectTrigger className="w-[220px]">
+          <SelectTrigger className="w-full sm:w-[220px]">
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
           <SelectContent>
@@ -134,7 +135,7 @@ export function DocumentTable({ initialData }: DocumentTableProps) {
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

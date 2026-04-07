@@ -47,7 +47,7 @@ export default async function AgencyDashboardPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-black uppercase tracking-tight">
             {agency?.name || "Agency"} Dashboard
@@ -56,7 +56,7 @@ export default async function AgencyDashboardPage() {
             Manage your organizations
           </p>
         </div>
-        <Link href="/agency/organizations/new">
+        <Link href="/agency/organizations/new" className="shrink-0">
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
             New Organization

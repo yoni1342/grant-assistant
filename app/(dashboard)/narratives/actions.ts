@@ -15,7 +15,7 @@ export async function getNarratives() {
     .from('documents')
     .select('*')
     .eq('org_id', orgId)
-    .eq('category', 'narrative')
+    .or('category.eq.narrative,ai_category.eq.narrative,ai_category.like.narrative_%')
     .order('updated_at', { ascending: false })
 
   if (error) {
@@ -197,7 +197,7 @@ export async function getNarrative(narrativeId: string) {
     .select('*')
     .eq('id', narrativeId)
     .eq('org_id', orgId)
-    .eq('category', 'narrative')
+    .or('category.eq.narrative,ai_category.eq.narrative,ai_category.like.narrative_%')
     .single()
 
   if (error || !doc) {

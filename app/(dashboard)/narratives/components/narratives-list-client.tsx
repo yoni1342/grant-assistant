@@ -20,7 +20,8 @@ export function NarrativesListClient({ initialNarratives }: NarrativesListClient
         { event: 'INSERT', schema: 'public', table: 'documents' },
         (payload) => {
           const doc = payload.new as Record<string, unknown>
-          if (doc.category === 'narrative') {
+          const isNarrative = doc.category === 'narrative' || (typeof doc.ai_category === 'string' && (doc.ai_category === 'narrative' || doc.ai_category.startsWith('narrative_')))
+          if (isNarrative) {
             const meta = doc.metadata as Record<string, unknown> | null
             setNarratives(prev => [{
               id: doc.id as string,
@@ -39,7 +40,8 @@ export function NarrativesListClient({ initialNarratives }: NarrativesListClient
         { event: 'UPDATE', schema: 'public', table: 'documents' },
         (payload) => {
           const doc = payload.new as Record<string, unknown>
-          if (doc.category === 'narrative') {
+          const isNarrativeUpdate = doc.category === 'narrative' || (typeof doc.ai_category === 'string' && (doc.ai_category === 'narrative' || doc.ai_category.startsWith('narrative_')))
+          if (isNarrativeUpdate) {
             const meta = doc.metadata as Record<string, unknown> | null
             setNarratives(prev =>
               prev.map(n => n.id === doc.id ? {

@@ -269,6 +269,7 @@ export function ProposalTable({ initialData }: ProposalTableProps) {
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="max-w-sm"
+          aria-label="Search proposals"
         />
         {selectedCount > 0 && (
           <Button
@@ -283,7 +284,7 @@ export function ProposalTable({ initialData }: ProposalTableProps) {
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

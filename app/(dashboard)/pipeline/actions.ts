@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sendGrantEligibleEmail } from '@/lib/email/service'
 
 const STAGE_WORKFLOWS: Record<string, string> = {
   screening: 'screen-grant',
@@ -65,6 +66,15 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
 
   if (!webhookPath) {
     // No workflow for this stage transition — just update the stage directly
+    const adminClient = createAdminClient()
+
+    const { data: grant } = await adminClient
+      .from('grants')
+      .select('title, funder_name, amount, deadline, screening_score')
+      .eq('id', grantId)
+      .eq('org_id', profile.org_id)
+      .single()
+
     const { error } = await supabase
       .from('grants')
       .update({ stage: targetStage })
@@ -72,6 +82,53 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
       .eq('org_id', profile.org_id)
 
     if (error) return { error: error.message }
+
+    // Send email when grant moves to pending_approval
+    if (targetStage === 'pending_approval' && grant) {
+      const { data: org } = await adminClient
+        .from('organizations')
+        .select('name')
+        .eq('id', profile.org_id)
+        .single()
+
+      const { data: userProfile } = await adminClient
+        .from('profiles')
+        .select('full_name, email')
+        .eq('org_id', profile.org_id)
+        .limit(1)
+        .single()
+
+      if (userProfile?.email && org) {
+        const { data: narrativeDocs } = await adminClient
+          .from('documents')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', profile.org_id)
+          .eq('category', 'narrative')
+
+        const { data: budgetDocs } = await adminClient
+          .from('documents')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', profile.org_id)
+          .eq('category', 'budget')
+
+        sendGrantEligibleEmail({
+          toEmail: userProfile.email,
+          fullName: userProfile.full_name || 'there',
+          organizationName: org.name,
+          grantId,
+          grantTitle: grant.title,
+          funderName: grant.funder_name,
+          amount: grant.amount,
+          deadline: grant.deadline,
+          screeningScore: grant.screening_score,
+          missingNarratives: (narrativeDocs?.length ?? 0) === 0,
+          missingBudget: (budgetDocs?.length ?? 0) === 0,
+        }).catch((err) => {
+          console.error('[triggerStageWorkflow] Failed to send grant eligible email:', err)
+        })
+      }
+    }
+
     revalidatePath('/pipeline')
     return { success: true }
   }
