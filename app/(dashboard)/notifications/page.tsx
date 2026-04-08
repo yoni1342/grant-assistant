@@ -33,11 +33,13 @@ export default async function NotificationsPage() {
     .eq("is_read", false);
 
   return (
-    <Suspense>
-      <NotificationsClient
-        initialNotifications={notifications || []}
-        orgId={profile.org_id}
-      />
-    </Suspense>
+    <div data-tour="notifications-area">
+      <Suspense>
+        <NotificationsClient
+          initialNotifications={notifications || []}
+          orgId={profile.org_id}
+        />
+      </Suspense>
+    </div>
   );
 }

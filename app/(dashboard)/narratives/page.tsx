@@ -13,7 +13,7 @@ export default async function NarrativesPage() {
   const { data: narratives, error: narrativesError } = await getNarratives()
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6" data-tour="narratives-area">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="font-display text-2xl font-black uppercase tracking-tight">Narratives</h1>

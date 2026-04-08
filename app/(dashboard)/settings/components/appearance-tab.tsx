@@ -5,6 +5,7 @@ import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -12,7 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Navigation } from "lucide-react"
 import { updatePreferences } from "../actions"
+import { useTour } from "@/lib/tour/tour-provider"
 
 const TIMEZONES = [
   "America/New_York",
@@ -54,10 +57,12 @@ function formatPreview(format: string) {
 
 interface AppearanceTabProps {
   preferences: Record<string, string>
+  plan?: string
 }
 
-export function AppearanceTab({ preferences }: AppearanceTabProps) {
+export function AppearanceTab({ preferences, plan }: AppearanceTabProps) {
   const { theme, setTheme } = useTheme()
+  const { startTour, isActive } = useTour()
   const [timezone, setTimezone] = useState(
     preferences.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
   )
@@ -166,6 +171,27 @@ export function AppearanceTab({ preferences }: AppearanceTabProps) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Feature Tour */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t">
+          <div className="space-y-0.5">
+            <Label>Feature Tour</Label>
+            <p className="text-sm text-muted-foreground">
+              Take a guided tour of the platform features.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            disabled={isActive}
+            onClick={() => {
+              const tourId = plan === "professional" || plan === "agency" ? "professional" : "base";
+              startTour(tourId);
+            }}
+          >
+            <Navigation className="h-4 w-4 mr-1.5" />
+            Restart Tour
+          </Button>
         </div>
       </CardContent>
     </Card>

@@ -14,6 +14,16 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Search,
   Loader2,
   Zap,
@@ -116,7 +126,7 @@ function GrantDetailBody({
                 <p className="text-xs text-muted-foreground mb-0.5">Deadline</p>
                 <p className={`text-sm font-medium flex items-center gap-1.5 ${isGrantExpired(grant.deadline) ? "text-red-500" : ""}`}>
                   {isGrantExpired(grant.deadline) && <AlertTriangle className="h-3.5 w-3.5" />}
-                  {new Date(grant.deadline).toLocaleDateString()}
+                  {isNaN(new Date(grant.deadline).getTime()) ? grant.deadline : new Date(grant.deadline).toLocaleDateString()}
                   {isGrantExpired(grant.deadline) && (
                     <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
                       Expired
@@ -374,9 +384,27 @@ interface GrantUsage {
   plan: string;
 }
 
+interface SearchSession {
+  id: string;
+  query: string;
+  results: DiscoveredGrant[];
+  loading: boolean;
+  searchComplete: boolean;
+  stageMessage: { message: string; icon: typeof Globe };
+  sourceCount: number;
+  error: string | null;
+}
+
+interface SessionRefs {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  channel: any;
+  poll: ReturnType<typeof setInterval> | null;
+  seenTitles: Set<string>;
+  seenRowIds: Set<string>;
+}
+
 export default function DiscoveryPage() {
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [orgType, setOrgType] = useState<string[]>([]);
   const [profitStatus, setProfitStatus] = useState<string[]>([]);
@@ -384,26 +412,73 @@ export default function DiscoveryPage() {
   const [fundingCategory, setFundingCategory] = useState<string[]>([]);
   const [location, setLocation] = useState<string[]>([]);
   const [hideExpired, setHideExpired] = useState(true);
-  const [results, setResults] = useState<DiscoveredGrant[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [searchComplete, setSearchComplete] = useState(false);
   const [selectedGrant, setSelectedGrant] = useState<DiscoveredGrant | null>(
     null
   );
   const [addingToPipeline, setAddingToPipeline] = useState<string | null>(null);
   const [addedGrants, setAddedGrants] = useState<Set<string>>(new Set());
-  const [sourceCount, setSourceCount] = useState(0);
-  const [stageMessage, setStageMessage] = useState(DEFAULT_STAGE);
   const [grantUsage, setGrantUsage] = useState<GrantUsage | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const channelRef = useRef<any>(null);
-  const inactivityRef = useRef<ReturnType<typeof setTimeout>>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval>>(null);
-  const seenTitlesRef = useRef<Set<string>>(new Set());
-  const seenRowIdsRef = useRef<Set<string>>(new Set());
+
+  // Concurrent search sessions
+  const [sessions, setSessions] = useState<SearchSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const sessionRefsMap = useRef<Map<string, SessionRefs>>(new Map());
+
+  // Derived: active session
+  const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
+  const results = activeSession?.results ?? [];
+  const loading = activeSession?.loading ?? false;
+  const searchComplete = activeSession?.searchComplete ?? false;
+  const stageMessage = activeSession?.stageMessage ?? DEFAULT_STAGE;
+  const error = activeSession?.error ?? null;
+
+  // Helper: update a specific session
+  function updateSession(sessionId: string, updates: Partial<SearchSession>) {
+    setSessions((prev) =>
+      prev.map((s) => (s.id === sessionId ? { ...s, ...updates } : s))
+    );
+  }
+
+  // Helper: append results to a specific session
+  function appendResults(sessionId: string, newGrants: DiscoveredGrant[]) {
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? { ...s, results: [...s.results, ...newGrants], sourceCount: s.sourceCount + 1 }
+          : s
+      )
+    );
+  }
+
+  // Helper: cleanup a session's subscriptions
+  function cleanupSessionRefs(sessionId: string) {
+    const refs = sessionRefsMap.current.get(sessionId);
+    if (!refs) return;
+    if (refs.channel) {
+      const supabase = createClient();
+      supabase.removeChannel(refs.channel as Parameters<typeof supabase.removeChannel>[0]);
+    }
+    if (refs.poll) clearInterval(refs.poll);
+    sessionRefsMap.current.delete(sessionId);
+  }
+
+  // Helper: close a session tab
+  function closeSession(sessionId: string) {
+    cleanupSessionRefs(sessionId);
+    setSessions((prev) => {
+      const remaining = prev.filter((s) => s.id !== sessionId);
+      if (activeSessionId === sessionId && remaining.length > 0) {
+        setActiveSessionId(remaining[remaining.length - 1].id);
+      } else if (remaining.length === 0) {
+        setActiveSessionId(null);
+      }
+      return remaining;
+    });
+  }
 
   const [storageKey, setStorageKey] = useState<string | null>(null);
-  const [recentSearches, setRecentSearches] = useState<{ id: string; query: string }[]>([]);
+  const [recentSearches, setRecentSearches] = useState<{ id: string; query: string; search_id?: string }[]>([]);
+  const [deleteSearchConfirm, setDeleteSearchConfirm] = useState<{ id: string; query: string } | null>(null);
 
   // Resolve org-specific storage key
   useEffect(() => {
@@ -427,21 +502,44 @@ export default function DiscoveryPage() {
   useEffect(() => {
     fetch("/api/search-history")
       .then((r) => r.ok ? r.json() : [])
-      .then((data) => setRecentSearches(data))
+      .then((data: { id: string; query: string; search_id?: string }[]) => setRecentSearches(data))
       .catch(() => {});
   }, []);
 
-  function saveRecentSearch(q: string) {
+  function saveRecentSearch(q: string, searchId?: string) {
     if (!q.trim()) return;
     setRecentSearches((prev) => [
-      { id: "temp-" + Date.now(), query: q.trim() },
+      { id: "temp-" + Date.now(), query: q.trim(), search_id: searchId },
       ...prev.filter((s) => s.query !== q.trim()),
     ].slice(0, 8));
     fetch("/api/search-history", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: q.trim() }),
+      body: JSON.stringify({ query: q.trim(), search_id: searchId }),
     }).catch(() => {});
+  }
+
+  async function loadCachedResults(searchId: string) {
+    try {
+      const res = await fetch(`/api/grants/search-results?search_id=${searchId}`);
+      if (!res.ok) return null;
+      const rows = await res.json() as { grant_data: unknown; is_complete: boolean; source_group: string }[];
+      const grants: DiscoveredGrant[] = [];
+      const seen = new Set<string>();
+      for (const row of rows) {
+        if (row.is_complete || row.source_group?.startsWith("__status__")) continue;
+        const extracted = extractGrants(row.grant_data);
+        for (const g of extracted) {
+          if (!seen.has(g.title)) {
+            seen.add(g.title);
+            grants.push(g);
+          }
+        }
+      }
+      return grants.length > 0 ? grants : null;
+    } catch {
+      return null;
+    }
   }
 
   function removeRecentSearch(id: string) {
@@ -469,12 +567,19 @@ export default function DiscoveryPage() {
       if (s.fundingCategory) setFundingCategory(s.fundingCategory);
       if (s.location) setLocation(s.location);
       if (s.results?.length) {
-        setResults(s.results);
-        setSearchComplete(true);
-        // Rebuild seen titles set
-        for (const g of s.results) {
-          seenTitlesRef.current.add(g.title);
-        }
+        const restoredId = "restored-" + Date.now();
+        const restoredSession: SearchSession = {
+          id: restoredId,
+          query: s.query || "",
+          results: s.results,
+          loading: false,
+          searchComplete: true,
+          stageMessage: DEFAULT_STAGE,
+          sourceCount: 0,
+          error: null,
+        };
+        setSessions([restoredSession]);
+        setActiveSessionId(restoredId);
       }
       if (s.addedGrants?.length) setAddedGrants(new Set(s.addedGrants));
     } catch {
@@ -489,7 +594,7 @@ export default function DiscoveryPage() {
       sessionStorage.setItem(
         storageKey,
         JSON.stringify({
-          query,
+          query: activeSession?.query || query,
           orgType,
           profitStatus,
           industry,
@@ -502,7 +607,7 @@ export default function DiscoveryPage() {
     } catch {
       // storage full — ignore
     }
-  }, [storageKey, query, orgType, profitStatus, industry, fundingCategory, location, results, addedGrants]);
+  }, [storageKey, query, activeSession, orgType, profitStatus, industry, fundingCategory, location, results, addedGrants]);
 
   const atLimit = grantUsage !== null && grantUsage.limit !== null && grantUsage.used >= grantUsage.limit;
 
@@ -527,15 +632,17 @@ export default function DiscoveryPage() {
     fetchUsage();
   }, []);
 
-  // Cleanup on unmount
+  // Cleanup all sessions on unmount
   useEffect(() => {
     return () => {
-      if (channelRef.current) {
-        const supabase = createClient();
-        supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
+      const supabase = createClient();
+      for (const [, refs] of sessionRefsMap.current) {
+        if (refs.channel) {
+          supabase.removeChannel(refs.channel as Parameters<typeof supabase.removeChannel>[0]);
+        }
+        if (refs.poll) clearInterval(refs.poll);
       }
-      if (inactivityRef.current) clearTimeout(inactivityRef.current);
-      if (pollRef.current) clearInterval(pollRef.current);
+      sessionRefsMap.current.clear();
     };
   }, []);
 
@@ -578,33 +685,117 @@ export default function DiscoveryPage() {
     return [];
   }, []);
 
+  // Start a new search and subscribe to results
+  function startSearchSession(sessionId: string, searchQuery: string) {
+    const supabase = createClient();
+
+    // Create refs for this session
+    const refs: SessionRefs = {
+      channel: null,
+      poll: null,
+      seenTitles: new Set(),
+      seenRowIds: new Set(),
+    };
+    sessionRefsMap.current.set(sessionId, refs);
+
+    // Helper: process a row from search_results
+    const processRow = (row: { grant_data: unknown; is_complete: boolean; source_group: string }) => {
+      if (row.is_complete) {
+        updateSession(sessionId, {
+          searchComplete: true,
+          loading: false,
+          stageMessage: DEFAULT_STAGE,
+        });
+        const r = sessionRefsMap.current.get(sessionId);
+        if (r?.poll) {
+          clearInterval(r.poll);
+          r.poll = null;
+        }
+        return;
+      }
+
+      if (row.source_group?.startsWith("__status__:")) {
+        const d = row.grant_data as { status?: string; stage_message?: string };
+        if (d?.stage_message) {
+          const icon = STAGE_ICONS[d.status || ""] || Sparkles;
+          updateSession(sessionId, { stageMessage: { message: d.stage_message, icon } });
+        }
+        return;
+      }
+
+      const grants = extractGrants(row.grant_data);
+      if (grants.length > 0) {
+        const newGrants = grants.filter((g) => {
+          if (refs.seenTitles.has(g.title)) return false;
+          refs.seenTitles.add(g.title);
+          return true;
+        });
+
+        if (newGrants.length > 0) {
+          appendResults(sessionId, newGrants);
+        }
+      }
+    };
+
+    // Subscribe to real-time search results
+    const channel = supabase
+      .channel(`search-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "search_results",
+          filter: `search_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          processRow(payload.new as { grant_data: unknown; is_complete: boolean; source_group: string });
+        }
+      )
+      .subscribe();
+
+    refs.channel = channel;
+
+    // Polling fallback: fetch search_results via server API every 2s
+    const pollForResults = async () => {
+      try {
+        const res = await fetch(`/api/grants/search-results?search_id=${sessionId}`);
+        if (!res.ok) return;
+        const rows = await res.json() as { id: string; grant_data: unknown; is_complete: boolean; source_group: string }[];
+
+        for (const row of rows) {
+          if (refs.seenRowIds.has(row.id)) continue;
+          refs.seenRowIds.add(row.id);
+          processRow(row);
+        }
+      } catch {
+        // silent — will retry on next poll
+      }
+    };
+
+    pollForResults();
+    refs.poll = setInterval(pollForResults, 2000);
+  }
+
   async function triggerDiscovery() {
     if (!query.trim()) return;
     saveRecentSearch(query);
-    setLoading(true);
-    setResults([]);
-    setError(null);
-    setSearchComplete(false);
-    setAddedGrants(new Set());
-    setSourceCount(0);
-    setStageMessage(DEFAULT_STAGE);
-    seenTitlesRef.current = new Set();
-    seenRowIdsRef.current = new Set();
 
-    // Clean up previous subscription & polling
-    if (channelRef.current) {
-      const supabase = createClient();
-      supabase.removeChannel(channelRef.current as Parameters<typeof supabase.removeChannel>[0]);
-      channelRef.current = null;
-    }
-    if (inactivityRef.current) {
-      clearTimeout(inactivityRef.current);
-      inactivityRef.current = null;
-    }
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
+    // Create a temporary session ID, will be replaced with real searchId
+    const tempId = "pending-" + Date.now();
+    const newSession: SearchSession = {
+      id: tempId,
+      query: query.trim(),
+      results: [],
+      loading: true,
+      searchComplete: false,
+      stageMessage: DEFAULT_STAGE,
+      sourceCount: 0,
+      error: null,
+    };
+
+    setSessions((prev) => [...prev, newSession]);
+    setActiveSessionId(tempId);
 
     try {
       const response = await fetch("/api/webhook", {
@@ -624,122 +815,42 @@ export default function DiscoveryPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        setError(data.error || "Failed to start search");
-        setLoading(false);
+        updateSession(tempId, {
+          error: data.error || "Failed to start search",
+          loading: false,
+        });
         return;
       }
 
       const searchId = data.search_id;
-      const supabase = createClient();
 
-      // Inactivity timeout: if no data arrives for 5 min, stop loading
-      // but do NOT mark searchComplete — only the workflow's __done__ signal does that
-      const resetInactivityTimer = () => {
-        if (inactivityRef.current) clearTimeout(inactivityRef.current);
-        inactivityRef.current = setTimeout(() => {
-          setLoading(false);
-          setStageMessage(DEFAULT_STAGE);
-          if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-          }
-        }, 300000);
-      };
+      // Update the recent search entry with the search_id
+      if (searchId) {
+        setRecentSearches((prev) =>
+          prev.map((s) => s.query === query.trim() ? { ...s, search_id: searchId } : s)
+        );
+        fetch("/api/search-history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query.trim(), search_id: searchId }),
+        }).catch(() => {});
+      }
 
-      // Start the initial inactivity timer
-      resetInactivityTimer();
+      // Replace temp ID with real search ID
+      setSessions((prev) =>
+        prev.map((s) => (s.id === tempId ? { ...s, id: searchId } : s))
+      );
+      setActiveSessionId(searchId);
 
-      // Helper: process a row from search_results (used by both Realtime and polling)
-      const processRow = (row: { grant_data: unknown; is_complete: boolean; source_group: string }) => {
-        // Reset inactivity timer on any activity
-        resetInactivityTimer();
-
-        if (row.is_complete) {
-          // Multiple source paths may each send __done__. Don't stop
-          // polling immediately — shorten the inactivity timer so we
-          // wait a bit for other paths to finish, then mark complete.
-          if (inactivityRef.current) clearTimeout(inactivityRef.current);
-          inactivityRef.current = setTimeout(() => {
-            setSearchComplete(true);
-            setLoading(false);
-            setStageMessage(DEFAULT_STAGE);
-            if (pollRef.current) {
-              clearInterval(pollRef.current);
-              pollRef.current = null;
-            }
-          }, 8000);
-          return;
-        }
-
-        if (row.source_group?.startsWith("__status__:")) {
-          const d = row.grant_data as { status?: string; stage_message?: string };
-          if (d?.stage_message) {
-            const icon = STAGE_ICONS[d.status || ""] || Sparkles;
-            setStageMessage({ message: d.stage_message, icon });
-          }
-          return;
-        }
-
-        const grants = extractGrants(row.grant_data);
-        if (grants.length > 0) {
-          const newGrants = grants.filter((g) => {
-            if (seenTitlesRef.current.has(g.title)) return false;
-            seenTitlesRef.current.add(g.title);
-            return true;
-          });
-
-          if (newGrants.length > 0) {
-            setResults((prev) => [...prev, ...newGrants]);
-            setSourceCount((prev) => prev + 1);
-          }
-        }
-      };
-
-      // 1) Subscribe to real-time search results
-      const channel = supabase
-        .channel(`search-${searchId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "search_results",
-            filter: `search_id=eq.${searchId}`,
-          },
-          (payload) => {
-            processRow(payload.new as { grant_data: unknown; is_complete: boolean; source_group: string });
-          }
-        )
-        .subscribe();
-
-      channelRef.current = channel;
-
-      // 2) Polling fallback: fetch search_results via server API every 2s
-      //    (bypasses RLS which can block the browser client's Realtime & direct queries)
-      const pollForResults = async () => {
-        try {
-          const res = await fetch(`/api/grants/search-results?search_id=${searchId}`);
-          if (!res.ok) return;
-          const rows = await res.json() as { id: string; grant_data: unknown; is_complete: boolean; source_group: string }[];
-
-          for (const row of rows) {
-            if (seenRowIdsRef.current.has(row.id)) continue;
-            seenRowIdsRef.current.add(row.id);
-            processRow(row);
-          }
-        } catch {
-          // silent — will retry on next poll
-        }
-      };
-
-      // Run first poll immediately, then every 2s
-      pollForResults();
-      pollRef.current = setInterval(pollForResults, 2000);
+      // Start listening for results
+      startSearchSession(searchId, query.trim());
 
     } catch (err) {
       console.error("Discovery error:", err);
-      setError("Failed to trigger discovery. Check your n8n connection.");
-      setLoading(false);
+      updateSession(tempId, {
+        error: "Failed to trigger discovery. Check your n8n connection.",
+        loading: false,
+      });
     }
   }
 
@@ -851,7 +962,7 @@ export default function DiscoveryPage() {
       </div>
 
       {/* Search */}
-      <Card>
+      <Card data-tour="discovery-search">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <div className="relative flex-1">
@@ -867,6 +978,7 @@ export default function DiscoveryPage() {
             <div className="flex gap-2 sm:gap-3">
               <Button
                 variant="outline"
+                data-tour="discovery-filters"
                 onClick={() => setShowFilters((v) => !v)}
                 className="shrink-0 flex-1 sm:flex-none"
               >
@@ -879,35 +991,73 @@ export default function DiscoveryPage() {
                 )}
               </Button>
               <Button
+                data-tour="discovery-discover-btn"
                 onClick={triggerDiscovery}
-                disabled={loading || !query.trim()}
+                disabled={!query.trim()}
                 className="shrink-0 flex-1 sm:flex-none"
               >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : (
-                  <Zap className="h-4 w-4 mr-1" />
-                )}
+                <Zap className="h-4 w-4 mr-1" />
                 Discover
               </Button>
             </div>
           </div>
 
           {/* Recent Searches */}
-          {!loading && recentSearches.length > 0 && (
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
+          {recentSearches.length > 0 && (
+            <div data-tour="discovery-recent" className="flex items-center gap-2 mt-3 flex-wrap">
               <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <span className="text-xs text-muted-foreground">Recent:</span>
               {recentSearches.map((s) => (
                 <button
                   key={s.id}
                   className="group inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-                  onClick={() => { setQuery(s.query); }}
+                  onClick={async () => {
+                    setQuery(s.query);
+                    // Check if there's already a session for this query
+                    const existing = sessions.find((sess) => sess.query === s.query);
+                    if (existing) {
+                      setActiveSessionId(existing.id);
+                      return;
+                    }
+                    if (s.search_id) {
+                      const cachedSessionId = "cached-" + s.search_id;
+                      const cachedSession: SearchSession = {
+                        id: cachedSessionId,
+                        query: s.query,
+                        results: [],
+                        loading: true,
+                        searchComplete: false,
+                        stageMessage: { message: "Loading previous results...", icon: Globe },
+                        sourceCount: 0,
+                        error: null,
+                      };
+                      setSessions((prev) => [...prev, cachedSession]);
+                      setActiveSessionId(cachedSessionId);
+                      const cached = await loadCachedResults(s.search_id);
+                      if (cached) {
+                        updateSession(cachedSessionId, {
+                          results: cached,
+                          searchComplete: true,
+                          loading: false,
+                          stageMessage: DEFAULT_STAGE,
+                        });
+                      } else {
+                        updateSession(cachedSessionId, {
+                          loading: false,
+                          searchComplete: true,
+                          stageMessage: DEFAULT_STAGE,
+                        });
+                      }
+                    }
+                  }}
                 >
                   {s.query}
                   <X
                     className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => { e.stopPropagation(); removeRecentSearch(s.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteSearchConfirm({ id: s.id, query: s.query });
+                    }}
                   />
                 </button>
               ))}
@@ -945,25 +1095,67 @@ export default function DiscoveryPage() {
             </div>
           )}
 
-          {loading && !searchComplete && (
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                {(() => {
-                  const StageIcon = stageMessage.icon;
-                  return (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                      <StageIcon className="h-4 w-4 shrink-0" />
-                      <span className="animate-pulse">{stageMessage.message}</span>
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
-          {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
         </CardContent>
       </Card>
+
+      {/* Search Session Tabs */}
+      {sessions.length > 0 && (
+        <div className="flex items-center gap-1 overflow-x-auto pb-1">
+          {sessions.map((session) => (
+            <button
+              key={session.id}
+              onClick={() => setActiveSessionId(session.id)}
+              className={`group inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+                session.id === activeSessionId
+                  ? "border-foreground/20 bg-foreground/[0.06] text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]"
+              }`}
+            >
+              {session.loading ? (
+                <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+              ) : session.searchComplete && session.results.length > 0 ? (
+                <CheckCheck className="h-3 w-3 text-green-500 shrink-0" />
+              ) : session.error ? (
+                <AlertTriangle className="h-3 w-3 text-red-500 shrink-0" />
+              ) : (
+                <Search className="h-3 w-3 shrink-0" />
+              )}
+              <span className="max-w-[150px] truncate">{session.query}</span>
+              {session.results.length > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 min-w-[1.25rem] justify-center">
+                  {session.results.length}
+                </Badge>
+              )}
+              <X
+                className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 hover:text-red-500"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeSession(session.id);
+                }}
+              />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Active session status */}
+      {activeSession && loading && !searchComplete && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {(() => {
+              const StageIcon = stageMessage.icon;
+              return (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                  <StageIcon className="h-4 w-4 shrink-0" />
+                  <span className="animate-pulse">{stageMessage.message}</span>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {/* Grant Usage Indicator (free tier) */}
       {grantUsage && grantUsage.limit !== null && (
@@ -1016,7 +1208,7 @@ export default function DiscoveryPage() {
 
       {/* Search Results */}
       {results.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3 min-w-0">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium">
               Results{" "}
@@ -1068,7 +1260,7 @@ export default function DiscoveryPage() {
             </div>
           )}
 
-          <div className="grid gap-3">
+          <div className="grid gap-3 min-w-0">
             {visibleResults.map((grant, index) => {
               const grantKey = grant.title;
               const isAdded = addedGrants.has(grantKey);
@@ -1077,12 +1269,12 @@ export default function DiscoveryPage() {
               return (
                 <Card
                   key={index}
-                  className="cursor-pointer transition-shadow hover:shadow-md"
+                  className="cursor-pointer transition-shadow hover:shadow-md overflow-hidden"
                   onClick={() => setSelectedGrant(grant)}
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-4 overflow-hidden">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-                      <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex-1 min-w-0 space-y-1.5 break-words">
                         <h3 className="font-medium leading-tight">
                           {grant.title}
                         </h3>
@@ -1186,6 +1378,32 @@ export default function DiscoveryPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete search history confirmation */}
+      <AlertDialog open={!!deleteSearchConfirm} onOpenChange={(open) => !open && setDeleteSearchConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Search</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove &ldquo;{deleteSearchConfirm?.query}&rdquo; from your search history? Its cached results will also be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (deleteSearchConfirm) {
+                  removeRecentSearch(deleteSearchConfirm.id);
+                  setDeleteSearchConfirm(null);
+                }
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

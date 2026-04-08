@@ -99,7 +99,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <div data-tour="dashboard-metrics" className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         <Link href="/pipeline">
           <Card className="cursor-pointer hover:bg-muted/50 transition-colors h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -150,7 +150,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 min-w-0">
         {/* Pipeline Overview */}
-        <Card className="lg:col-span-2 min-w-0 overflow-hidden">
+        <Card data-tour="dashboard-pipeline" className="lg:col-span-2 min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-base">Pipeline Overview</CardTitle>
           </CardHeader>
@@ -190,7 +190,7 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Upcoming Deadlines */}
-        <Card className="min-w-0 overflow-hidden">
+        <Card data-tour="dashboard-deadlines" className="min-w-0 overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Upcoming Deadlines</CardTitle>
             {deadlineGrants.length > 0 && (
@@ -243,7 +243,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent Activity */}
-      <Card>
+      <Card data-tour="dashboard-activity">
         <CardHeader>
           <CardTitle className="text-base">Recent Activity</CardTitle>
         </CardHeader>

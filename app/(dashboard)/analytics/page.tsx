@@ -5,7 +5,7 @@ export default async function AnalyticsPage() {
   const pipelineData = await getPipelineBreakdown()
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6" data-tour="analytics-area">
       {/* Page Header */}
       <div>
         <h1 className="font-display text-2xl font-black uppercase tracking-tight">Analytics</h1>

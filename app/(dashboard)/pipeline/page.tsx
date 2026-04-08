@@ -47,25 +47,21 @@ export default async function PipelinePage() {
     .single();
   const orgPlan = org?.plan || "free";
 
-  if (isEmpty && !isFetching && (orgPlan !== "free" || org?.is_tester)) {
+  const didTriggerFetch = isEmpty && !isFetching && (orgPlan !== "free" || org?.is_tester);
+  if (didTriggerFetch) {
     await triggerFetchGrants(orgId);
   }
 
-  // Re-fetch status after triggering so the banner shows immediately
+  // Use existing status if already fetching, or construct it directly
+  // when we just triggered — avoids a re-fetch race condition
   const activeFetchStatus = isFetching
     ? fetchStatus
-    : isEmpty
-      ? (await adminDb
-          .from("grant_fetch_status")
-          .select("*")
-          .eq("org_id", orgId)
-          .neq("status", "complete")
-          .gte("updated_at", staleThreshold)
-          .single()).data
+    : didTriggerFetch
+      ? { org_id: orgId, status: "searching", stage_message: "Automatically fetching grants for your organization…", error_message: null }
       : null;
 
   return (
-    <div>
+    <div data-tour="pipeline-board">
       {activeFetchStatus && (
         <div className="px-4 sm:px-6 pt-4 sm:pt-6">
           <GrantFetchBanner orgId={orgId} initialStatus={activeFetchStatus} />

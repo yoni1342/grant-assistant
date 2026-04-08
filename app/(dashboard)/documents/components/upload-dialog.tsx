@@ -153,7 +153,7 @@ export function UploadDialog() {
       if (!isOpen) resetForm()
     }}>
       <DialogTrigger asChild>
-        <Button>
+        <Button data-tour="documents-upload-btn">
           <Upload className="mr-2 h-4 w-4" />
           Upload Document
         </Button>
