@@ -29,8 +29,8 @@ import { OrgSwitcher } from "@/components/org-switcher";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/discovery", label: "Discovery", icon: Search },
+  { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/narratives", label: "Narratives", icon: BookOpen },
   { href: "/proposals", label: "Proposals", icon: PenTool },
@@ -198,6 +198,7 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              data-tour={`nav-${item.href.replace(/^\//, "").replace(/\//g, "-")}`}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2.5 md:py-2 text-sm transition-colors",
                 isActive

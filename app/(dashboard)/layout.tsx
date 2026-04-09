@@ -2,6 +2,10 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { getActiveOrgId } from "@/lib/agency/context";
+import { getAdminViewOrgId } from "@/lib/admin/context";
+import { AdminViewBanner } from "@/components/admin-view-banner";
+import { ReadOnlyProvider } from "@/components/read-only-provider";
+import { TourWrapper } from "@/components/tour-wrapper";
 
 export default async function DashboardLayout({
   children,
@@ -20,7 +24,7 @@ export default async function DashboardLayout({
   // Defense-in-depth: verify org is approved
   let { data: profile } = await supabase
     .from("profiles")
-    .select("org_id, is_platform_admin, agency_id, organizations(status)")
+    .select("org_id, is_platform_admin, agency_id, preferences, organizations(status)")
     .eq("id", user.id)
     .single();
 
@@ -28,60 +32,105 @@ export default async function DashboardLayout({
   if (!profile) {
     const fallback = await supabase
       .from("profiles")
-      .select("org_id, is_platform_admin, organizations(status)")
+      .select("org_id, is_platform_admin, preferences, organizations(status)")
       .eq("id", user.id)
       .single();
     profile = fallback.data ? { ...fallback.data, agency_id: null } as unknown as typeof profile : null;
   }
 
-  if (profile?.is_platform_admin) {
-    redirect("/admin");
-  }
+  // Admin viewing as organization — allow through with read-only mode
+  const isAdminView = profile?.is_platform_admin === true;
+  let adminViewOrgId: string | null = null;
+  let adminViewOrgName: string | null = null;
 
-  const orgs = profile?.organizations as unknown as { status: string } | { status: string }[] | null;
-  const orgStatus = Array.isArray(orgs) ? orgs[0]?.status : orgs?.status;
-
-  // Agency users should go to agency dashboard unless they've explicitly
-  // switched into a client org via the org switcher
-  if (profile?.agency_id) {
-    const activeOrgId = await getActiveOrgId();
-    if (!activeOrgId) {
-      redirect("/agency");
+  if (isAdminView) {
+    adminViewOrgId = await getAdminViewOrgId();
+    if (!adminViewOrgId) {
+      redirect("/admin");
     }
-    // Verify the active org exists, belongs to this agency, and is active
+    // Fetch the org name for the banner
     const adminClient = createAdminClient();
-    const { data: activeOrg } = await adminClient
+    const { data: viewedOrg } = await adminClient
       .from("organizations")
-      .select("agency_id, status")
-      .eq("id", activeOrgId)
+      .select("name")
+      .eq("id", adminViewOrgId)
       .single();
-    if (!activeOrg || activeOrg.status === "inactive") {
-      redirect("/agency");
+    if (!viewedOrg) {
+      redirect("/admin");
     }
+    adminViewOrgName = viewedOrg.name;
   }
 
-  if (!profile?.org_id && !profile?.agency_id) {
-    redirect("/register");
-  }
+  if (!isAdminView) {
+    const orgs = profile?.organizations as unknown as { status: string } | { status: string }[] | null;
+    const orgStatus = Array.isArray(orgs) ? orgs[0]?.status : orgs?.status;
 
-  if (orgStatus === "pending") {
-    redirect("/pending-approval");
-  }
+    // Agency users should go to agency dashboard unless they've explicitly
+    // switched into a client org via the org switcher
+    if (profile?.agency_id) {
+      const activeOrgId = await getActiveOrgId();
+      if (!activeOrgId) {
+        redirect("/agency");
+      }
+      // Verify the active org exists, belongs to this agency, and is active
+      const adminClient = createAdminClient();
+      const { data: activeOrg } = await adminClient
+        .from("organizations")
+        .select("agency_id, status")
+        .eq("id", activeOrgId)
+        .single();
+      if (!activeOrg || activeOrg.status === "inactive") {
+        redirect("/agency");
+      }
+    }
 
-  if (orgStatus === "rejected") {
-    redirect("/rejected");
+    if (!profile?.org_id && !profile?.agency_id) {
+      redirect("/register");
+    }
+
+    if (orgStatus === "pending") {
+      redirect("/pending-approval");
+    }
+
+    if (orgStatus === "rejected") {
+      redirect("/rejected");
+    }
   }
 
   const activeOrgId = profile?.agency_id ? await getActiveOrgId() : null;
+
+  // Fetch plan and tour preferences for the tour provider
+  const resolvedOrgId = isAdminView ? adminViewOrgId : (activeOrgId || profile?.org_id);
+  let orgPlan = "free";
+  if (resolvedOrgId) {
+    const adminClient = createAdminClient();
+    const { data: org } = await adminClient
+      .from("organizations")
+      .select("plan")
+      .eq("id", resolvedOrgId)
+      .single();
+    if (org?.plan) orgPlan = org.plan;
+  }
+  const prefs = (profile?.preferences as Record<string, unknown>) || {};
+  const toursCompleted = (prefs.tours_completed as Record<string, string>) || {};
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-background">
       <Sidebar
         user={user}
-        agencyId={profile?.agency_id ?? null}
-        activeOrgId={activeOrgId}
+        agencyId={isAdminView ? undefined : (profile?.agency_id ?? null)}
+        activeOrgId={isAdminView ? adminViewOrgId : activeOrgId}
       />
-      <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">{children}</main>
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {isAdminView && adminViewOrgName && (
+          <AdminViewBanner orgName={adminViewOrgName} />
+        )}
+        <ReadOnlyProvider readOnly={isAdminView}>
+          <TourWrapper plan={orgPlan} toursCompleted={toursCompleted}>
+            <main className={`flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0${isAdminView ? " read-only-mode" : ""}`}>{children}</main>
+          </TourWrapper>
+        </ReadOnlyProvider>
+      </div>
     </div>
   );
 }

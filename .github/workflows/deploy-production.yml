@@ -72,6 +72,7 @@ jobs:
             --build-arg NEXT_PUBLIC_SENTRY_DSN="${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}" \
             --build-arg SENTRY_ORG="${{ secrets.SENTRY_ORG }}" \
             --build-arg SENTRY_PROJECT="${{ secrets.SENTRY_PROJECT }}" \
+            --build-arg CRON_SECRET="${{ secrets.CRON_SECRET }}" \
             --cache-from ${{ steps.tags.outputs.image_latest }} \
             -t ${{ steps.tags.outputs.image_sha }} \
             -t ${{ steps.tags.outputs.image_short }} \

@@ -275,14 +275,14 @@ export function PipelineClient({
             {grants.length} grants in pipeline
           </p>
         </div>
-        <Button onClick={handleAddGrantClick} disabled={checkingLimit} size="sm">
+        <Button data-tour="pipeline-add-btn" onClick={handleAddGrantClick} disabled={checkingLimit} size="sm">
           <Plus className="h-4 w-4 mr-1" />
           {checkingLimit ? "Checking..." : "Add Grant"}
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3">
+      <div data-tour="pipeline-filters" className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -327,6 +327,7 @@ export function PipelineClient({
           </SelectContent>
         </Select>
         <Tabs
+          data-tour="pipeline-view-toggle"
           value={view}
           onValueChange={(v) => setView(v as "kanban" | "list")}
         >

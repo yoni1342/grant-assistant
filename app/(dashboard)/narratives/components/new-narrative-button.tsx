@@ -10,7 +10,7 @@ export function NewNarrativeButton() {
 
   return (
     <>
-      <Button size="sm" onClick={() => setDialogOpen(true)}>
+      <Button data-tour="narratives-new-btn" size="sm" onClick={() => setDialogOpen(true)}>
         <Plus className="h-4 w-4 mr-2" />
         New Narrative
       </Button>

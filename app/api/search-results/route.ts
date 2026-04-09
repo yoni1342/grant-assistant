@@ -31,8 +31,9 @@ export async function POST(req: Request) {
     });
 
     if (error) {
+      console.error("[search-results] Failed to insert done row:", error.message);
       return new Response(
-        JSON.stringify({ success: false, error: error.message }),
+        JSON.stringify({ success: false, error: "Something went wrong. Please try again." }),
         { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
@@ -46,8 +47,9 @@ export async function POST(req: Request) {
     });
 
     if (error) {
+      console.error("[search-results] Failed to insert status row:", error.message);
       return new Response(
-        JSON.stringify({ success: false, error: error.message }),
+        JSON.stringify({ success: false, error: "Something went wrong. Please try again." }),
         { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
@@ -60,16 +62,37 @@ export async function POST(req: Request) {
     });
 
     if (error) {
+      console.error("[search-results] Failed to insert grants row:", error.message);
       return new Response(
-        JSON.stringify({ success: false, error: error.message }),
+        JSON.stringify({ success: false, error: "Something went wrong. Please try again." }),
         { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
   }
 
-  // Clean up search results older than 1 hour
+  // Clean up search results older than 1 hour, but preserve results linked to search history
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  await supabase.from("search_results").delete().lt("created_at", oneHourAgo);
+  const { data: historyRows } = await supabase
+    .from("search_history")
+    .select("search_id")
+    .not("search_id", "is", null);
+  const preservedIds = new Set((historyRows || []).map((r: { search_id: string }) => r.search_id));
+
+  if (preservedIds.size === 0) {
+    await supabase.from("search_results").delete().lt("created_at", oneHourAgo);
+  } else {
+    // Delete old results that are NOT linked to a search history entry
+    const { data: oldRows } = await supabase
+      .from("search_results")
+      .select("id, search_id")
+      .lt("created_at", oneHourAgo);
+    const toDelete = (oldRows || [])
+      .filter((r: { id: string; search_id: string }) => !preservedIds.has(r.search_id))
+      .map((r: { id: string }) => r.id);
+    if (toDelete.length > 0) {
+      await supabase.from("search_results").delete().in("id", toDelete);
+    }
+  }
 
   return new Response(
     JSON.stringify({ success: true }),

@@ -32,7 +32,7 @@ export function SettingsClient({ data }: { data: SettingsData }) {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList variant="line">
+        <TabsList variant="line" data-tour="settings-tabs">
           <TabsTrigger value="profile" className="text-xs sm:text-sm px-2 sm:px-3">Profile</TabsTrigger>
           <TabsTrigger value="organization" className="text-xs sm:text-sm px-2 sm:px-3">Organization</TabsTrigger>
           {isAdmin && <TabsTrigger value="integrations" className="text-xs sm:text-sm px-2 sm:px-3">Integrations</TabsTrigger>}
@@ -60,6 +60,7 @@ export function SettingsClient({ data }: { data: SettingsData }) {
         <TabsContent value="appearance">
           <AppearanceTab
             preferences={(data.profile.preferences as Record<string, string>) || {}}
+            plan={(data.profile.organization as Record<string, unknown> | null)?.plan as string | undefined}
           />
         </TabsContent>
       </Tabs>
