@@ -92,6 +92,18 @@ export async function POST(req: Request) {
       );
     }
 
+    // Reject grants whose deadline has already passed
+    if (data.deadline && !isNaN(new Date(data.deadline).getTime()) && new Date(data.deadline) < new Date()) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Cannot add grant: deadline has already passed.",
+          code: "GRANT_EXPIRED",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     const adminSupabase = createAdminClient();
     const { data: org } = await adminSupabase
       .from("organizations")

@@ -40,6 +40,14 @@ export async function POST(req: Request) {
 
   const adminClient = createAdminClient();
 
+  // Check if agency is a tester (subscription_status indicates trial/test access)
+  const { data: agency } = await adminClient
+    .from("agencies")
+    .select("subscription_status")
+    .eq("id", agencyId)
+    .single();
+  const isTester = agency?.subscription_status === "trialing" || agency?.subscription_status === "active";
+
   // Create org under the agency with agency plan and approved status
   const { data: org, error } = await adminClient
     .from("organizations")
@@ -55,8 +63,9 @@ export async function POST(req: Request) {
       geographic_focus: geographic_focus || [],
       description: description || null,
       agency_id: agencyId,
-      plan: "professional",
-      status: "active",
+      plan: "agency",
+      is_tester: isTester,
+      status: "approved",
       approved_at: new Date().toISOString(),
     })
     .select("id")

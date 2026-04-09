@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
 import { DeadlineFilter } from "./deadline-filter";
+import { excludeFetchedExpired } from "@/lib/grants/filters";
 
 const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovered",
@@ -58,7 +59,7 @@ export default async function DeadlinesPage({
 
   const { data: grants } = await adminDb
     .from("grants")
-    .select("id, title, funder_name, stage, amount, deadline, description, source_url")
+    .select("id, title, funder_name, stage, amount, deadline, description, source_url, created_at")
     .eq("org_id", orgId)
     .neq("stage", "archived")
     .not("deadline", "is", null)
@@ -67,7 +68,7 @@ export default async function DeadlinesPage({
   const now = new Date();
   const cutoff = getFilterCutoff(filter);
 
-  const allActive = (grants || []).filter((g) => {
+  const allActive = excludeFetchedExpired(grants || []).filter((g) => {
     const dl = new Date(g.deadline!);
     const isValidDate = !isNaN(dl.getTime());
     if (isValidDate) return dl > now;

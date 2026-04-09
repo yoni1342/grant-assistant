@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, FileText, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { excludeFetchedExpired } from "@/lib/grants/filters";
 
 export default async function AgencyDashboardPage() {
   const supabase = await createClient();
@@ -32,10 +33,11 @@ export default async function AgencyDashboardPage() {
   if (orgIds.length > 0) {
     const { data: grants } = await adminClient
       .from("grants")
-      .select("org_id")
+      .select("org_id, deadline, created_at")
       .in("org_id", orgIds);
     if (grants) {
-      grantCounts = grants.reduce((acc, g) => {
+      const filtered = excludeFetchedExpired(grants);
+      grantCounts = filtered.reduce((acc, g) => {
         acc[g.org_id] = (acc[g.org_id] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);

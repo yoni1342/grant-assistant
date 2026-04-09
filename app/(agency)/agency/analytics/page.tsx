@@ -1,9 +1,10 @@
-import { createClient, getUserAgencyId } from "@/lib/supabase/server";
+import { createClient, getUserAgencyId, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Building2, FileText, Clock, TrendingUp } from "lucide-react";
+import { excludeFetchedExpired, parseGrantAmount } from "@/lib/grants/filters";
 
 const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovered",
@@ -18,31 +19,32 @@ export default async function AgencyAnalyticsPage() {
   const { agencyId } = await getUserAgencyId(supabase);
   if (!agencyId) redirect("/login");
 
-  // Fetch all orgs under this agency
-  const { data: orgs } = await supabase
+  const adminClient = createAdminClient();
+
+  // Fetch all orgs under this agency (admin client to bypass RLS)
+  const { data: orgs } = await adminClient
     .from("organizations")
     .select("id, name, sector, status")
     .eq("agency_id", agencyId)
-    .neq("plan", "agency")
     .order("name");
 
   const orgIds = (orgs || []).map((o) => o.id);
 
   // Fetch all grants across agency orgs
-  let allGrants: { id: string; org_id: string; title: string; stage: string; amount: number | null; deadline: string | null; funder_name: string | null }[] = [];
+  let allGrants: { id: string; org_id: string; title: string; stage: string; amount: string | null; deadline: string | null; funder_name: string | null; created_at: string | null }[] = [];
   if (orgIds.length > 0) {
-    const { data: grants } = await supabase
+    const { data: grants } = await adminClient
       .from("grants")
-      .select("id, org_id, title, stage, amount, deadline, funder_name")
+      .select("id, org_id, title, stage, amount, deadline, funder_name, created_at")
       .in("org_id", orgIds)
       .order("created_at", { ascending: false });
-    allGrants = grants || [];
+    allGrants = excludeFetchedExpired(grants || []);
   }
 
   // Fetch recent activity across all orgs
   let activities: { id: string; org_id: string; action: string; created_at: string }[] = [];
   if (orgIds.length > 0) {
-    const { data: acts } = await supabase
+    const { data: acts } = await adminClient
       .from("activity_log")
       .select("id, org_id, action, created_at")
       .in("org_id", orgIds)
@@ -75,7 +77,7 @@ export default async function AgencyAnalyticsPage() {
       sector: org.sector,
       status: org.status,
       grantCount: orgGrants.length,
-      totalAmount: orgGrants.reduce((sum, g) => sum + (g.amount || 0), 0),
+      totalAmount: orgGrants.reduce((sum, g) => sum + parseGrantAmount(g.amount), 0),
       upcomingDeadlines: orgGrants.filter(
         (g) => g.deadline && new Date(g.deadline) > new Date()
       ).length,
@@ -137,7 +139,7 @@ export default async function AgencyAnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${allGrants.reduce((sum, g) => sum + (g.amount || 0), 0).toLocaleString()}
+              ${allGrants.reduce((sum, g) => sum + parseGrantAmount(g.amount), 0).toLocaleString()}
             </div>
           </CardContent>
         </Card>
