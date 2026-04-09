@@ -235,7 +235,7 @@ export function PipelineClient({
     }
 
     await executeStageChange(grantId, targetStage);
-  }, [grants]);
+  }, [grants]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const executeStageChange = useCallback(async (grantId: string, targetStage: string) => {
     const grant = grants.find((g) => g.id === grantId);
@@ -360,7 +360,7 @@ export function PipelineClient({
       ) : view === "kanban" ? (
         <KanbanView grants={filtered} onStageChange={handleStageChange} proposalQualityMap={proposalQualityMap} />
       ) : (
-        <ListView grants={filtered} />
+        <ListView grants={filtered} proposalQualityMap={proposalQualityMap} />
       )}
 
       <AddGrantDialog

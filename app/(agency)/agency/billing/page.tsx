@@ -17,6 +17,17 @@ export default async function AgencyBillingPage() {
     .eq("id", agencyId)
     .single();
 
+  // Check if the agency owner's org is a tester
+  const { data: testerOrg } = await supabase
+    .from("organizations")
+    .select("is_tester")
+    .eq("agency_id", agencyId)
+    .eq("is_tester", true)
+    .limit(1)
+    .maybeSingle();
+
+  const isTester = !!testerOrg?.is_tester;
+
   // Count orgs under agency
   const { count: orgCount } = await supabase
     .from("organizations")
@@ -27,7 +38,54 @@ export default async function AgencyBillingPage() {
   const plan = PLANS.agency;
   const isTrialing = agency?.subscription_status === "trialing";
   const trialEndsAt = agency?.trial_ends_at ? new Date(agency.trial_ends_at) : null;
-  const daysLeft = trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
+  const now = new Date();
+  const daysLeft = trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+
+  if (isTester) {
+    return (
+      <div className="p-6 space-y-6 max-w-3xl">
+        <div>
+          <h1 className="font-display text-2xl font-black uppercase tracking-tight">
+            Billing
+          </h1>
+          <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
+            Manage your agency subscription
+          </p>
+        </div>
+
+        <div className="rounded-lg border-2 border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-400 p-4 flex items-center gap-4">
+          <Check className="h-6 w-6 shrink-0" />
+          <div>
+            <p className="font-bold text-base">Pilot Tester Account</p>
+            <p className="text-sm mt-0.5 opacity-80">
+              Your agency has full access to all features as a pilot tester. No payment is required.
+            </p>
+          </div>
+        </div>
+
+        <Card data-tour="agency-billing-plan">
+          <CardHeader>
+            <CardTitle className="text-lg">Current Plan</CardTitle>
+            <CardDescription>Your agency&apos;s subscription</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold">{plan.name}</p>
+                <Badge variant="outline" className="border-purple-500 text-purple-600 dark:text-purple-400 bg-purple-500/10 mt-1">
+                  Pilot Tester
+                </Badge>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">$0</p>
+                <p className="text-sm text-muted-foreground">pilot access</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-3xl">
@@ -41,7 +99,7 @@ export default async function AgencyBillingPage() {
       </div>
 
       {/* Current Plan */}
-      <Card>
+      <Card data-tour="agency-billing-plan">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>

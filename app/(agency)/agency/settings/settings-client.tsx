@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
+import { useTour } from "@/lib/tour/tour-provider";
+import { Navigation } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const TIMEZONES = [
@@ -74,6 +76,7 @@ interface AgencySettingsClientProps {
 
 export function AgencySettingsClient({ user, agency, profile, orgCount }: AgencySettingsClientProps) {
   const router = useRouter();
+  const { startTour, isActive: tourActive } = useTour();
 
   // Agency details state
   const [agencyName, setAgencyName] = useState(agency.name);
@@ -229,7 +232,7 @@ export function AgencySettingsClient({ user, agency, profile, orgCount }: Agency
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
+      <Tabs defaultValue="profile" className="space-y-6" data-tour="agency-settings-tabs">
         <TabsList variant="line">
           <TabsTrigger value="profile">Profile & Account</TabsTrigger>
           <TabsTrigger value="agency">Agency Details</TabsTrigger>
@@ -537,6 +540,24 @@ export function AgencySettingsClient({ user, agency, profile, orgCount }: Agency
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Feature Tour */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t">
+                <div className="space-y-0.5">
+                  <Label>Feature Tour</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Take a guided tour of the platform features.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={tourActive}
+                  onClick={() => startTour("agency")}
+                >
+                  <Navigation className="h-4 w-4 mr-1.5" />
+                  Restart Tour
+                </Button>
               </div>
             </CardContent>
           </Card>

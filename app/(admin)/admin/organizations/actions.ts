@@ -632,35 +632,148 @@ export async function updateSubscriptionStatus(orgId: string, status: string) {
   return { success: true }
 }
 
-export async function toggleTester(orgId: string, isTester: boolean) {
+export async function toggleTester(orgId: string, isTester: boolean, plan: 'professional' | 'agency' = 'professional') {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  const { data: profile } = await supabase
+  const { data: adminProfile } = await supabase
     .from('profiles')
     .select('is_platform_admin')
     .eq('id', user.id)
     .single()
 
-  if (!profile?.is_platform_admin) return { error: 'Unauthorized' }
+  if (!adminProfile?.is_platform_admin) return { error: 'Unauthorized' }
 
   const adminClient = createAdminClient()
 
-  // When marking as tester, set plan to professional and subscription_status to active
-  // so they get full access without Stripe
-  const updateData: Record<string, unknown> = { is_tester: isTester }
-  if (isTester) {
-    updateData.plan = 'professional'
-    updateData.subscription_status = 'active'
+  if (isTester && plan === 'agency') {
+    // --- Agency tester: create agency record, link org and profile ---
+
+    // Find the org owner (profile with org_id = this org and role = owner)
+    let ownerProfile: { id: string } | null = null
+
+    const { data: ownerData } = await adminClient
+      .from('profiles')
+      .select('id')
+      .eq('org_id', orgId)
+      .eq('role', 'owner')
+      .single()
+
+    ownerProfile = ownerData
+
+    if (!ownerProfile) {
+      // Fallback: find any user linked to this org
+      const { data: anyProfile } = await adminClient
+        .from('profiles')
+        .select('id')
+        .eq('org_id', orgId)
+        .limit(1)
+        .single()
+
+      if (!anyProfile) return { error: 'No user found for this organization.' }
+      ownerProfile = anyProfile
+    }
+
+    // Create agency record with placeholder name, setup_complete = false
+    const { data: agency, error: agencyError } = await adminClient
+      .from('agencies')
+      .insert({
+        name: 'Pending Setup',
+        owner_user_id: ownerProfile.id,
+        subscription_status: 'active',
+        setup_complete: false,
+      })
+      .select('id')
+      .single()
+
+    if (agencyError || !agency) {
+      return { error: sanitizeError(agencyError, 'Failed to create agency record.') }
+    }
+
+    // Update org: link to agency, set plan and tester flags
+    const { error: orgUpdateError } = await adminClient
+      .from('organizations')
+      .update({
+        is_tester: true,
+        plan: 'agency',
+        subscription_status: 'active',
+        agency_id: agency.id,
+      })
+      .eq('id', orgId)
+
+    if (orgUpdateError) {
+      await adminClient.from('agencies').delete().eq('id', agency.id)
+      return { error: sanitizeError(orgUpdateError, 'Failed to update organization.') }
+    }
+
+    // Update owner profile: link to agency
+    const { error: profileError } = await adminClient
+      .from('profiles')
+      .update({ agency_id: agency.id })
+      .eq('id', ownerProfile.id)
+
+    if (profileError) {
+      // Rollback: unlink org and delete agency
+      await adminClient.from('organizations').update({ agency_id: null, is_tester: false, plan: 'free', subscription_status: null }).eq('id', orgId)
+      await adminClient.from('agencies').delete().eq('id', agency.id)
+      return { error: sanitizeError(profileError, 'Failed to update user profile.') }
+    }
+  } else if (isTester && plan === 'professional') {
+    // --- Professional tester: current behavior ---
+    const { error } = await adminClient
+      .from('organizations')
+      .update({
+        is_tester: true,
+        plan: 'professional',
+        subscription_status: 'active',
+      })
+      .eq('id', orgId)
+
+    if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
+  } else {
+    // --- Remove tester ---
+
+    // Check if this org is linked to an agency (was agency tester)
+    const { data: org } = await adminClient
+      .from('organizations')
+      .select('agency_id, plan')
+      .eq('id', orgId)
+      .single()
+
+    if (org?.agency_id && org?.plan === 'agency') {
+      // Clean up: unlink profile from agency
+      await adminClient
+        .from('profiles')
+        .update({ agency_id: null })
+        .eq('agency_id', org.agency_id)
+
+      // Unlink org from agency and reset
+      await adminClient
+        .from('organizations')
+        .update({
+          is_tester: false,
+          agency_id: null,
+          plan: 'free',
+          subscription_status: null,
+        })
+        .eq('id', orgId)
+
+      // Delete the agency record
+      await adminClient
+        .from('agencies')
+        .delete()
+        .eq('id', org.agency_id)
+    } else {
+      // Simple professional tester removal
+      const { error } = await adminClient
+        .from('organizations')
+        .update({ is_tester: false })
+        .eq('id', orgId)
+
+      if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
+    }
   }
-
-  const { error } = await adminClient
-    .from('organizations')
-    .update(updateData)
-    .eq('id', orgId)
-
-  if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
 
   revalidatePath('/admin/organizations')
   revalidatePath(`/admin/organizations/${orgId}`)
@@ -688,4 +801,29 @@ export async function getAdminDocumentUrl(filePath: string) {
   if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.'), url: null }
 
   return { url: data.signedUrl, error: null }
+}
+
+export async function getAdminProposalSections(proposalId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated', data: [] }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_platform_admin')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.is_platform_admin) return { error: 'Unauthorized', data: [] }
+
+  const adminClient = createAdminClient()
+  const { data, error } = await adminClient
+    .from('proposal_sections')
+    .select('*')
+    .eq('proposal_id', proposalId)
+    .order('sort_order', { ascending: true })
+
+  if (error) return { error: sanitizeError(error, 'Failed to load sections'), data: [] }
+
+  return { data: data || [], error: null }
 }

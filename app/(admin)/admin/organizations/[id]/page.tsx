@@ -41,7 +41,7 @@ export default async function OrgDetailPage({
       .order("created_at", { ascending: false }),
     adminClient
       .from("proposals")
-      .select("*, grant:grants(id, title, funder_name, deadline, eligibility), proposal_sections(*)")
+      .select("*, grant:grants(id, title, funder_name, deadline, eligibility)")
       .eq("org_id", id)
       .order("created_at", { ascending: false }),
     adminClient

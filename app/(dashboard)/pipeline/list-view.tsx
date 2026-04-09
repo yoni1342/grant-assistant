@@ -14,23 +14,106 @@ import Link from "next/link";
 
 type Grant = Tables<"grants">;
 
-const STAGE_COLORS: Record<string, string> = {
-  discovery: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
-  screening: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300",
-  pending_approval: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  drafting: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300",
-  closed: "bg-muted text-foreground",
-};
+const STAGES = [
+  { key: "discovery", label: "Discovered", color: "bg-blue-500" },
+  { key: "screening", label: "Screened", color: "bg-yellow-500" },
+  { key: "pending_approval", label: "Waiting for Approval", color: "bg-amber-500" },
+  { key: "drafting", label: "Drafted", color: "bg-purple-500" },
+  { key: "closed", label: "Closed", color: "bg-muted-foreground" },
+] as const;
 
-const STAGE_LABELS: Record<string, string> = {
-  discovery: "Discovered",
-  screening: "Screened",
-  pending_approval: "Waiting for Approval",
-  drafting: "Drafted",
-  closed: "Closed",
-};
+function ScreeningScore({ grant }: { grant: Grant }) {
+  if (grant.screening_score == null) return null;
+  const elig = (typeof grant.eligibility === "string" ? JSON.parse(grant.eligibility) : grant.eligibility) as { data_quality?: string; score?: string } | null;
+  const insufficient = elig?.data_quality === "insufficient" || elig?.score === "INSUFFICIENT_DATA";
+  if (insufficient) {
+    return (
+      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">
+        Not Enough Info
+      </span>
+    );
+  }
+  const color =
+    grant.screening_score >= 80
+      ? "bg-green-100 text-green-800"
+      : grant.screening_score >= 50
+        ? "bg-yellow-100 text-yellow-800"
+        : "bg-red-100 text-red-800";
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
+      {grant.screening_score}%
+    </span>
+  );
+}
 
-export function ListView({ grants }: { grants: Grant[] }) {
+function ConfidenceScore({ grant }: { grant: Grant }) {
+  const elig = (typeof grant.eligibility === "string"
+    ? JSON.parse(grant.eligibility)
+    : grant.eligibility) as { confidence?: number } | null;
+  const confidence = elig?.confidence;
+  if (confidence == null) return null;
+  const color =
+    confidence >= 80
+      ? "bg-purple-100 text-purple-800"
+      : confidence >= 50
+        ? "bg-yellow-100 text-yellow-800"
+        : "bg-red-100 text-red-800";
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
+      {confidence}% conf
+    </span>
+  );
+}
+
+function ProposalQualityScore({ score }: { score: number | undefined }) {
+  if (score == null) return null;
+  const color =
+    score >= 85
+      ? "bg-green-100 text-green-800"
+      : score >= 60
+        ? "bg-yellow-100 text-yellow-800"
+        : "bg-red-100 text-red-800";
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
+      {score}% quality
+    </span>
+  );
+}
+
+function DeadlineCell({ deadline }: { deadline: string | null }) {
+  if (!deadline) return <span className="text-xs text-muted-foreground">—</span>;
+  const dl = new Date(deadline);
+  const valid = !isNaN(dl.getTime());
+  const expired = valid && dl < new Date(new Date().toDateString());
+  return (
+    <span className={`text-xs ${expired ? "text-red-500 font-medium" : "text-muted-foreground"}`}>
+      {expired ? "Expired: " : "Due: "}
+      {valid ? dl.toLocaleDateString() : deadline}
+    </span>
+  );
+}
+
+function groupByStage(grants: Grant[]) {
+  const groups = new Map<string, Grant[]>();
+  for (const g of grants) {
+    const stage = g.stage || "discovery";
+    const list = groups.get(stage) || [];
+    list.push(g);
+    groups.set(stage, list);
+  }
+  return STAGES.filter((s) => groups.has(s.key)).map((stage) => ({
+    ...stage,
+    grants: groups.get(stage.key)!,
+  }));
+}
+
+export function ListView({
+  grants,
+  proposalQualityMap = {},
+}: {
+  grants: Grant[];
+  proposalQualityMap?: Record<string, number>;
+}) {
   if (grants.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-muted-foreground">
@@ -39,153 +122,116 @@ export function ListView({ grants }: { grants: Grant[] }) {
     );
   }
 
+  const grouped = groupByStage(grants);
+
   return (
     <>
     {/* Mobile card layout */}
-    <div className="sm:hidden space-y-3">
-      {grants.map((g) => {
-        const elig = (typeof g.eligibility === "string" ? JSON.parse(g.eligibility) : g.eligibility) as { data_quality?: string; score?: string; confidence?: number } | null;
-        const insufficient = elig?.data_quality === "insufficient" || elig?.score === "INSUFFICIENT_DATA";
-        return (
-          <Link key={g.id} href={`/pipeline/${g.id}`}>
-            <div className="rounded-lg border bg-card p-4 space-y-2 hover:bg-muted/50 transition-colors">
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-medium text-sm leading-tight">{g.title}</p>
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${STAGE_COLORS[g.stage || "discovery"]}`}
-                >
-                  {STAGE_LABELS[g.stage || "discovery"] || g.stage}
-                </span>
+    <div className="sm:hidden space-y-6">
+      {grouped.map((col) => (
+        <div key={col.key} className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className={`h-2 w-2 rounded-full ${col.color}`} />
+            <span className="text-sm font-medium">{col.label}</span>
+            <span className="text-xs text-muted-foreground">
+              {col.grants.length}
+            </span>
+          </div>
+          {col.grants.map((g) => (
+            <Link key={g.id} href={`/pipeline/${g.id}`}>
+              <div className="rounded-lg border bg-card p-3 space-y-2 hover:shadow-md transition-shadow">
+                <p className="text-sm font-medium leading-tight">{g.title}</p>
+                {g.funder_name && (
+                  <p className="text-xs text-muted-foreground">{g.funder_name}</p>
+                )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {g.amount && (
+                    <Badge variant="secondary" className="text-xs">
+                      ${Number(g.amount).toLocaleString()}
+                    </Badge>
+                  )}
+                  {col.key === "drafting" ? (
+                    <>
+                      <ConfidenceScore grant={g} />
+                      <ProposalQualityScore score={proposalQualityMap[g.id]} />
+                    </>
+                  ) : (
+                    <ScreeningScore grant={g} />
+                  )}
+                </div>
+                {g.deadline && <DeadlineCell deadline={g.deadline} />}
               </div>
-              {g.funder_name && (
-                <p className="text-xs text-muted-foreground">{g.funder_name}</p>
-              )}
-              <div className="flex items-center gap-2 flex-wrap text-xs">
-                {g.screening_score != null && !insufficient && (
-                  <Badge
-                    variant={g.screening_score >= 80 ? "default" : g.screening_score >= 50 ? "secondary" : "destructive"}
-                  >
-                    {g.screening_score}% score
-                  </Badge>
-                )}
-                {insufficient && (
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
-                    Not Enough Info
-                  </Badge>
-                )}
-                {elig?.confidence != null && (
-                  <Badge variant={elig.confidence >= 80 ? "default" : elig.confidence >= 50 ? "secondary" : "destructive"}>
-                    {elig.confidence}% conf
-                  </Badge>
-                )}
-                {g.amount && <span className="text-muted-foreground">${Number(g.amount).toLocaleString()}</span>}
-                {g.deadline && (
-                  <span className="text-muted-foreground">
-                    Due: {isNaN(new Date(g.deadline).getTime()) ? g.deadline : new Date(g.deadline).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-            </div>
-          </Link>
-        );
-      })}
+            </Link>
+          ))}
+        </div>
+      ))}
     </div>
 
     {/* Desktop table layout */}
-    <div className="hidden sm:block rounded-lg border bg-card overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Grant</TableHead>
-            <TableHead>Funder</TableHead>
-            <TableHead>Stage</TableHead>
-            <TableHead>Screening</TableHead>
-            <TableHead>Confidence</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            <TableHead>Deadline</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {grants.map((g) => (
-            <TableRow key={g.id} className="cursor-pointer hover:bg-muted/50">
-              <TableCell>
-                <Link
-                  href={`/pipeline/${g.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {g.title}
-                </Link>
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {g.funder_name || "—"}
-              </TableCell>
-              <TableCell>
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STAGE_COLORS[g.stage || "discovery"]}`}
-                >
-                  {STAGE_LABELS[g.stage || "discovery"] || g.stage}
-                </span>
-              </TableCell>
-              <TableCell>
-                {g.screening_score != null ? (
-                  (() => {
-                    const elig = (typeof g.eligibility === "string" ? JSON.parse(g.eligibility) : g.eligibility) as { data_quality?: string; score?: string } | null;
-                    const insufficient = elig?.data_quality === "insufficient" || elig?.score === "INSUFFICIENT_DATA";
-                    return insufficient ? (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
-                        Not Enough Info
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant={
-                          g.screening_score >= 80
-                            ? "default"
-                            : g.screening_score >= 50
-                              ? "secondary"
-                              : "destructive"
-                        }
+    <div className="hidden sm:block space-y-6">
+      {grouped.map((col) => (
+        <div key={col.key}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`h-2 w-2 rounded-full ${col.color}`} />
+            <span className="text-sm font-medium">{col.label}</span>
+            <span className="text-xs text-muted-foreground">
+              {col.grants.length}
+            </span>
+          </div>
+          <div className="rounded-lg border bg-card overflow-hidden">
+            <Table className="table-fixed w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[35%]">Grant</TableHead>
+                  <TableHead className="w-[20%]">Funder</TableHead>
+                  <TableHead className="w-[15%]">Score</TableHead>
+                  <TableHead className="w-[15%] text-right">Amount</TableHead>
+                  <TableHead className="w-[15%]">Deadline</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {col.grants.map((g) => (
+                  <TableRow key={g.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell className="truncate">
+                      <Link
+                        href={`/pipeline/${g.id}`}
+                        className="font-medium hover:underline"
                       >
-                        {g.screening_score}%
-                      </Badge>
-                    );
-                  })()
-                ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
-                )}
-              </TableCell>
-              <TableCell>
-                {(() => {
-                  const elig = (typeof g.eligibility === "string"
-                    ? JSON.parse(g.eligibility)
-                    : g.eligibility) as { confidence?: number } | null;
-                  const confidence = elig?.confidence;
-                  if (confidence == null) return <span className="text-xs text-muted-foreground">—</span>;
-                  return (
-                    <Badge
-                      variant={
-                        confidence >= 80 ? "default" :
-                        confidence >= 50 ? "secondary" : "destructive"
-                      }
-                    >
-                      {confidence}%
-                    </Badge>
-                  );
-                })()}
-              </TableCell>
-              <TableCell className="text-right">
-                {g.amount || "—"}
-              </TableCell>
-              <TableCell>
-                {g.deadline
-                  ? isNaN(new Date(g.deadline).getTime())
-                    ? g.deadline
-                    : new Date(g.deadline).toLocaleDateString()
-                  : "—"}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                        {g.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground truncate">
+                      {g.funder_name || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {col.key === "drafting" ? (
+                          <>
+                            <ConfidenceScore grant={g} />
+                            <ProposalQualityScore score={proposalQualityMap[g.id]} />
+                          </>
+                        ) : (
+                          <ScreeningScore grant={g} />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {g.amount ? (
+                        <Badge variant="secondary" className="text-xs">
+                          ${Number(g.amount).toLocaleString()}
+                        </Badge>
+                      ) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <DeadlineCell deadline={g.deadline} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      ))}
     </div>
     </>
   );

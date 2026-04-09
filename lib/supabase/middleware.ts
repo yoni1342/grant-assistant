@@ -16,6 +16,7 @@ interface CachedProfile {
   org_id: string | null;
   agency_id: string | null;
   org_status: string | null;
+  agency_setup_complete: boolean | null;
   ts: number; // timestamp when cached
 }
 
@@ -98,34 +99,40 @@ export async function updateSession(request: NextRequest) {
   }
 
   // --- Try cached profile first, fetch from DB only if stale/missing ---
-  let cached = getCachedProfile(request);
+  // Always re-fetch on status pages so admin changes take effect immediately
+  const skipCache = pathname.startsWith("/pending-approval") || pathname.startsWith("/rejected") || pathname.startsWith("/suspended") || pathname === "/dashboard";
+  let cached = skipCache ? null : getCachedProfile(request);
 
   if (!cached) {
     const { data: rawProfile, error: profileError } = await supabase
       .from("profiles")
-      .select("is_platform_admin, org_id, agency_id, organizations(status)")
+      .select("is_platform_admin, org_id, agency_id, organizations(status), agencies(setup_complete)")
       .eq("id", user.id)
       .single();
 
     // Fallback: if agency_id column doesn't exist yet, retry without it
     let profile = rawProfile;
-    if (profileError && profileError.message?.includes("agency_id")) {
+    if (profileError && (profileError.message?.includes("agency_id") || profileError.message?.includes("agencies"))) {
       const fallback = await supabase
         .from("profiles")
         .select("is_platform_admin, org_id, organizations(status)")
         .eq("id", user.id)
         .single();
-      profile = fallback.data ? { ...fallback.data, agency_id: null } as typeof profile : null;
+      profile = fallback.data ? { ...fallback.data, agency_id: null, agencies: null } as unknown as typeof profile : null;
     }
 
     const orgs = profile?.organizations as unknown as { status: string } | { status: string }[] | null;
     const orgStatus = Array.isArray(orgs) ? orgs[0]?.status : orgs?.status;
+
+    const agencies = profile?.agencies as unknown as { setup_complete: boolean } | { setup_complete: boolean }[] | null;
+    const agencySetupComplete = Array.isArray(agencies) ? agencies[0]?.setup_complete : agencies?.setup_complete;
 
     cached = {
       is_platform_admin: profile?.is_platform_admin === true,
       org_id: profile?.org_id ?? null,
       agency_id: profile?.agency_id ?? null,
       org_status: orgStatus ?? null,
+      agency_setup_complete: agencySetupComplete ?? null,
       ts: Date.now(),
     };
 
@@ -173,6 +180,14 @@ export async function updateSession(request: NextRequest) {
 
   // --- Agency user: route to /agency by default ---
   if (hasAgency) {
+    // Force agency setup if not completed yet
+    if (cached.agency_setup_complete === false) {
+      if (pathname.startsWith("/agency/setup") || pathname.startsWith("/auth")) {
+        return supabaseResponse;
+      }
+      return NextResponse.redirect(getRedirectUrl(request, "/agency/setup"));
+    }
+
     if (pathname.startsWith("/admin")) {
       return NextResponse.redirect(getRedirectUrl(request, "/agency"));
     }

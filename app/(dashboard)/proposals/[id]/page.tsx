@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/server";
+import { notFound, redirect } from "next/navigation";
 import { ProposalDetailClient } from "./components/proposal-detail-client";
 
 export default async function ProposalDetailPage({
@@ -9,9 +9,13 @@ export default async function ProposalDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const { orgId } = await getUserOrgId(supabase);
+  if (!orgId) redirect("/login");
+
+  const adminDb = createAdminClient();
 
   // Fetch proposal with sections and grant data
-  const { data: proposalData, error } = await supabase
+  const { data: proposalData, error } = await adminDb
     .from("proposals")
     .select(`
       *,
@@ -26,6 +30,7 @@ export default async function ProposalDetailPage({
       )
     `)
     .eq("id", id)
+    .eq("org_id", orgId)
     .single();
 
   if (error || !proposalData) {
@@ -33,7 +38,7 @@ export default async function ProposalDetailPage({
   }
 
   // Fetch proposal sections and deduplicate by sort_order (keep latest)
-  const { data: rawSections } = await supabase
+  const { data: rawSections } = await adminDb
     .from("proposal_sections")
     .select("*")
     .eq("proposal_id", id)
@@ -51,7 +56,7 @@ export default async function ProposalDetailPage({
   // Fetch funder data if grant has a funder_name
   let funder = null;
   if (proposalData.grant?.funder_name && proposalData.grant?.org_id) {
-    const { data: funderData } = await supabase
+    const { data: funderData } = await adminDb
       .from("funders")
       .select("*")
       .eq("org_id", proposalData.grant.org_id)

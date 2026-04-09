@@ -778,10 +778,214 @@ export const UPGRADE_TOUR: TourStep[] = [
   },
 ];
 
-export type TourId = "base" | "professional" | "upgrade_pro";
+// ─── Agency Tour ────────────────────────────────────────────────────────────
+
+export const AGENCY_TOUR: TourStep[] = [
+  // ── Welcome ──
+  {
+    page: "/agency",
+    popover: {
+      title: "Welcome to Your Agency Dashboard!",
+      description:
+        "Let's walk through your agency command center. You'll learn how to manage multiple organizations, track grants across all of them, and keep everything running smoothly.",
+      side: "over" as const,
+      align: "center" as const,
+    },
+  },
+
+  // ── Dashboard ──
+  {
+    page: "/agency",
+    element: "[data-tour='agency-nav-dashboard']",
+    popover: {
+      title: "Agency Dashboard",
+      description:
+        "Your home base. See a snapshot of all your organizations, total grants, and subscription status at a glance.",
+      side: "right" as const,
+      popoverClass: "fundory-tour-popover fundory-tour-sidebar",
+    },
+  },
+  {
+    page: "/agency",
+    element: "[data-tour='agency-metrics']",
+    popover: {
+      title: "Key Metrics",
+      description:
+        "These cards show your total organizations, grants across all orgs, and your current subscription status. Keep an eye on these to monitor your agency's health.",
+      side: "bottom" as const,
+    },
+  },
+  {
+    page: "/agency",
+    element: "[data-tour='agency-add-org-btn']",
+    popover: {
+      title: "Add New Organization",
+      description:
+        "Quickly create a new client organization from the dashboard. Each org gets its own separate grants, proposals, documents, and pipeline.",
+      side: "bottom" as const,
+    },
+  },
+  {
+    page: "/agency",
+    element: "[data-tour='agency-org-cards']",
+    popover: {
+      title: "Your Organizations",
+      description:
+        "Each card represents a client organization. You can see the org name, sector, status, and grant count. Click any card to switch into that org's full dashboard.",
+      side: "top" as const,
+    },
+  },
+
+  // ── Organizations page ──
+  {
+    page: "/agency",
+    element: "[data-tour='agency-nav-organizations']",
+    popover: {
+      title: "Organizations Management",
+      description:
+        "The full organization management page. Let's take a look.",
+      side: "right" as const,
+      popoverClass: "fundory-tour-popover fundory-tour-sidebar",
+    },
+  },
+  {
+    page: "/agency/organizations",
+    element: "[data-tour='agency-new-org-btn']",
+    popover: {
+      title: "Create Organization",
+      description:
+        "Click here to onboard a new client organization. You'll fill in their name, sector, and mission \u2014 then they'll appear in your agency.",
+      side: "bottom" as const,
+    },
+  },
+  {
+    page: "/agency/organizations",
+    element: "[data-tour='agency-org-table']",
+    popover: {
+      title: "Organization Table",
+      description:
+        "A detailed table of every organization. See their sector, status (Active, Suspended, Pending), grant count, and creation date. You can suspend or unsuspend orgs, and click Open to switch into any org's dashboard.",
+      side: "top" as const,
+    },
+  },
+
+  // ── Analytics ──
+  {
+    page: "/agency/organizations",
+    element: "[data-tour='agency-nav-analytics']",
+    popover: {
+      title: "Cross-Org Analytics",
+      description:
+        "Your bird's-eye view of grant performance across every organization. Let's explore.",
+      side: "right" as const,
+      popoverClass: "fundory-tour-popover fundory-tour-sidebar",
+    },
+  },
+  {
+    page: "/agency/analytics",
+    element: "[data-tour='agency-analytics-summary']",
+    popover: {
+      title: "Agency Metrics",
+      description:
+        "At a glance: total organizations, total grants, pending deadlines, and combined pipeline value across your entire agency.",
+      side: "bottom" as const,
+    },
+  },
+  {
+    page: "/agency/analytics",
+    element: "[data-tour='agency-analytics-pipeline']",
+    popover: {
+      title: "Pipeline & Deadlines",
+      description:
+        "The pipeline overview shows how grants are distributed across stages (Discovered, Screened, Drafted, etc.) across all orgs. The deadlines panel shows upcoming grant deadlines so nothing slips through.",
+      side: "top" as const,
+    },
+  },
+  {
+    page: "/agency/analytics",
+    element: "[data-tour='agency-analytics-breakdown']",
+    popover: {
+      title: "Organization Breakdown",
+      description:
+        "A per-organization table showing each org's sector, status, grant count, total pipeline value, and upcoming deadlines. Compare performance across your client base.",
+      side: "top" as const,
+    },
+  },
+  {
+    page: "/agency/analytics",
+    element: "[data-tour='agency-analytics-activity']",
+    popover: {
+      title: "Recent Activity",
+      description:
+        "A live feed of actions across all organizations \u2014 grants added, proposals created, documents uploaded. Stay informed without switching between orgs.",
+      side: "top" as const,
+    },
+  },
+
+  // ── Billing ──
+  {
+    page: "/agency/analytics",
+    element: "[data-tour='agency-nav-billing']",
+    popover: {
+      title: "Billing",
+      description:
+        "Manage your agency subscription and payment details.",
+      side: "right" as const,
+      popoverClass: "fundory-tour-popover fundory-tour-sidebar",
+    },
+  },
+  {
+    page: "/agency/billing",
+    element: "[data-tour='agency-billing-plan']",
+    popover: {
+      title: "Your Agency Plan",
+      description:
+        "View your current plan, pricing, trial status, and included features. The Agency plan covers unlimited organizations and unlimited grants per org \u2014 all under a single bill. You can manage your payment method here too.",
+      side: "bottom" as const,
+    },
+  },
+
+  // ── Settings ──
+  {
+    page: "/agency/billing",
+    element: "[data-tour='agency-nav-settings']",
+    popover: {
+      title: "Settings",
+      description:
+        "Configure your agency account. Let's take a look.",
+      side: "right" as const,
+      popoverClass: "fundory-tour-popover fundory-tour-sidebar",
+    },
+  },
+  {
+    page: "/agency/settings",
+    element: "[data-tour='agency-settings-tabs']",
+    popover: {
+      title: "Agency Settings",
+      description:
+        "Three tabs here: Profile & Account for your personal info and password, Agency Details for your agency name and info, and Appearance for theme, timezone, date format, and restarting this tour.",
+      side: "bottom" as const,
+    },
+  },
+
+  // ── Final: point to an org ──
+  {
+    page: "/agency",
+    element: "[data-tour='agency-org-cards']",
+    popover: {
+      title: "Ready to Go!",
+      description:
+        "That's your agency in a nutshell. Now click any organization card to open its dashboard \u2014 you'll get a guided tour of the organization features when you enter. Happy grant hunting!",
+      side: "top" as const,
+    },
+  },
+];
+
+export type TourId = "base" | "professional" | "upgrade_pro" | "agency";
 
 export const TOUR_MAP: Record<TourId, TourStep[]> = {
   base: BASE_TOUR,
   professional: PROFESSIONAL_TOUR,
   upgrade_pro: UPGRADE_TOUR,
+  agency: AGENCY_TOUR,
 };

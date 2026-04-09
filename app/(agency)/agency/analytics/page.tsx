@@ -103,7 +103,7 @@ export default async function AgencyAnalyticsPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-4" data-tour="agency-analytics-summary">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Organizations</CardTitle>
@@ -143,7 +143,7 @@ export default async function AgencyAnalyticsPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3" data-tour="agency-analytics-pipeline">
         {/* Pipeline Overview (aggregated) */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -210,7 +210,7 @@ export default async function AgencyAnalyticsPage() {
       </div>
 
       {/* Per-Org Breakdown */}
-      <Card>
+      <Card data-tour="agency-analytics-breakdown">
         <CardHeader>
           <CardTitle className="text-base">Organization Breakdown</CardTitle>
         </CardHeader>
@@ -255,7 +255,7 @@ export default async function AgencyAnalyticsPage() {
       </Card>
 
       {/* Recent Activity */}
-      <Card>
+      <Card data-tour="agency-analytics-activity">
         <CardHeader>
           <CardTitle className="text-base">Recent Activity (All Orgs)</CardTitle>
         </CardHeader>
