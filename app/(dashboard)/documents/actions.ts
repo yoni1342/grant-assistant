@@ -3,6 +3,7 @@
 import { createClient, getUserOrgId } from '@/lib/supabase/server'
 import { uploadFile, deleteFile } from '@/lib/supabase/storage'
 import { revalidatePath } from 'next/cache'
+import { sanitizeError } from '@/lib/errors'
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -78,7 +79,7 @@ export async function uploadDocument(formData: FormData) {
   if (dbError) {
     // Rollback: delete uploaded file from storage
     await deleteFile(path)
-    return { error: dbError.message }
+    return { error: sanitizeError(dbError, 'Unable to save document. Please try again.') }
   }
 
   // Fire-and-forget: trigger n8n document processing webhook
@@ -137,7 +138,7 @@ export async function deleteDocument(documentId: string) {
     .eq('id', documentId)
 
   if (dbError) {
-    return { error: dbError.message }
+    return { error: sanitizeError(dbError, 'Unable to delete document. Please try again.') }
   }
 
   revalidatePath('/documents')
@@ -158,7 +159,7 @@ export async function getDocuments() {
     .order('created_at', { ascending: false })
 
   if (error) {
-    return { error: error.message, data: [] }
+    return { error: sanitizeError(error, 'Unable to load documents. Please try again.'), data: [] }
   }
 
   return { data: data || [], error: null }
@@ -177,7 +178,7 @@ export async function getDownloadUrl(filePath: string) {
     .createSignedUrl(filePath, 3600) // 1 hour expiry
 
   if (error) {
-    return { error: error.message, url: null }
+    return { error: sanitizeError(error, 'Unable to generate download link. Please try again.'), url: null }
   }
 
   return { url: data.signedUrl, error: null }
@@ -197,7 +198,7 @@ export async function updateDocumentCategory(documentId: string, category: strin
     .eq('id', documentId)
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to update document category. Please try again.') }
   }
 
   revalidatePath('/documents')

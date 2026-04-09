@@ -6,6 +6,7 @@ import { sendOrganizationApprovedEmail, sendOrganizationRejectedEmail } from '@/
 import { getStripeClient } from '@/lib/stripe/client'
 import { PLANS, TRIAL_DAYS } from '@/lib/stripe/config'
 import type { PlanId } from '@/lib/stripe/config'
+import { sanitizeError } from '@/lib/errors'
 
 export async function approveOrganization(orgId: string) {
   const supabase = await createClient()
@@ -33,7 +34,7 @@ export async function approveOrganization(orgId: string) {
     })
     .eq('id', orgId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
 
   // Start Stripe subscription with trial for paid-plan orgs (skip for testers)
   const { data: orgData } = await supabase
@@ -250,7 +251,7 @@ export async function rejectOrganization(orgId: string, reason?: string) {
     })
     .eq('id', orgId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
 
   // Send rejection email
   try {
@@ -491,7 +492,7 @@ export async function updateOrgPlan(orgId: string, newPlan: PlanId) {
     .update(updateData)
     .eq('id', orgId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
 
   revalidatePath('/admin/organizations')
   revalidatePath(`/admin/organizations/${orgId}`)
@@ -537,7 +538,7 @@ export async function cancelSubscription(orgId: string) {
     })
     .eq('id', orgId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
 
   revalidatePath('/admin/organizations')
   revalidatePath(`/admin/organizations/${orgId}`)
@@ -594,7 +595,7 @@ export async function extendTrial(orgId: string, additionalDays: number) {
     })
     .eq('id', orgId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
 
   revalidatePath('/admin/organizations')
   revalidatePath(`/admin/organizations/${orgId}`)
@@ -624,7 +625,7 @@ export async function updateSubscriptionStatus(orgId: string, status: string) {
     .update({ subscription_status: status })
     .eq('id', orgId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
 
   revalidatePath('/admin/organizations')
   revalidatePath(`/admin/organizations/${orgId}`)
@@ -659,7 +660,7 @@ export async function toggleTester(orgId: string, isTester: boolean) {
     .update(updateData)
     .eq('id', orgId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
 
   revalidatePath('/admin/organizations')
   revalidatePath(`/admin/organizations/${orgId}`)
@@ -684,7 +685,7 @@ export async function getAdminDocumentUrl(filePath: string) {
     .from('documents')
     .createSignedUrl(filePath, 3600)
 
-  if (error) return { error: error.message, url: null }
+  if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.'), url: null }
 
   return { url: data.signedUrl, error: null }
 }

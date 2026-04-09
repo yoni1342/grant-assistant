@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sanitizeError } from '@/lib/errors'
 
 export async function markAllNotificationsRead() {
   const supabase = await createClient()
@@ -22,7 +23,7 @@ export async function markAllNotificationsRead() {
     .eq('org_id', profile.org_id)
     .eq('is_read', false)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Unable to mark notifications as read. Please try again.') }
 
   revalidatePath('/notifications')
   return { success: true }

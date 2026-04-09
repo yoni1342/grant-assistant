@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { getActiveOrgId } from "@/lib/agency/context";
+import { getAdminViewOrgId } from "@/lib/admin/context";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -48,6 +49,22 @@ export function createAdminClient() {
  * For agency users, checks the active-org-id cookie and validates ownership.
  * Returns { orgId, error } — use orgId to scope all queries.
  */
+/**
+ * Check if the current user is an admin viewing an org (read-only mode).
+ */
+export async function isAdminViewMode(supabase: SupabaseClient): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_platform_admin")
+    .eq("id", user.id)
+    .single();
+  if (!profile?.is_platform_admin) return false;
+  const adminViewOrgId = await getAdminViewOrgId();
+  return !!adminViewOrgId;
+}
+
 export async function getUserOrgId(supabase: SupabaseClient): Promise<{ orgId: string | null; error: string | null }> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -56,7 +73,7 @@ export async function getUserOrgId(supabase: SupabaseClient): Promise<{ orgId: s
 
   let { data: profile } = await supabase
     .from("profiles")
-    .select("org_id, agency_id")
+    .select("org_id, agency_id, is_platform_admin")
     .eq("id", user.id)
     .single();
 
@@ -64,10 +81,19 @@ export async function getUserOrgId(supabase: SupabaseClient): Promise<{ orgId: s
   if (!profile) {
     const fallback = await supabase
       .from("profiles")
-      .select("org_id")
+      .select("org_id, is_platform_admin")
       .eq("id", user.id)
       .single();
     profile = fallback.data ? { ...fallback.data, agency_id: null } as unknown as typeof profile : null;
+  }
+
+  // Admin viewing as organization: return the viewed org ID
+  if (profile?.is_platform_admin) {
+    const adminViewOrgId = await getAdminViewOrgId();
+    if (adminViewOrgId) {
+      return { orgId: adminViewOrgId, error: null };
+    }
+    return { orgId: null, error: "No organization context for admin" };
   }
 
   // Agency user: check for active org cookie

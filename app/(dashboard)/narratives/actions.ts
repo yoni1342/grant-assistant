@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient, createAdminClient, getUserOrgId } from '@/lib/supabase/server'
+import { sanitizeError } from '@/lib/errors'
 import { revalidatePath } from 'next/cache'
 
 export async function getNarratives() {
@@ -19,7 +20,7 @@ export async function getNarratives() {
     .order('updated_at', { ascending: false })
 
   if (error) {
-    return { error: error.message, data: [] }
+    return { error: sanitizeError(error, 'Unable to load narratives. Please try again.'), data: [] }
   }
 
   // Map to narrative shape for UI compatibility
@@ -81,7 +82,7 @@ export async function createNarrative(formData: FormData) {
     .single()
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to save narrative. Please try again.') }
   }
 
   // Map back to narrative shape
@@ -105,6 +106,8 @@ export async function createNarrative(formData: FormData) {
 
 export async function updateNarrative(narrativeId: string, formData: FormData) {
   const supabase = await createClient()
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) return { error: 'Not authenticated' }
 
   // Extract fields
   const title = formData.get('title') as string
@@ -163,7 +166,7 @@ export async function updateNarrative(narrativeId: string, formData: FormData) {
     .single()
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to update narrative. Please try again.') }
   }
 
   const narrative = {
@@ -236,7 +239,7 @@ export async function deleteNarratives(narrativeIds: string[]) {
     .eq('org_id', orgId)
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to delete narrative. Please try again.') }
   }
 
   revalidatePath('/narratives')
@@ -258,7 +261,7 @@ export async function deleteNarrative(narrativeId: string) {
     .eq('id', narrativeId)
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to delete narrative. Please try again.') }
   }
 
   revalidatePath('/narratives')

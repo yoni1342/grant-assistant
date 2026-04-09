@@ -30,8 +30,9 @@ export async function GET(req: Request) {
     .order("created_at", { ascending: true });
 
   if (error) {
+    console.error("[grants/search-results] Failed to fetch search results:", error.message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Something went wrong. Please try again." }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }

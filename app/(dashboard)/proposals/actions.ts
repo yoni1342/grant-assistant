@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient, getUserOrgId } from '@/lib/supabase/server'
+import { sanitizeError } from '@/lib/errors'
 import { revalidatePath } from 'next/cache'
 
 export async function getProposals() {
@@ -26,7 +27,7 @@ export async function getProposals() {
     .order('updated_at', { ascending: false })
 
   if (error) {
-    return { error: error.message, data: [] }
+    return { error: sanitizeError(error, 'Unable to load proposals. Please try again.'), data: [] }
   }
 
   return { data: data || [], error: null }
@@ -58,7 +59,7 @@ export async function getProposal(proposalId: string) {
     .single()
 
   if (proposalError) {
-    return { error: proposalError.message, data: null }
+    return { error: sanitizeError(proposalError, 'Unable to load proposal. Please try again.'), data: null }
   }
 
   // Fetch proposal sections (scoped via proposal_sections RLS through proposals)
@@ -69,7 +70,7 @@ export async function getProposal(proposalId: string) {
     .order('created_at', { ascending: false })
 
   if (sectionsError) {
-    return { error: sectionsError.message, data: null }
+    return { error: sanitizeError(sectionsError, 'Unable to load proposal. Please try again.'), data: null }
   }
 
   // Deduplicate by sort_order, keeping the latest entry
@@ -126,7 +127,7 @@ export async function triggerProposalGeneration(grantId: string) {
     .single()
 
   if (workflowError) {
-    return { error: workflowError.message }
+    return { error: sanitizeError(workflowError, 'Unable to start this workflow. Please try again.') }
   }
 
   // Trigger n8n workflow
@@ -212,7 +213,7 @@ export async function triggerQualityReview(proposalId: string) {
     .single()
 
   if (workflowError) {
-    return { error: workflowError.message }
+    return { error: sanitizeError(workflowError, 'Unable to start this workflow. Please try again.') }
   }
 
   // Fire-and-forget: trigger n8n workflow
@@ -274,7 +275,7 @@ export async function triggerFunderAnalysis(
     .single()
 
   if (workflowError) {
-    return { error: workflowError.message }
+    return { error: sanitizeError(workflowError, 'Unable to start this workflow. Please try again.') }
   }
 
   // Fire-and-forget: trigger n8n workflow
@@ -325,7 +326,7 @@ export async function updateProposalSections(
       .update({ title: proposalTitle })
       .eq('id', proposalId)
 
-    if (error) return { error: error.message }
+    if (error) return { error: sanitizeError(error, 'Unable to save changes. Please try again.') }
   }
 
   for (const section of sections) {
@@ -341,7 +342,7 @@ export async function updateProposalSections(
       .eq('id', section.id)
       .eq('proposal_id', proposalId)
 
-    if (error) return { error: error.message }
+    if (error) return { error: sanitizeError(error, 'Unable to save changes. Please try again.') }
   }
 
   revalidatePath(`/proposals/${proposalId}`)
@@ -362,7 +363,7 @@ export async function deleteProposals(proposalIds: string[]) {
     .in('proposal_id', proposalIds)
 
   if (sectionsError) {
-    return { error: sectionsError.message }
+    return { error: sanitizeError(sectionsError, 'Unable to delete proposal. Please try again.') }
   }
 
   // Delete the proposals (scoped to org)
@@ -373,7 +374,7 @@ export async function deleteProposals(proposalIds: string[]) {
     .eq('org_id', orgId)
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to delete proposal. Please try again.') }
   }
 
   revalidatePath('/proposals')
@@ -416,7 +417,7 @@ export async function getFunder(grantId: string) {
     if (error.code === 'PGRST116') {
       return { data: null, error: null }
     }
-    return { error: error.message, data: null }
+    return { error: sanitizeError(error, 'Unable to load funder details. Please try again.'), data: null }
   }
 
   return { data, error: null }

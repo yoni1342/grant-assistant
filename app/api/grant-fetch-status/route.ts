@@ -35,8 +35,9 @@ export async function POST(req: Request) {
     );
 
   if (error) {
+    console.error("[grant-fetch-status] Failed to upsert status:", error.message);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: "Something went wrong. Please try again." }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }

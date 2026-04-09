@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sanitizeError } from '@/lib/errors'
 
 async function requirePlatformAdmin() {
   const supabase = await createClient()
@@ -32,7 +33,7 @@ export async function togglePlatformAdmin(userId: string, value: boolean) {
     .update({ is_platform_admin: value, updated_at: new Date().toISOString() })
     .eq('id', userId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Something went wrong. Please try again.') }
 
   revalidatePath('/admin/users')
   return { success: true }
@@ -125,8 +126,8 @@ export async function deleteUser(userId: string) {
     // 6. Delete the organization
     const { error: orgError } = await adminClient.from('organizations').delete().eq('id', orgId)
     if (orgError) {
-      console.error('Delete organization error:', orgError.message)
-      return { error: `Failed to delete organization: ${orgError.message}` }
+      console.error('[admin] Delete org error:', orgError.message)
+      return { error: 'Failed to delete organization. Please try again.' }
     }
   }
 
@@ -236,7 +237,7 @@ export async function createAdmin(email: string, password: string, fullName: str
     user_metadata: { full_name: fullName },
   })
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Failed to create user. Please try again.') }
 
   // Set the user as platform admin in profiles
   const { error: profileError } = await adminClient
@@ -248,7 +249,7 @@ export async function createAdmin(email: string, password: string, fullName: str
     })
     .eq('id', data.user.id)
 
-  if (profileError) return { error: profileError.message }
+  if (profileError) return { error: sanitizeError(profileError, 'Failed to set up user profile. Please try again.') }
 
   revalidatePath('/admin/users')
   return { success: true }

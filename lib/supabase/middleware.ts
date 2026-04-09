@@ -7,6 +7,45 @@ function getRedirectUrl(request: NextRequest, pathname: string) {
   return new URL(pathname, `${protocol}://${host}`);
 }
 
+/**
+ * Cached profile shape stored in a cookie to avoid hitting Supabase on every request.
+ * Refreshed every 5 minutes.
+ */
+interface CachedProfile {
+  is_platform_admin: boolean;
+  org_id: string | null;
+  agency_id: string | null;
+  org_status: string | null;
+  ts: number; // timestamp when cached
+}
+
+const PROFILE_CACHE_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
+
+function getCachedProfile(request: NextRequest): CachedProfile | null {
+  const raw = request.cookies.get("x-profile-cache")?.value;
+  if (!raw) return null;
+  try {
+    const parsed: CachedProfile = JSON.parse(raw);
+    if (Date.now() - parsed.ts > PROFILE_CACHE_MAX_AGE_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedProfile(response: NextResponse, profile: CachedProfile) {
+  response.cookies.set("x-profile-cache", JSON.stringify(profile), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 600, // 10 min hard expiry on cookie itself
+  });
+}
+
+function clearCachedProfile(response: NextResponse) {
+  response.cookies.delete("x-profile-cache");
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -51,54 +90,81 @@ export async function updateSession(request: NextRequest) {
       pathname.startsWith("/signup") ||
       pathname.startsWith("/auth")
     ) {
+      clearCachedProfile(supabaseResponse);
       return supabaseResponse;
     }
+    clearCachedProfile(supabaseResponse);
     return NextResponse.redirect(getRedirectUrl(request, "/login"));
   }
 
-  // --- Authenticated: redirect away from login/signup/landing ---
-  if (pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname === "/") {
-    // Quick check: if user is an agency user, send them to /agency instead of /dashboard
-    const { data: loginProfile } = await supabase
+  // --- Try cached profile first, fetch from DB only if stale/missing ---
+  let cached = getCachedProfile(request);
+
+  if (!cached) {
+    const { data: rawProfile, error: profileError } = await supabase
       .from("profiles")
-      .select("agency_id")
+      .select("is_platform_admin, org_id, agency_id, organizations(status)")
       .eq("id", user.id)
       .single();
-    if (loginProfile?.agency_id) {
+
+    // Fallback: if agency_id column doesn't exist yet, retry without it
+    let profile = rawProfile;
+    if (profileError && profileError.message?.includes("agency_id")) {
+      const fallback = await supabase
+        .from("profiles")
+        .select("is_platform_admin, org_id, organizations(status)")
+        .eq("id", user.id)
+        .single();
+      profile = fallback.data ? { ...fallback.data, agency_id: null } as typeof profile : null;
+    }
+
+    const orgs = profile?.organizations as unknown as { status: string } | { status: string }[] | null;
+    const orgStatus = Array.isArray(orgs) ? orgs[0]?.status : orgs?.status;
+
+    cached = {
+      is_platform_admin: profile?.is_platform_admin === true,
+      org_id: profile?.org_id ?? null,
+      agency_id: profile?.agency_id ?? null,
+      org_status: orgStatus ?? null,
+      ts: Date.now(),
+    };
+
+    setCachedProfile(supabaseResponse, cached);
+  }
+
+  const isAdmin = cached.is_platform_admin;
+  const orgStatus = cached.org_status;
+  const hasOrg = !!cached.org_id;
+  const hasAgency = !!cached.agency_id;
+
+  // --- Authenticated: redirect away from login/signup/landing ---
+  if (pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname === "/") {
+    if (hasAgency) {
       return NextResponse.redirect(getRedirectUrl(request, "/agency"));
     }
     return NextResponse.redirect(getRedirectUrl(request, "/dashboard"));
   }
 
-  // Fetch profile + org status in one query
-  let { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("is_platform_admin, org_id, agency_id, organizations(status)")
-    .eq("id", user.id)
-    .single();
-
-  // Fallback: if agency_id column doesn't exist yet, retry without it
-  if (profileError && profileError.message?.includes("agency_id")) {
-    const fallback = await supabase
-      .from("profiles")
-      .select("is_platform_admin, org_id, organizations(status)")
-      .eq("id", user.id)
-      .single();
-    profile = fallback.data ? { ...fallback.data, agency_id: null } as typeof profile : null;
-    profileError = fallback.error;
-  }
-
-  const isAdmin = profile?.is_platform_admin === true;
-  const orgs = profile?.organizations as unknown as { status: string } | { status: string }[] | null;
-  const orgStatus = Array.isArray(orgs) ? orgs[0]?.status : orgs?.status;
-  const hasOrg = !!profile?.org_id;
-  const hasAgency = !!profile?.agency_id;
-
   // --- Platform admin ---
   if (isAdmin) {
+    // Allow admin to view dashboard routes when viewing as an organization
+    const adminViewOrgId = request.cookies.get("admin-view-org-id")?.value;
     if (
       pathname.startsWith("/admin") ||
-      pathname.startsWith("/auth")
+      pathname.startsWith("/auth") ||
+      (adminViewOrgId && (
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/discovery") ||
+        pathname.startsWith("/pipeline") ||
+        pathname.startsWith("/documents") ||
+        pathname.startsWith("/narratives") ||
+        pathname.startsWith("/proposals") ||
+        pathname.startsWith("/notifications") ||
+        pathname.startsWith("/settings") ||
+        pathname.startsWith("/billing") ||
+        pathname.startsWith("/submissions") ||
+        pathname.startsWith("/awards")
+      ))
     ) {
       return supabaseResponse;
     }

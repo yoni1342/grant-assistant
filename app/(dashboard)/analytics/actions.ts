@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { calculateAvgTimeToSubmission } from '@/lib/utils/analytics'
+import { sanitizeError } from '@/lib/errors'
 
 export async function getAnalytics() {
   const supabase = await createClient()
@@ -29,7 +30,7 @@ export async function getAnalytics() {
     .eq('org_id', profile.org_id)
 
   if (submissionsError) {
-    return { error: submissionsError.message, data: null }
+    return { error: sanitizeError(submissionsError, 'Unable to load analytics. Please try again.'), data: null }
   }
 
   const { count: awardsCount, error: awardsCountError } = await supabase
@@ -38,7 +39,7 @@ export async function getAnalytics() {
     .eq('org_id', profile.org_id)
 
   if (awardsCountError) {
-    return { error: awardsCountError.message, data: null }
+    return { error: sanitizeError(awardsCountError, 'Unable to load analytics. Please try again.'), data: null }
   }
 
   const totalSubmissions = submissionsCount || 0
@@ -55,7 +56,7 @@ export async function getAnalytics() {
     .in('stage', ['discovery', 'screening', 'pending_approval', 'drafting', 'submission'])
 
   if (pipelineError) {
-    return { error: pipelineError.message, data: null }
+    return { error: sanitizeError(pipelineError, 'Unable to load analytics. Please try again.'), data: null }
   }
 
   const pipelineValue = (pipelineGrants || []).reduce(
@@ -70,7 +71,7 @@ export async function getAnalytics() {
     .eq('org_id', profile.org_id)
 
   if (awardsError) {
-    return { error: awardsError.message, data: null }
+    return { error: sanitizeError(awardsError, 'Unable to load analytics. Please try again.'), data: null }
   }
 
   const totalAwardAmount = (awards || []).reduce(
@@ -90,7 +91,7 @@ export async function getAnalytics() {
     .eq('org_id', profile.org_id)
 
   if (grantsError) {
-    return { error: grantsError.message, data: null }
+    return { error: sanitizeError(grantsError, 'Unable to load analytics. Please try again.'), data: null }
   }
 
   const avgTimeToSubmission = calculateAvgTimeToSubmission(grantsWithSubmissions || [])
@@ -139,7 +140,7 @@ export async function getSuccessRateByFunder() {
     .eq('org_id', profile.org_id)
 
   if (awardsError) {
-    return { error: awardsError.message, data: [] }
+    return { error: sanitizeError(awardsError, 'Unable to load analytics. Please try again.'), data: [] }
   }
 
   // Fetch submissions with grant funder_name
@@ -154,7 +155,7 @@ export async function getSuccessRateByFunder() {
     .eq('org_id', profile.org_id)
 
   if (submissionsError) {
-    return { error: submissionsError.message, data: [] }
+    return { error: sanitizeError(submissionsError, 'Unable to load analytics. Please try again.'), data: [] }
   }
 
   // Group by funder_name

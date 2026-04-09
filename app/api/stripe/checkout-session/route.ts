@@ -137,7 +137,7 @@ export async function POST(req: Request) {
     Sentry.captureException(error, { extra: { context: 'stripe-checkout-session' } })
     await Sentry.flush(2000)
     return NextResponse.json(
-      { error: `Failed to create checkout session: ${errMsg}` },
+      { error: "Unable to process your billing request. Please try again." },
       { status: 500 }
     )
   }

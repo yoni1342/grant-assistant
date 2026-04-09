@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendGrantEligibleEmail } from '@/lib/email/service'
+import { sanitizeError } from '@/lib/errors'
 
 const STAGE_WORKFLOWS: Record<string, string> = {
   screening: 'screen-grant',
@@ -81,7 +82,7 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
       .eq('id', grantId)
       .eq('org_id', profile.org_id)
 
-    if (error) return { error: error.message }
+    if (error) return { error: sanitizeError(error, 'Unable to move this grant. Please try again.') }
 
     // Send email when grant moves to pending_approval
     if (targetStage === 'pending_approval' && grant) {
@@ -159,7 +160,7 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
     .single()
 
   if (workflowError) {
-    return { error: workflowError.message }
+    return { error: sanitizeError(workflowError, 'Unable to start the workflow. Please try again.') }
   }
 
   // Clear screening data when moving to drafting from screening or pending_approval

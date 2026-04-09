@@ -140,7 +140,8 @@ export async function registerOrganization(data: {
         return { error: 'An account with this email already exists. Please sign in instead.' }
       }
     } else {
-      return { error: `Registration failed: ${userError.message}` }
+      console.error('[register] Registration error:', userError.message)
+      return { error: 'Registration failed. Please try again.' }
     }
   }
   if (!userData.user) return { error: 'Failed to create account. Please try again.' }
@@ -221,7 +222,8 @@ export async function registerOrganizationForExistingUser(data: {
     .single()
 
   if (orgError || !org) {
-    return { error: orgError?.message || 'Failed to create organization' }
+    if (orgError) console.error('[register] Org creation error:', orgError.message)
+    return { error: 'Failed to create organization. Please try again.' }
   }
 
   // Upsert profile with org_id + role (handles OAuth users who may not have a profile yet)
@@ -237,8 +239,9 @@ export async function registerOrganizationForExistingUser(data: {
     }, { onConflict: 'id' })
 
   if (profileError) {
+    console.error('[register] Profile setup error:', profileError.message)
     await serviceClient.from('organizations').delete().eq('id', org.id)
-    return { error: profileError.message }
+    return { error: 'Failed to set up your profile. Please try again.' }
   }
 
   // Process questionnaire if provided
@@ -290,7 +293,8 @@ export async function registerAgency(data: {
     if (userError.message?.includes('already been registered')) {
       return { error: 'An account with this email already exists. Please sign in instead.' }
     }
-    return { error: `Registration failed: ${userError.message}` }
+    console.error('[register-agency] Registration error:', userError.message)
+    return { error: 'Registration failed. Please try again.' }
   }
   if (!userData.user) return { error: 'Failed to create account. Please try again.' }
 
@@ -381,7 +385,8 @@ export async function registerAgencyForExistingUser(data: {
     .single()
 
   if (agencyError || !agency) {
-    return { error: agencyError?.message || 'Failed to create agency' }
+    if (agencyError) console.error('[register-agency] Agency creation error:', agencyError.message)
+    return { error: 'Failed to create agency. Please try again.' }
   }
 
   // 2. Create placeholder org
@@ -414,9 +419,10 @@ export async function registerAgencyForExistingUser(data: {
     }, { onConflict: 'id' })
 
   if (profileError) {
+    console.error('[register-agency] Profile setup error:', profileError.message)
     await serviceClient.from('organizations').delete().eq('id', org.id)
     await serviceClient.from('agencies').delete().eq('id', agency.id)
-    return { error: profileError.message }
+    return { error: 'Failed to set up your profile. Please try again.' }
   }
 
   // 4. Send welcome email

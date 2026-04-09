@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceRoleClient } from '@supabase/supabase-js'
-import { sendGrantEligibleEmail } from '@/lib/email/service'
+import { sendGrantEligibleEmail, sendProposalReadyEmail } from '@/lib/email/service'
 
 const WEBHOOK_SECRET = process.env.N8N_WEBHOOK_SECRET
 
@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No record in payload' }, { status: 400 })
   }
 
-  // Only process screening_completed notifications
-  if (record.type !== 'screening_completed') {
-    return NextResponse.json({ skipped: true, reason: 'not screening_completed' })
+  // Only process screening_completed and proposal_generated notifications
+  if (record.type !== 'screening_completed' && record.type !== 'proposal_generated') {
+    return NextResponse.json({ skipped: true, reason: 'unhandled notification type' })
   }
 
   if (!record.grant_id) {
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
     .eq('id', record.grant_id)
     .single()
 
-  if (!grant || grant.stage !== 'pending_approval') {
-    return NextResponse.json({ skipped: true, reason: 'grant not pending_approval' })
+  if (!grant) {
+    return NextResponse.json({ skipped: true, reason: 'grant not found' })
   }
 
   // Get org
@@ -82,20 +82,59 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ skipped: true, reason: 'no profile email' })
   }
 
-  // Check missing data
-  const { data: narrativeDocs } = await supabase
-    .from('documents')
-    .select('id', { count: 'exact', head: true })
-    .eq('org_id', record.org_id)
-    .eq('category', 'narrative')
-
-  const { data: budgetDocs } = await supabase
-    .from('documents')
-    .select('id', { count: 'exact', head: true })
-    .eq('org_id', record.org_id)
-    .eq('category', 'budget')
-
   try {
+    if (record.type === 'proposal_generated') {
+      // Look up the proposal ID from the grant
+      const { data: proposal } = await supabase
+        .from('proposals')
+        .select('id')
+        .eq('grant_id', grant.id)
+        .eq('org_id', record.org_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (!proposal) {
+        return NextResponse.json({ skipped: true, reason: 'proposal not found for grant' })
+      }
+
+      await sendProposalReadyEmail({
+        toEmail: profile.email,
+        fullName: profile.full_name || 'there',
+        organizationName: org.name,
+        proposalId: proposal.id,
+        grantTitle: grant.title,
+      })
+
+      await supabase.from('grant_email_log').insert({
+        notification_id: record.id,
+        org_id: record.org_id,
+        grant_id: record.grant_id,
+        sent_to: profile.email,
+      })
+
+      console.log(`[notification-email] Sent proposal ready email to ${profile.email} for "${grant.title}"`)
+      return NextResponse.json({ sent: true })
+    }
+
+    // screening_completed — only email if grant is pending_approval
+    if (grant.stage !== 'pending_approval') {
+      return NextResponse.json({ skipped: true, reason: 'grant not pending_approval' })
+    }
+
+    // Check missing data
+    const { data: narrativeDocs } = await supabase
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', record.org_id)
+      .eq('category', 'narrative')
+
+    const { data: budgetDocs } = await supabase
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', record.org_id)
+      .eq('category', 'budget')
+
     await sendGrantEligibleEmail({
       toEmail: profile.email,
       fullName: profile.full_name || 'there',
