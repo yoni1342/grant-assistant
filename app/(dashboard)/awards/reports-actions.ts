@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sanitizeError } from '@/lib/errors'
 
 export async function getReports(awardId: string) {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ export async function getReports(awardId: string) {
     .order('due_date', { ascending: true })
 
   if (error) {
-    return { error: error.message, data: [] }
+    return { error: sanitizeError(error, 'Unable to load reports. Please try again.'), data: [] }
   }
 
   return { data: data || [], error: null }
@@ -58,7 +59,7 @@ export async function getReport(reportId: string) {
     if (reportError.code === 'PGRST116') {
       return { data: null, error: null }
     }
-    return { error: reportError.message, data: null }
+    return { error: sanitizeError(reportError, 'Unable to load report details. Please try again.'), data: null }
   }
 
   return { data: report, error: null }
@@ -105,7 +106,7 @@ export async function createReport(data: {
     .single()
 
   if (reportError) {
-    return { error: reportError.message }
+    return { error: sanitizeError(reportError, 'Unable to save report. Please try again.') }
   }
 
   return { data: report, error: null }
@@ -132,7 +133,7 @@ export async function updateReport(
     .eq('id', reportId)
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to update report status. Please try again.') }
   }
 
   // Skip revalidatePath when only content changes (autosave pattern)
@@ -158,7 +159,7 @@ export async function deleteReport(reportId: string) {
     .eq('id', reportId)
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to delete report. Please try again.') }
   }
 
   return { success: true, error: null }
@@ -213,7 +214,7 @@ export async function triggerReportGeneration(awardId: string, reportId: string)
     .single()
 
   if (workflowError) {
-    return { error: workflowError.message }
+    return { error: sanitizeError(workflowError, 'Unable to generate report. Please try again.') }
   }
 
   // Fire-and-forget: trigger n8n workflow

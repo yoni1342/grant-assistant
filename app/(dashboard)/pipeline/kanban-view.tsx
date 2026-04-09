@@ -5,20 +5,21 @@ import type { Tables } from "@/lib/supabase/database.types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 type Grant = Tables<"grants">;
 
 const STAGES = [
-  { key: "discovery", label: "Discovered", color: "bg-blue-500" },
-  { key: "screening", label: "Screened", color: "bg-yellow-500" },
-  { key: "pending_approval", label: "Waiting for Approval", color: "bg-amber-500" },
-  { key: "drafting", label: "Drafted", color: "bg-purple-500" },
+  { key: "discovery", label: "Discovered", color: "bg-blue-500", tooltip: "Grants found through search or added manually. They haven\u2019t been screened yet." },
+  { key: "screening", label: "Screened", color: "bg-yellow-500", tooltip: "Grants that have been evaluated for eligibility and fit with your organization." },
+  { key: "pending_approval", label: "Waiting for Approval", color: "bg-amber-500", tooltip: "Screened grants waiting for your team to approve before moving to drafting." },
+  { key: "drafting", label: "Drafted", color: "bg-purple-500", tooltip: "Approved grants with a proposal draft in progress or completed." },
   // { key: "submission", label: "Submission", color: "bg-orange-500" },
   // { key: "awarded", label: "Awarded", color: "bg-green-500" },
   // { key: "reporting", label: "Reporting", color: "bg-teal-500" },
-  { key: "closed", label: "Closed", color: "bg-muted-foreground" },
+  { key: "closed", label: "Closed", color: "bg-muted-foreground", tooltip: "Grants that are no longer being pursued, whether declined, expired, or completed." },
 ] as const;
 
 function ScreeningScore({ grant }: { grant: Grant }) {
@@ -173,6 +174,16 @@ export function KanbanView({
           <div className="flex items-center gap-2 p-3">
             <div className={`h-2 w-2 rounded-full ${col.color}`} />
             <span className="text-sm font-medium">{col.label}</span>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-56 text-xs">
+                  {col.tooltip}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <span className="ml-auto text-xs text-muted-foreground">
               {col.grants.length}
             </span>
@@ -224,14 +235,17 @@ export function KanbanView({
                               <ScreeningScore grant={grant} />
                             )}
                           </div>
-                          {grant.deadline && (
-                            <p className="text-xs text-muted-foreground">
-                              Due:{" "}
-                              {isNaN(new Date(grant.deadline).getTime())
-                                ? grant.deadline
-                                : new Date(grant.deadline).toLocaleDateString()}
-                            </p>
-                          )}
+                          {grant.deadline && (() => {
+                            const dl = new Date(grant.deadline);
+                            const valid = !isNaN(dl.getTime());
+                            const expired = valid && dl < new Date(new Date().toDateString());
+                            return (
+                              <p className={`text-xs ${expired ? "text-red-500 font-medium" : "text-muted-foreground"}`}>
+                                {expired ? "Expired: " : "Due: "}
+                                {valid ? dl.toLocaleDateString() : grant.deadline}
+                              </p>
+                            );
+                          })()}
                         </CardContent>
                       </Card>
                     </Link>

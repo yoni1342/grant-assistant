@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Card,
@@ -48,6 +49,7 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  MonitorPlay,
   Users,
   BarChart3,
   FolderOpen,
@@ -304,8 +306,6 @@ function buildFlatHtml(text: string): string {
   // Split into segments at section-header boundaries
   // A section header is a capitalized phrase right before a known table-header pattern
   // Known table headers: "Category Annual Budget", "Position Type Annual Cost", "Item Annual Cost", "Source Amount % of Budget"
-  const sectionPattern = /(?=(?:Budget Overview|Personnel|Clinical Supplies|Mobile Clinic|Revenue Sources|Maternal Health|Rural Health|Marketing|General Administration)[^$]*(?:\$|$))/g;
-
   // First extract the document title (everything before first section)
   const titleMatch = text.match(/^(.*?)(?=Budget Overview|Personnel|Clinical Supplies|Mobile Clinic|Revenue Sources)/);
   const titleText = titleMatch ? titleMatch[1].trim() : '';
@@ -386,12 +386,11 @@ function buildFlatHtml(text: string): string {
       const words = between.split(/\s+/);
 
       // Detect known column header words at the end
-      const headerWords: string[] = [];
       const headerKeywords = ['Category', 'Annual', 'Budget', 'Position', 'Type', 'Cost', 'Item', 'Source', 'Amount'];
       let wi = words.length - 1;
 
       // Walk backwards collecting header words
-      let headerColsFound = 0;
+      const headerColsFound = 0;
       const tempHeaders: string[] = [];
       while (wi >= 0 && headerColsFound < colCount) {
         const w = words[wi];
@@ -483,12 +482,11 @@ function ExtractedTextViewer({
   text,
   title,
   category,
-  signedUrl,
 }: {
   text: string;
   title: string;
   category: string | null;
-  signedUrl: string | null;
+  signedUrl?: string | null;
 }) {
   const contentHtml = useMemo(() => buildExtractedHtml(text), [text]);
   const categoryLabel = category ? category.replace(/_/g, " ") : null;
@@ -1335,6 +1333,19 @@ export function OrgDetailClient({
   const [proposalSortAsc, setProposalSortAsc] = useState(false);
   const [proposalsVisible, setProposalsVisible] = useState(5);
 
+  const router = useRouter();
+  const [viewAsOrgLoading, setViewAsOrgLoading] = useState(false);
+
+  async function handleViewAsOrg() {
+    setViewAsOrgLoading(true);
+    await fetch("/api/admin/view-org", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orgId: organization.id }),
+    });
+    router.push("/dashboard");
+  }
+
   const owner = profiles.find((p) => p.role === "owner") || profiles[0];
 
   const grantsData = useMemo(() => groupByMonth(grants), [grants]);
@@ -1485,22 +1496,32 @@ export function OrgDetailClient({
     else { setProposalSortField(field); setProposalSortAsc(false); }
   }
 
-  const SortIcon = ({ field, currentField, asc }: { field: string; currentField: string; asc: boolean }) => (
-    field === currentField
-      ? asc ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />
-      : null
-  );
+  function renderSortIcon(field: string, currentField: string, asc: boolean) {
+    if (field !== currentField) return null;
+    return asc ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />;
+  }
 
   return (
     <div className="space-y-6">
-      {/* Back link */}
-      <Link
-        href="/admin/organizations"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Organizations
-      </Link>
+      {/* Back link + View as Org */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/admin/organizations"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Organizations
+        </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleViewAsOrg}
+          disabled={viewAsOrgLoading}
+        >
+          <MonitorPlay className="mr-1.5 h-3.5 w-3.5" />
+          {viewAsOrgLoading ? "Loading..." : "View as Organization"}
+        </Button>
+      </div>
 
       {/* Header */}
       <Card>
@@ -1797,12 +1818,12 @@ export function OrgDetailClient({
                     <TableHeader>
                       <TableRow>
                         <TableHead className="cursor-pointer select-none" onClick={() => toggleGrantSort("title")}>
-                          Title <SortIcon field="title" currentField={grantSortField} asc={grantSortAsc} />
+                          Title {renderSortIcon("title", grantSortField, grantSortAsc)}
                         </TableHead>
                         <TableHead>Funder</TableHead>
                         <TableHead>Stage</TableHead>
                         <TableHead className="cursor-pointer select-none" onClick={() => toggleGrantSort("screening_score")}>
-                          Score <SortIcon field="screening_score" currentField={grantSortField} asc={grantSortAsc} />
+                          Score {renderSortIcon("screening_score", grantSortField, grantSortAsc)}
                         </TableHead>
                         <TableHead>Amount</TableHead>
                         <TableHead>Deadline</TableHead>
@@ -1960,16 +1981,16 @@ export function OrgDetailClient({
                     <TableHeader>
                       <TableRow>
                         <TableHead className="cursor-pointer select-none" onClick={() => toggleProposalSort("title")}>
-                          Title <SortIcon field="title" currentField={proposalSortField} asc={proposalSortAsc} />
+                          Title {renderSortIcon("title", proposalSortField, proposalSortAsc)}
                         </TableHead>
                         <TableHead>Grant</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="cursor-pointer select-none" onClick={() => toggleProposalSort("quality_score")}>
-                          Quality <SortIcon field="quality_score" currentField={proposalSortField} asc={proposalSortAsc} />
+                          Quality {renderSortIcon("quality_score", proposalSortField, proposalSortAsc)}
                         </TableHead>
                         <TableHead>Confidence</TableHead>
                         <TableHead className="cursor-pointer select-none" onClick={() => toggleProposalSort("created_at")}>
-                          Created <SortIcon field="created_at" currentField={proposalSortField} asc={proposalSortAsc} />
+                          Created {renderSortIcon("created_at", proposalSortField, proposalSortAsc)}
                         </TableHead>
                         <TableHead className="w-[60px]"></TableHead>
                       </TableRow>

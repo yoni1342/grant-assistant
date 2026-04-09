@@ -47,7 +47,7 @@ export async function POST() {
     Sentry.captureException(error, { extra: { context: 'stripe-customer-portal' } })
     await Sentry.flush(2000)
     return NextResponse.json(
-      { error: `Failed to create portal session: ${errMsg}` },
+      { error: "Unable to process your billing request. Please try again." },
       { status: 500 }
     )
   }

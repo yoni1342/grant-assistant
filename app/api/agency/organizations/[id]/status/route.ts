@@ -35,7 +35,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     .eq("id", orgId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[agency/organizations/status] Failed to update status:", error.message);
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, status });

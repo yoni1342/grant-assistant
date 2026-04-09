@@ -3,6 +3,7 @@ import https from "https";
 import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/server";
 import { PLANS } from "@/lib/stripe/config";
 import type { PlanId } from "@/lib/stripe/config";
+import { friendlyWorkflowError } from "@/lib/errors";
 
 // Map service names to n8n webhook paths
 const SERVICE_MAP: Record<string, string> = {
@@ -230,7 +231,7 @@ export async function POST(req: Request) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: responseData?.message || responseData || "Workflow failed",
+          error: friendlyWorkflowError(service, responseData?.message || responseData),
         }),
         { status: response.status, headers: { "Content-Type": "application/json" } },
       );
@@ -238,10 +239,11 @@ export async function POST(req: Request) {
 
     // Empty response means workflow took a wrong path
     if (!text || text.trim() === "") {
+      console.error(`[webhook/${service}] Empty response from n8n`);
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Workflow returned empty response — check n8n logs",
+          error: friendlyWorkflowError(service),
         }),
         { status: 502, headers: { "Content-Type": "application/json" } },
       );
@@ -252,7 +254,7 @@ export async function POST(req: Request) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: responseData.message || "Workflow returned failure",
+          error: friendlyWorkflowError(service, responseData.message),
         }),
         { headers: { "Content-Type": "application/json" } },
       );
@@ -263,9 +265,8 @@ export async function POST(req: Request) {
       { headers: { "Content-Type": "application/json" } },
     );
   } catch (err) {
-    console.error(`[webhook/${service}] Fetch error:`, err);
     return new Response(
-      JSON.stringify({ success: false, error: String(err) }),
+      JSON.stringify({ success: false, error: friendlyWorkflowError(service, err) }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceRoleClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { sanitizeError } from '@/lib/errors'
 
 // ─── Profile ────────────────────────────────────────────────────────────────
 
@@ -17,12 +18,12 @@ export async function updateProfile(name: string, email: string) {
     .update({ full_name: name, email, updated_at: new Date().toISOString() })
     .eq('id', user.id)
 
-  if (profileError) return { error: profileError.message }
+  if (profileError) return { error: sanitizeError(profileError, 'Unable to update your profile. Please try again.') }
 
   // Update auth email if changed
   if (email !== user.email) {
     const { error: authError } = await supabase.auth.updateUser({ email })
-    if (authError) return { error: authError.message }
+    if (authError) return { error: sanitizeError(authError, 'Unable to update your email. Please try again.') }
   }
 
   revalidatePath('/settings')
@@ -52,7 +53,7 @@ export async function uploadAvatar(formData: FormData) {
     .from('avatars')
     .upload(filePath, file, { contentType: file.type, upsert: true })
 
-  if (uploadError) return { error: uploadError.message }
+  if (uploadError) return { error: sanitizeError(uploadError, 'Unable to upload your avatar. Please try again.') }
 
   const { data: { publicUrl } } = supabase.storage
     .from('avatars')
@@ -66,7 +67,7 @@ export async function uploadAvatar(formData: FormData) {
     .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
     .eq('id', user.id)
 
-  if (profileError) return { error: profileError.message }
+  if (profileError) return { error: sanitizeError(profileError, 'Unable to save your avatar. Please try again.') }
 
   revalidatePath('/settings')
   return { success: true, url: avatarUrl }
@@ -88,7 +89,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
   const { error: updateError } = await supabase.auth.updateUser({
     password: newPassword,
   })
-  if (updateError) return { error: updateError.message }
+  if (updateError) return { error: sanitizeError(updateError, 'Unable to change your password. Please try again.') }
 
   return { success: true }
 }
@@ -125,7 +126,7 @@ export async function updateOrganization(data: {
     .update({ ...data, updated_at: new Date().toISOString() })
     .eq('id', profile.org_id)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Unable to update organization settings. Please try again.') }
 
   revalidatePath('/settings')
   return { success: true }
@@ -153,7 +154,7 @@ export async function updateMemberRole(memberId: string, role: string) {
     .eq('id', memberId)
     .eq('org_id', profile.org_id)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Unable to update member role. Please try again.') }
 
   revalidatePath('/settings')
   return { success: true }
@@ -182,7 +183,7 @@ export async function removeMember(memberId: string) {
     .eq('id', memberId)
     .eq('org_id', profile.org_id)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Unable to remove member. Please try again.') }
 
   revalidatePath('/settings')
   return { success: true }
@@ -211,7 +212,7 @@ export async function inviteMember(email: string, role: string) {
   )
 
   const { data: inviteData, error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email)
-  if (inviteError) return { error: inviteError.message }
+  if (inviteError) return { error: sanitizeError(inviteError, 'Unable to send the invitation. Please try again.') }
 
   // Create profile for invited user
   if (inviteData.user) {
@@ -282,7 +283,7 @@ export async function updatePreferences(prefs: {
     .update({ preferences: merged, updated_at: new Date().toISOString() })
     .eq('id', user.id)
 
-  if (error) return { error: error.message }
+  if (error) return { error: sanitizeError(error, 'Unable to save your preferences. Please try again.') }
 
   revalidatePath('/settings')
   return { success: true }

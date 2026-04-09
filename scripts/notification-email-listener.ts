@@ -33,11 +33,11 @@ const channel = supabase
     async (payload) => {
       const record = payload.new
 
-      if (record.type !== 'screening_completed') {
+      if (record.type !== 'screening_completed' && record.type !== 'proposal_generated') {
         return
       }
 
-      console.log(`[notification-email-listener] screening_completed notification received for grant ${record.grant_id}`)
+      console.log(`[notification-email-listener] ${record.type} notification received for grant ${record.grant_id}`)
 
       try {
         const res = await fetch(`${APP_URL}/api/hooks/notification-email`, {

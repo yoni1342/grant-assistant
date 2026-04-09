@@ -17,7 +17,8 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[agency/organizations] Failed to fetch orgs:", error.message);
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 
   return NextResponse.json({ orgs });
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
 
   if (error) {
     console.error("[agency/organizations] Failed to create org:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 
   // Process questionnaire data if provided

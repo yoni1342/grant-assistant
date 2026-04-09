@@ -567,7 +567,21 @@ export default function DiscoveryPage() {
       if (s.industry) setIndustry(s.industry);
       if (s.fundingCategory) setFundingCategory(s.fundingCategory);
       if (s.location) setLocation(s.location);
-      if (s.results?.length) {
+      // Restore all sessions if available, otherwise fall back to single-session legacy format
+      if (s.sessions?.length) {
+        const restoredSessions: SearchSession[] = s.sessions.map((ss: { id: string; query: string; results: DiscoveredGrant[] }) => ({
+          id: ss.id,
+          query: ss.query,
+          results: ss.results,
+          loading: false,
+          searchComplete: true,
+          stageMessage: DEFAULT_STAGE,
+          sourceCount: 0,
+          error: null,
+        }));
+        setSessions(restoredSessions);
+        setActiveSessionId(s.activeSessionId || restoredSessions[restoredSessions.length - 1].id);
+      } else if (s.results?.length) {
         const restoredId = "restored-" + Date.now();
         const restoredSession: SearchSession = {
           id: restoredId,
@@ -592,6 +606,10 @@ export default function DiscoveryPage() {
   useEffect(() => {
     if (!hasRestored.current || !storageKey) return;
     try {
+      // Persist all sessions (id, query, results) so they survive navigation
+      const sessionsToSave = sessions
+        .filter((s) => s.results.length > 0)
+        .map((s) => ({ id: s.id, query: s.query, results: s.results }));
       sessionStorage.setItem(
         storageKey,
         JSON.stringify({
@@ -601,14 +619,15 @@ export default function DiscoveryPage() {
           industry,
           fundingCategory,
           location,
-          results,
+          sessions: sessionsToSave,
+          activeSessionId,
           addedGrants: Array.from(addedGrants),
         })
       );
     } catch {
       // storage full — ignore
     }
-  }, [storageKey, query, activeSession, orgType, profitStatus, industry, fundingCategory, location, results, addedGrants]);
+  }, [storageKey, query, activeSession, activeSessionId, sessions, orgType, profitStatus, industry, fundingCategory, location, addedGrants]);
 
   const atLimit = grantUsage !== null && grantUsage.limit !== null && grantUsage.used >= grantUsage.limit;
 
@@ -648,9 +667,10 @@ export default function DiscoveryPage() {
 
   // Cleanup all sessions on unmount
   useEffect(() => {
+    const refsMap = sessionRefsMap.current;
     return () => {
       const supabase = createClient();
-      for (const [, refs] of sessionRefsMap.current) {
+      for (const [, refs] of refsMap) {
         if (refs.channel) {
           supabase.removeChannel(refs.channel as Parameters<typeof supabase.removeChannel>[0]);
         }
@@ -700,7 +720,7 @@ export default function DiscoveryPage() {
   }, []);
 
   // Start a new search and subscribe to results
-  function startSearchSession(sessionId: string, searchQuery: string) {
+  function startSearchSession(sessionId: string) {
     const supabase = createClient();
 
     // Create refs for this session
@@ -857,7 +877,7 @@ export default function DiscoveryPage() {
       setActiveSessionId(searchId);
 
       // Start listening for results
-      startSearchSession(searchId, query.trim());
+      startSearchSession(searchId);
 
     } catch (err) {
       console.error("Discovery error:", err);

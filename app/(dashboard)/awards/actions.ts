@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeError } from '@/lib/errors'
 import { revalidatePath } from 'next/cache'
 
 export async function getAwards() {
@@ -37,7 +38,7 @@ export async function getAwards() {
     .order('award_date', { ascending: false })
 
   if (error) {
-    return { error: error.message, data: [] }
+    return { error: sanitizeError(error, 'Unable to load awards. Please try again.'), data: [] }
   }
 
   return { data: data || [], error: null }
@@ -72,7 +73,7 @@ export async function getAward(awardId: string) {
     if (awardError.code === 'PGRST116') {
       return { data: null, error: null }
     }
-    return { error: awardError.message, data: null }
+    return { error: sanitizeError(awardError, 'Unable to load award details. Please try again.'), data: null }
   }
 
   // Fetch related reports
@@ -83,7 +84,7 @@ export async function getAward(awardId: string) {
     .order('due_date', { ascending: true })
 
   if (reportsError) {
-    return { error: reportsError.message, data: null }
+    return { error: sanitizeError(reportsError, 'Unable to load award details. Please try again.'), data: null }
   }
 
   return {
@@ -138,7 +139,7 @@ export async function createAward(data: {
     .single()
 
   if (awardError) {
-    return { error: awardError.message }
+    return { error: sanitizeError(awardError, 'Unable to save award. Please try again.') }
   }
 
   // Update the grant's stage to 'awarded'
@@ -196,7 +197,7 @@ export async function updateAward(
     .eq('id', awardId)
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to update award. Please try again.') }
   }
 
   revalidatePath(`/awards/${awardId}`)
@@ -217,7 +218,7 @@ export async function deleteAward(awardId: string) {
     .eq('id', awardId)
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to delete award. Please try again.') }
   }
 
   revalidatePath('/awards')

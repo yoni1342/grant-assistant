@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sanitizeError } from '@/lib/errors'
 
 export async function getSubmissionChecklist(grantId: string) {
   const supabase = await createClient()
@@ -22,7 +23,7 @@ export async function getSubmissionChecklist(grantId: string) {
     if (error.code === 'PGRST116') {
       return { data: null, error: null }
     }
-    return { error: error.message, data: null }
+    return { error: sanitizeError(error, 'Unable to load checklist. Please try again.'), data: null }
   }
 
   return { data, error: null }
@@ -62,7 +63,7 @@ export async function generateChecklist(grantId: string) {
     .single()
 
   if (workflowError) {
-    return { error: workflowError.message }
+    return { error: sanitizeError(workflowError, 'Unable to generate checklist. Please try again.') }
   }
 
   // Fire-and-forget: trigger n8n workflow
@@ -105,7 +106,7 @@ export async function updateChecklistItem(
     .single()
 
   if (fetchError) {
-    return { error: fetchError.message }
+    return { error: sanitizeError(fetchError, 'Unable to load checklist. Please try again.') }
   }
 
   // Update the specific item in the items array
@@ -140,7 +141,7 @@ export async function updateChecklistItem(
     .eq('id', checklistId)
 
   if (updateError) {
-    return { error: updateError.message }
+    return { error: sanitizeError(updateError, 'Unable to update checklist item. Please try again.') }
   }
 
   // No revalidatePath - called from optimistic UI
@@ -181,7 +182,7 @@ export async function triggerAutoSubmission(grantId: string, portalUrl: string) 
     .single()
 
   if (workflowError) {
-    return { error: workflowError.message }
+    return { error: sanitizeError(workflowError, 'Unable to start submission. Please try again.') }
   }
 
   // Fire-and-forget: trigger n8n workflow
@@ -242,7 +243,7 @@ export async function logManualSubmission(
   })
 
   if (error) {
-    return { error: error.message }
+    return { error: sanitizeError(error, 'Unable to log submission. Please try again.') }
   }
 
   revalidatePath('/submissions')
@@ -264,7 +265,7 @@ export async function getSubmissions(grantId: string) {
     .order('submitted_at', { ascending: false })
 
   if (error) {
-    return { error: error.message, data: [] }
+    return { error: sanitizeError(error, 'Unable to load submissions. Please try again.'), data: [] }
   }
 
   return { data: data || [], error: null }

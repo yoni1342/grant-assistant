@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +31,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { Eye, Trash2, Ban, RotateCcw, Search, MoreHorizontal, CheckCircle2, XCircle } from "lucide-react";
+import { Eye, Trash2, Ban, RotateCcw, Search, MoreHorizontal, CheckCircle2, XCircle, MonitorPlay } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { approveOrganization, rejectOrganization, deleteOrganization, suspendOrganization, unsuspendOrganization } from "./actions";
 
 interface Organization {
@@ -91,6 +92,17 @@ export function OrganizationsClient({
     title: string;
     message: string;
   } | null>(null);
+  const router = useRouter();
+
+  async function handleViewAsOrg(orgId: string) {
+    setLoading(orgId);
+    await fetch("/api/admin/view-org", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orgId }),
+    });
+    router.push("/dashboard");
+  }
 
   const counts = {
     pending: organizations.filter((o) => o.status === "pending").length,
@@ -348,6 +360,13 @@ export function OrganizationsClient({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleViewAsOrg(org.id)}
+                            >
+                              <MonitorPlay className="mr-2 h-4 w-4" />
+                              View as Organization
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             {org.status === "pending" && (
                               <>
                                 <DropdownMenuItem
