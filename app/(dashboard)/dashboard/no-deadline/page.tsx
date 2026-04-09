@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
+import { excludeFetchedExpired } from "@/lib/grants/filters";
 
 const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovered",
@@ -31,13 +32,13 @@ export default async function NoDeadlinePage() {
 
   const { data: grants } = await adminDb
     .from("grants")
-    .select("id, title, funder_name, stage, amount, deadline, description, source_url")
+    .select("id, title, funder_name, stage, amount, deadline, description, source_url, created_at")
     .eq("org_id", orgId)
     .neq("stage", "archived")
     .is("deadline", null)
     .order("created_at", { ascending: false });
 
-  const noDeadlineGrants = grants || [];
+  const noDeadlineGrants = excludeFetchedExpired(grants || []);
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 w-full min-w-0">

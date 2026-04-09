@@ -3,6 +3,7 @@ import { PipelineClient } from "./pipeline-client";
 import { GrantFetchBanner } from "./grant-fetch-banner";
 import { redirect } from "next/navigation";
 import { triggerFetchGrants } from "./actions";
+import { excludeFetchedExpired } from "@/lib/grants/filters";
 
 export default async function PipelinePage() {
   const supabase = await createClient();
@@ -13,9 +14,10 @@ export default async function PipelinePage() {
   // who switch between orgs. Auth is already validated by getUserOrgId above.
   const adminDb = createAdminClient();
 
+  // eslint-disable-next-line react-hooks/purity
   const staleThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-  const [{ data: grants }, { data: fetchStatus }, { data: proposals }] = await Promise.all([
+  const [grantsResult, { data: fetchStatus }, { data: proposals }] = await Promise.all([
     adminDb
       .from("grants")
       .select("*")
@@ -34,6 +36,18 @@ export default async function PipelinePage() {
       .select("id, grant_id, quality_score")
       .eq("org_id", orgId),
   ]);
+
+  // Delete grants that were already expired when fetched (deadline < created_at).
+  // These are irrelevant — the user never had a chance at them.
+  // Grants that expire AFTER being added are handled by the close-expired-grants cron.
+  const allFetched = grantsResult.data || [];
+  const validGrants = excludeFetchedExpired(allFetched);
+  if (validGrants.length < allFetched.length) {
+    const validIds = new Set(validGrants.map((g) => g.id));
+    const expiredIds = allFetched.filter((g) => !validIds.has(g.id)).map((g) => g.id);
+    await adminDb.from("grants").delete().in("id", expiredIds);
+  }
+  const grants = validGrants;
 
   // Auto-trigger fetch-grants when pipeline is empty and no fetch is in progress
   // Only for professional and agency plans — free tier must use Discovery manually

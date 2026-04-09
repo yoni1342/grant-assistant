@@ -926,6 +926,15 @@ export default function DiscoveryPage() {
         ? String(rawDeadline)
         : null;
 
+      // Reject grants whose deadline has already passed
+      if (parsedDeadline && new Date(parsedDeadline) < new Date()) {
+        toast.error("Grant has expired", {
+          description: "This grant's deadline has already passed and cannot be added to the pipeline.",
+        });
+        setAddingToPipeline(null);
+        return;
+      }
+
       // Amount may come as amount, awardCeiling, or awardFloor — take first non-zero value
       const rawAmount = grant.amount
         || (raw.awardCeiling && Number(raw.awardCeiling) > 0 ? Number(raw.awardCeiling) : null)

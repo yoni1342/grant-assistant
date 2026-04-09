@@ -221,7 +221,7 @@ export function OrgTable({ initialOrgs, grantCounts }: OrgTableProps) {
                 if (!confirmDialog) return;
                 updateStatus(
                   confirmDialog.orgId,
-                  confirmDialog.type === "suspend" ? "suspended" : "active"
+                  confirmDialog.type === "suspend" ? "suspended" : "approved"
                 );
               }}
               disabled={loadingId === confirmDialog?.orgId}
