@@ -9,6 +9,7 @@ import type {
   TrialEndingEmailParams,
   CompleteProfileEmailParams,
   GrantEligibleEmailParams,
+  ProposalReadyEmailParams,
 } from './types'
 import WelcomeEmail from './templates/welcome'
 import OrganizationApprovedEmail from './templates/organization-approved'
@@ -16,6 +17,7 @@ import OrganizationRejectedEmail from './templates/organization-rejected'
 import TrialEndingEmail from './templates/trial-ending'
 import CompleteProfileEmail from './templates/complete-profile'
 import GrantEligibleEmail from './templates/grant-eligible'
+import ProposalReadyEmail from './templates/proposal-ready'
 
 const FROM_EMAIL = process.env.AWS_SES_FROM_EMAIL || 'noreply@fundory.ai'
 const FROM_NAME = process.env.AWS_SES_FROM_NAME || 'Fundory'
@@ -184,6 +186,27 @@ export async function sendGrantEligibleEmail(
 
   const htmlBody = await render(GrantEligibleEmail(params), { pretty: true })
   const textBody = await render(GrantEligibleEmail(params), { plainText: true })
+
+  await sendEmail({
+    to: params.toEmail,
+    subject,
+    htmlBody,
+    textBody,
+  })
+}
+
+/**
+ * Send proposal ready email
+ */
+export async function sendProposalReadyEmail(
+  params: ProposalReadyEmailParams
+): Promise<void> {
+  console.log('[sendProposalReadyEmail] Sending to:', { toEmail: params.toEmail, grant: params.grantTitle, org: params.organizationName })
+
+  const subject = `Proposal Draft Ready: ${params.grantTitle}`
+
+  const htmlBody = await render(ProposalReadyEmail(params), { pretty: true })
+  const textBody = await render(ProposalReadyEmail(params), { plainText: true })
 
   await sendEmail({
     to: params.toEmail,

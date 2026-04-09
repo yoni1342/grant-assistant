@@ -55,6 +55,15 @@ export interface GrantEligibleEmailParams extends BaseEmailParams {
 }
 
 /**
+ * Proposal ready email parameters
+ */
+export interface ProposalReadyEmailParams extends BaseEmailParams {
+  organizationName: string
+  proposalId: string
+  grantTitle: string
+}
+
+/**
  * Complete profile reminder email parameters
  */
 export interface CompleteProfileEmailParams extends BaseEmailParams {
