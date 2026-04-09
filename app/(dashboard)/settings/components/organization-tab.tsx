@@ -199,6 +199,7 @@ export function OrganizationTab({ profile, organization, members }: Organization
                 id="org-name"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
+                disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
@@ -208,6 +209,7 @@ export function OrganizationTab({ profile, organization, members }: Organization
                 value={ein}
                 onChange={(e) => setEin(e.target.value)}
                 placeholder="XX-XXXXXXX"
+                disabled={!isAdmin}
               />
             </div>
           </div>
@@ -220,6 +222,7 @@ export function OrganizationTab({ profile, organization, members }: Organization
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief description of your organization"
               rows={2}
+              disabled={!isAdmin}
             />
           </div>
 
@@ -231,6 +234,7 @@ export function OrganizationTab({ profile, organization, members }: Organization
               onChange={(e) => setMission(e.target.value)}
               placeholder="Your organization's mission"
               rows={2}
+              disabled={!isAdmin}
             />
           </div>
 
@@ -243,6 +247,7 @@ export function OrganizationTab({ profile, organization, members }: Organization
                 value={orgEmail}
                 onChange={(e) => setOrgEmail(e.target.value)}
                 placeholder="contact@org.com"
+                disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
@@ -252,6 +257,7 @@ export function OrganizationTab({ profile, organization, members }: Organization
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(555) 123-4567"
+                disabled={!isAdmin}
               />
             </div>
           </div>
@@ -263,6 +269,7 @@ export function OrganizationTab({ profile, organization, members }: Organization
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Street address, City, State, ZIP"
+              disabled={!isAdmin}
             />
           </div>
 
@@ -282,8 +289,9 @@ export function OrganizationTab({ profile, organization, members }: Organization
                     {state}
                     <button
                       type="button"
-                      onClick={() => toggleState(state)}
+                      onClick={() => isAdmin && toggleState(state)}
                       className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                      disabled={!isAdmin}
                     >
                       <X className="size-3" />
                     </button>
@@ -301,6 +309,7 @@ export function OrganizationTab({ profile, organization, members }: Organization
                   setStateDropdownOpen(true)
                 }}
                 onFocus={() => setStateDropdownOpen(true)}
+                disabled={!isAdmin}
               />
               {stateDropdownOpen && filteredStates.length > 0 && (
                 <div className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-md border bg-popover shadow-md">
@@ -330,6 +339,7 @@ export function OrganizationTab({ profile, organization, members }: Organization
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
                 placeholder="https://..."
+                disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
@@ -340,11 +350,12 @@ export function OrganizationTab({ profile, organization, members }: Organization
                 value={foundingYear}
                 onChange={(e) => setFoundingYear(e.target.value)}
                 placeholder="2000"
+                disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="org-sector">Sector</Label>
-              <Select value={sector} onValueChange={setSector}>
+              <Select value={sector} onValueChange={setSector} disabled={!isAdmin}>
                 <SelectTrigger id="org-sector">
                   <SelectValue placeholder="Select sector" />
                 </SelectTrigger>
@@ -357,25 +368,58 @@ export function OrganizationTab({ profile, organization, members }: Organization
             </div>
           </div>
 
-          <Button
-            onClick={handleSaveOrg}
-            disabled={saving || (
-              orgName === (organization?.name || "") &&
-              description === (organization?.description || "") &&
-              mission === (organization?.mission || "") &&
-              ein === (organization?.ein || "") &&
-              address === (organization?.address || "") &&
-              phone === (organization?.phone || "") &&
-              orgEmail === (organization?.email || "") &&
-              website === (organization?.website || "") &&
-              foundingYear === (organization?.founding_year?.toString() || "") &&
-              sector === (organization?.sector || "") &&
-              JSON.stringify(geographicFocus) === JSON.stringify(organization?.geographic_focus || [])
-            )}
-          >
-            {saving && <Loader2 className="size-4 animate-spin mr-2" />}
-            Save Organization
-          </Button>
+          {isAdmin && <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOrgName(organization?.name || "")
+                setDescription(organization?.description || "")
+                setMission(organization?.mission || "")
+                setEin(organization?.ein || "")
+                setAddress(organization?.address || "")
+                setPhone(organization?.phone || "")
+                setOrgEmail(organization?.email || "")
+                setWebsite(organization?.website || "")
+                setFoundingYear(organization?.founding_year?.toString() || "")
+                setSector(organization?.sector || "")
+                setGeographicFocus(organization?.geographic_focus || [])
+              }}
+              disabled={saving || (
+                orgName === (organization?.name || "") &&
+                description === (organization?.description || "") &&
+                mission === (organization?.mission || "") &&
+                ein === (organization?.ein || "") &&
+                address === (organization?.address || "") &&
+                phone === (organization?.phone || "") &&
+                orgEmail === (organization?.email || "") &&
+                website === (organization?.website || "") &&
+                foundingYear === (organization?.founding_year?.toString() || "") &&
+                sector === (organization?.sector || "") &&
+                JSON.stringify(geographicFocus) === JSON.stringify(organization?.geographic_focus || [])
+              )}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveOrg}
+              disabled={saving || (
+                orgName === (organization?.name || "") &&
+                description === (organization?.description || "") &&
+                mission === (organization?.mission || "") &&
+                ein === (organization?.ein || "") &&
+                address === (organization?.address || "") &&
+                phone === (organization?.phone || "") &&
+                orgEmail === (organization?.email || "") &&
+                website === (organization?.website || "") &&
+                foundingYear === (organization?.founding_year?.toString() || "") &&
+                sector === (organization?.sector || "") &&
+                JSON.stringify(geographicFocus) === JSON.stringify(organization?.geographic_focus || [])
+              )}
+            >
+              {saving && <Loader2 className="size-4 animate-spin mr-2" />}
+              Save Changes
+            </Button>
+          </div>}
         </CardContent>
       </Card>
 

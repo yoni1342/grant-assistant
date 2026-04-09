@@ -20,7 +20,7 @@ export function AdminViewBanner({ orgName }: { orgName: string }) {
   }
 
   return (
-    <div className="bg-amber-500 text-black px-4 py-2 flex items-center justify-between text-sm font-medium z-50 relative">
+    <div className="bg-amber-500 text-black px-4 py-2 flex items-center justify-between text-sm font-medium shrink-0">
       <div className="flex items-center gap-2">
         <Eye className="h-4 w-4" />
         <span>

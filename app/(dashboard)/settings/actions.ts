@@ -120,6 +120,9 @@ export async function updateOrganization(data: {
     .single()
 
   if (!profile?.org_id) return { error: 'No organization found' }
+  if (profile.role !== 'owner' && profile.role !== 'admin') {
+    return { error: 'Insufficient permissions' }
+  }
 
   const { error } = await supabase
     .from('organizations')

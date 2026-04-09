@@ -121,13 +121,13 @@ export default async function DashboardLayout({
         agencyId={isAdminView ? undefined : (profile?.agency_id ?? null)}
         activeOrgId={isAdminView ? adminViewOrgId : activeOrgId}
       />
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 pt-14 md:pt-0">
         {isAdminView && adminViewOrgName && (
           <AdminViewBanner orgName={adminViewOrgName} />
         )}
         <ReadOnlyProvider readOnly={isAdminView}>
           <TourWrapper plan={orgPlan} toursCompleted={toursCompleted}>
-            <main className={`flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0${isAdminView ? " read-only-mode" : ""}`}>{children}</main>
+            <main className={`flex-1 overflow-y-auto overflow-x-hidden${isAdminView ? " read-only-mode" : ""}`}>{children}</main>
           </TourWrapper>
         </ReadOnlyProvider>
       </div>

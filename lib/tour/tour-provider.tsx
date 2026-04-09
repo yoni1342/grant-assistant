@@ -122,7 +122,7 @@ export function TourProvider({
         doneBtnText: "Done",
         progressText: "{{current}} of {{total}}",
         steps: driverSteps,
-        showButtons: ["next", "previous"],
+        showButtons: ["next", "previous", "close"],
         onDestroyStarted: () => {
           // Only allow destroy when explicitly triggered (Skip Tour / completion)
           if (allowDestroyRef.current) {
@@ -136,40 +136,12 @@ export function TourProvider({
         onPopoverRender: (popover) => {
           // Always show "Next" (not "Done") since we manage completion ourselves
           popover.nextButton.innerHTML = "Next";
-          // Replace the X close button with a "Skip Tour" button
-          // Make title row a flex container with Skip Tour on the right
+          // Replace the X close button with a "Skip Tour" text button
           const btn = popover.closeButton;
           btn.innerHTML = "Skip Tour";
-          btn.className = "fundory-tour-skip-btn";
-          btn.style.cssText = `
-            display: inline-block !important;
-            position: static !important;
-            background: transparent;
-            border: 1px solid var(--border);
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            padding: 4px 12px;
-            border-radius: 6px;
-            width: auto;
-            height: auto;
-            color: var(--muted-foreground);
-            white-space: nowrap;
-            flex-shrink: 0;
-          `;
-          btn.onmouseenter = () => { btn.style.color = "#ef4444"; btn.style.borderColor = "#ef4444"; btn.style.background = "rgb(239 68 68 / 0.08)"; };
-          btn.onmouseleave = () => { btn.style.color = "var(--muted-foreground)"; btn.style.borderColor = "var(--border)"; btn.style.background = "transparent"; };
-
-          // Move button next to title in a flex row
-          if (popover.title.parentElement && !popover.title.parentElement.classList.contains("fundory-title-row")) {
-            const row = document.createElement("div");
-            row.className = "fundory-title-row";
-            row.style.cssText = "display: flex; align-items: center; justify-content: space-between; gap: 12px;";
-            popover.title.parentElement.insertBefore(row, popover.title);
-            row.appendChild(popover.title);
-            row.appendChild(btn);
+          // Keep the original class so CSS always targets it, add ours too
+          if (!btn.classList.contains("fundory-tour-skip-btn")) {
+            btn.classList.add("fundory-tour-skip-btn");
           }
           btn.onclick = (e) => {
             e.stopPropagation();
@@ -271,20 +243,31 @@ export function TourProvider({
   // Auto-trigger tour for new users
   useEffect(() => {
     if (hasAutoTriggered.current) return;
-    // Only trigger on dashboard (initial landing page)
+
+    // Agency users: trigger on /agency landing page
+    if (plan === "agency" && pathname === "/agency") {
+      const timer = setTimeout(() => {
+        if (hasAutoTriggered.current) return;
+        hasAutoTriggered.current = true;
+
+        if (!toursCompleted.agency) {
+          startTour("agency");
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+
+    // Org users: trigger on /dashboard landing page
     if (pathname !== "/dashboard") return;
 
-    // Wait a moment for the page to fully render
     const timer = setTimeout(() => {
       if (hasAutoTriggered.current) return;
       hasAutoTriggered.current = true;
 
-      if (plan === "professional" || plan === "agency") {
+      if (plan === "professional") {
         if (!toursCompleted.professional && !toursCompleted.base) {
-          // Brand new pro/agency user — full professional tour
           startTour("professional");
         } else if (toursCompleted.base && !toursCompleted.upgrade_pro) {
-          // Upgraded from free — show only the new features
           startTour("upgrade_pro");
         }
       } else {

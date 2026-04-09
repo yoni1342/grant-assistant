@@ -48,7 +48,7 @@ export function AgencySidebar({ user }: { user: User }) {
       .toUpperCase() || user.email?.[0]?.toUpperCase() || "?";
 
   useEffect(() => {
-    setMobileOpen(false);
+    setMobileOpen(false); // eslint-disable-line react-hooks/set-state-in-effect
   }, [pathname]);
 
   useEffect(() => {
@@ -110,6 +110,7 @@ export function AgencySidebar({ user }: { user: User }) {
             <Link
               key={item.href}
               href={item.href}
+              data-tour={`agency-nav-${item.href === "/agency" ? "dashboard" : item.href.replace("/agency/", "")}`}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2.5 md:py-2 text-sm transition-colors",
                 isActive

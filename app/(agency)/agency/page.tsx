@@ -56,7 +56,7 @@ export default async function AgencyDashboardPage() {
             Manage your organizations
           </p>
         </div>
-        <Link href="/agency/organizations/new" className="shrink-0">
+        <Link href="/agency/organizations/new" className="shrink-0" data-tour="agency-add-org-btn">
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
             New Organization
@@ -65,7 +65,7 @@ export default async function AgencyDashboardPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3" data-tour="agency-metrics">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Organizations</CardTitle>
@@ -102,7 +102,7 @@ export default async function AgencyDashboardPage() {
       </div>
 
       {/* Organization Cards */}
-      <div>
+      <div data-tour="agency-org-cards">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-lg font-bold uppercase tracking-tight">
             Your Organizations

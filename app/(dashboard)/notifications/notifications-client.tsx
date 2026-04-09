@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import {
   Bell,
@@ -135,10 +136,40 @@ const BUCKET_ICONS: Record<TimeBucket, typeof Bell> = {
   "Older": Clock,
 };
 
+function BucketDetailSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-4 w-14" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="flex items-start gap-4 py-4">
+              <Skeleton className="h-5 w-5 rounded-full mt-0.5" />
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-3 w-20 ml-auto" />
+                </div>
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function BucketTiles({
   notifications,
+  onSelectBucket,
 }: {
   notifications: Notification[];
+  onSelectBucket: (bucket: TimeBucket) => void;
 }) {
   const groups = groupNotifications(notifications);
 
@@ -155,10 +186,10 @@ function BucketTiles({
         }
 
         return (
-          <Link
+          <button
             key={bucket}
-            href={`/notifications?bucket=${encodeURIComponent(bucket)}`}
-            className="block"
+            onClick={() => onSelectBucket(bucket)}
+            className="block text-left w-full"
           >
             <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
               <CardContent className="p-4 sm:p-5">
@@ -188,7 +219,7 @@ function BucketTiles({
                 </div>
               </CardContent>
             </Card>
-          </Link>
+          </button>
         );
       })}
     </div>
@@ -198,9 +229,11 @@ function BucketTiles({
 function BucketDetail({
   bucket,
   notifications,
+  onBack,
 }: {
   bucket: TimeBucket;
   notifications: Notification[];
+  onBack: () => void;
 }) {
   const items = notifications.filter(
     (n) => getTimeBucket(n.created_at) === bucket
@@ -209,13 +242,13 @@ function BucketDetail({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Link
-          href="/notifications"
+        <button
+          onClick={onBack}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
           Back
-        </Link>
+        </button>
         <h2 className="font-mono text-xs font-semibold text-muted-foreground tracking-wide uppercase">
           {bucket}
         </h2>
@@ -237,7 +270,7 @@ function BucketDetail({
             const isStale =
               (notif.type === "screening_started" || notif.type === "proposal_started") &&
               notif.created_at &&
-              Date.now() - new Date(notif.created_at).getTime() > 60 * 60 * 1000;
+              new Date().getTime() - new Date(notif.created_at).getTime() > 60 * 60 * 1000;
 
             const config = isStale
               ? { icon: XCircle, color: "text-yellow-500", badge: "Timed Out", badgeVariant: "outline" as const }
@@ -327,7 +360,26 @@ export function NotificationsClient({
   const [notifications, setNotifications] =
     useState<Notification[]>(initialNotifications);
   const searchParams = useSearchParams();
-  const selectedBucket = searchParams.get("bucket") as TimeBucket | null;
+  const router = useRouter();
+  const initialBucket = searchParams.get("bucket") as TimeBucket | null;
+  const [selectedBucket, setSelectedBucket] = useState<TimeBucket | null>(
+    initialBucket && BUCKET_ORDER.includes(initialBucket) ? initialBucket : null
+  );
+  const [isPending, startTransition] = useTransition();
+
+  function handleSelectBucket(bucket: TimeBucket) {
+    startTransition(() => {
+      setSelectedBucket(bucket);
+      router.replace(`/notifications?bucket=${encodeURIComponent(bucket)}`, { scroll: false });
+    });
+  }
+
+  function handleBack() {
+    startTransition(() => {
+      setSelectedBucket(null);
+      router.replace("/notifications", { scroll: false });
+    });
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -392,10 +444,12 @@ export function NotificationsClient({
             <p className="text-sm">No notifications yet</p>
           </CardContent>
         </Card>
-      ) : selectedBucket && BUCKET_ORDER.includes(selectedBucket) ? (
-        <BucketDetail bucket={selectedBucket} notifications={notifications} />
+      ) : isPending ? (
+        <BucketDetailSkeleton />
+      ) : selectedBucket ? (
+        <BucketDetail bucket={selectedBucket} notifications={notifications} onBack={handleBack} />
       ) : (
-        <BucketTiles notifications={notifications} />
+        <BucketTiles notifications={notifications} onSelectBucket={handleSelectBucket} />
       )}
     </div>
   );

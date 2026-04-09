@@ -72,6 +72,7 @@ import {
   extendTrial,
   updateSubscriptionStatus,
   toggleTester,
+  getAdminProposalSections,
 } from "../actions";
 import { PLANS } from "@/lib/stripe/config";
 import type { PlanId } from "@/lib/stripe/config";
@@ -1260,9 +1261,22 @@ function GrantDetailView({ grant }: { grant: any }) { /* eslint-disable-line @ty
 
 // Read-only proposal detail dialog content
 function ProposalDetailView({ proposal }: { proposal: any }) { /* eslint-disable-line @typescript-eslint/no-explicit-any */
-  const sections = proposal.proposal_sections
-    ? [...proposal.proposal_sections].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) /* eslint-disable-line @typescript-eslint/no-explicit-any */
-    : [];
+  const [sections, setSections] = useState<any[]>([]); /* eslint-disable-line @typescript-eslint/no-explicit-any */
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true); // eslint-disable-line react-hooks/set-state-in-effect
+    getAdminProposalSections(proposal.id).then((result) => {
+      if (!cancelled) {
+        setSections(
+          (result.data || []).sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) /* eslint-disable-line @typescript-eslint/no-explicit-any */
+        );
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [proposal.id]);
 
   return (
     <div className="space-y-4">
@@ -1286,11 +1300,17 @@ function ProposalDetailView({ proposal }: { proposal: any }) { /* eslint-disable
         )}
       </div>
       <div className="h-[70vh]">
-        <ProposalSections
-          sections={sections}
-          proposalId={proposal.id}
-          proposalTitle={proposal.title}
-        />
+        {loading ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+            Loading sections...
+          </div>
+        ) : (
+          <ProposalSections
+            sections={sections}
+            proposalId={proposal.id}
+            proposalTitle={proposal.title}
+          />
+        )}
       </div>
     </div>
   );
@@ -1301,13 +1321,14 @@ export function OrgDetailClient({
   profiles,
   grants,
   proposals,
-  workflowExecutions,
+  workflowExecutions: _workflowExecutions,
   activityLog,
   documents,
 }: OrgDetailClientProps) {
   const [loading, setLoading] = useState(false);
   const [isTester, setIsTester] = useState(organization.is_tester);
   const [testerLoading, setTesterLoading] = useState(false);
+  const [testerDialogOpen, setTesterDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [billingLoading, setBillingLoading] = useState<string | null>(null);
@@ -2285,34 +2306,99 @@ export function OrgDetailClient({
             <CardHeader>
               <CardTitle className="text-sm font-medium">Pilot Tester</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm">
-                    {isTester
-                      ? "This organization is a pilot tester — billing is bypassed and they have full access."
-                      : "Mark this organization as a pilot tester to bypass all payment requirements."}
-                  </p>
-                </div>
-                <Button
-                  variant={isTester ? "destructive" : "outline"}
-                  size="sm"
-                  disabled={testerLoading}
-                  onClick={async () => {
-                    setTesterLoading(true);
-                    const result = await toggleTester(organization.id, !isTester);
-                    if (!result.error) setIsTester(!isTester);
-                    setTesterLoading(false);
-                  }}
-                >
-                  {testerLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                  ) : null}
-                  {isTester ? "Remove Tester" : "Mark as Tester"}
-                </Button>
+            <CardContent className="space-y-4">
+              <p className="text-sm">
+                {isTester
+                  ? `This organization is a pilot tester (${organization.plan || "professional"}) — billing is bypassed and they have full access.`
+                  : "Mark this organization as a pilot tester to bypass all payment requirements."}
+              </p>
+              <div className="flex justify-end">
+                {isTester ? (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={testerLoading}
+                    onClick={async () => {
+                      setTesterLoading(true);
+                      const result = await toggleTester(organization.id, false);
+                      if (!result.error) setIsTester(false);
+                      setTesterLoading(false);
+                    }}
+                  >
+                    {testerLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : null}
+                    Remove Tester
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTesterDialogOpen(true)}
+                  >
+                    Mark as Tester
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Tester Plan Selection Dialog */}
+          <Dialog open={testerDialogOpen} onOpenChange={setTesterDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Choose Tester Tier</DialogTitle>
+                <DialogDescription>
+                  Select which plan this tester should receive. This bypasses all payment requirements.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-3 py-4">
+                <button
+                  type="button"
+                  className="w-full rounded-lg border p-4 text-left hover:bg-accent transition-colors disabled:opacity-50"
+                  disabled={testerLoading}
+                  onClick={async () => {
+                    setTesterLoading(true);
+                    const result = await toggleTester(organization.id, true, "professional");
+                    if (!result.error) {
+                      setIsTester(true);
+                      setTesterDialogOpen(false);
+                    }
+                    setTesterLoading(false);
+                  }}
+                >
+                  <div className="font-medium text-sm">Professional</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Unlimited grants, AI writing, RFP parsing, content library
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  className="w-full rounded-lg border p-4 text-left hover:bg-accent transition-colors disabled:opacity-50"
+                  disabled={testerLoading}
+                  onClick={async () => {
+                    setTesterLoading(true);
+                    const result = await toggleTester(organization.id, true, "agency");
+                    if (!result.error) {
+                      setIsTester(true);
+                      setTesterDialogOpen(false);
+                    }
+                    setTesterLoading(false);
+                  }}
+                >
+                  <div className="font-medium text-sm">Agency</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Multi-org management, org switching, cross-org analytics. User will be prompted to complete agency setup on next login.
+                  </p>
+                </button>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" size="sm" onClick={() => setTesterDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Admin Actions */}
           <Card>

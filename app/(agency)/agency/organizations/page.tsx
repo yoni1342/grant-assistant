@@ -46,7 +46,7 @@ export default async function AgencyOrganizationsPage() {
             {(orgs || []).length} organization{(orgs || []).length !== 1 ? "s" : ""} managed
           </p>
         </div>
-        <Link href="/agency/organizations/new" className="shrink-0">
+        <Link href="/agency/organizations/new" className="shrink-0" data-tour="agency-new-org-btn">
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
             New Organization
@@ -70,7 +70,9 @@ export default async function AgencyOrganizationsPage() {
           </CardContent>
         </Card>
       ) : (
-        <OrgTable initialOrgs={orgs} grantCounts={grantCounts} />
+        <div data-tour="agency-org-table">
+          <OrgTable initialOrgs={orgs} grantCounts={grantCounts} />
+        </div>
       )}
     </div>
   );

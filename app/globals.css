@@ -221,10 +221,25 @@
   border-color: var(--foreground);
 }
 .driver-popover.fundory-tour-popover .driver-popover-close-btn {
-  color: var(--muted-foreground);
+  display: block !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--muted-foreground) !important;
+  font-size: 0.6875rem !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  cursor: pointer !important;
+  padding: 0.25rem 0.5rem !important;
+  width: auto !important;
+  height: auto !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 .driver-popover.fundory-tour-popover .driver-popover-close-btn:hover {
-  color: var(--foreground);
+  color: var(--destructive, #ef4444) !important;
+  background: transparent !important;
+  border: none !important;
 }
 /* Hide arrow — rely on highlight glow to connect popover to target */
 .driver-popover.fundory-tour-popover .driver-popover-arrow {
@@ -263,7 +278,7 @@ aside:has(.driver-active-element) {
 }
 .fundory-tour-skip-btn:hover {
   color: var(--destructive, #ef4444) !important;
-  background: rgb(239 68 68 / 0.1) !important;
+  background: transparent !important;
 }
 /* Sidebar tour steps — push popover clear of the sidebar */
 .driver-popover.fundory-tour-sidebar {
