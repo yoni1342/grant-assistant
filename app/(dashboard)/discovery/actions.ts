@@ -1,7 +1,22 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient, getUserOrgId } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sanitizeError } from '@/lib/errors'
+
+export async function getPipelineGrantTitles(): Promise<string[]> {
+  const supabase = await createClient()
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) return []
+
+  const adminDb = createAdminClient()
+  const { data } = await adminDb
+    .from('grants')
+    .select('title')
+    .eq('org_id', orgId)
+
+  return data?.map((g) => g.title).filter(Boolean) ?? []
+}
 
 export async function triggerEligibilityScreening(grantId: string) {
   const supabase = await createClient()
@@ -37,7 +52,7 @@ export async function triggerEligibilityScreening(grantId: string) {
     .single()
 
   if (workflowError) {
-    return { error: workflowError.message }
+    return { error: sanitizeError(workflowError, 'Unable to start eligibility screening. Please try again.') }
   }
 
   // Fire-and-forget: trigger n8n workflow

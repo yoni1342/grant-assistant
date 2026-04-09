@@ -56,6 +56,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { getPipelineGrantTitles } from "./actions";
 
 const STAGE_ICONS: Record<string, typeof Globe> = {
   searching: Search,
@@ -630,6 +631,19 @@ export default function DiscoveryPage() {
       }
     }
     fetchUsage();
+  }, []);
+
+  // Fetch pipeline grant titles on mount to mark already-added grants
+  useEffect(() => {
+    getPipelineGrantTitles().then((titles) => {
+      if (titles.length > 0) {
+        setAddedGrants((prev) => {
+          const next = new Set(prev);
+          for (const t of titles) next.add(t);
+          return next;
+        });
+      }
+    }).catch(() => {});
   }, []);
 
   // Cleanup all sessions on unmount
