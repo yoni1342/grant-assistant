@@ -13,6 +13,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { GrantUsageCard } from "./grant-usage-card";
+import { excludeFetchedExpired } from "@/lib/grants/filters";
 
 const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovered",
@@ -45,7 +46,7 @@ export default async function DashboardPage() {
   // Fetch grants for pipeline overview
   const { data: grants } = await adminDb
     .from("grants")
-    .select("id, title, funder_name, stage, amount, deadline")
+    .select("id, title, funder_name, stage, amount, deadline, created_at")
     .eq("org_id", orgId)
     .neq("stage", "archived")
     .order("created_at", { ascending: false });
@@ -58,7 +59,7 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(10);
 
-  const allGrants = grants || [];
+  const allGrants = excludeFetchedExpired(grants || []);
 
   // Pipeline counts by stage
   const stageCounts = allGrants.reduce(

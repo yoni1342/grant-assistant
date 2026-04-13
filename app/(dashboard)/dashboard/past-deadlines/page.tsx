@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
+import { excludeFetchedExpired } from "@/lib/grants/filters";
 
 const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovered",
@@ -31,14 +32,14 @@ export default async function PastDeadlinesPage() {
 
   const { data: grants } = await adminDb
     .from("grants")
-    .select("id, title, funder_name, stage, amount, deadline, description, source_url")
+    .select("id, title, funder_name, stage, amount, deadline, description, source_url, created_at")
     .eq("org_id", orgId)
     .neq("stage", "archived")
     .not("deadline", "is", null)
     .order("created_at", { ascending: false });
 
   const now = new Date();
-  const pastGrants = (grants || [])
+  const pastGrants = excludeFetchedExpired(grants || [])
     .filter((g) => {
       const dl = new Date(g.deadline!);
       return !isNaN(dl.getTime()) && dl <= now;

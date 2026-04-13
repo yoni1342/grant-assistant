@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { excludeFetchedExpired } from '@/lib/grants/filters'
 import { PipelineBreakdown } from './components/pipeline-breakdown'
 
 export default async function AnalyticsPage() {
@@ -44,12 +45,14 @@ async function getPipelineBreakdown() {
   // Fetch all grants for org
   const { data: grants, error } = await supabase
     .from('grants')
-    .select('stage')
+    .select('stage, deadline, created_at')
     .eq('org_id', profile.org_id)
 
   if (error || !grants) {
     return []
   }
+
+  const filtered = excludeFetchedExpired(grants)
 
   // Group by stage client-side
   const stageCounts = new Map<string, number>()
@@ -59,7 +62,7 @@ async function getPipelineBreakdown() {
   allStages.forEach(stage => stageCounts.set(stage, 0))
 
   // Count actual grants per stage
-  grants.forEach(grant => {
+  filtered.forEach(grant => {
     if (grant.stage) {
       const current = stageCounts.get(grant.stage) || 0
       stageCounts.set(grant.stage, current + 1)

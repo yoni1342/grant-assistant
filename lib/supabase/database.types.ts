@@ -910,7 +910,7 @@ export type Database = {
         | "reporting"
         | "closed"
         | "archived"
-      org_status: "pending" | "approved" | "rejected"
+      org_status: "pending" | "approved" | "rejected" | "suspended"
       report_type: "interim" | "final"
       submission_method: "auto" | "manual"
       workflow_status: "pending" | "running" | "completed" | "failed"

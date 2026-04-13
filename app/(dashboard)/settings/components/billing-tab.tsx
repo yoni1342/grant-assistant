@@ -139,6 +139,43 @@ export function BillingTab({
     }
   }
 
+  if (currentPlan === "agency") {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-lg border-2 border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-400 p-4 flex items-center gap-4">
+          <Check className="h-6 w-6 shrink-0" />
+          <div>
+            <p className="font-bold text-base">Agency Managed</p>
+            <p className="text-sm mt-0.5 opacity-80">
+              This organization is managed by your agency. Billing is handled at the agency level &mdash; no separate payment is required.
+            </p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Current Plan</CardTitle>
+            <CardDescription>Your organization&apos;s subscription</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold">Professional</p>
+                <Badge variant="outline" className="border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/10 mt-1">
+                  Agency
+                </Badge>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">$0</p>
+                <p className="text-sm text-muted-foreground">billed via agency</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (isTester) {
     return (
       <div className="space-y-6">

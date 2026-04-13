@@ -1,6 +1,7 @@
 "use client";
 
 import type { Tables } from "@/lib/supabase/database.types";
+import { parseGrantAmount } from "@/lib/grants/filters";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -147,7 +148,7 @@ export function ListView({
                 <div className="flex items-center gap-2 flex-wrap">
                   {g.amount && (
                     <Badge variant="secondary" className="text-xs">
-                      ${Number(g.amount).toLocaleString()}
+                      ${parseGrantAmount(g.amount).toLocaleString()}
                     </Badge>
                   )}
                   {col.key === "drafting" ? (
@@ -218,7 +219,7 @@ export function ListView({
                     <TableCell className="text-right whitespace-nowrap">
                       {g.amount ? (
                         <Badge variant="secondary" className="text-xs">
-                          ${Number(g.amount).toLocaleString()}
+                          ${parseGrantAmount(g.amount).toLocaleString()}
                         </Badge>
                       ) : "—"}
                     </TableCell>

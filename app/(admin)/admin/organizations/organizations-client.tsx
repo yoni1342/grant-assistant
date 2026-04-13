@@ -316,7 +316,12 @@ export function OrganizationsClient({
                     <TableCell className="hidden lg:table-cell">{org.sector || "-"}</TableCell>
                     <TableCell>{statusBadge(org.status)}</TableCell>
                     <TableCell className="text-sm hidden md:table-cell">
-                      {org.plan || "free"}
+                      {org.plan === "agency" ? "professional" : (org.plan || "free")}
+                      {org.plan === "agency" && (
+                        <Badge variant="outline" className="ml-1 text-xs border-blue-300 text-blue-700 dark:text-blue-400 bg-blue-500/10">
+                          Agency
+                        </Badge>
+                      )}
                       {org.is_tester && (
                         <Badge variant="outline" className="ml-1 text-xs border-purple-300 text-purple-700 dark:text-purple-400 bg-purple-500/10">
                           Tester
