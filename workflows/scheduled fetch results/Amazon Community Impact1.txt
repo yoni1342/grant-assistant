@@ -1,0 +1,80 @@
+[
+  {
+    "id": "AMZN-IMAGINE-2026-PATHFINDER",
+    "oppNum": "AMZN-IMAGINE-2026-PATHFINDER",
+    "title": "2026 AWS Imagine Grant — Pathfinder Award",
+    "description": "Frontier AI projects (generative, agentic, autonomous AI). Award: up to $200,000 unrestricted\n  cash + up to $100,000 AWS credits + implementation support.\n  Eligibility: US 501(c) nonprofits (education institutions excluded). Round One\n  application portal closes 2026-06-05. Guidelines: https://pages.awscloud.com/aws-imagine-grant-guidelines-US-2026.html",
+    "link": "https://apply.younoodle.com/showcase/competition/2026_aws_imagine_grant",
+    "openDate": "2026-03-19",
+    "closeDate": "2026-06-05",
+    "agency": "Amazon Web Services",
+    "agencyCode": "AMZN",
+    "category": "Philanthropic - Corporate",
+    "source": "Amazon",
+    "awardFloor": 0,
+    "awardCeiling": 200000,
+    "status": "posted",
+    "metadata": {
+      "sourceLevel": "philanthropic",
+      "funder": "Amazon Web Services",
+      "program": "AWS Imagine Grant",
+      "tier": "Pathfinder",
+      "cycle": "2026",
+      "awsCredits": 100000,
+      "guidelinesUrl": "https://pages.awscloud.com/aws-imagine-grant-guidelines-US-2026.html",
+      "eligibility": "US 501(c) nonprofits"
+    }
+  },
+  {
+    "id": "AMZN-IMAGINE-2026-GOFURTHERFASTER",
+    "oppNum": "AMZN-IMAGINE-2026-GOFURTHERFASTER",
+    "title": "2026 AWS Imagine Grant — Go Further, Faster Award",
+    "description": "Innovative cloud projects using AI/ML, HPC, or IoT. Award: up to $150,000 unrestricted\n  cash + up to $100,000 AWS credits + implementation support.\n  Eligibility: US 501(c) nonprofits (education institutions excluded). Round One\n  application portal closes 2026-06-05. Guidelines: https://pages.awscloud.com/aws-imagine-grant-guidelines-US-2026.html",
+    "link": "https://apply.younoodle.com/showcase/competition/2026_aws_imagine_grant",
+    "openDate": "2026-03-19",
+    "closeDate": "2026-06-05",
+    "agency": "Amazon Web Services",
+    "agencyCode": "AMZN",
+    "category": "Philanthropic - Corporate",
+    "source": "Amazon",
+    "awardFloor": 0,
+    "awardCeiling": 150000,
+    "status": "posted",
+    "metadata": {
+      "sourceLevel": "philanthropic",
+      "funder": "Amazon Web Services",
+      "program": "AWS Imagine Grant",
+      "tier": "Go Further, Faster",
+      "cycle": "2026",
+      "awsCredits": 100000,
+      "guidelinesUrl": "https://pages.awscloud.com/aws-imagine-grant-guidelines-US-2026.html",
+      "eligibility": "US 501(c) nonprofits"
+    }
+  },
+  {
+    "id": "AMZN-IMAGINE-2026-MOMENTUMTOMODERNIZE",
+    "oppNum": "AMZN-IMAGINE-2026-MOMENTUMTOMODERNIZE",
+    "title": "2026 AWS Imagine Grant — Momentum to Modernize Award",
+    "description": "Foundational migration and modernization projects. Award: up to $50,000 unrestricted\n  cash + up to $20,000 AWS credits + implementation support.\n  Eligibility: US 501(c) nonprofits (education institutions excluded). Round One\n  application portal closes 2026-06-05. Guidelines: https://pages.awscloud.com/aws-imagine-grant-guidelines-US-2026.html",
+    "link": "https://apply.younoodle.com/showcase/competition/2026_aws_imagine_grant",
+    "openDate": "2026-03-19",
+    "closeDate": "2026-06-05",
+    "agency": "Amazon Web Services",
+    "agencyCode": "AMZN",
+    "category": "Philanthropic - Corporate",
+    "source": "Amazon",
+    "awardFloor": 0,
+    "awardCeiling": 50000,
+    "status": "posted",
+    "metadata": {
+      "sourceLevel": "philanthropic",
+      "funder": "Amazon Web Services",
+      "program": "AWS Imagine Grant",
+      "tier": "Momentum to Modernize",
+      "cycle": "2026",
+      "awsCredits": 20000,
+      "guidelinesUrl": "https://pages.awscloud.com/aws-imagine-grant-guidelines-US-2026.html",
+      "eligibility": "US 501(c) nonprofits"
+    }
+  }
+]
