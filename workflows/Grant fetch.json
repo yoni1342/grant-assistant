@@ -1422,6 +1422,114 @@
       "id": "c00a465c-ee3a-4933-88c5-7de16dc27ca1",
       "name": "Status: Searching1",
       "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://www.rwjf.org/en/grants/funding-opportunities.html",
+        "options": {
+          "response": { "response": { "responseFormat": "text" } }
+        }
+      },
+      "id": "a11c0001-0001-0001-0001-000000000001",
+      "name": "RWJF Funding Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [6720, 33200],
+      "notesInFlow": true,
+      "continueOnFail": true,
+      "notes": "Robert Wood Johnson Foundation open CFPs"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 100) return [{ json: { empty: true, source: 'RWJF' } }];\nconst grants = [];\nconst seen = new Set();\nconst re = /href=\"(\\/en\\/grants\\/funding-opportunities\\/[^\"#?]+)\"[^>]*>([^<]{10,200})</g;\nlet m;\nwhile ((m = re.exec(html)) !== null) {\n  const path = m[1];\n  if (seen.has(path)) continue;\n  seen.add(path);\n  const title = m[2].replace(/\\s+/g, ' ').trim();\n  if (!title || title.toLowerCase().includes('funding opportunities')) continue;\n  const url = 'https://www.rwjf.org' + path;\n  const slug = path.split('/').filter(Boolean).pop();\n  grants.push({ json: {\n    id: 'RWJF-' + slug,\n    oppNum: 'RWJF-' + slug,\n    title: title,\n    description: 'Robert Wood Johnson Foundation funding opportunity. Visit ' + url + ' for full details including eligibility, deadline, and application.',\n    link: url,\n    openDate: new Date().toISOString().split('T')[0],\n    closeDate: 'See listing',\n    agency: 'Robert Wood Johnson Foundation',\n    agencyCode: 'RWJF',\n    category: 'Philanthropic - Health',\n    source: 'RWJF',\n    awardFloor: 0,\n    awardCeiling: 0,\n    status: 'posted',\n    metadata: { sourceLevel: 'philanthropic', funder: 'Robert Wood Johnson Foundation' }\n  }});\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'RWJF' } }];"
+      },
+      "id": "a11c0001-0002-0002-0002-000000000002",
+      "name": "Extract RWJF Opportunities",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [7040, 33200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://www.jpmorganchase.com/impact/our-approach/requests-for-proposals",
+        "options": {
+          "response": { "response": { "responseFormat": "text" } }
+        }
+      },
+      "id": "a11c0001-0003-0003-0003-000000000003",
+      "name": "JPMorgan Chase RFPs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [6720, 33400],
+      "notesInFlow": true,
+      "continueOnFail": true,
+      "notes": "JPMorgan Chase open philanthropic RFPs"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 100) return [{ json: { empty: true, source: 'JPMorgan Chase' } }];\nconst grants = [];\nconst seen = new Set();\nconst closedTerms = /closed|no longer accepting|applications? closed|concluded/i;\nconst headingRe = /<(h[2-4])[^>]*>([\\s\\S]{5,300}?)<\\/\\1>/gi;\nlet m;\nwhile ((m = headingRe.exec(html)) !== null) {\n  const title = m[2].replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim();\n  if (!title || title.length < 8) continue;\n  if (seen.has(title)) continue;\n  if (closedTerms.test(title)) continue;\n  if (/request for proposal|rfp|initiative|fund|program|grant/i.test(title)) {\n    seen.add(title);\n    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60);\n    grants.push({ json: {\n      id: 'JPMC-' + slug,\n      oppNum: 'JPMC-' + slug,\n      title: title,\n      description: 'JPMorgan Chase philanthropic RFP. See https://www.jpmorganchase.com/impact/our-approach/requests-for-proposals for full details, eligibility, and deadline.',\n      link: 'https://www.jpmorganchase.com/impact/our-approach/requests-for-proposals',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: 'See listing',\n      agency: 'JPMorgan Chase & Co.',\n      agencyCode: 'JPMC',\n      category: 'Philanthropic - Corporate',\n      source: 'JPMorgan Chase',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'philanthropic', funder: 'JPMorgan Chase & Co.' }\n    }});\n  }\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'JPMorgan Chase' } }];"
+      },
+      "id": "a11c0001-0004-0004-0004-000000000004",
+      "name": "Extract JPMorgan RFPs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [7040, 33400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://www.aboutamazon.com/impact/community",
+        "options": {
+          "response": { "response": { "responseFormat": "text" } }
+        }
+      },
+      "id": "a11c0001-0005-0005-0005-000000000005",
+      "name": "Amazon Community Impact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [6720, 33600],
+      "notesInFlow": true,
+      "continueOnFail": true,
+      "notes": "Amazon community grants and impact programs"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 100) return [{ json: { empty: true, source: 'Amazon' } }];\nconst grants = [];\nconst seen = new Set();\nconst closedTerms = /closed|no longer accepting|concluded|ended/i;\nconst linkRe = /<a[^>]+href=\"(https?:\\/\\/[^\"]*(?:aboutamazon|amazon)\\.com\\/[^\"#]*(?:grant|fund|program|initiative|impact)[^\"#]*)\"[^>]*>([\\s\\S]{8,200}?)<\\/a>/gi;\nlet m;\nwhile ((m = linkRe.exec(html)) !== null) {\n  const url = m[1];\n  const title = m[2].replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim();\n  if (!title || title.length < 8) continue;\n  if (seen.has(url)) continue;\n  if (closedTerms.test(title)) continue;\n  seen.add(url);\n  const slug = url.replace(/^https?:\\/\\//, '').replace(/[^a-z0-9]+/gi, '-').slice(0, 80);\n  grants.push({ json: {\n    id: 'AMZN-' + slug,\n    oppNum: 'AMZN-' + slug,\n    title: title,\n    description: 'Amazon community/impact funding opportunity. Visit ' + url + ' for eligibility, deadlines, and application details.',\n    link: url,\n    openDate: new Date().toISOString().split('T')[0],\n    closeDate: 'See listing',\n    agency: 'Amazon',\n    agencyCode: 'AMZN',\n    category: 'Philanthropic - Corporate',\n    source: 'Amazon',\n    awardFloor: 0,\n    awardCeiling: 0,\n    status: 'posted',\n    metadata: { sourceLevel: 'philanthropic', funder: 'Amazon' }\n  }});\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'Amazon' } }];"
+      },
+      "id": "a11c0001-0006-0006-0006-000000000006",
+      "name": "Extract Amazon Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [7040, 33600],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://www.google.org/our-work/",
+        "options": {
+          "response": { "response": { "responseFormat": "text" } }
+        }
+      },
+      "id": "a11c0001-0007-0007-0007-000000000007",
+      "name": "Google.org Our Work",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [6720, 33800],
+      "notesInFlow": true,
+      "continueOnFail": true,
+      "notes": "Google.org Impact Challenges and open funding"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 100) return [{ json: { empty: true, source: 'Google.org' } }];\nconst grants = [];\nconst seen = new Set();\nconst closedTerms = /closed|no longer accepting|concluded|applications? closed/i;\nconst linkRe = /<a[^>]+href=\"(https?:\\/\\/(?:www\\.)?google\\.org\\/[^\"#]+)\"[^>]*>([\\s\\S]{8,200}?)<\\/a>/gi;\nlet m;\nwhile ((m = linkRe.exec(html)) !== null) {\n  const url = m[1];\n  const title = m[2].replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim();\n  if (!title || title.length < 8) continue;\n  if (seen.has(url)) continue;\n  if (closedTerms.test(title)) continue;\n  if (!/challenge|fund|grant|impact|initiative|open|apply/i.test(title + ' ' + url)) continue;\n  seen.add(url);\n  const slug = url.replace(/^https?:\\/\\//, '').replace(/[^a-z0-9]+/gi, '-').slice(0, 80);\n  grants.push({ json: {\n    id: 'GOOGLE-' + slug,\n    oppNum: 'GOOGLE-' + slug,\n    title: title,\n    description: 'Google.org funding opportunity. Visit ' + url + ' for eligibility, deadlines, and application details.',\n    link: url,\n    openDate: new Date().toISOString().split('T')[0],\n    closeDate: 'See listing',\n    agency: 'Google.org',\n    agencyCode: 'GOOGLE',\n    category: 'Philanthropic - Corporate',\n    source: 'Google.org',\n    awardFloor: 0,\n    awardCeiling: 0,\n    status: 'posted',\n    metadata: { sourceLevel: 'philanthropic', funder: 'Google.org' }\n  }});\n}\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'Google.org' } }];"
+      },
+      "id": "a11c0001-0008-0008-0008-000000000008",
+      "name": "Extract Google.org Grants",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [7040, 33800],
+      "continueOnFail": true
     }
   ],
   "pinData": {
@@ -1632,6 +1740,30 @@
           }
         ]
       ]
+    },
+    "RWJF Funding Opportunities": {
+      "main": [[{ "node": "Extract RWJF Opportunities", "type": "main", "index": 0 }]]
+    },
+    "Extract RWJF Opportunities": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "JPMorgan Chase RFPs": {
+      "main": [[{ "node": "Extract JPMorgan RFPs", "type": "main", "index": 0 }]]
+    },
+    "Extract JPMorgan RFPs": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "Amazon Community Impact": {
+      "main": [[{ "node": "Extract Amazon Grants", "type": "main", "index": 0 }]]
+    },
+    "Extract Amazon Grants": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
+    },
+    "Google.org Our Work": {
+      "main": [[{ "node": "Extract Google.org Grants", "type": "main", "index": 0 }]]
+    },
+    "Extract Google.org Grants": {
+      "main": [[{ "node": "Combine & Deduplicate All Sources5", "type": "main", "index": 0 }]]
     },
     "PA DCED Programs1": {
       "main": [
@@ -1992,6 +2124,26 @@
           },
           {
             "node": "PA DCED Programs1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RWJF Funding Opportunities",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "JPMorgan Chase RFPs",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Amazon Community Impact",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google.org Our Work",
             "type": "main",
             "index": 0
           },
