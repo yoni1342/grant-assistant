@@ -1,0 +1,151 @@
+{
+  "name": "Daily Org Grant Fetch Scheduler",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Daily Trigger 06:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "notes": "Runs once per day. Adjust the cron if you want a different time."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/organizations?status=eq.approved&select=id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+            }
+          ]
+        },
+        "options": {
+          "splitIntoItems": true
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Fetch Approved Orgs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        300
+      ],
+      "notes": "Returns one item per approved org; PostgREST array gets split so downstream nodes run once per org."
+    },
+    {
+      "parameters": {
+        "amount": 200,
+        "unit": "ms"
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Stagger 200ms",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        300
+      ],
+      "notes": "Small gap between webhook dispatches so OpenAI inside Grant fetch doesn't see a thundering herd of concurrent starts."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/fetch-grants",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-webhook-secret",
+              "value": "t+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk="
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"org_id\": $json.id, \"is_new_org\": false } }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 0
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Trigger Grant Fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        300
+      ],
+      "notes": "Fire-and-forget per-org trigger. Each call spawns an independent Grant fetch execution server-side.",
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Daily Trigger 06:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Fetch Approved Orgs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Approved Orgs": {
+      "main": [
+        [
+          {
+            "node": "Stagger 200ms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stagger 200ms": {
+      "main": [
+        [
+          {
+            "node": "Trigger Grant Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  }
+}
