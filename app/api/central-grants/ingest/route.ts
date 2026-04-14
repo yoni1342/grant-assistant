@@ -52,7 +52,6 @@ export async function POST(req: Request) {
   let inserted = 0;
   let updated = 0;
   const errors: string[] = [];
-  const newlyInsertedIds: string[] = [];
 
   // Upsert one grant at a time so we can pick the right conflict target
   // depending on whether source_id is present. Bulk upsert isn't safe here
@@ -98,78 +97,18 @@ export async function POST(req: Request) {
 
     if (data && data.created_at === data.updated_at) {
       inserted++;
-      newlyInsertedIds.push(data.id);
     } else {
       updated++;
     }
   }
 
-  // Fan newly-inserted central grants out to every approved org's pipeline
-  // so existing users keep seeing fresh grants daily — same UX as before
-  // the central catalog existed. Updates to already-known grants don't
-  // get fanned out (we don't want to overwrite per-org screening state).
-  let fannedOut = 0;
-  if (newlyInsertedIds.length > 0) {
-    const { data: newCentralGrants, error: fetchErr } = await supabase
-      .from("central_grants")
-      .select(
-        "title, funder_name, organization, amount, deadline, description, eligibility, categories, metadata, source, source_id, source_url",
-      )
-      .in("id", newlyInsertedIds);
-
-    if (fetchErr) {
-      errors.push(`fan-out fetch failed: ${fetchErr.message}`);
-    } else if (newCentralGrants && newCentralGrants.length > 0) {
-      const { data: orgs, error: orgsErr } = await supabase
-        .from("organizations")
-        .select("id")
-        .eq("status", "approved");
-
-      if (orgsErr) {
-        errors.push(`fan-out orgs fetch failed: ${orgsErr.message}`);
-      } else if (orgs && orgs.length > 0) {
-        const rows = orgs.flatMap((org) =>
-          newCentralGrants.map((g) => ({
-            org_id: org.id,
-            title: g.title,
-            funder_name: g.funder_name,
-            organization: g.organization,
-            amount: g.amount,
-            deadline: g.deadline,
-            description: g.description,
-            eligibility: g.eligibility,
-            categories: g.categories,
-            metadata: g.metadata,
-            source: g.source,
-            source_id: g.source_id,
-            source_url: g.source_url,
-            stage: "discovery" as const,
-          })),
-        );
-
-        // Insert in chunks; ignore unique-violation duplicates if an org
-        // already has the grant from a prior run.
-        const chunkSize = 500;
-        for (let i = 0; i < rows.length; i += chunkSize) {
-          const chunk = rows.slice(i, i + chunkSize);
-          const { error: insErr, count } = await supabase
-            .from("grants")
-            .insert(chunk, { count: "exact" });
-          if (insErr) {
-            errors.push(`fan-out insert failed: ${insErr.message}`);
-          } else {
-            fannedOut += count ?? chunk.length;
-          }
-        }
-      }
-    }
-  }
-
+  // Fan-out to per-org pipelines happens in the daily
+  // /api/cron/fan-out-central-grants route, which triggers the n8n
+  // Grant fetch workflow per approved org so the AI niche filter runs.
   return Response.json({
     success: true,
     inserted,
     updated,
-    fanned_out: fannedOut,
     errors: errors.length > 0 ? errors : undefined,
   });
 }
