@@ -4,6 +4,55 @@ import { createClient, createAdminClient, getUserOrgId } from '@/lib/supabase/se
 import { revalidatePath } from 'next/cache'
 import { sanitizeError } from '@/lib/errors'
 
+export interface CentralSearchGrant {
+  id: string
+  title: string
+  funder_name: string | null
+  organization: string | null
+  amount: string | null
+  deadline: string | null
+  description: string | null
+  source: string | null
+  source_id: string | null
+  source_url: string | null
+  metadata: Record<string, unknown> | null
+}
+
+// Search the central grant catalog directly instead of triggering an
+// n8n workflow per query. Filters out grants whose deadline has passed.
+// `query` is matched against title / funder_name / description.
+export async function searchCentralGrants(
+  query: string,
+  limit = 100,
+): Promise<{ grants: CentralSearchGrant[]; error?: string }> {
+  const adminDb = createAdminClient()
+  const today = new Date().toISOString().slice(0, 10)
+
+  let q = adminDb
+    .from('central_grants')
+    .select(
+      'id, title, funder_name, organization, amount, deadline, description, source, source_id, source_url, metadata',
+    )
+    .or(`deadline.is.null,deadline.gte.${today}`)
+    .order('last_seen_at', { ascending: false })
+    .limit(limit)
+
+  const trimmed = query?.trim()
+  if (trimmed) {
+    // ilike on each searchable column. Postgres `or` filter syntax.
+    const escaped = trimmed.replace(/[%,]/g, ' ')
+    q = q.or(
+      `title.ilike.%${escaped}%,funder_name.ilike.%${escaped}%,description.ilike.%${escaped}%`,
+    )
+  }
+
+  const { data, error } = await q
+  if (error) {
+    return { grants: [], error: sanitizeError(error, 'Search failed. Please try again.') }
+  }
+  return { grants: (data ?? []) as CentralSearchGrant[] }
+}
+
 export async function getPipelineGrantTitles(): Promise<string[]> {
   const supabase = await createClient()
   const { orgId } = await getUserOrgId(supabase)

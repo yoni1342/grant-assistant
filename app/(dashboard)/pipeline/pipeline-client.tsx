@@ -319,6 +319,7 @@ export function PipelineClient({
         open={showAddDialog}
         onClose={() => setShowAddDialog(false)}
         onGrantAdded={handleGrantAdded}
+        orgName={orgName}
       />
 
       {/* Confirm Proposal Generation Dialog */}

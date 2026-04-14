@@ -7,6 +7,7 @@ import { getStripeClient } from '@/lib/stripe/client'
 import { PLANS, TRIAL_DAYS } from '@/lib/stripe/config'
 import type { PlanId } from '@/lib/stripe/config'
 import { sanitizeError } from '@/lib/errors'
+import { seedOrgGrantsFromCentral } from '@/lib/grants/seed-from-central'
 
 export async function approveOrganization(orgId: string) {
   const supabase = await createClient()
@@ -161,6 +162,17 @@ export async function approveOrganization(orgId: string) {
         // Don't fail approval if Stripe fails — they can set up billing later
       }
     }
+  }
+
+  // Seed the org's pipeline from the central grant catalog. This replaces
+  // the old per-org scraper run for the common case where the central
+  // catalog already has grants. The n8n fetch is still kicked off below
+  // for any sources the daily catalog hasn't covered yet.
+  const seedResult = await seedOrgGrantsFromCentral(orgId)
+  if (seedResult.error) {
+    console.error('[approveOrganization] Failed to seed grants from central:', seedResult.error)
+  } else {
+    console.log(`[approveOrganization] Seeded ${seedResult.copied} grants from central catalog for org ${orgId}`)
   }
 
   // Trigger grant fetch workflow for the newly approved org

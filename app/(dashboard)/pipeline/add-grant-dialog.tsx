@@ -21,11 +21,14 @@ export function AddGrantDialog({
   open,
   onClose,
   onGrantAdded,
+  orgName,
 }: {
   open: boolean;
   onClose: () => void;
   onGrantAdded: () => void;
+  orgName?: string;
 }) {
+  const manualSourceFallback = `Manual Entry by ${orgName?.trim() || "organization"}`;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAdditional, setShowAdditional] = useState(false);
@@ -95,6 +98,8 @@ export function AddGrantDialog({
     const deadline = ongoingDeadline ? "Ongoing" : (formData.get("deadline") as string);
     const amount = formData.get("amount") as string;
     const sourceUrl = (formData.get("source_url") as string)?.trim();
+    const sourceInput = (formData.get("source") as string)?.trim();
+    const source = sourceInput || manualSourceFallback;
     const eligibilityRequirements = (formData.get("eligibility_requirements") as string)?.trim();
     const focusAreas = (formData.get("focus_areas") as string)?.trim();
     const matchPercentage = (formData.get("match_percentage") as string)?.trim();
@@ -130,7 +135,7 @@ export function AddGrantDialog({
           deadline: deadline || null,
           description: (formData.get("description") as string)?.trim() || null,
           stage: "discovery",
-          source: "Manual Entry",
+          source,
           source_id: null,
           source_url: sourceUrl || null,
           metadata,
@@ -256,6 +261,14 @@ export function AddGrantDialog({
 
           {showAdditional && (
             <div className="space-y-4 rounded-md border p-3">
+              <div className="space-y-2">
+                <Label htmlFor="source">Source</Label>
+                <Input
+                  id="source"
+                  name="source"
+                  placeholder={manualSourceFallback}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="source_url">Grant URL</Label>
                 <Input
