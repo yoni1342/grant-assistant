@@ -318,6 +318,369 @@
       "notesInFlow": true,
       "continueOnFail": true,
       "notes": "Parse Grand Challenges list + per-challenge detail pages"
+    },
+    {
+      "parameters": {
+        "url": "https://nj.gov/state/njsca/dos_njsca_grants.html",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001000",
+      "name": "NJ Arts Council Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        60400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// NJ State Council on the Arts - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'NJ Arts Council', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'NJSCA-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'NJ Arts Council: ' + title,\n      description: description || '',\n      link: link || 'https://nj.gov/state/njsca/dos_njsca_grants.html',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'NJ State Council on the Arts',\n      agencyCode: 'NJ-NJSCA',\n      category: 'State Grant',\n      source: 'NJ Arts Council',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'state', state: 'New Jersey' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'NJ Arts Council', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001001",
+      "name": "Extract NJ Arts Council",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        60400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://nj.gov/dca/divisions/dhcr/offices/cdbg.html",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001002",
+      "name": "NJ CDBG Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        60720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// New Jersey CDBG - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'NJ CDBG', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'NJCDBG-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'NJ CDBG: ' + title,\n      description: description || '',\n      link: link || 'https://nj.gov/dca/divisions/dhcr/offices/cdbg.html',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'NJ Dept of Community Affairs',\n      agencyCode: 'NJ-DCA-CDBG',\n      category: 'State Grant',\n      source: 'NJ CDBG',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'state', state: 'New Jersey' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'NJ CDBG', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001003",
+      "name": "Extract NJ CDBG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        60720
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://grdodge.org/grants/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001004",
+      "name": "Dodge Foundation Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        61040
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Geraldine R. Dodge Foundation - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'Dodge Foundation', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'DODGE-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'Dodge Foundation: ' + title,\n      description: description || '',\n      link: link || 'https://grdodge.org/grants/',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'Geraldine R. Dodge Foundation',\n      agencyCode: 'DODGE',\n      category: 'Foundation',\n      source: 'Dodge Foundation',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation', state: 'New Jersey' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'Dodge Foundation', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001005",
+      "name": "Extract Dodge Foundation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        61040
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://cfnj.org/receive/grants/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001006",
+      "name": "CFNJ Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        61360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Community Foundation of New Jersey - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'CFNJ', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'CFNJ-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'CFNJ: ' + title,\n      description: description || '',\n      link: link || 'https://cfnj.org/receive/grants/',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'Community Foundation of NJ',\n      agencyCode: 'CFNJ',\n      category: 'Foundation',\n      source: 'CFNJ',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation', state: 'New Jersey' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'CFNJ', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001007",
+      "name": "Extract CFNJ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        61360
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.heinz.org/apply-for-a-grant",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001008",
+      "name": "Heinz Endowments Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        61680
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Heinz Endowments - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'Heinz Endowments', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'HEINZ-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'Heinz Endowments: ' + title,\n      description: description || '',\n      link: link || 'https://www.heinz.org/apply-for-a-grant',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'The Heinz Endowments',\n      agencyCode: 'HEINZ',\n      category: 'Foundation',\n      source: 'Heinz Endowments',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation', state: 'Pennsylvania' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'Heinz Endowments', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001009",
+      "name": "Extract Heinz Endowments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        61680
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.unitedwaynnj.org/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001010",
+      "name": "United Way NJ Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        62000
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// United Way of Northern NJ - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'United Way NJ', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'UWNJ-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'United Way NJ: ' + title,\n      description: description || '',\n      link: link || 'https://www.unitedwaynnj.org/',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'United Way of Northern NJ',\n      agencyCode: 'UWNJ',\n      category: 'Foundation',\n      source: 'United Way NJ',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation', state: 'New Jersey' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'United Way NJ', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001011",
+      "name": "Extract United Way NJ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        62000
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.aarp.org/aarp-foundation/grants/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001012",
+      "name": "AARP Foundation Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        62320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// AARP Foundation - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'AARP Foundation', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'AARP-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'AARP Foundation: ' + title,\n      description: description || '',\n      link: link || 'https://www.aarp.org/aarp-foundation/grants/',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'AARP Foundation',\n      agencyCode: 'AARP',\n      category: 'Foundation',\n      source: 'AARP Foundation',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'AARP Foundation', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001013",
+      "name": "Extract AARP Foundation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        62320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.luminafoundation.org/grants-funding/apply/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001014",
+      "name": "Lumina Foundation Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        62640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lumina Foundation - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'Lumina Foundation', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'LUMINA-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'Lumina Foundation: ' + title,\n      description: description || '',\n      link: link || 'https://www.luminafoundation.org/grants-funding/apply/',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'Lumina Foundation',\n      agencyCode: 'LUMINA',\n      category: 'Foundation',\n      source: 'Lumina Foundation',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'Lumina Foundation', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001015",
+      "name": "Extract Lumina Foundation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        62640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://rareimpactfund.org/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001016",
+      "name": "Rare Impact Fund Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        62960
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rare Impact Fund - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'Rare Impact Fund', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'RAREIMPACT-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'Rare Impact Fund: ' + title,\n      description: description || '',\n      link: link || 'https://rareimpactfund.org/',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'Rare Impact Fund',\n      agencyCode: 'RAREIMPACT',\n      category: 'Foundation',\n      source: 'Rare Impact Fund',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'Rare Impact Fund', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001017",
+      "name": "Extract Rare Impact Fund",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        62960
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.google.org/opportunities/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001018",
+      "name": "Google.org Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        63280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Google.org Opportunities - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'Google.org', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'GOOGLEORG-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'Google.org: ' + title,\n      description: description || '',\n      link: link || 'https://www.google.org/opportunities/',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'Google.org',\n      agencyCode: 'GOOGLEORG',\n      category: 'Corporate Foundation',\n      source: 'Google.org',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'corporate' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'Google.org', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001019",
+      "name": "Extract Google.org",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        63280
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.waltonfamilyfoundation.org/grants/grants-database",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001020",
+      "name": "Walton Family Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6240,
+        63600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Walton Family Foundation - skeleton parser\n// TODO: tune HTML extraction for this source.\n// HTTP Request node fetches the landing page as text.\n// Returns empty sentinel until the parser is wired up so no placeholder rows hit the DB.\n\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 200) {\n  return [{ json: { empty: true, source: 'Walton Family', reason: 'empty or unreachable page' } }];\n}\n\nconst grants = [];\n\n// ---- Parser placeholder ----\n// Example patterns to adapt once the site's HTML is inspected:\n//   const rows = html.match(/<article[^>]*>[\\s\\S]*?<\\/article>/g) || [];\n//   for (const row of rows) {\n//     const title = (row.match(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     const href  = (row.match(/href=\"([^\"]+)\"/)||[])[1];\n//     const desc  = (row.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/)||[])[1]?.replace(/<[^>]+>/g,'').trim();\n//     if (!title) continue;\n//     grants.push(buildGrant(title, desc, href));\n//   }\n// ----------------------------\n\nfunction buildGrant(title, description, link, closeDate) {\n  const oppNum = 'WALTON-' + (link || title || '').toString().replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  return {\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'Walton Family: ' + title,\n      description: description || '',\n      link: link || 'https://www.waltonfamilyfoundation.org/grants/grants-database',\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: closeDate || 'See listing',\n      agency: 'Walton Family Foundation',\n      agencyCode: 'WALTON',\n      category: 'Foundation',\n      source: 'Walton Family',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation' }\n    }\n  };\n}\n\nif (grants.length === 0) {\n  return [{ json: { empty: true, source: 'Walton Family', reason: 'parser not yet implemented' } }];\n}\nreturn grants;\n"
+      },
+      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001021",
+      "name": "Extract Walton Family",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5920,
+        63600
+      ]
     }
   ],
   "pinData": {},
@@ -374,6 +737,61 @@
           },
           {
             "node": "Amazon Community Impact1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "NJ Arts Council Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "NJ CDBG Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Dodge Foundation Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "CFNJ Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Heinz Endowments Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "United Way NJ Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AARP Foundation Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Lumina Foundation Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rare Impact Fund Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google.org Source",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Walton Family Source",
             "type": "main",
             "index": 0
           }
@@ -513,6 +931,248 @@
       ]
     },
     "Extract Amazon Grants1": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NJ Arts Council Source": {
+      "main": [
+        [
+          {
+            "node": "Extract NJ Arts Council",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract NJ Arts Council": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NJ CDBG Source": {
+      "main": [
+        [
+          {
+            "node": "Extract NJ CDBG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract NJ CDBG": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dodge Foundation Source": {
+      "main": [
+        [
+          {
+            "node": "Extract Dodge Foundation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Dodge Foundation": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CFNJ Source": {
+      "main": [
+        [
+          {
+            "node": "Extract CFNJ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CFNJ": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Heinz Endowments Source": {
+      "main": [
+        [
+          {
+            "node": "Extract Heinz Endowments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Heinz Endowments": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "United Way NJ Source": {
+      "main": [
+        [
+          {
+            "node": "Extract United Way NJ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract United Way NJ": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AARP Foundation Source": {
+      "main": [
+        [
+          {
+            "node": "Extract AARP Foundation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract AARP Foundation": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lumina Foundation Source": {
+      "main": [
+        [
+          {
+            "node": "Extract Lumina Foundation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Lumina Foundation": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rare Impact Fund Source": {
+      "main": [
+        [
+          {
+            "node": "Extract Rare Impact Fund",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Rare Impact Fund": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google.org Source": {
+      "main": [
+        [
+          {
+            "node": "Extract Google.org",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Google.org": {
+      "main": [
+        [
+          {
+            "node": "Combine & Deduplicate All Sources5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Walton Family Source": {
+      "main": [
+        [
+          {
+            "node": "Extract Walton Family",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Walton Family": {
       "main": [
         [
           {
