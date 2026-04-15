@@ -98,42 +98,86 @@
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================\n// Dispatcher: dedup against DB, fetch org context, chunk grants.\n// Emits one item per ~300-grant chunk. Downstream Execute Workflow\n// node runs the sub-workflow once per item, so every chunk gets its\n// own 300s runner budget — unbounded total grant count.\n// ============================================================\n\nconst CHUNK_SIZE = 300;\nconst DEDUP_BATCH = 200;\n\nconst items = $input.all();\n\nlet orgId, callbackUrl;\ntry {\n  const webhookData = $('Fetch Grants Webhook').first().json.body;\n  orgId = webhookData?.org_id;\n  callbackUrl = webhookData?.callback_url;\n} catch(e) {}\n\nif (!orgId) {\n  return [{ json: { error: true, message: 'No org_id provided' } }];\n}\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst supaHeaders = {\n  'apikey': supabaseKey,\n  'Authorization': 'Bearer ' + supabaseKey,\n  'Content-Type': 'application/json',\n};\nconst supaReadHeaders = {\n  'apikey': supabaseKey,\n  'Authorization': 'Bearer ' + supabaseKey,\n};\nconst webhookHeaders = {\n  'Content-Type': 'application/json',\n  'x-webhook-secret': 't+KHcyHWsievwSbCyHvDJk5/YbZayMsiKp0letIw0Xk='\n};\n\nasync function sendStatus(status, stage_message) {\n  if (!callbackUrl || !orgId) return;\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: callbackUrl,\n      headers: webhookHeaders,\n      body: { org_id: orgId, status, stage_message }\n    });\n  } catch(e) {}\n}\n\nawait sendStatus.call(this, 'checking', 'Checking for duplicates in your pipeline...');\n\nconst allItems = items.map(i => i.json);\nconst oppNums = allItems\n  .map(g => (g.oppNum || '').trim())\n  .filter(id => id.length > 0);\n\nconst existingOppNums = new Set();\nfor (let i = 0; i < oppNums.length; i += DEDUP_BATCH) {\n  const chunk = oppNums.slice(i, i + DEDUP_BATCH);\n  const filter = chunk.map(id => '\"' + id.replace(/\"/g, '') + '\"').join(',');\n  try {\n    const response = await this.helpers.httpRequest({\n      method: 'GET',\n      url: supabaseUrl + '/grants?source_id=in.(' + filter + ')&org_id=eq.' + orgId + '&select=source_id',\n      headers: supaReadHeaders,\n    });\n    if (Array.isArray(response)) {\n      for (const r of response) existingOppNums.add((r.source_id || '').trim());\n    }\n  } catch(e) {}\n}\n\nconst newGrants = [];\nfor (const grant of allItems) {\n  const oppNum = (grant.oppNum || '').trim();\n  if (!oppNum || existingOppNums.has(oppNum)) continue;\n  newGrants.push(grant);\n}\n\nif (newGrants.length === 0) {\n  await sendStatus.call(this, 'complete', 'Grant search complete!');\n  return [{ json: { noNewGrants: true, success: true, message: 'All grants already tracked', totalInserted: 0 } }];\n}\n\n// Log source counts\nconst sourceCounts = {};\nfor (const grant of newGrants) {\n  const source = grant.source || 'Unknown';\n  sourceCounts[source] = (sourceCounts[source] || 0) + 1;\n}\nconst today = new Date().toISOString().split('T')[0];\ntry {\n  await this.helpers.httpRequest({\n    method: 'DELETE',\n    url: supabaseUrl + '/grant_source_stats?org_id=eq.' + orgId + '&fetch_date=eq.' + today,\n    headers: supaHeaders,\n  });\n  const rows = Object.entries(sourceCounts).map(([source, raw_count]) => ({\n    org_id: orgId, source, raw_count, fetch_date: today\n  }));\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl + '/grant_source_stats',\n    headers: supaHeaders,\n    body: JSON.stringify(rows),\n  });\n} catch(e) {}\n\n// Fetch org + narratives once\nconst orgs = await this.helpers.httpRequest({\n  method: 'GET',\n  url: supabaseUrl + '/organizations?id=eq.' + encodeURIComponent(orgId) + '&select=id,geographic_focus,address',\n  headers: supaReadHeaders,\n});\nif (!Array.isArray(orgs) || orgs.length === 0) {\n  return [{ json: { error: true, message: 'Organization not found: ' + orgId } }];\n}\nconst org = orgs[0];\n\nconst narratives = await this.helpers.httpRequest({\n  method: 'GET',\n  url: supabaseUrl + '/documents?org_id=eq.' + encodeURIComponent(orgId) + '&select=title,extracted_text,category&order=updated_at.desc&limit=10',\n  headers: supaReadHeaders,\n});\nlet nicheSummary = '';\nif (Array.isArray(narratives) && narratives.length > 0) {\n  nicheSummary = narratives.map(n => (n.title || n.category || '') + ': ' + (n.extracted_text || '')).join('\\n\\n');\n}\n\n// Normalize grant shape for sub-workflow\nconst allGrantsForAI = newGrants.map(grant => ({\n  title: grant.title || '',\n  agency: grant.agency || null,\n  agencyCode: grant.agencyCode || '',\n  description: grant.description || '',\n  awardFloor: grant.awardFloor || 0,\n  awardCeiling: grant.awardCeiling || 0,\n  openDate: grant.openDate || '',\n  closeDate: grant.closeDate || '',\n  status: grant.status || '',\n  source: grant.source || 'Grant Scanner',\n  source_id: grant.oppNum || grant.source_id,\n  source_url: grant.link || grant.source_url,\n  oppNum: grant.oppNum || grant.source_id,\n  id: grant.id,\n  link: grant.link || grant.source_url,\n}));\n\n// Split into chunks — one item per chunk → Execute Workflow runs once per item\nconst totalChunks = Math.ceil(allGrantsForAI.length / CHUNK_SIZE);\nconst output = [];\nfor (let i = 0; i < totalChunks; i++) {\n  const chunk = allGrantsForAI.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);\n  output.push({\n    json: {\n      org_id: orgId,\n      org,\n      nicheSummary,\n      callbackUrl: callbackUrl || null,\n      chunk_index: i,\n      total_chunks: totalChunks,\n      grants: chunk,\n    }\n  });\n}\n\nawait sendStatus.call(this, 'filtering', 'Dispatching ' + allGrantsForAI.length + ' grants across ' + totalChunks + ' chunks...');\n\nreturn output;"
+        "jsCode": "// Node 1 (parallel branch A): fetch ALL existing grant source_ids for this org\n// in a single Supabase query. Used downstream to filter out grants already tracked.\n\nlet orgId;\ntry { orgId = $('Fetch Grants Webhook').first().json.body?.org_id; } catch(e) {}\nif (!orgId) return [{ json: { existingIds: [] } }];\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\nlet existingIds = [];\ntry {\n  const res = await this.helpers.httpRequest({\n    method: 'GET',\n    url: supabaseUrl + '/grants?org_id=eq.' + encodeURIComponent(orgId) + '&select=source_id&limit=100000',\n    headers: { 'apikey': supabaseKey, 'Authorization': 'Bearer ' + supabaseKey },\n  });\n  if (Array.isArray(res)) existingIds = res.map(r => (r.source_id || '').trim()).filter(Boolean);\n} catch(e) {}\n\nreturn [{ json: { existingIds } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        27824,
-        162320
-      ],
-      "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbcf",
-      "name": "Dispatcher: Dedup & Chunk",
-      "notesInFlow": true,
+      "position": [27600, 162240],
+      "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbc1",
+      "name": "Fetch Existing Grant IDs",
       "continueOnFail": true,
-      "notes": "Dedups against DB, fetches org context, splits into 300-grant chunks. Emits one item per chunk."
+      "notes": "Single query: all existing source_ids for this org"
     },
     {
       "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "GrantFetchProcessChunk01",
-          "mode": "id"
+        "jsCode": "// Node 2 (parallel branch B): fetch org row + narratives in parallel.\n// Runs alongside 'Fetch Existing Grant IDs' — n8n executes sibling branches concurrently.\n\nlet orgId;\ntry { orgId = $('Fetch Grants Webhook').first().json.body?.org_id; } catch(e) {}\nif (!orgId) return [{ json: { error: true, message: 'No org_id' } }];\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst headers = { 'apikey': supabaseKey, 'Authorization': 'Bearer ' + supabaseKey };\n\nconst [orgs, narratives] = await Promise.all([\n  this.helpers.httpRequest({\n    method: 'GET',\n    url: supabaseUrl + '/organizations?id=eq.' + encodeURIComponent(orgId) + '&select=id,geographic_focus,address',\n    headers,\n  }).catch(() => []),\n  this.helpers.httpRequest({\n    method: 'GET',\n    url: supabaseUrl + '/documents?org_id=eq.' + encodeURIComponent(orgId) + '&select=title,extracted_text,category&order=updated_at.desc&limit=10',\n    headers,\n  }).catch(() => []),\n]);\n\nif (!Array.isArray(orgs) || orgs.length === 0) {\n  return [{ json: { error: true, message: 'Organization not found: ' + orgId } }];\n}\nconst org = orgs[0];\n\nlet nicheSummary = '';\nif (Array.isArray(narratives) && narratives.length > 0) {\n  nicheSummary = narratives.map(n => (n.title || n.category || '') + ': ' + (n.extracted_text || '')).join('\\n\\n');\n}\n\nreturn [{ json: { org, nicheSummary } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [27600, 162400],
+      "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbc2",
+      "name": "Fetch Org Context",
+      "continueOnFail": true,
+      "notes": "Parallel fetch: org row + narratives"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [27820, 162320],
+      "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbc3",
+      "name": "Merge Branches"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node 3: filter grants that are already tracked, normalize shape for sub-workflow.\n// Pulls raw grants from the Combine node and existingIds from branch A.\n\nconst allItems = $('Combine & Deduplicate All Sources5').all().map(i => i.json);\nconst existingIds = new Set(($('Fetch Existing Grant IDs').first().json.existingIds) || []);\n\nconst newGrants = [];\nfor (const grant of allItems) {\n  const oppNum = (grant.oppNum || '').trim();\n  if (!oppNum || existingIds.has(oppNum)) continue;\n  newGrants.push(grant);\n}\n\nif (newGrants.length === 0) {\n  return [{ json: { noNewGrants: true, count: 0 } }];\n}\n\nconst normalized = newGrants.map(grant => ({\n  title: grant.title || '',\n  agency: grant.agency || null,\n  agencyCode: grant.agencyCode || '',\n  description: grant.description || '',\n  awardFloor: grant.awardFloor || 0,\n  awardCeiling: grant.awardCeiling || 0,\n  openDate: grant.openDate || '',\n  closeDate: grant.closeDate || '',\n  status: grant.status || '',\n  source: grant.source || 'Grant Scanner',\n  source_id: grant.oppNum || grant.source_id,\n  source_url: grant.link || grant.source_url,\n  oppNum: grant.oppNum || grant.source_id,\n  id: grant.id,\n  link: grant.link || grant.source_url,\n}));\n\nreturn [{ json: { grants: normalized, count: normalized.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [28040, 162320],
+      "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbc4",
+      "name": "Filter New Grants",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node 4: split filtered grants into ~300-grant chunks and emit one n8n item per chunk.\n// Execute Workflow (mode 'each') then runs the sub-workflow once per item.\n\nconst CHUNK_SIZE = 300;\n\nconst filterOut = $('Filter New Grants').first().json;\nif (filterOut.noNewGrants || !Array.isArray(filterOut.grants) || filterOut.grants.length === 0) {\n  return [{ json: { noNewGrants: true } }];\n}\n\nlet orgId, callbackUrl;\ntry {\n  const body = $('Fetch Grants Webhook').first().json.body;\n  orgId = body?.org_id;\n  callbackUrl = body?.callback_url || null;\n} catch(e) {}\n\nconst ctx = $('Fetch Org Context').first().json;\nif (ctx.error) return [{ json: ctx }];\n\nconst grants = filterOut.grants;\nconst totalChunks = Math.ceil(grants.length / CHUNK_SIZE);\nconst output = [];\nfor (let i = 0; i < totalChunks; i++) {\n  output.push({\n    json: {\n      org_id: orgId,\n      org: ctx.org,\n      nicheSummary: ctx.nicheSummary,\n      callbackUrl,\n      chunk_index: i,\n      total_chunks: totalChunks,\n      grants: grants.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE),\n    }\n  });\n}\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [28260, 162320],
+      "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbc5",
+      "name": "Chunk & Emit",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.thebrownmine.com/webhook/process-grant-chunk",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
         },
-        "mode": "each",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
         "options": {
-          "waitForSubWorkflow": true
+          "timeout": 10000
         }
       },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [
-        28200,
-        162320
-      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [28480, 162320],
       "id": "f2c3e1bc-f3d9-4a23-8bee-5da6c3a6dbce",
-      "name": "Process Chunk (Sub-workflow)",
+      "name": "Process Chunk (Webhook)",
       "continueOnFail": true,
-      "notes": "Runs Grant fetch - Process Chunk once per input item. Each chunk gets its own 300s runner budget."
+      "notes": "Fires one POST per chunk item to the Process Chunk webhook. Each call spawns its own sub-execution with its own runner budget."
     },
     {
       "parameters": {
@@ -231,7 +275,12 @@
       "main": [
         [
           {
-            "node": "Dispatcher: Dedup & Chunk",
+            "node": "Fetch Existing Grant IDs",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Org Context",
             "type": "main",
             "index": 0
           }
@@ -245,18 +294,62 @@
         ]
       ]
     },
-    "Dispatcher: Dedup & Chunk": {
+    "Fetch Existing Grant IDs": {
       "main": [
         [
           {
-            "node": "Process Chunk (Sub-workflow)",
+            "node": "Merge Branches",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Process Chunk (Sub-workflow)": {
+    "Fetch Org Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Branches": {
+      "main": [
+        [
+          {
+            "node": "Filter New Grants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter New Grants": {
+      "main": [
+        [
+          {
+            "node": "Chunk & Emit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk & Emit": {
+      "main": [
+        [
+          {
+            "node": "Process Chunk (Webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Chunk (Webhook)": {
       "main": [
         [
           {
