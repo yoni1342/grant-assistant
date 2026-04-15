@@ -387,39 +387,6 @@
     },
     {
       "parameters": {
-        "url": "https://www.grdodge.org/our-work/grantmaking/grants/",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
-        }
-      },
-      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001004",
-      "name": "Dodge Foundation Source",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -6240,
-        61040
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Dodge Foundation (awarded grantees directory) parser\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 500) {\n  return [{ json: { empty: true, source: 'DODGE', reason: 'unreachable' } }];\n}\n\nconst grants = [];\nconst rowRe = /<tr>\\s*<td class=\"GrantsTable-largeCell\">\\s*<a href=\"([^\"]+)\"[^>]*>([^<]+)<\\/a>\\s*<\\/td>\\s*<td class=\"GrantsTable-smallCell\">([^<]*)<\\/td>\\s*<td class=\"GrantsTable-smallCell\">([^<]*)<\\/td>/g;\n\nlet m;\nwhile ((m = rowRe.exec(html)) !== null) {\n  const link = m[1].trim();\n  const title = m[2].replace(/&amp;/g, '&').trim();\n  const location = m[3].trim();\n  const year = m[4].trim();\n  if (!title) continue;\n  const oppNum = 'DODGE-' + (title + '-' + year).replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  grants.push({\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'Dodge: ' + title,\n      description: 'Grantee of the Geraldine R. Dodge Foundation (' + year + '). Location: ' + location + '.',\n      link: link.startsWith('http') ? link : 'https://www.grdodge.org' + link,\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: 'See listing',\n      agency: 'Geraldine R. Dodge Foundation',\n      agencyCode: 'DODGE',\n      category: 'Foundation',\n      source: 'DODGE',\n      awardFloor: 0,\n      awardCeiling: 0,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation', year, location, historical: true }\n    }\n  });\n}\n\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'DODGE' } }];"
-      },
-      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001005",
-      "name": "Extract Dodge Foundation",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -5920,
-        61040
-      ]
-    },
-    {
-      "parameters": {
         "url": "https://cfnj.org/find-grants/",
         "options": {
           "response": {
@@ -519,72 +486,6 @@
     },
     {
       "parameters": {
-        "url": "https://www.aarp.org/aarp-foundation/grants/",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
-        }
-      },
-      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001012",
-      "name": "AARP Foundation Source",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -6240,
-        62320
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// AARP Foundation — no open listing page\n// The AARP Foundation grants page is narrative only; grants are by invitation.\n// No discrete open programs, deadlines, or application links to extract.\nreturn [{ json: { empty: true, source: 'AARP', reason: 'no discrete open listings (invitation-based)' } }];"
-      },
-      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001013",
-      "name": "Extract AARP Foundation",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -5920,
-        62320
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://www.luminafoundation.org/resources/grants/grant-database/",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
-        }
-      },
-      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001014",
-      "name": "Lumina Foundation Source",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -6240,
-        62640
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Lumina Foundation (awarded grants database) parser\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 500) {\n  return [{ json: { empty: true, source: 'LUMINA', reason: 'unreachable' } }];\n}\n\nconst grants = [];\nconst strip = s => s.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\\s+/g, ' ').trim();\nconst parseAmount = s => {\n  const m = (s || '').replace(/[^\\d.]/g, '');\n  return m ? Math.round(parseFloat(m)) : 0;\n};\n\nconst re = /<article class=\"grant\"[^>]*>\\s*<a href=\"([^\"]+)\" class=\"grant-title\">\\s*([^<]+?)\\s*<\\/a>([\\s\\S]*?)<\\/article>/g;\nlet m;\nwhile ((m = re.exec(html)) !== null) {\n  const link = m[1].trim();\n  const title = strip(m[2]);\n  const body = m[3];\n  const amountMatch = body.match(/AMOUNT\\s*<span>\\s*([^<]+?)\\s*<\\/span>/);\n  const locationMatch = body.match(/LOCATION\\s*<span>\\s*([^<]+?)\\s*<\\/span>/);\n  const dateMatch = body.match(/DATE RANGE\\s*<span>\\s*([^<]+?)\\s*<\\/span>/);\n  const excerptMatch = body.match(/<div class=\"grant-excerpt\">([\\s\\S]*?)<\\/div>/);\n  const amount = amountMatch ? parseAmount(amountMatch[1]) : 0;\n  const description = (excerptMatch ? strip(excerptMatch[1]) : '') + (locationMatch ? ' Location: ' + locationMatch[1].trim() + '.' : '');\n  const deadline = dateMatch ? dateMatch[1].trim() : 'See listing';\n  if (!title) continue;\n  const oppNum = 'LUMINA-' + (link || title).replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  grants.push({\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'Lumina: ' + title,\n      description,\n      link: link.startsWith('http') ? link : 'https://www.luminafoundation.org' + link,\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: deadline,\n      agency: 'Lumina Foundation',\n      agencyCode: 'LUMINA',\n      category: 'Foundation',\n      source: 'LUMINA',\n      awardFloor: 0,\n      awardCeiling: amount,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation', historical: true }\n    }\n  });\n}\n\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'LUMINA' } }];"
-      },
-      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001015",
-      "name": "Extract Lumina Foundation",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -5920,
-        62640
-      ]
-    },
-    {
-      "parameters": {
         "url": "https://rareimpactfund.org/",
         "options": {
           "response": {
@@ -614,72 +515,6 @@
       "position": [
         -5920,
         62960
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://www.google.org/opportunities/",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
-        }
-      },
-      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001018",
-      "name": "Google.org Source",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -6240,
-        63280
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Google.org /opportunities/ is 100% client-rendered (JS shell, no SSR content).\n// Cannot scrape without a headless browser. Returning empty sentinel.\nreturn [{ json: { empty: true, source: 'Google.org', reason: 'client-rendered, no server HTML' } }];"
-      },
-      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001019",
-      "name": "Extract Google.org",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -5920,
-        63280
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://www.waltonfamilyfoundation.org/grants-database",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "text"
-            }
-          }
-        }
-      },
-      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001020",
-      "name": "Walton Family Source",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -6240,
-        63600
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Walton Family Foundation (awarded grants database) parser\nconst html = $input.first().json.data || $input.first().json.body || '';\nif (typeof html !== 'string' || html.length < 500) {\n  return [{ json: { empty: true, source: 'WALTON', reason: 'unreachable' } }];\n}\n\nconst grants = [];\nconst strip = s => s.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\\s+/g, ' ').trim();\nconst parseAmount = s => {\n  const n = (s || '').replace(/[^\\d]/g, '');\n  return n ? parseInt(n, 10) : 0;\n};\n\nconst blockRe = /<div class=\"SearchResultPromo\"[^>]*data-grant-promo=\"true\"[\\s\\S]*?<div class=\"SearchResultPromo-title\">\\s*([\\s\\S]*?)\\s*<\\/div>[\\s\\S]*?(?:<a href=\"([^\"]*)\"[^>]*>[\\s\\S]*?<\\/a>)?[\\s\\S]*?<div class=\"SearchResultPromo-date\">\\s*([^<]*)\\s*<\\/div>[\\s\\S]*?<span class=\"Link\"[^>]*>\\s*([^<]*)\\s*<\\/span>[\\s\\S]*?<div class=\"SearchResultPromo-amount\">\\s*([^<]+?)\\s*<\\/div>/g;\n\nlet m;\nwhile ((m = blockRe.exec(html)) !== null) {\n  const title = strip(m[1]);\n  if (!title) continue;\n  const linkRel = m[2] || '/grants-database';\n  const year = strip(m[3]);\n  const category = strip(m[4]);\n  const amountStr = strip(m[5]);\n  const amount = parseAmount(amountStr);\n  const description = 'Walton Family Foundation grantee (' + year + '). Program area: ' + category + '. Award: ' + amountStr + '.';\n  const link = linkRel.startsWith('http') ? linkRel : 'https://www.waltonfamilyfoundation.org/grants-database' + (linkRel.startsWith('?') ? linkRel : '');\n  const oppNum = 'WALTON-' + (title + '-' + year).replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 80);\n  grants.push({\n    json: {\n      id: oppNum,\n      oppNum,\n      title: 'Walton: ' + title,\n      description,\n      link,\n      openDate: new Date().toISOString().split('T')[0],\n      closeDate: year || 'See listing',\n      agency: 'Walton Family Foundation',\n      agencyCode: 'WALTON',\n      category: category || 'Foundation',\n      source: 'WALTON',\n      awardFloor: 0,\n      awardCeiling: amount,\n      status: 'posted',\n      metadata: { sourceLevel: 'foundation', year, historical: true }\n    }\n  });\n}\n\nreturn grants.length > 0 ? grants : [{ json: { empty: true, source: 'WALTON' } }];"
-      },
-      "id": "aaaaaaaa-bbbb-cccc-dddd-000000001021",
-      "name": "Extract Walton Family",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -5920,
-        63600
       ]
     }
   ],
@@ -751,11 +586,6 @@
             "index": 0
           },
           {
-            "node": "Dodge Foundation Source",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "CFNJ Source",
             "type": "main",
             "index": 0
@@ -771,27 +601,7 @@
             "index": 0
           },
           {
-            "node": "AARP Foundation Source",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Lumina Foundation Source",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "Rare Impact Fund Source",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Google.org Source",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Walton Family Source",
             "type": "main",
             "index": 0
           }
@@ -985,28 +795,6 @@
         ]
       ]
     },
-    "Dodge Foundation Source": {
-      "main": [
-        [
-          {
-            "node": "Extract Dodge Foundation",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Dodge Foundation": {
-      "main": [
-        [
-          {
-            "node": "Combine & Deduplicate All Sources5",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "CFNJ Source": {
       "main": [
         [
@@ -1073,50 +861,6 @@
         ]
       ]
     },
-    "AARP Foundation Source": {
-      "main": [
-        [
-          {
-            "node": "Extract AARP Foundation",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract AARP Foundation": {
-      "main": [
-        [
-          {
-            "node": "Combine & Deduplicate All Sources5",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Lumina Foundation Source": {
-      "main": [
-        [
-          {
-            "node": "Extract Lumina Foundation",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Lumina Foundation": {
-      "main": [
-        [
-          {
-            "node": "Combine & Deduplicate All Sources5",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Rare Impact Fund Source": {
       "main": [
         [
@@ -1129,50 +873,6 @@
       ]
     },
     "Extract Rare Impact Fund": {
-      "main": [
-        [
-          {
-            "node": "Combine & Deduplicate All Sources5",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google.org Source": {
-      "main": [
-        [
-          {
-            "node": "Extract Google.org",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Google.org": {
-      "main": [
-        [
-          {
-            "node": "Combine & Deduplicate All Sources5",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Walton Family Source": {
-      "main": [
-        [
-          {
-            "node": "Extract Walton Family",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract Walton Family": {
       "main": [
         [
           {
