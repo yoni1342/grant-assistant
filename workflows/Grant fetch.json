@@ -102,7 +102,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [27600, 162240],
+      "position": [
+        27600,
+        162240
+      ],
       "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbc1",
       "name": "Fetch Existing Grant IDs",
       "continueOnFail": true,
@@ -110,11 +113,14 @@
     },
     {
       "parameters": {
-        "jsCode": "// Node 2 (parallel branch B): fetch org row + narratives in parallel.\n// Runs alongside 'Fetch Existing Grant IDs' — n8n executes sibling branches concurrently.\n\nlet orgId;\ntry { orgId = $('Fetch Grants Webhook').first().json.body?.org_id; } catch(e) {}\nif (!orgId) return [{ json: { error: true, message: 'No org_id' } }];\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst headers = { 'apikey': supabaseKey, 'Authorization': 'Bearer ' + supabaseKey };\n\nconst [orgs, narratives] = await Promise.all([\n  this.helpers.httpRequest({\n    method: 'GET',\n    url: supabaseUrl + '/organizations?id=eq.' + encodeURIComponent(orgId) + '&select=id,geographic_focus,address',\n    headers,\n  }).catch(() => []),\n  this.helpers.httpRequest({\n    method: 'GET',\n    url: supabaseUrl + '/documents?org_id=eq.' + encodeURIComponent(orgId) + '&select=title,extracted_text,category&order=updated_at.desc&limit=10',\n    headers,\n  }).catch(() => []),\n]);\n\nif (!Array.isArray(orgs) || orgs.length === 0) {\n  return [{ json: { error: true, message: 'Organization not found: ' + orgId } }];\n}\nconst org = orgs[0];\n\nlet nicheSummary = '';\nif (Array.isArray(narratives) && narratives.length > 0) {\n  nicheSummary = narratives.map(n => (n.title || n.category || '') + ': ' + (n.extracted_text || '')).join('\\n\\n');\n}\n\nreturn [{ json: { org, nicheSummary } }];"
+        "jsCode": "// Node 2 (parallel branch B): fetch org profile + supporting documents.\n// Primary niche context is built from the organizations row fields directly\n// (mission, description, executive_summary, sector, programs, geographic_focus).\n// Document extracted_text is appended as supporting context, tightly capped\n// so the prompt stays within reasonable size for the discovery AI.\n\nlet orgId;\ntry { orgId = $('Fetch Grants Webhook').first().json.body?.org_id; } catch(e) {}\nif (!orgId) return [{ json: { error: true, message: 'No org_id' } }];\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst headers = { 'apikey': supabaseKey, 'Authorization': 'Bearer ' + supabaseKey };\n\nconst ORG_SELECT = 'id,name,mission,description,executive_summary,sector,programs,geographic_focus,address';\n\nconst [orgs, docs] = await Promise.all([\n  this.helpers.httpRequest({\n    method: 'GET',\n    url: supabaseUrl + '/organizations?id=eq.' + encodeURIComponent(orgId) + '&select=' + ORG_SELECT,\n    headers,\n  }).catch(() => []),\n  this.helpers.httpRequest({\n    method: 'GET',\n    url: supabaseUrl + '/documents?org_id=eq.' + encodeURIComponent(orgId) + '&extraction_status=eq.completed&select=title,category,extracted_text&order=updated_at.desc&limit=10',\n    headers,\n  }).catch(() => []),\n]);\n\nif (!Array.isArray(orgs) || orgs.length === 0) {\n  return [{ json: { error: true, message: 'Organization not found: ' + orgId } }];\n}\nconst org = orgs[0];\n\n// Structured profile from organizations columns (primary source)\nconst profileParts = [];\nif (org.name) profileParts.push('Organization: ' + org.name);\nif (org.mission) profileParts.push('Mission: ' + org.mission);\nif (org.description) profileParts.push('Description: ' + org.description);\nif (org.executive_summary) profileParts.push('Executive Summary: ' + org.executive_summary);\nif (org.sector) profileParts.push('Sector: ' + org.sector);\nif (Array.isArray(org.programs) && org.programs.length > 0) {\n  profileParts.push('Programs: ' + org.programs.map(p => typeof p === 'string' ? p : (p && (p.name || p.title)) || '').filter(Boolean).join(', '));\n} else if (typeof org.programs === 'string' && org.programs) {\n  profileParts.push('Programs: ' + org.programs);\n}\nif (org.geographic_focus) {\n  const geo = Array.isArray(org.geographic_focus) ? org.geographic_focus.join(', ') : org.geographic_focus;\n  if (geo) profileParts.push('Geographic Focus: ' + geo);\n}\nif (org.address) profileParts.push('Address: ' + org.address);\n\nlet nicheSummary = profileParts.join('\\n');\n\n// Supporting document excerpts (optional, tightly capped)\nif (Array.isArray(docs) && docs.length > 0) {\n  const PER_DOC_LIMIT = 1500;\n  const TOTAL_DOC_LIMIT = 6000;\n  let used = 0;\n  const docParts = [];\n  for (const d of docs) {\n    const text = (d.extracted_text || '').trim();\n    if (!text) continue;\n    const chunk = text.slice(0, PER_DOC_LIMIT);\n    if (used + chunk.length > TOTAL_DOC_LIMIT) break;\n    const label = d.category || d.title || 'Document';\n    docParts.push('[' + label + '] ' + chunk);\n    used += chunk.length;\n  }\n  if (docParts.length > 0) {\n    nicheSummary += (nicheSummary ? '\\n\\n' : '') + 'Supporting documents:\\n' + docParts.join('\\n\\n');\n  }\n}\n\nreturn [{ json: { org, nicheSummary } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [27600, 162400],
+      "position": [
+        27600,
+        162400
+      ],
       "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbc2",
       "name": "Fetch Org Context",
       "continueOnFail": true,
@@ -128,7 +134,10 @@
       },
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
-      "position": [27820, 162320],
+      "position": [
+        27820,
+        162320
+      ],
       "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbc3",
       "name": "Merge Branches"
     },
@@ -138,7 +147,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [28040, 162320],
+      "position": [
+        28040,
+        162320
+      ],
       "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbc4",
       "name": "Filter New Grants",
       "continueOnFail": true
@@ -149,7 +161,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [28260, 162320],
+      "position": [
+        28260,
+        162320
+      ],
       "id": "e1c3e1bc-f3d9-4a23-8bee-5da6c3a6dbc5",
       "name": "Chunk & Emit",
       "continueOnFail": true
@@ -161,7 +176,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
@@ -173,7 +191,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [28480, 162320],
+      "position": [
+        28480,
+        162320
+      ],
       "id": "f2c3e1bc-f3d9-4a23-8bee-5da6c3a6dbce",
       "name": "Process Chunk (Webhook)",
       "continueOnFail": true,
