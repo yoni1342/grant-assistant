@@ -60,8 +60,21 @@ export async function POST(req: Request) {
   );
 }
 
-// GET: Called by admin panel to fetch aggregated stats
-export async function GET(req: Request) {
+// ---------------------------------------------------------------------------
+// GET: Called by admin panel — now driven by central_grants table
+// ---------------------------------------------------------------------------
+
+/** Extract a readable domain from a source_url */
+function extractDomain(url: string | null): string {
+  if (!url) return "Unknown";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url.length > 40 ? url.slice(0, 40) : url;
+  }
+}
+
+export async function GET() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -89,159 +102,202 @@ export async function GET(req: Request) {
   }
 
   const adminClient = createAdminClient();
-  const url = new URL(req.url);
-  const from = url.searchParams.get("from"); // YYYY-MM-DD
-  const to = url.searchParams.get("to"); // YYYY-MM-DD
 
-  // 1. Raw fetch counts — all time
-  const { data: allTimeRaw } = await adminClient
-    .from("grant_source_stats")
-    .select("source, raw_count");
+  // --- Fetch all central grants (up to 10 000) ---
+  let allCentral: Array<{
+    id: string;
+    source_url: string | null;
+    deadline: string | null;
+    first_seen_at: string | null;
+    last_seen_at: string | null;
+    eligibility: unknown;
+  }> = [];
 
-  // Raw fetch counts — filtered by date range
-  let filteredRawQuery = adminClient
-    .from("grant_source_stats")
-    .select("source, raw_count");
-  if (from) filteredRawQuery = filteredRawQuery.gte("fetch_date", from);
-  if (to) filteredRawQuery = filteredRawQuery.lte("fetch_date", to);
-  const { data: filteredRaw } = await filteredRawQuery;
+  let page = 0;
+  const PAGE_SIZE = 1000;
+  while (true) {
+    const { data } = await adminClient
+      .from("central_grants")
+      .select("id, source_url, deadline, first_seen_at, last_seen_at, eligibility")
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    if (!data || data.length === 0) break;
+    allCentral = allCentral.concat(data);
+    if (data.length < PAGE_SIZE) break;
+    page++;
+  }
 
-  // 2. Grants stored (in grants table), by source — all
-  const { data: allGrants } = await adminClient
-    .from("grants")
-    .select("source, stage, created_at, id");
+  // --- Fetch org pipeline grants (source_url used to match back to central) ---
+  let allOrgGrants: Array<{
+    id: string;
+    source_url: string | null;
+    stage: string | null;
+    source: string | null;
+  }> = [];
 
-  // 3. Proposals count by grant source
+  page = 0;
+  while (true) {
+    const { data } = await adminClient
+      .from("grants")
+      .select("id, source_url, stage, source")
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    if (!data || data.length === 0) break;
+    allOrgGrants = allOrgGrants.concat(data);
+    if (data.length < PAGE_SIZE) break;
+    page++;
+  }
+
+  // --- Fetch proposals ---
   const { data: allProposals } = await adminClient
     .from("proposals")
-    .select("id, grant_id, created_at");
+    .select("id, grant_id");
 
-  // Build grant ID to source mapping
-  const grantSourceMap: Record<string, string> = {};
-  for (const g of allGrants || []) {
-    if (g.source) grantSourceMap[g.id] = g.source;
+  // Build sets for quick lookup
+  const orgGrantsByUrl: Record<string, typeof allOrgGrants> = {};
+  for (const g of allOrgGrants) {
+    const key = g.source_url || g.id;
+    if (!orgGrantsByUrl[key]) orgGrantsByUrl[key] = [];
+    orgGrantsByUrl[key].push(g);
   }
 
-  interface Stats {
-    raw_fetched_total: number;
-    raw_fetched_filtered: number;
-    stored_total: number;
-    stored_filtered: number;
-    eligible_total: number;
-    eligible_filtered: number;
-    pending_approval_total: number;
-    pending_approval_filtered: number;
-    proposals_total: number;
-    proposals_filtered: number;
+  const proposalsByGrant: Record<string, number> = {};
+  for (const p of allProposals || []) {
+    if (p.grant_id) proposalsByGrant[p.grant_id] = (proposalsByGrant[p.grant_id] || 0) + 1;
   }
 
-  const sourceStats: Record<string, Stats> = {};
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const todayStr = now.toISOString().split("T")[0];
 
-  function ensureSource(source: string) {
-    if (!sourceStats[source]) {
-      sourceStats[source] = {
-        raw_fetched_total: 0,
-        raw_fetched_filtered: 0,
-        stored_total: 0,
-        stored_filtered: 0,
-        eligible_total: 0,
-        eligible_filtered: 0,
-        pending_approval_total: 0,
-        pending_approval_filtered: 0,
-        proposals_total: 0,
-        proposals_filtered: 0,
+  // --- Aggregate by source domain ---
+  interface SourceStats {
+    source: string;
+    total: number;
+    active: number;
+    new_7d: number;
+    new_today: number;
+    picked_up: number;
+    screened: number;
+    pending_approval: number;
+    proposals: number;
+    avg_eligibility: number;
+    eligibility_count: number;
+    last_seen: string | null;
+    stale: boolean;
+  }
+
+  const bySource: Record<string, SourceStats> = {};
+
+  function ensureSource(domain: string): SourceStats {
+    if (!bySource[domain]) {
+      bySource[domain] = {
+        source: domain,
+        total: 0,
+        active: 0,
+        new_7d: 0,
+        new_today: 0,
+        picked_up: 0,
+        screened: 0,
+        pending_approval: 0,
+        proposals: 0,
+        avg_eligibility: 0,
+        eligibility_count: 0,
+        last_seen: null,
+        stale: false,
       };
     }
+    return bySource[domain];
   }
 
-  // Raw fetched — all time
-  for (const row of allTimeRaw || []) {
-    ensureSource(row.source);
-    sourceStats[row.source].raw_fetched_total += row.raw_count;
-  }
-
-  // Raw fetched — filtered date range
-  for (const row of filteredRaw || []) {
-    ensureSource(row.source);
-    sourceStats[row.source].raw_fetched_filtered += row.raw_count;
-  }
-
-  // Helper: check if a timestamp falls within the date range
-  function isInRange(dateStr: string | null) {
-    if (!dateStr) return false;
-    const d = dateStr.substring(0, 10); // YYYY-MM-DD from ISO timestamp
-    if (from && d < from) return false;
-    if (to && d > to) return false;
-    return true;
-  }
-
-  // Eligible stages (past screening)
   const eligibleStages = new Set([
-    "screening",
-    "pending_approval",
-    "drafting",
-    "submission",
-    "awarded",
-    "reporting",
-    "closed",
+    "screening", "pending_approval", "drafting",
+    "submission", "awarded", "reporting", "closed",
   ]);
 
-  // Grants — stored, eligible, pending_approval
-  for (const g of allGrants || []) {
-    const src = g.source || "Unknown";
-    ensureSource(src);
-    const inRange = isInRange(g.created_at);
+  for (const cg of allCentral) {
+    const domain = extractDomain(cg.source_url);
+    const s = ensureSource(domain);
+    s.total++;
 
-    sourceStats[src].stored_total++;
-    if (inRange) sourceStats[src].stored_filtered++;
+    // Active = future deadline or no deadline
+    const isActive = !cg.deadline || cg.deadline >= todayStr;
+    if (isActive) s.active++;
 
-    if (g.stage && eligibleStages.has(g.stage)) {
-      sourceStats[src].eligible_total++;
-      if (inRange) sourceStats[src].eligible_filtered++;
+    // New this week / today
+    if (cg.first_seen_at && cg.first_seen_at >= sevenDaysAgo) s.new_7d++;
+    if (cg.first_seen_at && cg.first_seen_at.startsWith(todayStr)) s.new_today++;
+
+    // Freshness
+    if (cg.last_seen_at) {
+      if (!s.last_seen || cg.last_seen_at > s.last_seen) s.last_seen = cg.last_seen_at;
     }
 
-    if (g.stage === "pending_approval") {
-      sourceStats[src].pending_approval_total++;
-      if (inRange) sourceStats[src].pending_approval_filtered++;
+    // Eligibility score
+    const elig = cg.eligibility as { confidence?: number } | null;
+    if (elig?.confidence != null) {
+      s.avg_eligibility += elig.confidence;
+      s.eligibility_count++;
+    }
+
+    // Org pipeline pickup: check if any org grant has matching source_url
+    const orgMatches = cg.source_url ? orgGrantsByUrl[cg.source_url] : null;
+    if (orgMatches && orgMatches.length > 0) {
+      s.picked_up++;
+      for (const og of orgMatches) {
+        if (og.stage && eligibleStages.has(og.stage)) s.screened++;
+        if (og.stage === "pending_approval") s.pending_approval++;
+        const pc = proposalsByGrant[og.id] || 0;
+        s.proposals += pc;
+      }
     }
   }
 
-  // Proposals — by grant source
-  for (const p of allProposals || []) {
-    const src = p.grant_id ? grantSourceMap[p.grant_id] || "Unknown" : "Unknown";
-    ensureSource(src);
-    sourceStats[src].proposals_total++;
-    if (isInRange(p.created_at)) sourceStats[src].proposals_filtered++;
+  // Finalize averages & staleness
+  const staleThreshold = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
+  for (const s of Object.values(bySource)) {
+    if (s.eligibility_count > 0) {
+      s.avg_eligibility = Math.round(s.avg_eligibility / s.eligibility_count);
+    }
+    s.stale = !s.last_seen || s.last_seen < staleThreshold;
   }
 
-  // Convert to array sorted by raw_fetched_total desc
-  const result = Object.entries(sourceStats)
-    .map(([source, stats]) => ({ source, ...stats }))
-    .sort((a, b) => b.raw_fetched_total - a.raw_fetched_total);
+  // Sort by total desc
+  const sources = Object.values(bySource).sort((a, b) => b.total - a.total);
 
-  // Compute totals
-  const emptyTotals: Stats = {
-    raw_fetched_total: 0,
-    raw_fetched_filtered: 0,
-    stored_total: 0,
-    stored_filtered: 0,
-    eligible_total: 0,
-    eligible_filtered: 0,
-    pending_approval_total: 0,
-    pending_approval_filtered: 0,
-    proposals_total: 0,
-    proposals_filtered: 0,
+  // Totals
+  const totals = {
+    total: allCentral.length,
+    active: sources.reduce((a, s) => a + s.active, 0),
+    new_7d: sources.reduce((a, s) => a + s.new_7d, 0),
+    new_today: sources.reduce((a, s) => a + s.new_today, 0),
+    sources_tracked: sources.length,
+    picked_up: sources.reduce((a, s) => a + s.picked_up, 0),
+    screened: sources.reduce((a, s) => a + s.screened, 0),
+    pending_approval: sources.reduce((a, s) => a + s.pending_approval, 0),
+    proposals: sources.reduce((a, s) => a + s.proposals, 0),
   };
 
-  const totals = result.reduce((acc, row) => {
-    (Object.keys(emptyTotals) as (keyof Stats)[]).forEach((k) => {
-      acc[k] += row[k];
-    });
-    return acc;
-  }, { ...emptyTotals });
+  // New grants per day (last 14 days) for chart
+  const dailyCounts: Record<string, Record<string, number>> = {};
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    dailyCounts[d.toISOString().split("T")[0]] = {};
+  }
+  for (const cg of allCentral) {
+    const day = cg.first_seen_at?.split("T")[0];
+    if (day && dailyCounts[day] !== undefined) {
+      const domain = extractDomain(cg.source_url);
+      dailyCounts[day][domain] = (dailyCounts[day][domain] || 0) + 1;
+    }
+  }
+  const daily = Object.entries(dailyCounts).map(([date, bySrc]) => ({
+    date,
+    total: Object.values(bySrc).reduce((a, b) => a + b, 0),
+    by_source: bySrc,
+  }));
 
   return new Response(
-    JSON.stringify({ sources: result, totals, filters: { from, to } }),
+    JSON.stringify({ sources, totals, daily }),
     { headers: { "Content-Type": "application/json" } },
   );
 }

@@ -81,7 +81,7 @@ export default async function PipelinePage() {
           <GrantFetchBanner orgId={orgId} initialStatus={activeFetchStatus} />
         </div>
       )}
-      <PipelineClient initialGrants={grants || []} isFetchingGrants={!!activeFetchStatus} proposalQualityMap={
+      <PipelineClient initialGrants={grants || []} orgId={orgId} isFetchingGrants={!!activeFetchStatus} proposalQualityMap={
         (proposals || []).reduce((acc, p) => {
           if (p.grant_id && p.quality_score != null) {
             const existing = acc[p.grant_id];

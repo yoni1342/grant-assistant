@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -15,492 +15,535 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Database, Filter, CheckCircle2, Clock, PenTool, ArrowDownUp, CalendarDays, ExternalLink } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Database,
+  Zap,
+  CalendarCheck,
+  Globe,
+  ArrowRight,
+  ArrowDownUp,
+  Search,
+  Info,
+  AlertTriangle,
+  Users,
+  Loader2,
+} from "lucide-react";
 import Link from "next/link";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { Bar, BarChart, XAxis, YAxis } from "recharts";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface SourceStat {
   source: string;
-  raw_fetched_total: number;
-  raw_fetched_filtered: number;
-  stored_total: number;
-  stored_filtered: number;
-  eligible_total: number;
-  eligible_filtered: number;
-  pending_approval_total: number;
-  pending_approval_filtered: number;
-  proposals_total: number;
-  proposals_filtered: number;
+  total: number;
+  active: number;
+  new_7d: number;
+  new_today: number;
+  picked_up: number;
+  screened: number;
+  pending_approval: number;
+  proposals: number;
+  avg_eligibility: number;
+  eligibility_count: number;
+  last_seen: string | null;
+  stale: boolean;
 }
 
 interface Totals {
-  raw_fetched_total: number;
-  raw_fetched_filtered: number;
-  stored_total: number;
-  stored_filtered: number;
-  eligible_total: number;
-  eligible_filtered: number;
-  pending_approval_total: number;
-  pending_approval_filtered: number;
-  proposals_total: number;
-  proposals_filtered: number;
+  total: number;
+  active: number;
+  new_7d: number;
+  new_today: number;
+  sources_tracked: number;
+  picked_up: number;
+  screened: number;
+  pending_approval: number;
+  proposals: number;
 }
 
-type SortField =
-  | "source"
-  | "raw_fetched_total"
-  | "stored_total"
-  | "eligible_total"
-  | "pending_approval_total"
-  | "proposals_total";
-
-function toLocalDate() {
-  const d = new Date();
-  return d.toISOString().split("T")[0];
+interface DailyCount {
+  date: string;
+  total: number;
+  by_source: Record<string, number>;
 }
 
-/** If source is a JSON string like {"url":"..."}, extract just the readable part */
-function cleanSource(source: string): string {
-  if (!source.startsWith("{")) return source;
-  try {
-    const parsed = JSON.parse(source);
-    if (parsed.url) {
-      const hostname = new URL(parsed.url).hostname.replace("www.", "");
-      return hostname;
-    }
-  } catch {
-    // not JSON
-  }
-  return source;
+type SortField = "source" | "total" | "active" | "new_7d" | "picked_up" | "avg_eligibility";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function InfoTip({ children }: { children: React.ReactNode }) {
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-64 text-xs">
+          {children}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return "Never";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function SourceAnalyticsClient() {
   const [sources, setSources] = useState<SourceStat[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
+  const [daily, setDaily] = useState<DailyCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<SortField>("stored_total");
+  const [sortField, setSortField] = useState<SortField>("total");
   const [sortAsc, setSortAsc] = useState(false);
-  const [activePreset, setActivePreset] = useState<string>("today");
-
-  const today = toLocalDate();
-  const [fromDate, setFromDate] = useState(today);
-  const [toDate, setToDate] = useState(today);
-
-  const fetchStats = useCallback(async (from: string, to: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (from) params.set("from", from);
-      if (to) params.set("to", to);
-      const res = await fetch(`/api/grant-source-stats?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch stats");
-      const data = await res.json();
-      setSources(data.sources || []);
-      setTotals(data.totals || null);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetchStats(fromDate, toDate);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function handleApplyFilter() {
-    setActivePreset("custom");
-    fetchStats(fromDate, toDate);
-  }
-
-  function setPreset(preset: "today" | "7d" | "30d" | "all") {
-    setActivePreset(preset);
-    const t = toLocalDate();
-    let f = "";
-    if (preset === "today") {
-      f = t;
-    } else if (preset === "7d") {
-      const d = new Date();
-      d.setDate(d.getDate() - 7);
-      f = d.toISOString().split("T")[0];
-    } else if (preset === "30d") {
-      const d = new Date();
-      d.setDate(d.getDate() - 30);
-      f = d.toISOString().split("T")[0];
-    } else {
-      f = "";
-    }
-    setFromDate(f);
-    setToDate(preset === "all" ? "" : t);
-    fetchStats(f, preset === "all" ? "" : t);
-  }
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/grant-source-stats");
+        if (!res.ok) throw new Error("Failed to fetch stats");
+        const data = await res.json();
+        setSources(data.sources || []);
+        setTotals(data.totals || null);
+        setDaily(data.daily || []);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   function handleSort(field: SortField) {
-    if (sortField === field) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortField(field);
-      setSortAsc(false);
+    if (sortField === field) setSortAsc(!sortAsc);
+    else { setSortField(field); setSortAsc(false); }
+  }
+
+  const filtered = useMemo(() => {
+    let list = [...sources];
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter((s) => s.source.toLowerCase().includes(q));
     }
-  }
+    list.sort((a, b) => {
+      if (sortField === "source") {
+        return sortAsc ? a.source.localeCompare(b.source) : b.source.localeCompare(a.source);
+      }
+      const av = a[sortField];
+      const bv = b[sortField];
+      return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
+    });
+    return list;
+  }, [sources, search, sortField, sortAsc]);
 
-  const sortedSources = [...sources].sort((a, b) => {
-    if (sortField === "source") {
-      return sortAsc
-        ? a.source.localeCompare(b.source)
-        : b.source.localeCompare(a.source);
-    }
-    const aVal = a[sortField];
-    const bVal = b[sortField];
-    return sortAsc ? aVal - bVal : bVal - aVal;
-  });
+  const staleSources = useMemo(() => sources.filter((s) => s.stale), [sources]);
 
-  // Only show filtered column when filter narrows down from all-time (i.e. not "all" preset)
-  const showFiltered = activePreset !== "all";
+  const chartConfig: ChartConfig = {
+    total: { label: "New Grants", color: "hsl(220, 70%, 50%)" },
+  };
 
-  function SortHeader({ field, children, align = "left" }: { field: SortField; children: React.ReactNode; align?: "left" | "right" }) {
-    return (
-      <TableHead
-        className={`cursor-pointer select-none text-xs px-2 py-1.5 ${align === "right" ? "text-right" : ""}`}
-        onClick={() => handleSort(field)}
-      >
-        <div className={`flex items-center gap-1 ${align === "right" ? "justify-end" : ""}`}>
-          {children}
-          {sortField === field && (
-            <ArrowDownUp className="h-3 w-3 text-foreground shrink-0" />
-          )}
-        </div>
-      </TableHead>
-    );
-  }
-
-  function StatCell({ total, filtered }: { total: number; filtered: number }) {
-    // When showing filtered data and it differs from total, show "filtered / total"
-    if (showFiltered && filtered !== total) {
-      return (
-        <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-          <span className="font-medium">{filtered.toLocaleString()}</span>
-          <span className="text-muted-foreground"> / {total.toLocaleString()}</span>
-        </TableCell>
-      );
-    }
-    return (
-      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-        <span className="font-medium">{total.toLocaleString()}</span>
-      </TableCell>
-    );
-  }
-
-  function filterLabel() {
-    if (!fromDate && !toDate) return "All time";
-    if (fromDate === toDate) return fromDate;
-    if (fromDate && toDate) return `${fromDate} – ${toDate}`;
-    if (fromDate) return `From ${fromDate}`;
-    return `Until ${toDate}`;
-  }
+  // --- Render ---
 
   if (error && !loading) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-semibold">Grant Source Analytics</h2>
+        <Header />
         <Card>
-          <CardContent className="py-10 text-center text-red-600">
-            {error}
-          </CardContent>
+          <CardContent className="py-10 text-center text-red-600">{error}</CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Header />
+        <div className="flex items-center justify-center py-24 text-muted-foreground gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading source analytics...
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold">Grant Source Analytics</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Pipeline funnel from raw fetch to proposal generation, broken down by source.
-        </p>
-      </div>
+      <Header />
 
-      {/* Date filter */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" />
-            Date Filter
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-end gap-2 sm:gap-3">
-            <div className="w-full sm:w-auto">
-              <label className="text-xs text-muted-foreground mb-1 block">From</label>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="w-full sm:w-40"
-              />
-            </div>
-            <div className="w-full sm:w-auto">
-              <label className="text-xs text-muted-foreground mb-1 block">To</label>
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="w-full sm:w-40"
-              />
-            </div>
-            <Button onClick={handleApplyFilter} size="sm" className="w-full sm:w-auto">
-              Apply
-            </Button>
-            <div className="flex gap-1.5 w-full sm:w-auto">
-              {(["today", "7d", "30d", "all"] as const).map((p) => (
-                <Button
-                  key={p}
-                  variant={activePreset === p ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setPreset(p)}
-                  className="flex-1 sm:flex-none"
-                >
-                  {p === "today" ? "Today" : p === "7d" ? "7 days" : p === "30d" ? "30 days" : "All time"}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Showing: <span className="font-medium text-foreground">{filterLabel()}</span>
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Summary cards */}
+      {/* ====== 1. Summary Cards ====== */}
       {totals && (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Raw Fetched
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                Total in Catalog
+                <InfoTip>Total deduped grants stored in the central catalog across all sources. This is the master pool that orgs draw from.</InfoTip>
               </CardTitle>
               <Database className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{totals.raw_fetched_total.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">total so far</p>
-              {showFiltered && totals.raw_fetched_filtered !== totals.raw_fetched_total && (
-                <p className="text-sm font-semibold text-blue-600 mt-1">
-                  {totals.raw_fetched_filtered.toLocaleString()}
-                  <span className="text-xs font-normal text-muted-foreground ml-1">in range</span>
-                </p>
+              <p className="text-2xl font-bold">{totals.total.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                Active Grants
+                <InfoTip>Grants with a future deadline or no deadline set. These are available for organizations to discover and pursue.</InfoTip>
+              </CardTitle>
+              <CalendarCheck className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-green-600">{totals.active.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">{totals.total > 0 ? `${Math.round((totals.active / totals.total) * 100)}% of catalog` : ""}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                New This Week
+                <InfoTip>Grants first discovered in the last 7 days. High numbers mean sources are actively producing fresh opportunities.</InfoTip>
+              </CardTitle>
+              <Zap className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-blue-600">{totals.new_7d.toLocaleString()}</p>
+              {totals.new_today > 0 && (
+                <p className="text-xs text-muted-foreground">{totals.new_today} added today</p>
               )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Stored (Post-Filter)
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                Sources Tracked
+                <InfoTip>Distinct grant source websites being crawled. Each source is a domain (e.g. grants.gov, propublica.org).</InfoTip>
               </CardTitle>
-              <Filter className="h-4 w-4 text-blue-500" />
+              <Globe className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-blue-600">{totals.stored_total.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">total so far</p>
-              {showFiltered && totals.stored_filtered !== totals.stored_total && (
-                <p className="text-sm font-semibold text-blue-600 mt-1">
-                  {totals.stored_filtered.toLocaleString()}
-                  <span className="text-xs font-normal text-muted-foreground ml-1">in range</span>
-                </p>
+              <p className="text-2xl font-bold text-purple-600">{totals.sources_tracked}</p>
+              {staleSources.length > 0 && (
+                <p className="text-xs text-amber-600">{staleSources.length} stale (&gt;48h)</p>
               )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Passed Eligibility
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                Org Pickup Rate
+                <InfoTip>Percentage of central catalog grants that at least one organization has added to their pipeline. Higher = better source quality.</InfoTip>
               </CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <Users className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-green-600">{totals.eligible_total.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">total so far</p>
-              {showFiltered && totals.eligible_filtered !== totals.eligible_total && (
-                <p className="text-sm font-semibold text-green-600 mt-1">
-                  {totals.eligible_filtered.toLocaleString()}
-                  <span className="text-xs font-normal text-muted-foreground ml-1">in range</span>
-                </p>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Pending Approval
-              </CardTitle>
-              <Clock className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-amber-600">{totals.pending_approval_total.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">total so far</p>
-              {showFiltered && totals.pending_approval_filtered !== totals.pending_approval_total && (
-                <p className="text-sm font-semibold text-amber-600 mt-1">
-                  {totals.pending_approval_filtered.toLocaleString()}
-                  <span className="text-xs font-normal text-muted-foreground ml-1">in range</span>
-                </p>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Proposals Generated
-              </CardTitle>
-              <PenTool className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-purple-600">{totals.proposals_total.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">total so far</p>
-              {showFiltered && totals.proposals_filtered !== totals.proposals_total && (
-                <p className="text-sm font-semibold text-purple-600 mt-1">
-                  {totals.proposals_filtered.toLocaleString()}
-                  <span className="text-xs font-normal text-muted-foreground ml-1">in range</span>
-                </p>
-              )}
+              <p className="text-2xl font-bold text-amber-600">
+                {totals.total > 0 ? `${Math.round((totals.picked_up / totals.total) * 100)}%` : "0%"}
+              </p>
+              <p className="text-xs text-muted-foreground">{totals.picked_up.toLocaleString()} of {totals.total.toLocaleString()} picked up</p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Conversion rate summary */}
-      {totals && totals.raw_fetched_total > 0 && (
+      {/* ====== 2. Pipeline Conversion Funnel ====== */}
+      {totals && totals.total > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Funnel Conversion Rates</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Pipeline Conversion
+              <InfoTip>Shows how central catalog grants flow through the org pipeline stages. Each bar shows the count and the conversion rate from the previous step.</InfoTip>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-6 text-sm">
-              <div>
-                <span className="text-muted-foreground">Raw → Stored:</span>{" "}
-                <span className="font-medium">
-                  {((totals.stored_total / totals.raw_fetched_total) * 100).toFixed(1)}%
-                </span>
-              </div>
-              {totals.stored_total > 0 && (
-                <div>
-                  <span className="text-muted-foreground">Stored → Eligible:</span>{" "}
-                  <span className="font-medium">
-                    {((totals.eligible_total / totals.stored_total) * 100).toFixed(1)}%
-                  </span>
+            <div className="flex flex-wrap items-center gap-0">
+              {[
+                { label: "Central Catalog", value: totals.total, color: "bg-foreground", tooltip: "All deduped grants in the central catalog, ready for orgs to discover." },
+                { label: "Picked Up", value: totals.picked_up, color: "bg-blue-500", tooltip: "Central grants added to at least one organization\u2019s pipeline." },
+                { label: "Screened", value: totals.screened, color: "bg-yellow-500", tooltip: "Grants that have been evaluated for eligibility and fit with an organization." },
+                { label: "Pending Approval", value: totals.pending_approval, color: "bg-amber-500", tooltip: "Screened grants waiting for team approval before drafting begins." },
+                { label: "Proposals", value: totals.proposals, color: "bg-purple-500", tooltip: "Proposal drafts generated from pipeline grants across all organizations." },
+              ].map((step, i, arr) => (
+                <div key={step.label} className="flex items-center">
+                  <div className="flex flex-col items-center px-3 py-2 min-w-[90px]">
+                    <div className="flex items-center gap-1 mb-1">
+                      <div className={`h-2 w-2 rounded-full ${step.color}`} />
+                      <span className="text-xs text-muted-foreground">{step.label}</span>
+                      <InfoTip>{step.tooltip}</InfoTip>
+                    </div>
+                    <span className="text-lg font-bold">{step.value.toLocaleString()}</span>
+                    {i > 0 && arr[i - 1].value > 0 && (
+                      <span className="text-[10px] text-muted-foreground">
+                        {Math.round((step.value / arr[i - 1].value) * 100)}% of prev
+                      </span>
+                    )}
+                  </div>
+                  {i < arr.length - 1 && (
+                    <ArrowRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                  )}
                 </div>
-              )}
-              {totals.eligible_total > 0 && (
-                <div>
-                  <span className="text-muted-foreground">Eligible → Proposal:</span>{" "}
-                  <span className="font-medium">
-                    {((totals.proposals_total / totals.eligible_total) * 100).toFixed(1)}%
-                  </span>
-                </div>
-              )}
+              ))}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Per-source table */}
+      {/* ====== 3. New Grants Per Day (14-day chart) ====== */}
+      {daily.length > 0 && daily.some((d) => d.total > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              New Grants Per Day (Last 14 Days)
+              <InfoTip>Number of new grants first discovered each day across all sources. Shows crawler activity and source freshness over time.</InfoTip>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[180px] w-full">
+              <BarChart data={daily}>
+                <XAxis
+                  dataKey="date"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => {
+                    const d = new Date(v + "T00:00:00");
+                    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                  }}
+                />
+                <YAxis fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="total" fill="var(--color-total)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ====== 4. Stale Source Alerts ====== */}
+      {staleSources.length > 0 && (
+        <Card className="border-amber-200 dark:border-amber-900">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4" />
+              Stale Sources
+              <InfoTip>Sources where no grant has been seen in the last 48 hours. The crawler may have failed or the source may be offline.</InfoTip>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {staleSources.map((s) => (
+                <Link key={s.source} href={`/admin/source-analytics/${encodeURIComponent(s.source)}`}>
+                  <Badge variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-400 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/30">
+                    {s.source}
+                    <span className="ml-1.5 text-muted-foreground font-normal">
+                      last seen {timeAgo(s.last_seen)}
+                    </span>
+                  </Badge>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ====== 5. Source Breakdown Table ====== */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium">Per-Source Breakdown</CardTitle>
-            {showFiltered && (
-              <span className="text-[11px] text-muted-foreground">
-                Shows <span className="font-medium">filtered / total</span> when different
-              </span>
-            )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              Source Breakdown
+              <InfoTip>Per-source metrics from the central catalog. Click a source to see its individual grants, eligibility scores, and org pickup details.</InfoTip>
+            </CardTitle>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Filter sources..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">
-              Loading...
-            </div>
-          ) : sortedSources.length === 0 ? (
+          {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              No source data yet. Stats will appear after the first grant fetch runs.
+              {search ? "No sources match your filter." : "No source data yet."}
             </p>
           ) : (
             <div className="overflow-x-auto">
-            <Table className="table-fixed min-w-[700px]">
-              <colgroup>
-                <col className="w-[26%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[9%]" />
-                <col className="w-[10%]" />
-              </colgroup>
-              <TableHeader>
-                <TableRow>
-                  <SortHeader field="source">Source</SortHeader>
-                  <SortHeader field="raw_fetched_total" align="right">Raw Fetched</SortHeader>
-                  <SortHeader field="stored_total" align="right">Stored</SortHeader>
-                  <SortHeader field="eligible_total" align="right">Eligible</SortHeader>
-                  <SortHeader field="pending_approval_total" align="right">Pending</SortHeader>
-                  <SortHeader field="proposals_total" align="right">Proposals</SortHeader>
-                  <TableHead className="text-right text-xs px-2 py-1.5">Rate</TableHead>
-                  <TableHead className="text-right text-xs px-2 py-1.5"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedSources.map((row) => (
-                  <TableRow key={row.source}>
-                    <TableCell className="font-medium text-xs px-2 py-1.5 truncate" title={row.source}>
-                      {cleanSource(row.source)}
-                    </TableCell>
-                    <StatCell total={row.raw_fetched_total} filtered={row.raw_fetched_filtered} />
-                    <StatCell total={row.stored_total} filtered={row.stored_filtered} />
-                    <StatCell total={row.eligible_total} filtered={row.eligible_filtered} />
-                    <StatCell total={row.pending_approval_total} filtered={row.pending_approval_filtered} />
-                    <StatCell total={row.proposals_total} filtered={row.proposals_filtered} />
-                    <TableCell className="text-right tabular-nums text-muted-foreground text-xs px-2 py-1.5">
-                      {row.raw_fetched_total > 0
-                        ? `${((row.stored_total / row.raw_fetched_total) * 100).toFixed(0)}%`
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-right text-xs px-2 py-1.5">
-                      <Link
-                        href={`/admin/source-analytics/${encodeURIComponent(row.source)}`}
-                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        View <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    </TableCell>
+              <Table className="table-fixed min-w-[800px]">
+                <colgroup>
+                  <col className="w-[22%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[12%]" />
+                </colgroup>
+                <TableHeader>
+                  <TableRow>
+                    <SortHeader field="source" sortField={sortField} sortAsc={sortAsc} onSort={handleSort}>Source</SortHeader>
+                    <SortHeader field="total" sortField={sortField} sortAsc={sortAsc} onSort={handleSort} align="right">Total</SortHeader>
+                    <SortHeader field="active" sortField={sortField} sortAsc={sortAsc} onSort={handleSort} align="right">Active</SortHeader>
+                    <SortHeader field="new_7d" sortField={sortField} sortAsc={sortAsc} onSort={handleSort} align="right">New (7d)</SortHeader>
+                    <SortHeader field="picked_up" sortField={sortField} sortAsc={sortAsc} onSort={handleSort} align="right">Picked Up</SortHeader>
+                    <SortHeader field="avg_eligibility" sortField={sortField} sortAsc={sortAsc} onSort={handleSort} align="right">Avg Score</SortHeader>
+                    <TableHead className="text-right text-xs px-2 py-1.5">Last Seen</TableHead>
+                    <TableHead className="text-right text-xs px-2 py-1.5"></TableHead>
                   </TableRow>
-                ))}
-                {/* Totals row */}
-                {totals && (
-                  <TableRow className="border-t-2 font-semibold bg-muted/30">
-                    <TableCell className="text-xs px-2 py-1.5">All Sources</TableCell>
-                    <StatCell total={totals.raw_fetched_total} filtered={totals.raw_fetched_filtered} />
-                    <StatCell total={totals.stored_total} filtered={totals.stored_filtered} />
-                    <StatCell total={totals.eligible_total} filtered={totals.eligible_filtered} />
-                    <StatCell total={totals.pending_approval_total} filtered={totals.pending_approval_filtered} />
-                    <StatCell total={totals.proposals_total} filtered={totals.proposals_filtered} />
-                    <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-                      {totals.raw_fetched_total > 0
-                        ? `${((totals.stored_total / totals.raw_fetched_total) * 100).toFixed(0)}%`
-                        : "-"}
-                    </TableCell>
-                    <TableCell />
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((row) => (
+                    <TableRow key={row.source} className={row.stale ? "bg-amber-50/50 dark:bg-amber-950/10" : ""}>
+                      <TableCell className="font-medium text-xs px-2 py-1.5 truncate" title={row.source}>
+                        <div className="flex items-center gap-1.5">
+                          {row.stale && <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />}
+                          {row.source}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 font-medium">
+                        {row.total.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                        <span className="text-green-600">{row.active.toLocaleString()}</span>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                        {row.new_7d > 0 ? (
+                          <span className="text-blue-600">{row.new_7d}</span>
+                        ) : (
+                          <span className="text-muted-foreground">0</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                        {row.picked_up > 0 ? (
+                          <span>{row.picked_up} <span className="text-muted-foreground text-[10px]">({row.total > 0 ? Math.round((row.picked_up / row.total) * 100) : 0}%)</span></span>
+                        ) : (
+                          <span className="text-muted-foreground">0</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                        {row.eligibility_count > 0 ? (
+                          <span className={row.avg_eligibility >= 75 ? "text-green-600" : row.avg_eligibility >= 50 ? "text-amber-600" : "text-red-600"}>
+                            {row.avg_eligibility}%
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right text-xs px-2 py-1.5 text-muted-foreground">
+                        {timeAgo(row.last_seen)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs px-2 py-1.5">
+                        <Link
+                          href={`/admin/source-analytics/${encodeURIComponent(row.source)}`}
+                          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          View <ArrowRight className="h-3 w-3" />
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {/* Totals row */}
+                  {totals && (
+                    <TableRow className="border-t-2 font-semibold bg-muted/30">
+                      <TableCell className="text-xs px-2 py-1.5">All Sources</TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{totals.total.toLocaleString()}</TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-green-600">{totals.active.toLocaleString()}</TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-blue-600">{totals.new_7d.toLocaleString()}</TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{totals.picked_up.toLocaleString()}</TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">-</TableCell>
+                      <TableCell className="text-right text-xs px-2 py-1.5">-</TableCell>
+                      <TableCell />
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function Header() {
+  return (
+    <div>
+      <h1 className="font-display text-xl sm:text-2xl font-black uppercase tracking-tight">Source Analytics</h1>
+      <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
+        Central grant catalog health, source freshness, and org pipeline conversion
+      </p>
+    </div>
+  );
+}
+
+function SortHeader({
+  field,
+  children,
+  align = "left",
+  sortField,
+  onSort,
+}: {
+  field: SortField;
+  children: React.ReactNode;
+  align?: "left" | "right";
+  sortField: SortField;
+  sortAsc?: boolean;
+  onSort: (f: SortField) => void;
+}) {
+  return (
+    <TableHead
+      className={`cursor-pointer select-none text-xs px-2 py-1.5 ${align === "right" ? "text-right" : ""}`}
+      onClick={() => onSort(field)}
+    >
+      <div className={`flex items-center gap-1 ${align === "right" ? "justify-end" : ""}`}>
+        {children}
+        {sortField === field && (
+          <ArrowDownUp className="h-3 w-3 text-foreground shrink-0" />
+        )}
+      </div>
+    </TableHead>
   );
 }
