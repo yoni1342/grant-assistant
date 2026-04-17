@@ -26,6 +26,39 @@ const STAGE_LABELS: Record<string, string> = {
   closed: "Closed",
 };
 
+const ACTION_LABELS: Record<string, string> = {
+  screening_started: "Started eligibility screening",
+  screening_completed: "Completed eligibility screening",
+  screening_failed: "Eligibility screening failed",
+  proposal_started: "Started proposal draft",
+  proposal_generated: "Generated proposal draft",
+  proposal_failed: "Proposal generation failed",
+  grant_added: "Added grant to pipeline",
+  grant_archived: "Archived grant",
+  grant_restored: "Restored grant from archive",
+  stage_changed: "Moved grant to a new stage",
+  stage_changed_pending_approval: "Marked grant as ready for approval",
+};
+
+function formatActivityAction(
+  action: string,
+  details: Record<string, unknown> | null | undefined
+) {
+  const base =
+    ACTION_LABELS[action] ??
+    action
+      .replace(/_/g, " ")
+      .replace(/^./, (c) => c.toUpperCase());
+  const grantName =
+    details && typeof details === "object" && "grant_name" in details
+      ? (details as { grant_name?: unknown }).grant_name
+      : undefined;
+  if (typeof grantName === "string" && grantName.trim()) {
+    return `${base} — ${grantName}`;
+  }
+  return base;
+}
+
 function getDeadlineUrgency(deadline: string) {
   const now = new Date();
   const dl = new Date(deadline);
@@ -127,7 +160,7 @@ export default async function DashboardPage() {
         <Link href="/dashboard/no-deadline">
           <Card className="cursor-pointer hover:bg-muted/50 transition-colors h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">No Deadline</CardTitle>
+              <CardTitle className="text-sm font-medium">Ongoing</CardTitle>
               <CircleOff className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -259,7 +292,12 @@ export default async function DashboardPage() {
                 <div key={a.id} className="flex items-center gap-3">
                   <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm">{a.action}</p>
+                    <p className="text-sm">
+                      {formatActivityAction(
+                        a.action,
+                        a.details as Record<string, unknown> | null
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(a.created_at!).toLocaleString()}
                     </p>

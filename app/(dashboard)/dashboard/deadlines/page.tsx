@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
 import { DeadlineFilter } from "./deadline-filter";
-import { excludeFetchedExpired } from "@/lib/grants/filters";
+import { excludeFetchedExpired, isMissingGrantValue } from "@/lib/grants/filters";
 
 const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovered",
@@ -146,8 +146,8 @@ export default async function DeadlinesPage({
                         {g.title}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-muted-foreground truncate">
-                      {g.funder_name || "—"}
+                    <TableCell className={`text-muted-foreground truncate ${isMissingGrantValue(g.funder_name) ? "italic" : ""}`}>
+                      {isMissingGrantValue(g.funder_name) ? "No funder mentioned" : g.funder_name}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -165,11 +165,11 @@ export default async function DeadlinesPage({
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {g.amount != null
+                      {g.amount != null && !isMissingGrantValue(g.amount)
                         ? typeof g.amount === "number"
                           ? `$${g.amount.toLocaleString()}`
                           : String(g.amount)
-                        : "—"}
+                        : <span className="italic">No amount mentioned</span>}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">

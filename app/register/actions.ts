@@ -89,6 +89,34 @@ async function processQuestionnaire(
   }
 }
 
+export async function checkEmailAvailable(email: string): Promise<{ available: boolean; error?: string }> {
+  const trimmed = email.trim().toLowerCase()
+  if (!trimmed) return { available: false, error: 'Email is required' }
+
+  const serviceClient = getServiceClient()
+  const { data: { users }, error } = await serviceClient.auth.admin.listUsers()
+  if (error) {
+    console.error('[checkEmailAvailable] listUsers error:', error.message)
+    return { available: true }
+  }
+
+  const existingUser = users?.find((u: { email?: string }) => u.email?.toLowerCase() === trimmed)
+  if (!existingUser) return { available: true }
+
+  // If the user exists but has no org/agency, treat as orphan and allow re-use
+  const { data: profile } = await serviceClient
+    .from('profiles')
+    .select('org_id, agency_id')
+    .eq('id', existingUser.id)
+    .maybeSingle()
+
+  if (profile?.org_id || profile?.agency_id) {
+    return { available: false, error: 'An account with this email already exists. Please sign in instead.' }
+  }
+
+  return { available: true }
+}
+
 export async function registerOrganization(data: {
   fullName: string
   email: string

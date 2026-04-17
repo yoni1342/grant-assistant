@@ -4,7 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendOrganizationApprovedEmail, sendOrganizationRejectedEmail } from '@/lib/email/service'
 import { getStripeClient } from '@/lib/stripe/client'
-import { PLANS, TRIAL_DAYS } from '@/lib/stripe/config'
+import { PLANS, TRIAL_DAYS, canAutoFetchGrants } from '@/lib/stripe/config'
 import type { PlanId } from '@/lib/stripe/config'
 import { sanitizeError } from '@/lib/errors'
 import { seedOrgGrantsFromCentral } from '@/lib/grants/seed-from-central'
@@ -164,42 +164,49 @@ export async function approveOrganization(orgId: string) {
     }
   }
 
-  // Seed the org's pipeline from the central grant catalog. This replaces
-  // the old per-org scraper run for the common case where the central
-  // catalog already has grants. The n8n fetch is still kicked off below
-  // for any sources the daily catalog hasn't covered yet.
-  const seedResult = await seedOrgGrantsFromCentral(orgId)
-  if (seedResult.error) {
-    console.error('[approveOrganization] Failed to seed grants from central:', seedResult.error)
-  } else {
-    console.log(`[approveOrganization] Seeded ${seedResult.copied} grants from central catalog for org ${orgId}`)
-  }
+  // Seed pipeline + kick off the n8n fetch only for plans that allow
+  // automatic grant discovery. Free-tier non-testers must use Discovery
+  // manually and are capped at 1 grant/day.
+  const canAutoFetch = canAutoFetchGrants(orgData)
 
-  // Trigger grant fetch workflow for the newly approved org
-  if (process.env.N8N_WEBHOOK_URL) {
-    const adminClient = createAdminClient()
+  if (canAutoFetch) {
+    // Seed the org's pipeline from the central grant catalog. This replaces
+    // the old per-org scraper run for the common case where the central
+    // catalog already has grants. The n8n fetch is still kicked off below
+    // for any sources the daily catalog hasn't covered yet.
+    const seedResult = await seedOrgGrantsFromCentral(orgId)
+    if (seedResult.error) {
+      console.error('[approveOrganization] Failed to seed grants from central:', seedResult.error)
+    } else {
+      console.log(`[approveOrganization] Seeded ${seedResult.copied} grants from central catalog for org ${orgId}`)
+    }
 
-    await adminClient.from('grant_fetch_status').upsert({
-      org_id: orgId,
-      status: 'searching',
-      stage_message: 'Starting grant search...',
-    }, { onConflict: 'org_id' })
+    // Trigger grant fetch workflow for the newly approved org
+    if (process.env.N8N_WEBHOOK_URL) {
+      const adminClient = createAdminClient()
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`
-    fetch(`${process.env.N8N_WEBHOOK_URL}/fetch-grants`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
-      },
-      body: JSON.stringify({
+      await adminClient.from('grant_fetch_status').upsert({
         org_id: orgId,
-        callback_url: `${appUrl}/api/grant-fetch-status`,
-        is_new_org: true,
-      }),
-    }).catch((err) => {
-      console.error('n8n fetch-grants webhook failed:', err)
-    })
+        status: 'searching',
+        stage_message: 'Starting grant search...',
+      }, { onConflict: 'org_id' })
+
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`
+      fetch(`${process.env.N8N_WEBHOOK_URL}/fetch-grants`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
+        },
+        body: JSON.stringify({
+          org_id: orgId,
+          callback_url: `${appUrl}/api/grant-fetch-status`,
+          is_new_org: true,
+        }),
+      }).catch((err) => {
+        console.error('n8n fetch-grants webhook failed:', err)
+      })
+    }
   }
 
   // Send approval email

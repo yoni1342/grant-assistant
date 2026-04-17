@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import type { Tables } from "@/lib/supabase/database.types";
+import { isMissingGrantValue } from "@/lib/grants/filters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,24 +76,26 @@ export function GrantDetail({
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const cleanText = (value: unknown) =>
+    isMissingGrantValue(value) ? "" : String(value);
   const [title, setTitle] = useState(grant.title);
-  const [funderName, setFunderName] = useState(grant.funder_name || "");
-  const [amount, setAmount] = useState(grant.amount?.toString() || "");
+  const [funderName, setFunderName] = useState(cleanText(grant.funder_name));
+  const [amount, setAmount] = useState(cleanText(grant.amount));
   const [ongoingDeadline, setOngoingDeadline] = useState(grant.deadline === "Ongoing");
   const [deadline, setDeadline] = useState(() => {
-    if (!grant.deadline || grant.deadline === "Ongoing") return "";
+    if (!grant.deadline || grant.deadline === "Ongoing" || isMissingGrantValue(grant.deadline)) return "";
     const d = new Date(grant.deadline);
     return isNaN(d.getTime()) ? grant.deadline : d.toISOString().split("T")[0];
   });
   const [stage, setStage] = useState<string>(grant.stage || "discovery");
-  const [description, setDescription] = useState(grant.description || "");
-  const [sourceUrl, setSourceUrl] = useState(grant.source_url || "");
+  const [description, setDescription] = useState(cleanText(grant.description));
+  const [sourceUrl, setSourceUrl] = useState(cleanText(grant.source_url));
   const metadata = (grant.metadata || {}) as Record<string, string>;
-  const [notes, setNotes] = useState(metadata.notes || "");
-  const [eligibilityRequirements, setEligibilityRequirements] = useState(metadata.eligibility_requirements || "");
-  const [focusAreas, setFocusAreas] = useState(metadata.focus_areas || "");
-  const [matchPercentage, setMatchPercentage] = useState(metadata.match_percentage || "");
-  const [contactInfo, setContactInfo] = useState(metadata.contact_info || "");
+  const [notes, setNotes] = useState(cleanText(metadata.notes));
+  const [eligibilityRequirements, setEligibilityRequirements] = useState(cleanText(metadata.eligibility_requirements));
+  const [focusAreas, setFocusAreas] = useState(cleanText(metadata.focus_areas));
+  const [matchPercentage, setMatchPercentage] = useState(cleanText(metadata.match_percentage));
+  const [contactInfo, setContactInfo] = useState(cleanText(metadata.contact_info));
   const [showAdditional, setShowAdditional] = useState(false);
   const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
   const [proposalStatus, setProposalStatus] = useState<"generating" | "done" | "error">("generating");
@@ -293,7 +296,7 @@ export function GrantDetail({
               <Input
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="Not specified"
+                placeholder="No amount mentioned"
               />
             </div>
             <div className="space-y-2">
@@ -307,7 +310,7 @@ export function GrantDetail({
                   type="date"
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
-                  placeholder="Not specified"
+                  placeholder="No deadline mentioned"
                 />
               )}
               <label className="flex items-center gap-2 cursor-pointer">
@@ -723,12 +726,12 @@ export function GrantDetail({
                 <span className="text-sm font-medium text-muted-foreground">Grant:</span>
                 <span className="text-sm font-medium">{grant.title}</span>
               </div>
-              {grant.funder_name && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Funder:</span>
-                  <span className="text-sm">{grant.funder_name}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Funder:</span>
+                <span className={`text-sm ${isMissingGrantValue(grant.funder_name) ? "italic text-muted-foreground" : ""}`}>
+                  {isMissingGrantValue(grant.funder_name) ? "No funder mentioned" : grant.funder_name}
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-muted-foreground">Applying as:</span>
                 <span className="text-sm font-semibold">{orgName}</span>
@@ -777,7 +780,7 @@ export function GrantDetail({
           </DialogHeader>
           <div className="rounded-lg border p-3 space-y-1">
             <p className="text-sm font-medium">{grant.title || "Untitled Grant"}</p>
-            {grant.funder_name && (
+            {!isMissingGrantValue(grant.funder_name) && (
               <p className="text-xs text-muted-foreground">{grant.funder_name}</p>
             )}
           </div>

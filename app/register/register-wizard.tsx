@@ -20,6 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -31,6 +39,7 @@ import {
   registerAgency,
   registerAgencyForExistingUser,
   uploadRegistrationDocuments,
+  checkEmailAvailable,
 } from "./actions";
 import { PLANS, TRIAL_DAYS } from "@/lib/stripe/config";
 import type { PlanId } from "@/lib/stripe/config";
@@ -47,6 +56,8 @@ const SECTORS = [
   "Science & Technology",
   "Other",
 ];
+
+const ALL_STATES = "Across all states";
 
 const US_STATES = [
   "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
@@ -122,16 +133,20 @@ export function RegisterWizard({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredStates = US_STATES.filter(
+  const filteredStates = [ALL_STATES, ...US_STATES].filter(
     (s) =>
       s.toLowerCase().includes(stateSearch.toLowerCase()) &&
       !geographicFocus.includes(s)
   );
 
   function toggleState(state: string) {
-    setGeographicFocus((prev) =>
-      prev.includes(state) ? prev.filter((s) => s !== state) : [...prev, state]
-    );
+    setGeographicFocus((prev) => {
+      if (prev.includes(state)) return prev.filter((s) => s !== state);
+      // Selecting "Across all states" clears any specific-state selections
+      if (state === ALL_STATES) return [ALL_STATES];
+      // Selecting a specific state removes the "Across all states" option
+      return [...prev.filter((s) => s !== ALL_STATES), state];
+    });
     setStateSearch("");
   }
 
@@ -154,6 +169,12 @@ export function RegisterWizard({
   const [narrativeFile, setNarrativeFile] = useState<File | null>(null);
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
 
+  // Incomplete-fields warning dialog
+  const [incompleteWarning, setIncompleteWarning] = useState<{
+    missing: string[];
+    onProceed: () => void;
+  } | null>(null);
+
   // Step 3: Questionnaire
   const [annualBudget, setAnnualBudget] = useState("");
   const [staffCount, setStaffCount] = useState("");
@@ -164,14 +185,20 @@ export function RegisterWizard({
   const [methodsNarrative, setMethodsNarrative] = useState("");
   const [budgetNarrative, setBudgetNarrative] = useState("");
 
-  function handleNextToStep2() {
+  async function handleNextToStep2() {
     setError(null);
     if (!fullName.trim()) {
       setError("Full name is required");
       return;
     }
-    if (!email.trim()) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
       setError("Email is required");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError("Please enter a valid email address");
       return;
     }
     if (password.length < 6) {
@@ -182,6 +209,15 @@ export function RegisterWizard({
       setError("Passwords do not match");
       return;
     }
+
+    setLoading(true);
+    const { available, error: checkError } = await checkEmailAvailable(trimmedEmail);
+    setLoading(false);
+    if (!available) {
+      setError(checkError || "This email is not available");
+      return;
+    }
+
     setStep(2);
   }
 
@@ -202,6 +238,27 @@ export function RegisterWizard({
       setError("Please select at least one geographic focus area");
       return;
     }
+
+    const missing: string[] = [];
+    if (!ein.trim()) missing.push("EIN");
+    if (!sector) missing.push("Sector");
+    if (!mission.trim()) missing.push("Mission");
+    if (!address.trim()) missing.push("Address");
+    if (!phone.trim()) missing.push("Phone");
+    if (!website.trim()) missing.push("Website");
+    if (!foundingYear) missing.push("Founding Year");
+
+    if (missing.length > 0) {
+      setIncompleteWarning({
+        missing,
+        onProceed: () => {
+          setIncompleteWarning(null);
+          setStep(4);
+        },
+      });
+      return;
+    }
+
     setStep(4);
   }
 
@@ -528,8 +585,8 @@ export function RegisterWizard({
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button onClick={handleNextToStep2} className="w-full">
-                Next
+              <Button onClick={handleNextToStep2} disabled={loading} className="w-full">
+                {loading ? "Checking..." : "Next"}
               </Button>
             </div>
           )}
@@ -835,7 +892,7 @@ export function RegisterWizard({
               <Button
                 variant="outline"
                 onClick={() => {
-                  setStep(2);
+                  setStep(3);
                   setError(null);
                 }}
                 className="w-full"
@@ -1094,6 +1151,42 @@ export function RegisterWizard({
           )}
         </CardFooter>
       </Card>
+
+      <Dialog
+        open={incompleteWarning !== null}
+        onOpenChange={(open) => {
+          if (!open) setIncompleteWarning(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Some details are missing</DialogTitle>
+            <DialogDescription>
+              For the best experience, we recommend filling in all the fields so
+              we can tailor grant recommendations more accurately. You can still
+              skip and complete them later.
+            </DialogDescription>
+          </DialogHeader>
+          {incompleteWarning && incompleteWarning.missing.length > 0 && (
+            <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-0.5">
+              {incompleteWarning.missing.map((field) => (
+                <li key={field}>{field}</li>
+              ))}
+            </ul>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIncompleteWarning(null)}
+            >
+              Go back and fill
+            </Button>
+            <Button onClick={() => incompleteWarning?.onProceed()}>
+              Skip and continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

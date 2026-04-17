@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendGrantEligibleEmail } from '@/lib/email/service'
 import { sanitizeError } from '@/lib/errors'
+import { canAutoFetchGrants } from '@/lib/stripe/config'
 
 const STAGE_WORKFLOWS: Record<string, string> = {
   screening: 'screen-grant',
@@ -18,6 +19,18 @@ export async function triggerFetchGrants(orgId: string) {
   }
 
   const adminClient = createAdminClient()
+
+  // Free tier is manual-only — Discovery search is the only way in, and the
+  // 1-grant-per-day cap is enforced in /api/webhook/route.ts + DB trigger.
+  const { data: org } = await adminClient
+    .from('organizations')
+    .select('plan, is_tester')
+    .eq('id', orgId)
+    .single()
+
+  if (!canAutoFetchGrants(org)) {
+    return
+  }
 
   // Insert a fetch status row so the banner shows immediately
   await adminClient

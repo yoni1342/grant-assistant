@@ -1,7 +1,7 @@
 "use client";
 
 import type { Tables } from "@/lib/supabase/database.types";
-import { parseGrantAmount } from "@/lib/grants/filters";
+import { parseGrantAmount, isMissingGrantValue } from "@/lib/grants/filters";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -82,7 +82,9 @@ function ProposalQualityScore({ score }: { score: number | undefined }) {
 }
 
 function DeadlineCell({ deadline }: { deadline: string | null }) {
-  if (!deadline) return <span className="text-xs text-muted-foreground">—</span>;
+  if (!deadline || isMissingGrantValue(deadline)) {
+    return <span className="text-xs text-muted-foreground italic">No deadline mentioned</span>;
+  }
   const dl = new Date(deadline);
   const valid = !isNaN(dl.getTime());
   const expired = valid && dl < new Date(new Date().toDateString());
@@ -142,14 +144,16 @@ export function ListView({
             <Link key={g.id} href={`/pipeline/${g.id}`}>
               <div className="rounded-lg border bg-card p-3 space-y-2 hover:shadow-md transition-shadow">
                 <p className="text-sm font-medium leading-tight">{g.title}</p>
-                {g.funder_name && (
-                  <p className="text-xs text-muted-foreground">{g.funder_name}</p>
-                )}
+                <p className={`text-xs text-muted-foreground ${isMissingGrantValue(g.funder_name) ? "italic" : ""}`}>
+                  {isMissingGrantValue(g.funder_name) ? "No funder mentioned" : g.funder_name}
+                </p>
                 <div className="flex items-center gap-2 flex-wrap">
-                  {g.amount && (
+                  {g.amount && !isMissingGrantValue(g.amount) ? (
                     <Badge variant="secondary" className="text-xs">
                       ${parseGrantAmount(g.amount).toLocaleString()}
                     </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">No amount mentioned</span>
                   )}
                   {col.key === "drafting" ? (
                     <>
@@ -160,7 +164,7 @@ export function ListView({
                     <ScreeningScore grant={g} />
                   )}
                 </div>
-                {g.deadline && <DeadlineCell deadline={g.deadline} />}
+                <DeadlineCell deadline={g.deadline} />
               </div>
             </Link>
           ))}
@@ -201,8 +205,8 @@ export function ListView({
                         {g.title}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-muted-foreground truncate">
-                      {g.funder_name || "—"}
+                    <TableCell className={`text-muted-foreground truncate ${isMissingGrantValue(g.funder_name) ? "italic" : ""}`}>
+                      {isMissingGrantValue(g.funder_name) ? "No funder mentioned" : g.funder_name}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -217,11 +221,11 @@ export function ListView({
                       </div>
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      {g.amount ? (
+                      {g.amount && !isMissingGrantValue(g.amount) ? (
                         <Badge variant="secondary" className="text-xs">
                           ${parseGrantAmount(g.amount).toLocaleString()}
                         </Badge>
-                      ) : "—"}
+                      ) : <span className="text-xs text-muted-foreground italic">No amount mentioned</span>}
                     </TableCell>
                     <TableCell>
                       <DeadlineCell deadline={g.deadline} />

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Tables } from "@/lib/supabase/database.types";
+import { isMissingGrantValue } from "@/lib/grants/filters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -215,16 +216,16 @@ export function KanbanView({
                               <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
                             )}
                           </div>
-                          {grant.funder_name && (
-                            <p className="text-xs text-muted-foreground">
-                              {grant.funder_name}
-                            </p>
-                          )}
+                          <p className={`text-xs text-muted-foreground ${isMissingGrantValue(grant.funder_name) ? "italic" : ""}`}>
+                            {isMissingGrantValue(grant.funder_name) ? "No funder mentioned" : grant.funder_name}
+                          </p>
                           <div className="flex items-center gap-2 flex-wrap">
-                            {grant.amount && (
+                            {grant.amount && !isMissingGrantValue(grant.amount) ? (
                               <Badge variant="secondary" className="text-xs">
                                 ${grant.amount.toLocaleString()}
                               </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">No amount mentioned</span>
                             )}
                             {grant.stage === "drafting" ? (
                               <>
@@ -235,7 +236,7 @@ export function KanbanView({
                               <ScreeningScore grant={grant} />
                             )}
                           </div>
-                          {grant.deadline && (() => {
+                          {grant.deadline && !isMissingGrantValue(grant.deadline) ? (() => {
                             const dl = new Date(grant.deadline);
                             const valid = !isNaN(dl.getTime());
                             const expired = valid && dl < new Date(new Date().toDateString());
@@ -245,7 +246,9 @@ export function KanbanView({
                                 {valid ? dl.toLocaleDateString() : grant.deadline}
                               </p>
                             );
-                          })()}
+                          })() : (
+                            <p className="text-xs text-muted-foreground italic">No deadline mentioned</p>
+                          )}
                         </CardContent>
                       </Card>
                     </Link>
