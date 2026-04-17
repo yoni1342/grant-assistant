@@ -11,8 +11,6 @@ import {
   FileText,
   BookOpen,
   PenTool,
-  Send,
-  Trophy,
   Settings,
   LogOut,
   ChevronLeft,
@@ -21,8 +19,9 @@ import {
   Archive,
   Menu,
   X,
+  Library,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { OrgSwitcher } from "@/components/org-switcher";
@@ -39,6 +38,7 @@ const navItems = [
   // { href: "/awards", label: "Awards", icon: Trophy },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/billing", label: "Billing", icon: CreditCard },
+  { href: "/directory", label: "Directory", icon: Library },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -71,10 +71,8 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
       .join("")
       .toUpperCase() || user.email?.[0]?.toUpperCase() || "?";
 
-  // Close mobile menu on navigation
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+  // Close mobile menu when a nav link is clicked
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
@@ -198,6 +196,7 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={closeMobile}
               data-tour={`nav-${item.href.replace(/^\//, "").replace(/\//g, "-")}`}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2.5 md:py-2 text-sm transition-colors",

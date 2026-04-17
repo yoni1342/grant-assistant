@@ -44,10 +44,12 @@ const STAGES = [
 
 export function PipelineClient({
   initialGrants,
+  orgId,
   isFetchingGrants = false,
   proposalQualityMap = {},
 }: {
   initialGrants: Grant[];
+  orgId: string;
   isFetchingGrants?: boolean;
   proposalQualityMap?: Record<string, number>;
 }) {
@@ -93,6 +95,8 @@ export function PipelineClient({
       const { data } = await supabase
         .from("grants")
         .select("*")
+        .eq("org_id", orgId)
+        .neq("stage", "archived")
         .order("created_at", { ascending: false });
       if (data) setGrants(data as Grant[]);
     }
@@ -148,7 +152,7 @@ export function PipelineClient({
       supabase.removeChannel(channel);
       supabase.removeChannel(notifChannel);
     };
-  }, []);
+  }, [orgId]);
 
   const filtered = useMemo(() => {
     const result = grants.filter((g) => {
@@ -367,6 +371,7 @@ export function PipelineClient({
         open={showAddDialog}
         onClose={() => setShowAddDialog(false)}
         onGrantAdded={handleGrantAdded}
+        orgName={orgName}
       />
 
       {/* Confirm Proposal Generation Dialog */}

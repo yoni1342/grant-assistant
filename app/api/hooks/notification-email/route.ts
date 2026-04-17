@@ -26,8 +26,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No record in payload' }, { status: 400 })
   }
 
-  // Only process screening_completed and proposal_generated notifications
-  if (record.type !== 'screening_completed' && record.type !== 'proposal_generated') {
+  // Only process known notification types
+  if (
+    record.type !== 'screening_completed' &&
+    record.type !== 'proposal_generated' &&
+    record.type !== 'stage_changed_pending_approval'
+  ) {
     return NextResponse.json({ skipped: true, reason: 'unhandled notification type' })
   }
 
@@ -37,11 +41,17 @@ export async function POST(request: NextRequest) {
 
   const supabase = getServiceClient()
 
+  // For stage_changed events, use the grant_id as dedup key;
+  // for notification-based events, use the notification id.
+  const dedupId = record.type === 'stage_changed_pending_approval'
+    ? `pending_approval:${record.grant_id}`
+    : record.id
+
   // Check if already emailed
   const { data: existing } = await supabase
     .from('grant_email_log')
     .select('id')
-    .eq('notification_id', record.id)
+    .eq('notification_id', dedupId)
     .maybeSingle()
 
   if (existing) {
@@ -51,7 +61,7 @@ export async function POST(request: NextRequest) {
   // Get grant details
   const { data: grant } = await supabase
     .from('grants')
-    .select('id, title, funder_name, amount, deadline, screening_score, stage')
+    .select('id, title, funder_name, amount, deadline, screening_score, stage, org_id')
     .eq('id', record.grant_id)
     .single()
 
@@ -59,11 +69,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ skipped: true, reason: 'grant not found' })
   }
 
+  // org_id comes from the notification record, or from the grant itself for stage changes
+  const orgId = record.org_id || grant.org_id
+
   // Get org
   const { data: org } = await supabase
     .from('organizations')
     .select('id, name')
-    .eq('id', record.org_id)
+    .eq('id', orgId)
     .single()
 
   if (!org) {
@@ -74,7 +87,7 @@ export async function POST(request: NextRequest) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, email')
-    .eq('org_id', record.org_id)
+    .eq('org_id', orgId)
     .limit(1)
     .single()
 
@@ -107,8 +120,8 @@ export async function POST(request: NextRequest) {
       })
 
       await supabase.from('grant_email_log').insert({
-        notification_id: record.id,
-        org_id: record.org_id,
+        notification_id: dedupId,
+        org_id: orgId,
         grant_id: record.grant_id,
         sent_to: profile.email,
       })
@@ -117,22 +130,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ sent: true })
     }
 
-    // screening_completed — only email if grant is pending_approval
-    if (grant.stage !== 'pending_approval') {
-      return NextResponse.json({ skipped: true, reason: 'grant not pending_approval' })
+    // screening_completed or stage_changed_pending_approval — send grant eligible email
+    if (record.type === 'screening_completed') {
+      // The notification fires when screening finishes; the stage may not have
+      // moved to pending_approval yet, so accept both.
+      if (grant.stage !== 'pending_approval' && grant.stage !== 'screening') {
+        return NextResponse.json({ skipped: true, reason: `grant stage is ${grant.stage}` })
+      }
     }
 
     // Check missing data
     const { data: narrativeDocs } = await supabase
       .from('documents')
       .select('id', { count: 'exact', head: true })
-      .eq('org_id', record.org_id)
+      .eq('org_id', orgId)
       .eq('category', 'narrative')
 
     const { data: budgetDocs } = await supabase
       .from('documents')
       .select('id', { count: 'exact', head: true })
-      .eq('org_id', record.org_id)
+      .eq('org_id', orgId)
       .eq('category', 'budget')
 
     await sendGrantEligibleEmail({
@@ -150,8 +167,8 @@ export async function POST(request: NextRequest) {
     })
 
     await supabase.from('grant_email_log').insert({
-      notification_id: record.id,
-      org_id: record.org_id,
+      notification_id: dedupId,
+      org_id: orgId,
       grant_id: record.grant_id,
       sent_to: profile.email,
     })

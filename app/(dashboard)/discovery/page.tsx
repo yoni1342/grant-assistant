@@ -139,7 +139,7 @@ function GrantDetailBody({
             {grant.source && (
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Source</p>
-                <p className="text-sm font-medium">{grant.source}</p>
+                <p className="text-sm font-medium">{formatSource(grant.source)}</p>
               </div>
             )}
           </div>
@@ -368,6 +368,26 @@ function MultiSelect({
       )}
     </div>
   );
+}
+
+function formatSource(source: string | null | undefined): string {
+  if (!source) return "";
+  const trimmed = source.trim();
+  let url: string | null = null;
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed.url === "string") url = parsed.url;
+    } catch {}
+  } else if (/^https?:\/\//i.test(trimmed)) {
+    url = trimmed;
+  }
+  if (url) {
+    try {
+      return new URL(url).hostname.replace(/^www\./i, "");
+    } catch {}
+  }
+  return trimmed;
 }
 
 function isGrantExpired(deadline: string | null): boolean {
@@ -676,7 +696,7 @@ export default function DiscoveryPage() {
         }
         if (refs.poll) clearInterval(refs.poll);
       }
-      sessionRefsMap.current.clear();
+      refsMap.clear();
     };
   }, []);
 
@@ -1362,7 +1382,7 @@ export default function DiscoveryPage() {
                         <div className="flex items-center gap-2 pt-0.5">
                           {grant.source && (
                             <Badge variant="outline" className="text-xs">
-                              {grant.source}
+                              {formatSource(grant.source)}
                             </Badge>
                           )}
                           {typeof grant.metadata?.priority === "string" && (

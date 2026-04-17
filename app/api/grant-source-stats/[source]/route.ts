@@ -31,132 +31,158 @@ export async function GET(
   }
 
   const { source } = await params;
-  const sourceName = decodeURIComponent(source);
+  const sourceDomain = decodeURIComponent(source);
   const adminClient = createAdminClient();
   const url = new URL(req.url);
-  const from = url.searchParams.get("from");
-  const to = url.searchParams.get("to");
+  const filter = url.searchParams.get("filter"); // "active" | "expired" | "green" | "yellow" | "red" | null
 
-  // Normalize source names — JSON objects get grouped by domain
-  function normalizeSource(s: string): string {
-    if (!s) return "Unknown";
-    if (!s.startsWith("{")) return s;
-    try {
-      const parsed = JSON.parse(s);
-      if (parsed.url) {
-        const hostname = new URL(parsed.url).hostname.replace("www.", "");
-        if (hostname.includes("grants.gov")) return "Grants.gov";
-        return hostname;
-      }
-    } catch {
-      // not JSON
-    }
-    return s;
-  }
+  // Fetch central grants — filter by source_url domain via ilike
+  // We use a broad approach: fetch all then filter client-side by domain
+  const PAGE_SIZE = 1000;
+  let allCentral: Array<{
+    id: string;
+    title: string;
+    funder_name: string | null;
+    organization: string | null;
+    amount: string | null;
+    deadline: string | null;
+    description: string | null;
+    eligibility: unknown;
+    source_url: string | null;
+    source_id: string | null;
+    first_seen_at: string | null;
+    last_seen_at: string | null;
+  }> = [];
 
-  // Get raw fetch counts — fetch all then filter by normalized source
-  const { data: allRawStats } = await adminClient
-    .from("grant_source_stats")
-    .select("source, raw_count, fetch_date");
-
-  const matchingRaw = (allRawStats || []).filter((r) => normalizeSource(r.source) === sourceName);
-  const raw_fetched_total = matchingRaw.reduce((sum, r) => sum + r.raw_count, 0);
-  const raw_fetched_filtered = matchingRaw.filter((r) => {
-    const d = r.fetch_date;
-    if (from && d < from) return false;
-    if (to && d > to) return false;
-    return true;
-  }).reduce((sum, r) => sum + r.raw_count, 0);
-
-  // Get all grants then filter by normalized source
-  const { data: allGrants } = await adminClient
-    .from("grants")
-    .select("id, title, funder_name, source, source_url, stage, screening_score, deadline, amount, created_at, org_id")
-    .order("created_at", { ascending: false });
-
-  const grants = (allGrants || []).filter((g) => normalizeSource(g.source || "Unknown") === sourceName);
-
-  // Get proposals linked to these grants
-  const grantIds = (grants || []).map((g) => g.id);
-  let proposals: Array<{ id: string; grant_id: string | null; created_at: string | null }> = [];
-  if (grantIds.length > 0) {
+  let page = 0;
+  while (true) {
     const { data } = await adminClient
-      .from("proposals")
-      .select("id, grant_id, created_at")
-      .in("grant_id", grantIds);
-    proposals = data || [];
+      .from("central_grants")
+      .select("id, title, funder_name, organization, amount, deadline, description, eligibility, source_url, source_id, first_seen_at, last_seen_at")
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    if (!data || data.length === 0) break;
+    allCentral = allCentral.concat(data);
+    if (data.length < PAGE_SIZE) break;
+    page++;
   }
 
-  // Build proposal count per grant
-  const proposalsByGrant: Record<string, number> = {};
-  for (const p of proposals) {
-    if (p.grant_id) {
-      proposalsByGrant[p.grant_id] = (proposalsByGrant[p.grant_id] || 0) + 1;
+  // Filter to this source domain
+  function extractDomain(u: string | null): string {
+    if (!u) return "Unknown";
+    try {
+      return new URL(u).hostname.replace(/^www\./, "");
+    } catch {
+      return u.length > 40 ? u.slice(0, 40) : u;
     }
   }
 
-  const eligibleStages = new Set([
-    "screening",
-    "pending_approval",
-    "drafting",
-    "submission",
-    "awarded",
-    "reporting",
-    "closed",
-  ]);
+  const sourceGrants = allCentral.filter(
+    (g) => extractDomain(g.source_url) === sourceDomain
+  );
 
-  function isInRange(dateStr: string | null) {
-    if (!dateStr) return false;
-    const d = dateStr.substring(0, 10);
-    if (from && d < from) return false;
-    if (to && d > to) return false;
-    return true;
+  // Get org pipeline grants to check pickup
+  const sourceUrls = sourceGrants.map((g) => g.source_url).filter(Boolean) as string[];
+  let orgGrants: Array<{ id: string; source_url: string | null; stage: string | null }> = [];
+  if (sourceUrls.length > 0) {
+    // Fetch in batches of 200 to stay within Supabase query limits
+    for (let i = 0; i < sourceUrls.length; i += 200) {
+      const batch = sourceUrls.slice(i, i + 200);
+      const { data } = await adminClient
+        .from("grants")
+        .select("id, source_url, stage")
+        .in("source_url", batch);
+      if (data) orgGrants = orgGrants.concat(data);
+    }
   }
 
-  // Build per-grant detail rows
-  const rows = (grants || []).map((g) => ({
-    id: g.id,
-    title: g.title,
-    funder_name: g.funder_name,
-    source_url: g.source_url,
-    stage: g.stage,
-    screening_score: g.screening_score,
-    deadline: g.deadline,
-    amount: g.amount,
-    created_at: g.created_at,
-    is_eligible: g.stage ? eligibleStages.has(g.stage) : false,
-    is_pending: g.stage === "pending_approval",
-    proposals_count: proposalsByGrant[g.id] || 0,
-    in_range: isInRange(g.created_at),
-  }));
+  // Build lookup: source_url → org grant stages
+  const orgByUrl: Record<string, Array<{ stage: string | null }>> = {};
+  for (const og of orgGrants) {
+    const key = og.source_url || "";
+    if (!orgByUrl[key]) orgByUrl[key] = [];
+    orgByUrl[key].push({ stage: og.stage });
+  }
 
-  // Summary stats
-  const total = rows.length;
-  const filtered = rows.filter((r) => r.in_range).length;
-  const eligible_total = rows.filter((r) => r.is_eligible).length;
-  const eligible_filtered = rows.filter((r) => r.is_eligible && r.in_range).length;
-  const pending_total = rows.filter((r) => r.is_pending).length;
-  const pending_filtered = rows.filter((r) => r.is_pending && r.in_range).length;
-  const proposals_total = proposals.length;
-  const proposals_filtered = proposals.filter((p) => isInRange(p.created_at)).length;
+  // Get proposals for org grants
+  const orgGrantIds = orgGrants.map((g) => g.id);
+  const proposalsByGrant: Record<string, number> = {};
+  if (orgGrantIds.length > 0) {
+    for (let i = 0; i < orgGrantIds.length; i += 200) {
+      const batch = orgGrantIds.slice(i, i + 200);
+      const { data } = await adminClient
+        .from("proposals")
+        .select("id, grant_id")
+        .in("grant_id", batch);
+      for (const p of data || []) {
+        if (p.grant_id) proposalsByGrant[p.grant_id] = (proposalsByGrant[p.grant_id] || 0) + 1;
+      }
+    }
+  }
+
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  // Build rows
+  const rows = sourceGrants.map((g) => {
+    const elig = g.eligibility as {
+      score?: string;
+      confidence?: number;
+      dimension_scores?: Record<string, number>;
+    } | null;
+
+    const isActive = !g.deadline || g.deadline >= todayStr;
+    const orgMatches = g.source_url ? orgByUrl[g.source_url] || [] : [];
+    const orgsPickedUp = orgMatches.length;
+
+    // Count proposals across all org copies
+    let proposalCount = 0;
+    for (const og of orgGrants.filter((o) => o.source_url === g.source_url)) {
+      proposalCount += proposalsByGrant[og.id] || 0;
+    }
+
+    return {
+      id: g.id,
+      title: g.title,
+      funder_name: g.funder_name,
+      source_url: g.source_url,
+      deadline: g.deadline,
+      amount: g.amount,
+      first_seen_at: g.first_seen_at,
+      last_seen_at: g.last_seen_at,
+      is_active: isActive,
+      eligibility_score: elig?.score || null,
+      eligibility_confidence: elig?.confidence ?? null,
+      dimension_scores: elig?.dimension_scores || null,
+      orgs_picked_up: orgsPickedUp,
+      proposals_count: proposalCount,
+    };
+  });
+
+  // Apply client filter
+  let filtered = rows;
+  if (filter === "active") filtered = rows.filter((r) => r.is_active);
+  else if (filter === "expired") filtered = rows.filter((r) => !r.is_active);
+  else if (filter === "green") filtered = rows.filter((r) => r.eligibility_score === "GREEN");
+  else if (filter === "yellow") filtered = rows.filter((r) => r.eligibility_score === "YELLOW");
+  else if (filter === "red") filtered = rows.filter((r) => r.eligibility_score === "RED");
+
+  // Sort by first_seen_at desc
+  filtered.sort((a, b) => (b.first_seen_at || "").localeCompare(a.first_seen_at || ""));
+
+  // Summary
+  const summary = {
+    total: sourceGrants.length,
+    active: rows.filter((r) => r.is_active).length,
+    expired: rows.filter((r) => !r.is_active).length,
+    picked_up: rows.filter((r) => r.orgs_picked_up > 0).length,
+    green: rows.filter((r) => r.eligibility_score === "GREEN").length,
+    yellow: rows.filter((r) => r.eligibility_score === "YELLOW").length,
+    red: rows.filter((r) => r.eligibility_score === "RED").length,
+    no_score: rows.filter((r) => !r.eligibility_score).length,
+    proposals: rows.reduce((a, r) => a + r.proposals_count, 0),
+  };
 
   return new Response(
-    JSON.stringify({
-      source: sourceName,
-      grants: rows,
-      summary: {
-        raw_fetched_total,
-        raw_fetched_filtered,
-        stored_total: total,
-        stored_filtered: filtered,
-        eligible_total,
-        eligible_filtered,
-        pending_approval_total: pending_total,
-        pending_approval_filtered: pending_filtered,
-        proposals_total,
-        proposals_filtered,
-      },
-    }),
+    JSON.stringify({ source: sourceDomain, grants: filtered, summary }),
     { headers: { "Content-Type": "application/json" } },
   );
 }

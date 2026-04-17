@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import { OrgDetailClient } from "./org-detail-client";
+import { excludeFetchedExpired } from "@/lib/grants/filters";
 
 export default async function OrgDetailPage({
   params,
@@ -38,6 +39,7 @@ export default async function OrgDetailPage({
       .from("grants")
       .select("*")
       .eq("org_id", id)
+      .neq("stage", "archived")
       .order("created_at", { ascending: false }),
     adminClient
       .from("proposals")
@@ -64,6 +66,9 @@ export default async function OrgDetailPage({
   ]);
 
   if (!organization) notFound();
+
+  // Filter out fetched-expired grants to match the user-facing dashboard
+  const filteredGrants = excludeFetchedExpired(grants || []);
 
   // Derive budgets and narratives from documents
   const allDocs = documents || [];
@@ -92,7 +97,7 @@ export default async function OrgDetailPage({
       <OrgDetailClient
         organization={organization}
         profiles={profiles || []}
-        grants={grants || []}
+        grants={filteredGrants}
         proposals={proposals || []}
         workflowExecutions={workflowExecutions || []}
         activityLog={activityLog || []}

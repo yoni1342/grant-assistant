@@ -1,0 +1,34 @@
+name: ⏰ Cron — Email notifications
+
+on:
+  schedule:
+    # Grant eligible emails — every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: cron-emails
+  cancel-in-progress: false
+
+jobs:
+  grant-eligible-emails:
+    name: Grant eligible emails
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Trigger grant eligible email cron
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron/grant-eligible-emails"
+
+  profile-reminders:
+    name: Profile reminder emails
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Trigger profile reminder cron
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron/profile-reminders"

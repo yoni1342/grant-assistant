@@ -116,6 +116,66 @@ export type Database = {
           },
         ]
       }
+      central_grants: {
+        Row: {
+          amount: string | null
+          categories: Json | null
+          created_at: string
+          deadline: string | null
+          description: string | null
+          eligibility: Json | null
+          first_seen_at: string
+          funder_name: string | null
+          id: string
+          last_seen_at: string
+          metadata: Json | null
+          organization: string | null
+          source: string
+          source_id: string | null
+          source_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: string | null
+          categories?: Json | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          eligibility?: Json | null
+          first_seen_at?: string
+          funder_name?: string | null
+          id?: string
+          last_seen_at?: string
+          metadata?: Json | null
+          organization?: string | null
+          source: string
+          source_id?: string | null
+          source_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: string | null
+          categories?: Json | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          eligibility?: Json | null
+          first_seen_at?: string
+          funder_name?: string | null
+          id?: string
+          last_seen_at?: string
+          metadata?: Json | null
+          organization?: string | null
+          source?: string
+          source_id?: string | null
+          source_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           ai_category: string | null
