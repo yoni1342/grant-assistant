@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       .eq('id', notif.grant_id)
       .single()
 
-    if (!grant || grant.stage !== 'pending_approval') {
+    if (!grant || (grant.stage !== 'pending_approval' && grant.stage !== 'screening')) {
       skipped++
       continue
     }
