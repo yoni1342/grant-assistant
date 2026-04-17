@@ -26,7 +26,7 @@ import { KanbanView } from "./kanban-view";
 import { ListView } from "./list-view";
 import { AddGrantDialog } from "./add-grant-dialog";
 import { triggerStageWorkflow } from "./actions";
-import { Search, Plus, LayoutGrid, List, Loader2, Lightbulb } from "lucide-react";
+import { Search, Plus, LayoutGrid, List, Loader2, Lightbulb, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 
 type Grant = Tables<"grants">;
@@ -59,6 +59,7 @@ export function PipelineClient({
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [checkingLimit, setCheckingLimit] = useState(false);
+  const [sortBy, setSortBy] = useState<"none" | "deadline" | "amount" | "score">("none");
   const [confirmGrant, setConfirmGrant] = useState<Grant | null>(null);
   const [orgName, setOrgName] = useState<string>("");
 
@@ -154,7 +155,7 @@ export function PipelineClient({
   }, [orgId]);
 
   const filtered = useMemo(() => {
-    return grants.filter((g) => {
+    const result = grants.filter((g) => {
       if (g.stage === "archived") return false;
       const matchesSearch =
         !search ||
@@ -164,7 +165,42 @@ export function PipelineClient({
         stageFilter === "all" || g.stage === stageFilter;
       return matchesSearch && matchesStage;
     });
-  }, [grants, search, stageFilter]);
+
+    if (sortBy === "deadline") {
+      result.sort((a, b) => {
+        const aDate = a.deadline ? new Date(a.deadline).getTime() : NaN;
+        const bDate = b.deadline ? new Date(b.deadline).getTime() : NaN;
+        const aValid = !isNaN(aDate);
+        const bValid = !isNaN(bDate);
+        if (!aValid && !bValid) return 0;
+        if (!aValid) return 1;
+        if (!bValid) return -1;
+        return aDate - bDate;
+      });
+    } else if (sortBy === "amount") {
+      result.sort((a, b) => {
+        const aAmt = a.amount ? parseFloat(a.amount) : NaN;
+        const bAmt = b.amount ? parseFloat(b.amount) : NaN;
+        const aValid = !isNaN(aAmt);
+        const bValid = !isNaN(bAmt);
+        if (!aValid && !bValid) return 0;
+        if (!aValid) return 1;
+        if (!bValid) return -1;
+        return bAmt - aAmt;
+      });
+    } else if (sortBy === "score") {
+      result.sort((a, b) => {
+        const aScore = a.screening_score ?? null;
+        const bScore = b.screening_score ?? null;
+        if (aScore === null && bScore === null) return 0;
+        if (aScore === null) return 1;
+        if (bScore === null) return -1;
+        return bScore - aScore;
+      });
+    }
+
+    return result;
+  }, [grants, search, stageFilter, sortBy]);
 
   function handleGrantAdded() {
     setShowAddDialog(false);
@@ -280,6 +316,18 @@ export function PipelineClient({
                 </SelectItem>
               );
             })}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as "none" | "deadline" | "amount" | "score")}>
+          <SelectTrigger className="w-40">
+            <ArrowUpDown className="h-4 w-4 mr-1" />
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No sorting</SelectItem>
+            <SelectItem value="deadline">Deadline (soonest)</SelectItem>
+            <SelectItem value="amount">Amount (highest)</SelectItem>
+            <SelectItem value="score">Score (highest)</SelectItem>
           </SelectContent>
         </Select>
         <Tabs

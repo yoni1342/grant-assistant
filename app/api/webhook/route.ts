@@ -163,6 +163,7 @@ export async function POST(req: Request) {
     // We must NOT await this — if n8n uses responseNode mode, the fetch
     // would block until the entire workflow completes, preventing the
     // API from returning the search_id to the frontend.
+    console.log("[webhook/grant-discovery] Calling n8n:", fullUrl);
     fetch(fullUrl, {
       method: "POST",
       headers: {
@@ -171,6 +172,28 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify(discoveryPayload),
       agent,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.error(`[webhook/grant-discovery] n8n returned ${res.status}: ${body}`);
+        // Write error so frontend stops loading
+        await adminSupabase.from("search_results").insert({
+          search_id: searchId,
+          org_id: orgId,
+          source_group: "__status__:no_results",
+          grant_data: { status: "no_results", stage_message: "Search workflow returned an error. Please try again." },
+          is_complete: false,
+        });
+        await adminSupabase.from("search_results").insert({
+          search_id: searchId,
+          org_id: orgId,
+          source_group: "__done__",
+          grant_data: [],
+          is_complete: true,
+        });
+      } else {
+        console.log("[webhook/grant-discovery] n8n accepted request, status:", res.status);
+      }
     }).catch((err) => {
       console.error("[webhook/grant-discovery] Fetch error:", err);
       // Write error completion marker so frontend stops loading
