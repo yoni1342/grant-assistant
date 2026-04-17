@@ -4,6 +4,8 @@ import { GrantDetail } from "./grant-detail";
 
 const BACK_MAP: Record<string, { href: string; label: string }> = {
   deadlines: { href: "/dashboard/deadlines", label: "Deadlines" },
+  "no-deadline": { href: "/dashboard/no-deadline", label: "Ongoing Grants" },
+  "past-deadlines": { href: "/dashboard/past-deadlines", label: "Past Deadlines" },
 };
 
 export default async function GrantDetailPage({

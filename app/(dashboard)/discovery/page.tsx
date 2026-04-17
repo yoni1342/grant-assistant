@@ -57,6 +57,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getPipelineGrantTitles } from "./actions";
+import { isMissingGrantValue } from "@/lib/grants/filters";
 
 const STAGE_ICONS: Record<string, typeof Globe> = {
   searching: Search,
@@ -106,25 +107,27 @@ function GrantDetailBody({
       <ScrollArea className="max-h-[75vh] sm:max-h-[60vh]">
         <div className="space-y-4 pr-4">
           <div className="grid grid-cols-2 gap-3">
-            {grant.funder_name && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Funder</p>
-                <p className="text-sm font-medium">{grant.funder_name}</p>
-              </div>
-            )}
-            {grant.amount != null && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Amount</p>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Funder</p>
+              <p className={`text-sm font-medium ${isMissingGrantValue(grant.funder_name) ? "text-muted-foreground italic" : ""}`}>
+                {isMissingGrantValue(grant.funder_name) ? "No funder mentioned" : grant.funder_name}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Amount</p>
+              {grant.amount != null && !isMissingGrantValue(grant.amount) ? (
                 <p className="text-sm font-medium">
                   {typeof grant.amount === "number"
                     ? `$${grant.amount.toLocaleString()}`
                     : String(grant.amount)}
                 </p>
-              </div>
-            )}
-            {grant.deadline && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Deadline</p>
+              ) : (
+                <p className="text-sm font-medium text-muted-foreground italic">No amount mentioned</p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Deadline</p>
+              {grant.deadline && !isMissingGrantValue(grant.deadline) ? (
                 <p className={`text-sm font-medium flex items-center gap-1.5 ${isGrantExpired(grant.deadline) ? "text-red-500" : ""}`}>
                   {isGrantExpired(grant.deadline) && <AlertTriangle className="h-3.5 w-3.5" />}
                   {isNaN(new Date(grant.deadline).getTime()) ? grant.deadline : new Date(grant.deadline).toLocaleDateString()}
@@ -134,24 +137,28 @@ function GrantDetailBody({
                     </Badge>
                   )}
                 </p>
-              </div>
-            )}
-            {grant.source && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Source</p>
-                <p className="text-sm font-medium">{formatSource(grant.source)}</p>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm font-medium text-muted-foreground italic">No deadline mentioned</p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Source</p>
+              <p className={`text-sm font-medium ${isMissingGrantValue(grant.source) ? "text-muted-foreground italic" : ""}`}>
+                {isMissingGrantValue(grant.source) ? "No source mentioned" : formatSource(grant.source)}
+              </p>
+            </div>
           </div>
 
           <Separator />
 
-          {grant.description && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Description</p>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Description</p>
+            {isMissingGrantValue(grant.description) ? (
+              <p className="text-sm leading-relaxed text-muted-foreground italic">No description mentioned</p>
+            ) : (
               <p className="text-sm leading-relaxed">{grant.description}</p>
-            </div>
-          )}
+            )}
+          </div>
 
           {grant.source_url && (
             <a
@@ -1342,21 +1349,24 @@ export default function DiscoveryPage() {
                           {grant.title}
                         </h3>
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm text-muted-foreground">
-                          {grant.funder_name && (
-                            <span className="flex items-center gap-1">
-                              <Building2 className="h-3.5 w-3.5" />
-                              {grant.funder_name}
-                            </span>
-                          )}
-                          {grant.amount && (
+                          <span className={`flex items-center gap-1 ${isMissingGrantValue(grant.funder_name) ? "italic" : ""}`}>
+                            <Building2 className="h-3.5 w-3.5" />
+                            {isMissingGrantValue(grant.funder_name) ? "No funder mentioned" : grant.funder_name}
+                          </span>
+                          {grant.amount != null && !isMissingGrantValue(grant.amount) ? (
                             <span className="flex items-center gap-1">
                               <DollarSign className="h-3.5 w-3.5" />
                               {typeof grant.amount === "number"
                                 ? `$${grant.amount.toLocaleString()}`
                                 : grant.amount}
                             </span>
+                          ) : (
+                            <span className="flex items-center gap-1 italic">
+                              <DollarSign className="h-3.5 w-3.5" />
+                              No amount mentioned
+                            </span>
                           )}
-                          {grant.deadline && (
+                          {grant.deadline && !isMissingGrantValue(grant.deadline) ? (
                             <span className={`flex items-center gap-1 ${isGrantExpired(grant.deadline) ? "text-red-500" : ""}`}>
                               {isGrantExpired(grant.deadline) ? (
                                 <AlertTriangle className="h-3.5 w-3.5" />
@@ -1372,9 +1382,14 @@ export default function DiscoveryPage() {
                                 </Badge>
                               )}
                             </span>
+                          ) : (
+                            <span className="flex items-center gap-1 italic">
+                              <Calendar className="h-3.5 w-3.5" />
+                              No deadline mentioned
+                            </span>
                           )}
                         </div>
-                        {grant.description && (
+                        {!isMissingGrantValue(grant.description) && (
                           <p className="text-sm text-muted-foreground line-clamp-2">
                             {grant.description}
                           </p>

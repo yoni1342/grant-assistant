@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -59,8 +59,14 @@ interface SidebarProps {
   activeOrgId?: string | null;
 }
 
+const DASHBOARD_FROM_SOURCES = new Set(["deadlines", "no-deadline", "past-deadlines"]);
+
 export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const fromDashboard =
+    pathname.startsWith("/pipeline/") &&
+    DASHBOARD_FROM_SOURCES.has(searchParams.get("from") ?? "");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -189,8 +195,9 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
         {navItems.filter((item) => !(agencyId && item.href === "/billing")).map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive = fromDashboard
+            ? item.href === "/dashboard"
+            : pathname === item.href || pathname.startsWith(item.href + "/");
           const isNotifications = item.href === "/notifications";
           return (
             <Link

@@ -139,16 +139,14 @@ export function TourProvider({
           // Replace the X close button with a "Skip Tour" text button
           const btn = popover.closeButton;
           btn.innerHTML = "Skip Tour";
-          // Keep the original class so CSS always targets it, add ours too
           if (!btn.classList.contains("fundory-tour-skip-btn")) {
             btn.classList.add("fundory-tour-skip-btn");
           }
-          btn.onclick = (e) => {
-            e.stopPropagation();
-            allowDestroyRef.current = true;
-            d.destroy();
-            saveTourCompletion(tourId);
-          };
+        },
+        onCloseClick: () => {
+          allowDestroyRef.current = true;
+          d.destroy();
+          saveTourCompletion(tourId);
         },
         onNextClick: () => {
           const current = d.getActiveIndex() ?? 0;

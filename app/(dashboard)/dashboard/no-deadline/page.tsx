@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
-import { excludeFetchedExpired } from "@/lib/grants/filters";
+import { excludeFetchedExpired, isMissingGrantValue } from "@/lib/grants/filters";
 
 const STAGE_LABELS: Record<string, string> = {
   discovery: "Discovered",
@@ -51,10 +51,10 @@ export default async function NoDeadlinePage() {
         </Link>
         <div>
           <h1 className="font-display text-2xl font-black uppercase tracking-tight">
-            No Deadline
+            Ongoing Grants
           </h1>
           <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
-            {noDeadlineGrants.length} grant{noDeadlineGrants.length === 1 ? "" : "s"} without a deadline
+            {noDeadlineGrants.length} grant{noDeadlineGrants.length === 1 ? "" : "s"} open on a rolling basis
           </p>
         </div>
       </div>
@@ -62,7 +62,7 @@ export default async function NoDeadlinePage() {
       {noDeadlineGrants.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-sm text-muted-foreground">All grants have deadlines set</p>
+            <p className="text-sm text-muted-foreground">No ongoing grants in your pipeline</p>
           </CardContent>
         </Card>
       ) : (
@@ -80,19 +80,19 @@ export default async function NoDeadlinePage() {
               {noDeadlineGrants.map((g) => (
                 <TableRow key={g.id}>
                   <TableCell className="truncate">
-                    <Link href={`/pipeline/${g.id}`} className="font-medium hover:underline">
+                    <Link href={`/pipeline/${g.id}?from=no-deadline`} className="font-medium hover:underline">
                       {g.title}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-muted-foreground truncate">
-                    {g.funder_name || "—"}
+                  <TableCell className={`text-muted-foreground truncate ${isMissingGrantValue(g.funder_name) ? "italic" : ""}`}>
+                    {isMissingGrantValue(g.funder_name) ? "No funder mentioned" : g.funder_name}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {g.amount != null
+                    {g.amount != null && !isMissingGrantValue(g.amount)
                       ? typeof g.amount === "number"
                         ? `$${g.amount.toLocaleString()}`
                         : String(g.amount)
-                      : "—"}
+                      : <span className="italic">No amount mentioned</span>}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/server";
+import { canAutoFetchGrants } from "@/lib/stripe/config";
 
 // Copy every currently-active grant from the central catalog into an
 // organization's `grants` pipeline at stage = 'discovery'. Used when a
@@ -7,11 +8,25 @@ import { createAdminClient } from "@/lib/supabase/server";
 //
 // "Active" = no deadline, or deadline in the future. Mirrors the
 // expired-grant filter used elsewhere in the app.
+//
+// Skipped for free-tier non-testers — they must use Discovery manually
+// and are capped at 1 grant/day.
 export async function seedOrgGrantsFromCentral(orgId: string): Promise<{
   copied: number;
   error?: string;
 }> {
   const supabase = createAdminClient();
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("plan, is_tester")
+    .eq("id", orgId)
+    .single();
+
+  if (!canAutoFetchGrants(org)) {
+    return { copied: 0 };
+  }
+
   const today = new Date().toISOString().slice(0, 10);
 
   const { data: centralGrants, error: fetchError } = await supabase

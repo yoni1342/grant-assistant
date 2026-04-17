@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { Eye, Trash2, Ban, RotateCcw, Search, MoreHorizontal, CheckCircle2, XCircle, MonitorPlay } from "lucide-react";
+import { Eye, Trash2, Ban, RotateCcw, Search, MoreHorizontal, CheckCircle2, XCircle, MonitorPlay, ArrowUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { approveOrganization, rejectOrganization, deleteOrganization, suspendOrganization, unsuspendOrganization } from "./actions";
 
@@ -352,12 +352,25 @@ export function OrganizationsClient({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={`/admin/organizations/${org.id}`}>
-                            <Eye className="mr-1 h-3 w-3" />
-                            View
+                        {org.status === "pending" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-green-600 text-green-700 hover:bg-green-50 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-950"
+                            onClick={() => handleApprove(org.id)}
+                            disabled={loading === org.id}
+                          >
+                            <CheckCircle2 className="mr-1 h-3 w-3" />
+                            Approve
+                          </Button>
+                        ) : (
+                          <Link
+                            href={`/admin/organizations/${org.id}`}
+                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            View <ArrowUpRight className="h-3 w-3" />
                           </Link>
-                        </Button>
+                        )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button size="sm" variant="outline" disabled={loading === org.id}>
@@ -365,6 +378,17 @@ export function OrganizationsClient({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {org.status === "pending" && (
+                              <>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/admin/organizations/${org.id}`}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
                             <DropdownMenuItem
                               onClick={() => handleViewAsOrg(org.id)}
                             >
@@ -374,13 +398,6 @@ export function OrganizationsClient({
                             <DropdownMenuSeparator />
                             {org.status === "pending" && (
                               <>
-                                <DropdownMenuItem
-                                  className="text-green-700 dark:text-green-400"
-                                  onClick={() => handleApprove(org.id)}
-                                >
-                                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                                  Approve
-                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-red-700 dark:text-red-400"
                                   onClick={() => openRejectDialog(org.id)}

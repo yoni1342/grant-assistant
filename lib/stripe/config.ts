@@ -45,3 +45,16 @@ export const PLANS = {
 export type PlanId = keyof typeof PLANS
 
 export const TRIAL_DAYS = 7
+
+// Free tier is manual-only: users add grants one at a time via Discovery,
+// capped at `dailyGrantLimit`. Automatic fetching (pipeline auto-trigger,
+// daily fan-out cron, approval-time seed) is reserved for paid plans.
+// Testers bypass this regardless of plan.
+export function canAutoFetchGrants(org: {
+  plan?: string | null
+  is_tester?: boolean | null
+} | null | undefined): boolean {
+  if (!org) return false
+  if (org.is_tester) return true
+  return !!org.plan && org.plan !== 'free'
+}

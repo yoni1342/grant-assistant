@@ -28,3 +28,27 @@ export function parseGrantAmount(amount: string | number | null | undefined): nu
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 0 : parsed;
 }
+
+const MISSING_VALUE_PATTERNS = /^(unknown|undefined|null|none|n\/?a|tbd|tba|not\s+(specified|mentioned|available|provided|listed|given|stated|disclosed))$/i;
+
+/**
+ * True when a grant field value should be treated as "not mentioned" —
+ * null, undefined, empty, or a literal placeholder like "Unknown" / "undefined" / "N/A".
+ */
+export function isMissingGrantValue(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  if (trimmed === "—" || trimmed === "-") return true;
+  return MISSING_VALUE_PATTERNS.test(trimmed);
+}
+
+/**
+ * Returns the field value for display, or "Not mentioned" if the value is
+ * missing or a placeholder like "Unknown"/"undefined"/"N/A".
+ */
+export function displayGrantField(value: unknown): string {
+  if (isMissingGrantValue(value)) return "Not mentioned";
+  return String(value);
+}

@@ -27,10 +27,13 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = getServiceClient();
+  // Free tier is manual-only — they add grants via Discovery, capped at
+  // 1/day. Only paid plans (or testers) receive the daily auto-fetch.
   const { data: orgs, error } = await supabase
     .from("organizations")
-    .select("id")
-    .eq("status", "approved");
+    .select("id, plan, is_tester")
+    .eq("status", "approved")
+    .or("plan.neq.free,is_tester.eq.true");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
