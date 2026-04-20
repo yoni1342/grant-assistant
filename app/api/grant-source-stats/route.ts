@@ -74,7 +74,7 @@ function extractDomain(url: string | null): string {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -103,6 +103,13 @@ export async function GET() {
 
   const adminClient = createAdminClient();
 
+  // --- Parse date-range filter (from/to query params, ISO 8601) ---
+  const url = new URL(req.url);
+  const fromParam = url.searchParams.get("from");
+  const toParam = url.searchParams.get("to");
+  const fromISO = fromParam ? new Date(fromParam).toISOString() : null;
+  const toISO = toParam ? new Date(toParam).toISOString() : null;
+
   // --- Fetch all central grants (up to 10 000) ---
   let allCentral: Array<{
     id: string;
@@ -116,10 +123,13 @@ export async function GET() {
   let page = 0;
   const PAGE_SIZE = 1000;
   while (true) {
-    const { data } = await adminClient
+    let q = adminClient
       .from("central_grants")
       .select("id, source_url, deadline, first_seen_at, last_seen_at, eligibility")
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    if (fromISO) q = q.gte("first_seen_at", fromISO);
+    if (toISO) q = q.lte("first_seen_at", toISO);
+    const { data } = await q;
     if (!data || data.length === 0) break;
     allCentral = allCentral.concat(data);
     if (data.length < PAGE_SIZE) break;
@@ -165,8 +175,9 @@ export async function GET() {
   }
 
   const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const todayStr = now.toISOString().split("T")[0];
+  const rangeEnd = toISO ? new Date(toISO) : now;
+  const sevenDaysAgo = new Date(rangeEnd.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const todayStr = rangeEnd.toISOString().split("T")[0];
 
   // --- Aggregate by source domain ---
   interface SourceStats {
@@ -251,8 +262,8 @@ export async function GET() {
     }
   }
 
-  // Finalize averages & staleness
-  const staleThreshold = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
+  // Finalize averages & staleness (relative to range end, or now if no filter)
+  const staleThreshold = new Date(rangeEnd.getTime() - 48 * 60 * 60 * 1000).toISOString();
   for (const s of Object.values(bySource)) {
     if (s.eligibility_count > 0) {
       s.avg_eligibility = Math.round(s.avg_eligibility / s.eligibility_count);
@@ -276,11 +287,20 @@ export async function GET() {
     proposals: sources.reduce((a, s) => a + s.proposals, 0),
   };
 
-  // New grants per day (last 14 days) for chart
+  // New grants per day for chart — spans the filter range, defaults to last 14 days
+  const chartStart = fromISO ? new Date(fromISO) : new Date(rangeEnd.getTime() - 13 * 24 * 60 * 60 * 1000);
+  const chartEnd = rangeEnd;
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const dayCount = Math.max(
+    1,
+    Math.min(
+      366,
+      Math.ceil((chartEnd.getTime() - chartStart.getTime()) / msPerDay) + 1,
+    ),
+  );
   const dailyCounts: Record<string, Record<string, number>> = {};
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
+  for (let i = 0; i < dayCount; i++) {
+    const d = new Date(chartStart.getTime() + i * msPerDay);
     dailyCounts[d.toISOString().split("T")[0]] = {};
   }
   for (const cg of allCentral) {

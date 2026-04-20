@@ -119,6 +119,80 @@ function timeAgo(iso: string | null): string {
 // Component
 // ---------------------------------------------------------------------------
 
+type RangePreset =
+  | "all"
+  | "today"
+  | "yesterday"
+  | "this_week"
+  | "this_month"
+  | "last_7"
+  | "last_30"
+  | "custom";
+
+const RANGE_LABELS: Record<RangePreset, string> = {
+  all: "All time",
+  today: "Today",
+  yesterday: "Yesterday",
+  this_week: "This week",
+  this_month: "This month",
+  last_7: "Last 7 days",
+  last_30: "Last 30 days",
+  custom: "Custom",
+};
+
+function rangeToISO(
+  preset: RangePreset,
+  customFrom?: string,
+  customTo?: string,
+): { from: string | null; to: string | null } {
+  if (preset === "all") return { from: null, to: null };
+  if (preset === "custom") {
+    if (!customFrom || !customTo) return { from: null, to: null };
+    const start = new Date(customFrom);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(customTo);
+    end.setHours(23, 59, 59, 999);
+    return { from: start.toISOString(), to: end.toISOString() };
+  }
+  const now = new Date();
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+
+  switch (preset) {
+    case "today":
+      break;
+    case "yesterday":
+      start.setDate(start.getDate() - 1);
+      end.setDate(end.getDate() - 1);
+      break;
+    case "this_week": {
+      const dow = start.getDay();
+      const diff = (dow + 6) % 7; // treat Monday as week start
+      start.setDate(start.getDate() - diff);
+      break;
+    }
+    case "this_month":
+      start.setDate(1);
+      break;
+    case "last_7":
+      start.setDate(start.getDate() - 6);
+      break;
+    case "last_30":
+      start.setDate(start.getDate() - 29);
+      break;
+  }
+  return { from: start.toISOString(), to: end.toISOString() };
+}
+
+function toDateInputValue(d: Date): string {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export function SourceAnalyticsClient() {
   const [sources, setSources] = useState<SourceStat[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
@@ -128,13 +202,26 @@ export function SourceAnalyticsClient() {
   const [sortField, setSortField] = useState<SortField>("total");
   const [sortAsc, setSortAsc] = useState(false);
   const [search, setSearch] = useState("");
+  const [range, setRange] = useState<RangePreset>("today");
+  const defaultCustomTo = toDateInputValue(new Date());
+  const defaultCustomFrom = toDateInputValue(
+    new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
+  );
+  const [customFrom, setCustomFrom] = useState<string>(defaultCustomFrom);
+  const [customTo, setCustomTo] = useState<string>(defaultCustomTo);
 
   useEffect(() => {
+    if (range === "custom" && (!customFrom || !customTo)) return;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/grant-source-stats");
+        const { from, to } = rangeToISO(range, customFrom, customTo);
+        const params = new URLSearchParams();
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
+        const qs = params.toString();
+        const res = await fetch(`/api/grant-source-stats${qs ? "?" + qs : ""}`);
         if (!res.ok) throw new Error("Failed to fetch stats");
         const data = await res.json();
         setSources(data.sources || []);
@@ -146,7 +233,7 @@ export function SourceAnalyticsClient() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [range, customFrom, customTo]);
 
   function handleSort(field: SortField) {
     if (sortField === field) setSortAsc(!sortAsc);
@@ -172,6 +259,17 @@ export function SourceAnalyticsClient() {
 
   const staleSources = useMemo(() => sources.filter((s) => s.stale), [sources]);
 
+  // Query string to forward the current date range to the detail page.
+  const rangeQs = useMemo(() => {
+    const { from, to } = rangeToISO(range, customFrom, customTo);
+    const p = new URLSearchParams();
+    if (from) p.set("from", from);
+    if (to) p.set("to", to);
+    if (range !== "all") p.set("range", range);
+    const qs = p.toString();
+    return qs ? `?${qs}` : "";
+  }, [range, customFrom, customTo]);
+
   const chartConfig: ChartConfig = {
     total: { label: "New Grants", color: "hsl(220, 70%, 50%)" },
   };
@@ -189,10 +287,22 @@ export function SourceAnalyticsClient() {
     );
   }
 
+  const rangeFilter = (
+    <RangeFilter
+      value={range}
+      onChange={setRange}
+      customFrom={customFrom}
+      customTo={customTo}
+      onCustomFromChange={setCustomFrom}
+      onCustomToChange={setCustomTo}
+    />
+  );
+
   if (loading) {
     return (
       <div className="space-y-6">
         <Header />
+        {rangeFilter}
         <div className="flex items-center justify-center py-24 text-muted-foreground gap-2">
           <Loader2 className="h-5 w-5 animate-spin" />
           Loading source analytics...
@@ -204,6 +314,7 @@ export function SourceAnalyticsClient() {
   return (
     <div className="space-y-6">
       <Header />
+      {rangeFilter}
 
       {/* ====== 1. Summary Cards ====== */}
       {totals && (
@@ -367,7 +478,7 @@ export function SourceAnalyticsClient() {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {staleSources.map((s) => (
-                <Link key={s.source} href={`/admin/source-analytics/${encodeURIComponent(s.source)}`}>
+                <Link key={s.source} href={`/admin/source-analytics/${encodeURIComponent(s.source)}${rangeQs}`}>
                   <Badge variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-400 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/30">
                     {s.source}
                     <span className="ml-1.5 text-muted-foreground font-normal">
@@ -473,7 +584,7 @@ export function SourceAnalyticsClient() {
                       </TableCell>
                       <TableCell className="text-right text-xs px-2 py-1.5">
                         <Link
-                          href={`/admin/source-analytics/${encodeURIComponent(row.source)}`}
+                          href={`/admin/source-analytics/${encodeURIComponent(row.source)}${rangeQs}`}
                           className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
                         >
                           View <ArrowRight className="h-3 w-3" />
@@ -515,6 +626,106 @@ function Header() {
       <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
         Central grant catalog health, source freshness, and org pipeline conversion
       </p>
+    </div>
+  );
+}
+
+function RangeFilter({
+  value,
+  onChange,
+  customFrom,
+  customTo,
+  onCustomFromChange,
+  onCustomToChange,
+}: {
+  value: RangePreset;
+  onChange: (v: RangePreset) => void;
+  customFrom: string;
+  customTo: string;
+  onCustomFromChange: (v: string) => void;
+  onCustomToChange: (v: string) => void;
+}) {
+  const presets: RangePreset[] = [
+    "all",
+    "today",
+    "yesterday",
+    "this_week",
+    "this_month",
+    "last_7",
+    "last_30",
+    "custom",
+  ];
+
+  // Local draft state — only commits to parent on Apply.
+  const [draftFrom, setDraftFrom] = useState(customFrom);
+  const [draftTo, setDraftTo] = useState(customTo);
+  const [lastProps, setLastProps] = useState({ customFrom, customTo });
+  if (lastProps.customFrom !== customFrom || lastProps.customTo !== customTo) {
+    setLastProps({ customFrom, customTo });
+    setDraftFrom(customFrom);
+    setDraftTo(customTo);
+  }
+
+  const dirty = draftFrom !== customFrom || draftTo !== customTo;
+  const canApply = dirty && !!draftFrom && !!draftTo && draftFrom <= draftTo;
+
+  function apply() {
+    if (!canApply) return;
+    onCustomFromChange(draftFrom);
+    onCustomToChange(draftTo);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {presets.map((p) => {
+        const active = p === value;
+        return (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onChange(p)}
+            className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+              active
+                ? "bg-foreground text-background border-foreground"
+                : "bg-background text-muted-foreground border-border hover:text-foreground hover:border-foreground/40"
+            }`}
+          >
+            {RANGE_LABELS[p]}
+          </button>
+        );
+      })}
+      {value === "custom" && (
+        <div className="flex items-center gap-1.5 ml-1">
+          <input
+            type="date"
+            value={draftFrom}
+            max={draftTo || undefined}
+            onChange={(e) => setDraftFrom(e.target.value)}
+            className="h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground focus:outline-none focus:border-foreground/60"
+          />
+          <span className="text-xs text-muted-foreground">to</span>
+          <input
+            type="date"
+            value={draftTo}
+            min={draftFrom || undefined}
+            max={toDateInputValue(new Date())}
+            onChange={(e) => setDraftTo(e.target.value)}
+            className="h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground focus:outline-none focus:border-foreground/60"
+          />
+          <button
+            type="button"
+            onClick={apply}
+            disabled={!canApply}
+            className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+              canApply
+                ? "bg-foreground text-background border-foreground hover:opacity-90"
+                : "bg-muted text-muted-foreground border-border cursor-not-allowed"
+            }`}
+          >
+            Apply
+          </button>
+        </div>
+      )}
     </div>
   );
 }

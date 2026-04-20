@@ -36,6 +36,13 @@ export async function GET(
   const url = new URL(req.url);
   const filter = url.searchParams.get("filter"); // "active" | "expired" | "green" | "yellow" | "red" | null
 
+  // Optional date-range filter (ISO 8601) — matches the list page's semantics
+  // by filtering central_grants on first_seen_at.
+  const fromParam = url.searchParams.get("from");
+  const toParam = url.searchParams.get("to");
+  const fromISO = fromParam ? new Date(fromParam).toISOString() : null;
+  const toISO = toParam ? new Date(toParam).toISOString() : null;
+
   // Fetch central grants — filter by source_url domain via ilike
   // We use a broad approach: fetch all then filter client-side by domain
   const PAGE_SIZE = 1000;
@@ -56,10 +63,13 @@ export async function GET(
 
   let page = 0;
   while (true) {
-    const { data } = await adminClient
+    let q = adminClient
       .from("central_grants")
       .select("id, title, funder_name, organization, amount, deadline, description, eligibility, source_url, source_id, first_seen_at, last_seen_at")
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    if (fromISO) q = q.gte("first_seen_at", fromISO);
+    if (toISO) q = q.lte("first_seen_at", toISO);
+    const { data } = await q;
     if (!data || data.length === 0) break;
     allCentral = allCentral.concat(data);
     if (data.length < PAGE_SIZE) break;
@@ -80,7 +90,7 @@ export async function GET(
     (g) => extractDomain(g.source_url) === sourceDomain
   );
 
-  // Get org pipeline grants to check pickup
+  // Org pipeline pickups for this source's grants (lifetime, for the per-grant row).
   const sourceUrls = sourceGrants.map((g) => g.source_url).filter(Boolean) as string[];
   let orgGrants: Array<{ id: string; source_url: string | null; stage: string | null }> = [];
   if (sourceUrls.length > 0) {
@@ -93,6 +103,83 @@ export async function GET(
         .in("source_url", batch);
       if (data) orgGrants = orgGrants.concat(data);
     }
+  }
+
+  // Range-scoped activity for this source, independent of when the central
+  // grant was first seen. "Pickups" uses created_at; per-stage counts use
+  // updated_at as a best-effort proxy (no stage-transition history exists,
+  // so any row edit bumps updated_at).
+  let pickupsInRange = 0;
+  const stageActivity: Record<string, number> = {
+    screening: 0,
+    pending_approval: 0,
+    drafting: 0,
+    submission: 0,
+    awarded: 0,
+  };
+  const activityGrantIds = new Set<string>();
+
+  async function paginate(
+    dateCol: "created_at" | "updated_at",
+    onRow: (row: { id: string; source_url: string | null; stage: string | null }) => void,
+  ) {
+    const PAGE = 1000;
+    let p = 0;
+    while (true) {
+      let q = adminClient
+        .from("grants")
+        .select("id, source_url, stage")
+        .range(p * PAGE, (p + 1) * PAGE - 1);
+      if (fromISO) q = q.gte(dateCol, fromISO);
+      if (toISO) q = q.lte(dateCol, toISO);
+      const { data } = await q;
+      if (!data || data.length === 0) break;
+      for (const row of data) onRow(row);
+      if (data.length < PAGE) break;
+      p++;
+    }
+  }
+
+  await paginate("created_at", (row) => {
+    if (extractDomain(row.source_url) === sourceDomain) {
+      pickupsInRange++;
+      activityGrantIds.add(row.id);
+    }
+  });
+  await paginate("updated_at", (row) => {
+    if (extractDomain(row.source_url) !== sourceDomain) return;
+    activityGrantIds.add(row.id);
+    if (row.stage && row.stage in stageActivity) {
+      stageActivity[row.stage]++;
+    }
+  });
+
+  // Proposals created in the range, scoped to this source. Start from
+  // proposals (small, range-filtered) and look up each grant's source_url so
+  // we don't need a full grants-for-source fetch.
+  let proposalsInRange = 0;
+  {
+    let proposalsQ = adminClient.from("proposals").select("id, grant_id");
+    if (fromISO) proposalsQ = proposalsQ.gte("created_at", fromISO);
+    if (toISO) proposalsQ = proposalsQ.lte("created_at", toISO);
+    const { data: rangeProposals } = await proposalsQ;
+    const grantIds = Array.from(
+      new Set((rangeProposals ?? []).map((p) => p.grant_id).filter(Boolean)),
+    ) as string[];
+    const sourceMatch = new Set<string>();
+    for (let i = 0; i < grantIds.length; i += 200) {
+      const batch = grantIds.slice(i, i + 200);
+      const { data } = await adminClient
+        .from("grants")
+        .select("id, source_url")
+        .in("id", batch);
+      for (const g of data ?? []) {
+        if (extractDomain(g.source_url) === sourceDomain) sourceMatch.add(g.id);
+      }
+    }
+    proposalsInRange = (rangeProposals ?? []).filter(
+      (p) => p.grant_id && sourceMatch.has(p.grant_id),
+    ).length;
   }
 
   // Build lookup: source_url → org grant stages
@@ -174,6 +261,12 @@ export async function GET(
     active: rows.filter((r) => r.is_active).length,
     expired: rows.filter((r) => !r.is_active).length,
     picked_up: rows.filter((r) => r.orgs_picked_up > 0).length,
+    pickups_in_range: pickupsInRange,
+    screening_in_range: stageActivity.screening + stageActivity.pending_approval,
+    drafting_in_range: stageActivity.drafting,
+    submitted_in_range: stageActivity.submission,
+    awarded_in_range: stageActivity.awarded,
+    proposals_in_range: proposalsInRange,
     green: rows.filter((r) => r.eligibility_score === "GREEN").length,
     yellow: rows.filter((r) => r.eligibility_score === "YELLOW").length,
     red: rows.filter((r) => r.eligibility_score === "RED").length,

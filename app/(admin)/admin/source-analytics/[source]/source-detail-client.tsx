@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -35,6 +36,10 @@ import {
   Info,
   Loader2,
   AlertTriangle,
+  Eye,
+  PenLine,
+  Send,
+  Award,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -64,6 +69,12 @@ interface Summary {
   active: number;
   expired: number;
   picked_up: number;
+  pickups_in_range: number;
+  screening_in_range: number;
+  drafting_in_range: number;
+  submitted_in_range: number;
+  awarded_in_range: number;
+  proposals_in_range: number;
   green: number;
   yellow: number;
   red: number;
@@ -73,6 +84,16 @@ interface Summary {
 
 type SortField = "title" | "deadline" | "eligibility_confidence" | "orgs_picked_up" | "first_seen_at";
 type FilterMode = "all" | "active" | "expired" | "green" | "yellow" | "red";
+
+const RANGE_LABELS: Record<string, string> = {
+  today: "Today",
+  yesterday: "Yesterday",
+  this_week: "This week",
+  this_month: "This month",
+  last_7: "Last 7 days",
+  last_30: "Last 30 days",
+  custom: "Custom range",
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -109,6 +130,12 @@ function EligibilityBadge({ score }: { score: string | null }) {
 // ---------------------------------------------------------------------------
 
 export function SourceDetailClient({ source }: { source: string }) {
+  const searchParams = useSearchParams();
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+  const rangePreset = searchParams.get("range");
+  const rangeLabel = rangePreset ? RANGE_LABELS[rangePreset] ?? null : null;
+
   const [grants, setGrants] = useState<GrantRow[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,8 +149,14 @@ export function SourceDetailClient({ source }: { source: string }) {
       setLoading(true);
       setError(null);
       try {
-        const params = filterMode !== "all" ? `?filter=${filterMode}` : "";
-        const res = await fetch(`/api/grant-source-stats/${encodeURIComponent(source)}${params}`);
+        const params = new URLSearchParams();
+        if (filterMode !== "all") params.set("filter", filterMode);
+        if (fromParam) params.set("from", fromParam);
+        if (toParam) params.set("to", toParam);
+        const qs = params.toString();
+        const res = await fetch(
+          `/api/grant-source-stats/${encodeURIComponent(source)}${qs ? "?" + qs : ""}`,
+        );
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setGrants(data.grants || []);
@@ -134,7 +167,7 @@ export function SourceDetailClient({ source }: { source: string }) {
         setLoading(false);
       }
     })();
-  }, [source, filterMode]);
+  }, [source, filterMode, fromParam, toParam]);
 
   function handleSort(field: SortField) {
     if (sortField === field) setSortAsc(!sortAsc);
@@ -166,7 +199,7 @@ export function SourceDetailClient({ source }: { source: string }) {
   if (error && !loading) {
     return (
       <div className="space-y-6">
-        <DetailHeader source={source} count={0} />
+        <DetailHeader source={source} count={0} rangeLabel={rangeLabel} />
         <Card>
           <CardContent className="py-10 text-center text-red-600">{error}</CardContent>
         </Card>
@@ -185,85 +218,164 @@ export function SourceDetailClient({ source }: { source: string }) {
 
   return (
     <div className="space-y-6">
-      <DetailHeader source={source} count={summary?.total || 0} />
+      <DetailHeader source={source} count={summary?.total || 0} rangeLabel={rangeLabel} />
 
-      {/* ====== Summary Cards ====== */}
+      {/* ====== Catalog — new grants in range ====== */}
       {summary && (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                Total Grants
-                <InfoTip>Total grants in the central catalog from this source domain.</InfoTip>
-              </CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{summary.total.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                Active
-                <InfoTip>Grants with a future deadline or no deadline. These are still available for organizations to pursue.</InfoTip>
-              </CardTitle>
-              <CalendarCheck className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-green-600">{summary.active}</p>
-              <p className="text-xs text-muted-foreground">{summary.expired} expired</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                Picked Up
-                <InfoTip>Grants from this source that at least one organization has added to their pipeline.</InfoTip>
-              </CardTitle>
-              <Users className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-blue-600">{summary.picked_up}</p>
-              <p className="text-xs text-muted-foreground">
-                {summary.total > 0 ? `${Math.round((summary.picked_up / summary.total) * 100)}% pickup rate` : ""}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                Eligibility
-                <InfoTip>Distribution of AI eligibility scores. Green = strong match, Yellow = partial, Red = poor fit. Based on the most recent org that screened each grant.</InfoTip>
-              </CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-green-600 font-medium">{summary.green}</span>
-                <span className="text-muted-foreground">/</span>
-                <span className="text-amber-600 font-medium">{summary.yellow}</span>
-                <span className="text-muted-foreground">/</span>
-                <span className="text-red-600 font-medium">{summary.red}</span>
-              </div>
-              {summary.no_score > 0 && (
-                <p className="text-xs text-muted-foreground">{summary.no_score} unscored</p>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                Proposals
-                <InfoTip>Total proposal drafts generated from this source&apos;s grants across all organizations.</InfoTip>
-              </CardTitle>
-              <FileText className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-purple-600">{summary.proposals}</p>
-            </CardContent>
-          </Card>
-        </div>
+        <section className="space-y-2">
+          <h2 className="font-mono text-[11px] text-muted-foreground tracking-wider uppercase">
+            Catalog{rangeLabel ? ` · new in ${rangeLabel}` : ""}
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  New Grants
+                  <InfoTip>Grants from this source whose first-seen date falls in the selected range. With no range, shows the full catalog for this source.</InfoTip>
+                </CardTitle>
+                <Database className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{summary.total.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  Active
+                  <InfoTip>Of the new grants above, the ones with a future deadline or no deadline.</InfoTip>
+                </CardTitle>
+                <CalendarCheck className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-green-600">{summary.active}</p>
+                <p className="text-xs text-muted-foreground">{summary.expired} expired</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  Eligibility
+                  <InfoTip>Eligibility scores for the new grants: Green = strong match, Yellow = partial, Red = poor fit. Based on the most recent org that screened each grant.</InfoTip>
+                </CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-green-600 font-medium">{summary.green}</span>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="text-amber-600 font-medium">{summary.yellow}</span>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="text-red-600 font-medium">{summary.red}</span>
+                </div>
+                {summary.no_score > 0 && (
+                  <p className="text-xs text-muted-foreground">{summary.no_score} unscored</p>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  Picked Up (Ever)
+                  <InfoTip>Of the new grants above, how many have been added to at least one org&apos;s pipeline at any point in time.</InfoTip>
+                </CardTitle>
+                <Users className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-blue-600">{summary.picked_up}</p>
+                <p className="text-xs text-muted-foreground">
+                  {summary.total > 0 ? `${Math.round((summary.picked_up / summary.total) * 100)}% pickup rate` : ""}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
+
+      {/* ====== Org activity in range — spans old + new grants ====== */}
+      {summary && (
+        <section className="space-y-2">
+          <h2 className="font-mono text-[11px] text-muted-foreground tracking-wider uppercase">
+            Org Activity{rangeLabel ? ` · ${rangeLabel}` : " · all time"}
+            <InfoTip>
+              Pipeline activity that happened during the selected range on grants from this source — regardless of when the grant first appeared in the catalog. So picking up, screening, or drafting an older grant all count here.
+            </InfoTip>
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  Pickups
+                  <InfoTip>Org grants added to a pipeline during this range (by <code>grants.created_at</code>).</InfoTip>
+                </CardTitle>
+                <Users className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-blue-600">{summary.pickups_in_range}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  Screening
+                  <InfoTip>Grants currently in <code>screening</code> or <code>pending_approval</code> whose row was last updated in this range. Uses <code>updated_at</code> as a best-effort proxy for stage activity — any edit to the row also bumps it.</InfoTip>
+                </CardTitle>
+                <Eye className="h-4 w-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-amber-600">{summary.screening_in_range}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  Drafting
+                  <InfoTip>Grants currently in <code>drafting</code> whose row was last updated in this range.</InfoTip>
+                </CardTitle>
+                <PenLine className="h-4 w-4 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-purple-600">{summary.drafting_in_range}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  Submitted
+                  <InfoTip>Grants currently in <code>submission</code> whose row was last updated in this range.</InfoTip>
+                </CardTitle>
+                <Send className="h-4 w-4 text-sky-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-sky-600">{summary.submitted_in_range}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  Awarded
+                  <InfoTip>Grants currently in <code>awarded</code> whose row was last updated in this range.</InfoTip>
+                </CardTitle>
+                <Award className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-green-600">{summary.awarded_in_range}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  Proposals
+                  <InfoTip>Proposal drafts generated in this range for grants from this source.</InfoTip>
+                </CardTitle>
+                <FileText className="h-4 w-4 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-purple-600">{summary.proposals_in_range}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
       )}
 
       {/* ====== Filter Tabs ====== */}
@@ -402,7 +514,15 @@ export function SourceDetailClient({ source }: { source: string }) {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function DetailHeader({ source, count }: { source: string; count: number }) {
+function DetailHeader({
+  source,
+  count,
+  rangeLabel,
+}: {
+  source: string;
+  count: number;
+  rangeLabel: string | null;
+}) {
   return (
     <div className="flex items-center gap-3">
       <Link href="/admin/source-analytics">
@@ -416,6 +536,7 @@ function DetailHeader({ source, count }: { source: string; count: number }) {
         </h1>
         <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
           {count} grant{count !== 1 ? "s" : ""} from this source
+          {rangeLabel ? ` · ${rangeLabel}` : ""}
         </p>
       </div>
     </div>
