@@ -1,0 +1,62 @@
+{
+  "name": "Screening Throttle Queue",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "screen-queue",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c1000000-0000-0000-0000-000000000001",
+      "name": "Queue Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [20000, 0],
+      "webhookId": "screen-queue"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"accepted\": true}",
+        "options": { "responseCode": 202 }
+      },
+      "id": "c1000000-0000-0000-0000-000000000002",
+      "name": "Ack",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [20150, -150]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Screening Throttle Queue\n// ------------------------------------------------------------\n// Sits between the Grant Fetch Process Chunk workflow and the\n// Grant Eligibility Screener + Tracker workflow.\n//\n// Producers POST a batch of grant payloads to /webhook/screen-queue.\n// This Code node forwards them to /webhook/screen-grant one at a time\n// with a small delay between calls, so the Screening workflow's\n// AI node cannot burst past OpenAI's TPM limit.\n//\n// Expected input shape (body):\n//   { \"grants\": [ { url, grantid, orgId, grantData }, ... ] }\n// If the body itself is an array, or a single grant object, that is\n// also accepted.\n// ============================================================\n\nconst DELAY_MS    = 300;\nconst MAX_RETRIES = 5;\nconst TIMEOUT_MS  = 120000;\nconst SCREEN_URL  = 'https://n8n.thebrownmine.com/webhook/screen-grant';\n\nconst helpers = this.helpers;\nconst raw = $input.first().json;\nconst input = raw.body || raw;\n\nlet grants;\nif (Array.isArray(input)) {\n  grants = input;\n} else if (Array.isArray(input.grants)) {\n  grants = input.grants;\n} else if (input && (input.grantid || input.grantData || input.url)) {\n  grants = [input];\n} else {\n  grants = [];\n}\n\nlet ok = 0;\nlet failed = 0;\nconst errors = [];\n\nasync function forwardOne(payload, attempt) {\n  attempt = attempt || 0;\n  try {\n    await helpers.httpRequest({\n      method: 'POST',\n      url: SCREEN_URL,\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify(payload),\n      timeout: TIMEOUT_MS,\n    });\n    return { success: true };\n  } catch (e) {\n    const status = e.httpCode || e.statusCode || (e.response && e.response.status);\n    const transient = status === 429 || (status >= 500 && status < 600) || !status;\n    if (transient && attempt < MAX_RETRIES) {\n      const retryAfter = e.response && e.response.headers && (e.response.headers['retry-after'] || (e.response.headers.get && e.response.headers.get('retry-after')));\n      const raMs = retryAfter ? Math.max(50, Number(retryAfter) * 1000) : 0;\n      const backoff = Math.min(30000, 1000 * Math.pow(2, attempt)) + Math.floor(Math.random() * 250);\n      await new Promise(function (r) { setTimeout(r, raMs || backoff); });\n      return forwardOne(payload, attempt + 1);\n    }\n    return { success: false, status: status, message: String(e.message || e).slice(0, 400) };\n  }\n}\n\nfor (let i = 0; i < grants.length; i++) {\n  const g = grants[i];\n  const result = await forwardOne(g);\n  if (result.success) {\n    ok++;\n  } else {\n    failed++;\n    errors.push({ grantid: g && g.grantid, status: result.status, message: result.message });\n  }\n  if (i < grants.length - 1) {\n    await new Promise(function (r) { setTimeout(r, DELAY_MS); });\n  }\n}\n\nreturn [{ json: { success: true, total: grants.length, forwarded: ok, failed: failed, errors: errors } }];"
+      },
+      "id": "c1000000-0000-0000-0000-000000000003",
+      "name": "Throttle Forward",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [20300, 0],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Queue Webhook": {
+      "main": [
+        [
+          { "node": "Ack", "type": "main", "index": 0 },
+          { "node": "Throttle Forward", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c1000000-0000-0000-0000-0000000000ff",
+  "meta": {
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "ScreeningThrottleQueue01",
+  "tags": []
+}
