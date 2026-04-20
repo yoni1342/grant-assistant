@@ -9,6 +9,7 @@ import type {
   TrialEndingEmailParams,
   CompleteProfileEmailParams,
   GrantEligibleEmailParams,
+  GrantDigestEmailParams,
   ProposalReadyEmailParams,
 } from './types'
 import WelcomeEmail from './templates/welcome'
@@ -17,6 +18,7 @@ import OrganizationRejectedEmail from './templates/organization-rejected'
 import TrialEndingEmail from './templates/trial-ending'
 import CompleteProfileEmail from './templates/complete-profile'
 import GrantEligibleEmail from './templates/grant-eligible'
+import GrantDigestEmail from './templates/grant-digest'
 import ProposalReadyEmail from './templates/proposal-ready'
 
 const FROM_EMAIL = process.env.AWS_SES_FROM_EMAIL || 'noreply@fundory.ai'
@@ -186,6 +188,36 @@ export async function sendGrantEligibleEmail(
 
   const htmlBody = await render(GrantEligibleEmail(params), { pretty: true })
   const textBody = await render(GrantEligibleEmail(params), { plainText: true })
+
+  await sendEmail({
+    to: params.toEmail,
+    subject,
+    htmlBody,
+    textBody,
+  })
+}
+
+/**
+ * Send the grant eligibility digest — a single email that lists N newly-eligible grants
+ * for an org. Used by the 30-minute cron to batch screening results.
+ */
+export async function sendGrantDigestEmail(
+  params: GrantDigestEmailParams
+): Promise<void> {
+  const count = params.grants.length
+  console.log('[sendGrantDigestEmail] Sending to:', {
+    toEmail: params.toEmail,
+    org: params.organizationName,
+    count,
+  })
+
+  const subject =
+    count === 1
+      ? `Eligible Grant: ${params.grants[0].title}`
+      : `${count} eligible grants ready for review`
+
+  const htmlBody = await render(GrantDigestEmail(params), { pretty: true })
+  const textBody = await render(GrantDigestEmail(params), { plainText: true })
 
   await sendEmail({
     to: params.toEmail,

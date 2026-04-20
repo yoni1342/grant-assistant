@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceRoleClient } from '@supabase/supabase-js'
-import { sendGrantEligibleEmail, sendProposalReadyEmail } from '@/lib/email/service'
+import { sendProposalReadyEmail } from '@/lib/email/service'
 
 const WEBHOOK_SECRET = process.env.N8N_WEBHOOK_SECRET
 
@@ -26,12 +26,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No record in payload' }, { status: 400 })
   }
 
-  // Only process known notification types
+  // Eligibility events (screening_completed, stage_changed_pending_approval) are
+  // now batched into a 30-minute digest by /api/cron/grant-eligible-emails,
+  // so we deliberately do NOT fire an email here. The notification still lives
+  // in the DB and the cron will pick it up.
   if (
-    record.type !== 'screening_completed' &&
-    record.type !== 'proposal_generated' &&
-    record.type !== 'stage_changed_pending_approval'
+    record.type === 'screening_completed' ||
+    record.type === 'stage_changed_pending_approval'
   ) {
+    return NextResponse.json({
+      skipped: true,
+      reason: 'deferred to grant-eligible digest cron',
+    })
+  }
+
+  // Only proposal-generated still fires a direct email here.
+  if (record.type !== 'proposal_generated') {
     return NextResponse.json({ skipped: true, reason: 'unhandled notification type' })
   }
 
@@ -41,13 +51,8 @@ export async function POST(request: NextRequest) {
 
   const supabase = getServiceClient()
 
-  // For stage_changed events, use the grant_id as dedup key;
-  // for notification-based events, use the notification id.
-  const dedupId = record.type === 'stage_changed_pending_approval'
-    ? `pending_approval:${record.grant_id}`
-    : record.id
-
-  // Check if already emailed
+  // Dedup by notification id.
+  const dedupId = record.id
   const { data: existing } = await supabase
     .from('grant_email_log')
     .select('id')
@@ -58,10 +63,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ skipped: true, reason: 'already sent' })
   }
 
-  // Get grant details
   const { data: grant } = await supabase
     .from('grants')
-    .select('id, title, funder_name, amount, deadline, screening_score, stage, org_id')
+    .select('id, title, org_id')
     .eq('id', record.grant_id)
     .single()
 
@@ -69,10 +73,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ skipped: true, reason: 'grant not found' })
   }
 
-  // org_id comes from the notification record, or from the grant itself for stage changes
   const orgId = record.org_id || grant.org_id
 
-  // Get org
   const { data: org } = await supabase
     .from('organizations')
     .select('id, name')
@@ -83,7 +85,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ skipped: true, reason: 'org not found' })
   }
 
-  // Get org owner
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, email')
@@ -96,74 +97,25 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    if (record.type === 'proposal_generated') {
-      // Look up the proposal ID from the grant
-      const { data: proposal } = await supabase
-        .from('proposals')
-        .select('id')
-        .eq('grant_id', grant.id)
-        .eq('org_id', record.org_id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
+    const { data: proposal } = await supabase
+      .from('proposals')
+      .select('id')
+      .eq('grant_id', grant.id)
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
 
-      if (!proposal) {
-        return NextResponse.json({ skipped: true, reason: 'proposal not found for grant' })
-      }
-
-      await sendProposalReadyEmail({
-        toEmail: profile.email,
-        fullName: profile.full_name || 'there',
-        organizationName: org.name,
-        proposalId: proposal.id,
-        grantTitle: grant.title,
-      })
-
-      await supabase.from('grant_email_log').insert({
-        notification_id: dedupId,
-        org_id: orgId,
-        grant_id: record.grant_id,
-        sent_to: profile.email,
-      })
-
-      console.log(`[notification-email] Sent proposal ready email to ${profile.email} for "${grant.title}"`)
-      return NextResponse.json({ sent: true })
+    if (!proposal) {
+      return NextResponse.json({ skipped: true, reason: 'proposal not found for grant' })
     }
 
-    // screening_completed or stage_changed_pending_approval — send grant eligible email
-    if (record.type === 'screening_completed') {
-      // The notification fires when screening finishes; the stage may not have
-      // moved to pending_approval yet, so accept both.
-      if (grant.stage !== 'pending_approval' && grant.stage !== 'screening') {
-        return NextResponse.json({ skipped: true, reason: `grant stage is ${grant.stage}` })
-      }
-    }
-
-    // Check missing data
-    const { data: narrativeDocs } = await supabase
-      .from('documents')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', orgId)
-      .eq('category', 'narrative')
-
-    const { data: budgetDocs } = await supabase
-      .from('documents')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', orgId)
-      .eq('category', 'budget')
-
-    await sendGrantEligibleEmail({
+    await sendProposalReadyEmail({
       toEmail: profile.email,
       fullName: profile.full_name || 'there',
       organizationName: org.name,
-      grantId: grant.id,
+      proposalId: proposal.id,
       grantTitle: grant.title,
-      funderName: grant.funder_name,
-      amount: grant.amount,
-      deadline: grant.deadline,
-      screeningScore: grant.screening_score,
-      missingNarratives: (narrativeDocs?.length ?? 0) === 0,
-      missingBudget: (budgetDocs?.length ?? 0) === 0,
     })
 
     await supabase.from('grant_email_log').insert({
@@ -173,7 +125,9 @@ export async function POST(request: NextRequest) {
       sent_to: profile.email,
     })
 
-    console.log(`[notification-email] Sent grant eligible email to ${profile.email} for "${grant.title}"`)
+    console.log(
+      `[notification-email] Sent proposal ready email to ${profile.email} for "${grant.title}"`,
+    )
     return NextResponse.json({ sent: true })
   } catch (err) {
     console.error('[notification-email] Failed:', err)

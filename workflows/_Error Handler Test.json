@@ -1,0 +1,53 @@
+{
+  "name": "_Error Handler Test",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "error-test-ping",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0001-4000-8000-000000000001",
+      "name": "Trigger Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "webhookId": "error-test-ping",
+      "notes": "POST to /webhook/error-test-ping to trigger a guaranteed failure and verify the global error workflow fires a Slack alert."
+    },
+    {
+      "parameters": {
+        "jsCode": "throw new Error('global error workflow test — this failure is intentional');"
+      },
+      "id": "c3d4e5f6-0002-4000-8000-000000000002",
+      "name": "Throw Intentional Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Trigger Webhook": {
+      "main": [
+        [
+          {
+            "node": "Throw Intentional Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

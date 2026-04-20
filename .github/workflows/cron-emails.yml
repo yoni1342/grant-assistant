@@ -2,8 +2,10 @@ name: ⏰ Cron — Email notifications
 
 on:
   schedule:
-    # Grant eligible emails — every 15 minutes
-    - cron: '*/15 * * * *'
+    # Grant eligible digest — every 30 minutes.
+    # The cron groups newly-eligible grants per org into one digest email
+    # instead of sending one email per grant.
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 concurrency:

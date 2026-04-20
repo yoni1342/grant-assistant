@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendGrantEligibleEmail } from '@/lib/email/service'
+import { extractGrantEligibleFields } from '@/lib/email/grant-data'
 import { sanitizeError } from '@/lib/errors'
 import { canAutoFetchGrants } from '@/lib/stripe/config'
 
@@ -84,7 +85,9 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
 
     const { data: grant } = await adminClient
       .from('grants')
-      .select('title, funder_name, amount, deadline, screening_score')
+      .select(
+        'title, funder_name, amount, deadline, screening_score, description, screening_notes, eligibility, concerns, recommendations, categories, source_url',
+      )
       .eq('id', grantId)
       .eq('org_id', profile.org_id)
       .single()
@@ -135,11 +138,22 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
           amount: grant.amount,
           deadline: grant.deadline,
           screeningScore: grant.screening_score,
+          ...extractGrantEligibleFields(grant),
           missingNarratives: (narrativeDocs?.length ?? 0) === 0,
           missingBudget: (budgetDocs?.length ?? 0) === 0,
-        }).catch((err) => {
-          console.error('[triggerStageWorkflow] Failed to send grant eligible email:', err)
         })
+          .then(() =>
+            // Log so the 30-min digest cron doesn't also email this grant.
+            adminClient.from('grant_email_log').insert({
+              notification_id: `manual:${grantId}`,
+              org_id: profile.org_id,
+              grant_id: grantId,
+              sent_to: userProfile.email!,
+            }),
+          )
+          .catch((err) => {
+            console.error('[triggerStageWorkflow] Failed to send grant eligible email:', err)
+          })
       }
     }
 
@@ -157,6 +171,19 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
 
   if (!grant) {
     return { error: 'Grant not found' }
+  }
+
+  // Persist the stage change immediately so the UI is consistent on refresh.
+  // The workflow may later transition the grant further (e.g. screening → pending_approval),
+  // but until it does the grant should stay on the stage the user dropped it on.
+  const { error: stageUpdateError } = await supabase
+    .from('grants')
+    .update({ stage: targetStage })
+    .eq('id', grantId)
+    .eq('org_id', profile.org_id)
+
+  if (stageUpdateError) {
+    return { error: sanitizeError(stageUpdateError, 'Unable to move this grant. Please try again.') }
   }
 
   // Insert workflow execution record
