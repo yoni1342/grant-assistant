@@ -104,20 +104,20 @@ export function ArchiveClient({ initialGrants }: { initialGrants: ArchivedGrant[
             <TableBody>
               {grants.map((g) => (
                 <TableRow key={g.id}>
-                  <TableCell className="truncate font-medium">
+                  <TableCell className="font-medium whitespace-normal break-words align-top">
                     {g.title}
                   </TableCell>
-                  <TableCell className="text-muted-foreground truncate">
+                  <TableCell className="text-muted-foreground whitespace-normal break-words align-top">
                     {g.funder_name || "\u2014"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell className="text-muted-foreground text-sm whitespace-normal break-words align-top">
                     {g.amount != null
                       ? typeof g.amount === "number"
                         ? `$${g.amount.toLocaleString()}`
                         : String(g.amount)
                       : "\u2014"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell className="text-muted-foreground text-sm whitespace-normal break-words align-top">
                     {new Date(g.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">

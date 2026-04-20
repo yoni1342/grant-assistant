@@ -40,6 +40,18 @@ export interface TrialEndingEmailParams extends BaseEmailParams {
 }
 
 /**
+ * Eligibility dimension breakdown (matches the in-app screening report).
+ * Each dimension is scored 0–20.
+ */
+export interface GrantEligibilityDimensions {
+  mission_alignment?: number | null
+  target_population?: number | null
+  service_fit?: number | null
+  geographic_alignment?: number | null
+  organizational_capacity?: number | null
+}
+
+/**
  * Grant eligible / pending approval email parameters
  */
 export interface GrantEligibleEmailParams extends BaseEmailParams {
@@ -48,10 +60,39 @@ export interface GrantEligibleEmailParams extends BaseEmailParams {
   grantTitle: string
   funderName: string | null
   amount: string | null
+  /** Raw deadline (ISO date or already-formatted). The template formats it for display. */
   deadline: string | null
+  description?: string | null
   screeningScore: number | null
+  screeningNotes?: string | null
+  dimensionScores?: GrantEligibilityDimensions | null
+  concerns?: string[] | null
+  recommendations?: string[] | null
+  categories?: string[] | null
+  sourceUrl?: string | null
   missingNarratives: boolean
   missingBudget: boolean
+}
+
+/**
+ * One grant row inside the grant-digest email.
+ */
+export interface GrantDigestItem {
+  grantId: string
+  title: string
+  funderName: string | null
+  amount: string | null
+  deadline: string | null
+  description?: string | null
+  screeningScore: number | null
+}
+
+/**
+ * Grant digest email parameters — one email covering N eligible grants for an org.
+ */
+export interface GrantDigestEmailParams extends BaseEmailParams {
+  organizationName: string
+  grants: GrantDigestItem[]
 }
 
 /**
