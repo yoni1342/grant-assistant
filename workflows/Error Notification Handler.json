@@ -45,52 +45,43 @@
     },
     {
       "parameters": {
-        "resource": "row",
-        "operation": "create",
-        "tableId": "n8n_workflow_errors",
-        "fieldsUi": {
-          "fieldValues": [
+        "method": "POST",
+        "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/n8n_workflow_errors",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "fieldId": "workflow_name",
-              "fieldValue": "={{ $json.workflow.name || null }}"
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
             },
             {
-              "fieldId": "failed_node",
-              "fieldValue": "={{ $json.execution.lastNodeExecuted || null }}"
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
             },
             {
-              "fieldId": "execution_id",
-              "fieldValue": "={{ $json.execution.id ? String($json.execution.id) : null }}"
+              "name": "Content-Type",
+              "value": "application/json"
             },
             {
-              "fieldId": "execution_mode",
-              "fieldValue": "={{ $json.execution.mode || null }}"
-            },
-            {
-              "fieldId": "error_message",
-              "fieldValue": "={{ ($json.execution.error && $json.execution.error.message) || null }}"
-            },
-            {
-              "fieldId": "execution_url",
-              "fieldValue": "={{ $json.execution.url || null }}"
+              "name": "Prefer",
+              "value": "return=minimal"
             }
           ]
-        }
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ workflow_name: ($json.workflow && $json.workflow.name) || null, failed_node: ($json.execution && $json.execution.lastNodeExecuted) || null, execution_id: ($json.execution && $json.execution.id) ? String($json.execution.id) : null, execution_mode: ($json.execution && $json.execution.mode) || null, error_message: ($json.execution && $json.execution.error && $json.execution.error.message) || null, execution_url: ($json.execution && $json.execution.url) || null }) }}",
+        "options": {}
       },
       "id": "b1e2c3d4-0003-4000-8000-000000000003",
       "name": "Log to Supabase",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
       "position": [
         496,
         120
-      ],
-      "credentials": {
-        "supabaseApi": {
-          "id": "9lVbmu8ZsrEcUO8x",
-          "name": "Supabase account"
-        }
-      }
+      ]
     }
   ],
   "connections": {
