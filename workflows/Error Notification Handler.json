@@ -34,12 +34,61 @@
       "typeVersion": 2.4,
       "position": [
         496,
-        0
+        -120
       ],
       "credentials": {
         "slackApi": {
           "id": "rFSQaYpz4DWprrfA",
           "name": "Grant Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "create",
+        "tableId": "n8n_workflow_errors",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "workflow_name",
+              "fieldValue": "={{ $json.workflow.name || null }}"
+            },
+            {
+              "fieldId": "failed_node",
+              "fieldValue": "={{ $json.execution.lastNodeExecuted || null }}"
+            },
+            {
+              "fieldId": "execution_id",
+              "fieldValue": "={{ $json.execution.id ? String($json.execution.id) : null }}"
+            },
+            {
+              "fieldId": "execution_mode",
+              "fieldValue": "={{ $json.execution.mode || null }}"
+            },
+            {
+              "fieldId": "error_message",
+              "fieldValue": "={{ ($json.execution.error && $json.execution.error.message) || null }}"
+            },
+            {
+              "fieldId": "execution_url",
+              "fieldValue": "={{ $json.execution.url || null }}"
+            }
+          ]
+        }
+      },
+      "id": "b1e2c3d4-0003-4000-8000-000000000003",
+      "name": "Log to Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        496,
+        120
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "9lVbmu8ZsrEcUO8x",
+          "name": "Supabase account"
         }
       }
     }
@@ -50,6 +99,11 @@
         [
           {
             "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Supabase",
             "type": "main",
             "index": 0
           }

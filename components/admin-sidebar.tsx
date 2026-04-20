@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronLeft,
   BarChart3,
+  AlertTriangle,
   Menu,
   X,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/admin/grants", label: "Grants", icon: FileText },
   { href: "/admin/proposals", label: "Proposals", icon: PenTool },
   { href: "/admin/source-analytics", label: "Source Analytics", icon: BarChart3 },
+  { href: "/admin/system-errors", label: "System Errors", icon: AlertTriangle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -53,6 +55,8 @@ export function AdminSidebar({ user }: { user: User }) {
       .toUpperCase() || user.email?.[0]?.toUpperCase() || "?";
 
   useEffect(() => {
+    // Close the mobile menu when navigation occurs — syncing UI state to route.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileOpen(false);
   }, [pathname]);
 
