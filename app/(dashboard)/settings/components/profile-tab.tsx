@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { User } from "@supabase/supabase-js"
 import { toast } from "sonner"
 import { Loader2, Upload } from "lucide-react"
@@ -9,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { updateProfile, uploadAvatar, changePassword } from "../actions"
+import { updateProfile, changePassword } from "../actions"
+import { createClient } from "@/lib/supabase/client"
 import type { Tables } from "@/lib/supabase/database.types"
 
 type Profile = Tables<"profiles">
@@ -30,6 +32,7 @@ interface ProfileTabProps {
 }
 
 export function ProfileTab({ user, profile }: ProfileTabProps) {
+  const router = useRouter()
   const [name, setName] = useState(profile.full_name || "")
   const [email, setEmail] = useState(profile.email || user.email || "")
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || "")
@@ -63,20 +66,49 @@ export function ProfileTab({ user, profile }: ProfileTabProps) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setUploading(true)
-    const formData = new FormData()
-    formData.append("file", file)
-    const result = await uploadAvatar(formData)
-    setUploading(false)
-
-    if (result.error) {
-      toast.error(result.error)
-    } else {
-      toast.success("Avatar updated")
-      if (result.url) setAvatarUrl(result.url)
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Invalid file type. Only PNG, JPEG, and WebP are allowed.")
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
     }
-    // Reset file input
-    if (fileInputRef.current) fileInputRef.current.value = ""
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 2MB.")
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
+    }
+
+    setUploading(true)
+    try {
+      const supabase = createClient()
+      const ext = file.name.split(".").pop()
+      const filePath = `${user.id}/avatar.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { contentType: file.type, upsert: true })
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath)
+      const newUrl = `${publicUrl}?t=${Date.now()}`
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: newUrl, updated_at: new Date().toISOString() })
+        .eq("id", user.id)
+      if (profileError) throw profileError
+
+      setAvatarUrl(newUrl)
+      toast.success("Avatar updated")
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload avatar")
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
   }
 
   async function handleChangePassword() {

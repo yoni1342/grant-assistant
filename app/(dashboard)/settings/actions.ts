@@ -30,49 +30,6 @@ export async function updateProfile(name: string, email: string) {
   return { success: true }
 }
 
-export async function uploadAvatar(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const file = formData.get('file') as File
-  if (!file || !file.name) return { error: 'No file provided' }
-
-  const allowedTypes = ['image/png', 'image/jpeg', 'image/webp']
-  if (!allowedTypes.includes(file.type)) {
-    return { error: 'Invalid file type. Only PNG, JPEG, and WebP are allowed.' }
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    return { error: 'File too large. Maximum size is 2MB.' }
-  }
-
-  const ext = file.name.split('.').pop()
-  const filePath = `${user.id}/avatar.${ext}`
-
-  const { error: uploadError } = await supabase.storage
-    .from('avatars')
-    .upload(filePath, file, { contentType: file.type, upsert: true })
-
-  if (uploadError) return { error: sanitizeError(uploadError, 'Unable to upload your avatar. Please try again.') }
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('avatars')
-    .getPublicUrl(filePath)
-
-  // Append cache-bust to force re-fetch
-  const avatarUrl = `${publicUrl}?t=${Date.now()}`
-
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
-    .eq('id', user.id)
-
-  if (profileError) return { error: sanitizeError(profileError, 'Unable to save your avatar. Please try again.') }
-
-  revalidatePath('/settings')
-  return { success: true, url: avatarUrl }
-}
-
 export async function changePassword(currentPassword: string, newPassword: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
