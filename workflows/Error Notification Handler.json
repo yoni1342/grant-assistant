@@ -1,0 +1,64 @@
+{
+  "name": "Error Notification Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b1e2c3d4-0001-4000-8000-000000000001",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ],
+      "notes": "Fires whenever any workflow that references this workflow as its Error Workflow fails. Set N8N_DEFAULT_ERROR_WORKFLOW to this workflow's id so every workflow inherits it."
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ABUATDHG9",
+          "mode": "list",
+          "cachedResultName": "grant-assistant"
+        },
+        "text": "=🚨 *n8n Workflow Error*\n\n*Workflow:* {{ $json.workflow.name }}\n*Failed node:* {{ $json.execution.lastNodeExecuted || 'unknown' }}\n*Mode:* {{ $json.execution.mode }}\n*Execution ID:* {{ $json.execution.id }}\n\n*Error:*\n```{{ ($json.execution.error && $json.execution.error.message) || 'No message' }}```\n\n{{ $json.execution.url ? '<' + $json.execution.url + '|View execution in n8n>' : '' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "id": "b1e2c3d4-0002-4000-8000-000000000002",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        496,
+        0
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "rFSQaYpz4DWprrfA",
+          "name": "Grant Assistant"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
