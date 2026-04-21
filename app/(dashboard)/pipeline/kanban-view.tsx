@@ -25,8 +25,8 @@ const STAGES = [
 
 function ScreeningScore({ grant }: { grant: Grant }) {
   if (grant.screening_score == null) return null;
-  const elig = (typeof grant.eligibility === "string" ? JSON.parse(grant.eligibility) : grant.eligibility) as { data_quality?: string; score?: string } | null;
-  const insufficient = elig?.data_quality === "insufficient" || elig?.score === "INSUFFICIENT_DATA";
+  const screening = (typeof grant.screening_result === "string" ? JSON.parse(grant.screening_result) : grant.screening_result) as { data_quality?: string; score?: string } | null;
+  const insufficient = screening?.data_quality === "insufficient" || screening?.score === "INSUFFICIENT_DATA";
   if (insufficient) {
     return (
       <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">
@@ -51,10 +51,10 @@ function ScreeningScore({ grant }: { grant: Grant }) {
 
 function ConfidenceScore({ grant }: { grant: Grant }) {
   if (grant.stage !== "drafting") return null;
-  const elig = (typeof grant.eligibility === "string"
-    ? JSON.parse(grant.eligibility)
-    : grant.eligibility) as { confidence?: number } | null;
-  const confidence = elig?.confidence;
+  const screening = (typeof grant.screening_result === "string"
+    ? JSON.parse(grant.screening_result)
+    : grant.screening_result) as { confidence?: number } | null;
+  const confidence = screening?.confidence;
   if (confidence == null) return null;
   const color =
     confidence >= 80
@@ -249,6 +249,15 @@ export function KanbanView({
                           })() : (
                             <p className="text-xs text-muted-foreground italic">No deadline mentioned</p>
                           )}
+                          {grant.created_at && (() => {
+                            const added = new Date(grant.created_at);
+                            if (isNaN(added.getTime())) return null;
+                            return (
+                              <p className="text-xs text-muted-foreground">
+                                Added {added.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                              </p>
+                            );
+                          })()}
                         </CardContent>
                       </Card>
                     </Link>
