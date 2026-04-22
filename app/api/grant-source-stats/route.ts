@@ -137,7 +137,7 @@ export async function GET(req: Request) {
   }
 
   // --- Fetch org pipeline grants (source_url used to match back to central) ---
-  let allOrgGrants: Array<{
+  const allOrgGrants: Array<{
     id: string;
     source_url: string | null;
     stage: string | null;
@@ -147,11 +147,19 @@ export async function GET(req: Request) {
   page = 0;
   while (true) {
     const { data } = await adminClient
-      .from("grants")
+      .from("grants_full")
       .select("id, source_url, stage, source")
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
     if (!data || data.length === 0) break;
-    allOrgGrants = allOrgGrants.concat(data);
+    for (const row of data) {
+      if (!row.id) continue;
+      allOrgGrants.push({
+        id: row.id,
+        source_url: row.source_url,
+        stage: row.stage,
+        source: row.source,
+      });
+    }
     if (data.length < PAGE_SIZE) break;
     page++;
   }

@@ -32,15 +32,14 @@ export default async function SubmissionsPage() {
     )
   }
 
-  // Fetch all grants for the user's org, ordered by deadline ascending (soonest first)
-  const { data: grants, error } = await supabase
+  // Fetch grants + related checklists/submissions in one query from the
+  // base grants table (FK embedding works there). Then hydrate the
+  // denormalized fields (title/deadline/funder_name/source_url) from
+  // the grants_full view keyed by id.
+  const { data: grantRows, error } = await supabase
     .from('grants')
     .select(`
       id,
-      title,
-      deadline,
-      funder_name,
-      source_url,
       submission_checklists (
         id,
         items,
@@ -53,7 +52,41 @@ export default async function SubmissionsPage() {
       )
     `)
     .eq('org_id', profile.org_id)
-    .order('deadline', { ascending: true, nullsFirst: false })
+
+  const grantIds = (grantRows || []).map((g) => g.id)
+  const fullById = new Map<string, { title: string | null; deadline: string | null; funder_name: string | null; source_url: string | null }>()
+  if (grantIds.length > 0) {
+    const { data: full } = await supabase
+      .from('grants_full')
+      .select('id, title, deadline, funder_name, source_url')
+      .in('id', grantIds)
+    for (const row of full || []) {
+      if (row.id) fullById.set(row.id, {
+        title: row.title,
+        deadline: row.deadline,
+        funder_name: row.funder_name,
+        source_url: row.source_url,
+      })
+    }
+  }
+
+  const grants = (grantRows || [])
+    .map((g) => {
+      const full = fullById.get(g.id)
+      return {
+        ...g,
+        title: full?.title ?? null,
+        deadline: full?.deadline ?? null,
+        funder_name: full?.funder_name ?? null,
+        source_url: full?.source_url ?? null,
+      }
+    })
+    .sort((a, b) => {
+      if (a.deadline == null && b.deadline == null) return 0
+      if (a.deadline == null) return 1
+      if (b.deadline == null) return -1
+      return a.deadline.localeCompare(b.deadline)
+    })
 
   if (error) {
     return (

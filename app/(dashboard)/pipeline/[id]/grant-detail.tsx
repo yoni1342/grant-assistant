@@ -40,7 +40,10 @@ import {
 } from "@/components/ui/dialog";
 import Link from "next/link";
 
-type Grant = Tables<"grants">;
+// `grants_full` view joins grants → central_grants / manual_grants so a
+// single row carries all display fields. Nullable because view columns
+// are nullable in the generated types.
+type Grant = Tables<"grants_full">;
 
 const STAGES = [
   "discovery",
@@ -78,7 +81,12 @@ export function GrantDetail({
   const [saving, setSaving] = useState(false);
   const cleanText = (value: unknown) =>
     isMissingGrantValue(value) ? "" : String(value);
-  const [title, setTitle] = useState(grant.title);
+  // Catalog grants point to a shared `central_grants` row that this org
+  // doesn't own, so title/funder/amount/deadline/etc. are read-only.
+  // Manual grants point to a per-org `manual_grants` row that the org
+  // can freely edit.
+  const isCatalog = grant.source_type === "catalog";
+  const [title, setTitle] = useState(cleanText(grant.title));
   const [funderName, setFunderName] = useState(cleanText(grant.funder_name));
   const [amount, setAmount] = useState(cleanText(grant.amount));
   const [ongoingDeadline, setOngoingDeadline] = useState(grant.deadline === "Ongoing");
@@ -104,9 +112,12 @@ export function GrantDetail({
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
 
-  const eligibility = (typeof grant.eligibility === "string"
-    ? JSON.parse(grant.eligibility)
-    : grant.eligibility) as {
+  // AI screening output lives on `grants.screening_result`.
+  // `grants.eligibility` (now surfaced via grants_full from central_grants
+  // or manual_grants) holds the raw scraped criteria string.
+  const screening = (typeof grant.screening_result === "string"
+    ? JSON.parse(grant.screening_result)
+    : grant.screening_result) as {
     score?: string;
     indicator?: string;
     confidence?: number;
@@ -119,11 +130,12 @@ export function GrantDetail({
       organizational_capacity?: number;
     };
   } | null;
-  const isInsufficientData = eligibility?.data_quality === "insufficient" || eligibility?.score === "INSUFFICIENT_DATA";
+  const isInsufficientData = screening?.data_quality === "insufficient" || screening?.score === "INSUFFICIENT_DATA";
   const concerns = grant.concerns as string[] | null;
   const recommendations = grant.recommendations as { text?: string }[] | string[] | null;
 
   async function handleArchive() {
+    if (!grant.id) return;
     setArchiving(true);
     const supabase = createClient();
     await supabase.from("grants").update({ stage: "archived" }).eq("id", grant.id);
@@ -197,19 +209,33 @@ export function GrantDetail({
     if (matchPercentage) updatedMetadata.match_percentage = matchPercentage; else delete updatedMetadata.match_percentage;
     if (contactInfo) updatedMetadata.contact_info = contactInfo; else delete updatedMetadata.contact_info;
 
-    await supabase
-      .from("grants")
-      .update({
-        title,
-        funder_name: funderName || null,
-        amount: amount || null,
-        deadline: ongoingDeadline ? "Ongoing" : (deadline || null),
-        stage,
-        description: description || null,
-        source_url: sourceUrl || null,
-        metadata: updatedMetadata,
-      })
-      .eq("id", grant.id);
+    // Pipeline-local fields (stage + per-org metadata like notes) always
+    // live on the grants row. Grant detail fields live on manual_grants
+    // for manual grants; catalog grants don't allow edits to those
+    // fields here (the catalog is shared across orgs).
+    if (grant.id) {
+      await supabase
+        .from("grants")
+        .update({
+          stage: stage as Tables<"grants">["stage"],
+          metadata: updatedMetadata,
+        })
+        .eq("id", grant.id);
+    }
+
+    if (!isCatalog && grant.manual_grant_id) {
+      await supabase
+        .from("manual_grants")
+        .update({
+          title: title.trim() || "(untitled grant)",
+          funder_name: funderName || null,
+          amount: amount || null,
+          deadline: ongoingDeadline ? "Ongoing" : (deadline || null),
+          description: description || null,
+          source_url: sourceUrl || null,
+        })
+        .eq("id", grant.manual_grant_id);
+    }
 
     setSaving(false);
 
@@ -250,187 +276,255 @@ export function GrantDetail({
                 Archive
               </Button>
             )}
-            <Button onClick={handleSave} disabled={saving} size="sm">
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-1" />
-              )}
-              Save
-            </Button>
+            {!isCatalog && (
+              <Button onClick={handleSave} disabled={saving} size="sm">
+                {saving ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-1" />
+                )}
+                Save
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2 space-y-2">
-              <Label>Title</Label>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Funder</Label>
-              <Input
-                value={funderName}
-                onChange={(e) => setFunderName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Stage</Label>
-              <Select value={stage} onValueChange={setStage}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STAGES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {STAGE_LABELS[s] || s.charAt(0).toUpperCase() + s.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <Input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="No amount mentioned"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Deadline</Label>
-              {ongoingDeadline ? (
-                <div className="flex items-center h-9 px-3 rounded-md border bg-muted/50 text-sm text-muted-foreground">
-                  Ongoing / Rolling
+          {isCatalog ? (
+            // Catalog grants are shared across orgs — their canonical fields
+            // belong to the scraper/central catalog and can't be edited here.
+            // Only stage + org-local notes/additional-info are editable below.
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold leading-tight">{title || "Untitled Grant"}</h2>
+                <p className={`text-sm mt-1 ${isMissingGrantValue(funderName) ? "italic text-muted-foreground" : "text-muted-foreground"}`}>
+                  {isMissingGrantValue(funderName) ? "No funder mentioned" : funderName}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Stage</p>
+                  <Badge variant="outline" className="text-xs">
+                    {STAGE_LABELS[stage] || stage}
+                  </Badge>
                 </div>
-              ) : (
-                <Input
-                  type="date"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  placeholder="No deadline mentioned"
-                />
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Amount</p>
+                  <p className={`text-sm ${isMissingGrantValue(amount) ? "italic text-muted-foreground" : "font-medium"}`}>
+                    {isMissingGrantValue(amount) ? "No amount mentioned" : amount}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Deadline</p>
+                  <p className={`text-sm ${ongoingDeadline ? "text-muted-foreground" : isMissingGrantValue(deadline) ? "italic text-muted-foreground" : "font-medium"}`}>
+                    {ongoingDeadline
+                      ? "Ongoing / Rolling"
+                      : isMissingGrantValue(deadline)
+                        ? "No deadline mentioned"
+                        : deadline}
+                  </p>
+                </div>
+              </div>
+              {!isMissingGrantValue(description) && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Description</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{description}</p>
+                </div>
               )}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={ongoingDeadline}
-                  onChange={(e) => {
-                    setOngoingDeadline(e.target.checked);
-                    if (e.target.checked) setDeadline("");
-                  }}
-                  className="rounded border-gray-300"
-                />
-                <span className="text-xs text-muted-foreground">Ongoing / Rolling deadline</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="col-span-2 space-y-2">
-            <Label>Description</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of the grant opportunity..."
-              rows={3}
-            />
-          </div>
-
-          {/* Source URL */}
-          <div className="space-y-2">
-            <Label>Grant URL</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                value={sourceUrl}
-                onChange={(e) => setSourceUrl(e.target.value)}
-                placeholder="https://..."
-                type="url"
-              />
               {sourceUrl && (
-                <a
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-blue-600 hover:text-blue-800"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </a>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Source</p>
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 hover:underline break-all"
+                  >
+                    {sourceUrl}
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                  </a>
+                </div>
               )}
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2 space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Funder</Label>
+                  <Input
+                    value={funderName}
+                    onChange={(e) => setFunderName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Stage</Label>
+                  <Select value={stage} onValueChange={setStage}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STAGES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {STAGE_LABELS[s] || s.charAt(0).toUpperCase() + s.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Amount</Label>
+                  <Input
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="No amount mentioned"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Deadline</Label>
+                  {ongoingDeadline ? (
+                    <div className="flex items-center h-9 px-3 rounded-md border bg-muted/50 text-sm text-muted-foreground">
+                      Ongoing / Rolling
+                    </div>
+                  ) : (
+                    <Input
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                      placeholder="No deadline mentioned"
+                    />
+                  )}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ongoingDeadline}
+                      onChange={(e) => {
+                        setOngoingDeadline(e.target.checked);
+                        if (e.target.checked) setDeadline("");
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-xs text-muted-foreground">Ongoing / Rolling deadline</span>
+                  </label>
+                </div>
+              </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label>Notes</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any additional notes..."
-              rows={2}
-            />
-          </div>
-
-          {/* Additional Information */}
-          <button
-            type="button"
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setShowAdditional((v) => !v)}
-          >
-            {showAdditional ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-            Additional Information
-          </button>
-
-          {showAdditional && (
-            <div className="space-y-4 rounded-md border p-3">
-              <div className="space-y-2">
-                <Label>Eligibility Requirements</Label>
+              {/* Description */}
+              <div className="col-span-2 space-y-2">
+                <Label>Description</Label>
                 <Textarea
-                  value={eligibilityRequirements}
-                  onChange={(e) => setEligibilityRequirements(e.target.value)}
-                  placeholder="Who can apply, restrictions..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief description of the grant opportunity..."
+                  rows={3}
+                />
+              </div>
+
+              {/* Source URL */}
+              <div className="space-y-2">
+                <Label>Grant URL</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={sourceUrl}
+                    onChange={(e) => setSourceUrl(e.target.value)}
+                    placeholder="https://..."
+                    type="url"
+                  />
+                  {sourceUrl && (
+                    <a
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-blue-600 hover:text-blue-800"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Notes + Additional Information — only for manual grants.
+              Catalog grants are strictly read-only here; a future "Convert
+              to Manual" action would be the right way to attach org-specific
+              annotations. */}
+          {!isCatalog && (
+            <>
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Any additional notes..."
                   rows={2}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Focus Areas</Label>
-                <Input
-                  value={focusAreas}
-                  onChange={(e) => setFocusAreas(e.target.value)}
-                  placeholder="e.g., Health, Education, Environment"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Match Requirement</Label>
-                  <Input
-                    value={matchPercentage}
-                    onChange={(e) => setMatchPercentage(e.target.value)}
-                    placeholder="e.g., 20% match"
-                  />
+
+              <button
+                type="button"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowAdditional((v) => !v)}
+              >
+                {showAdditional ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+                Additional Information
+              </button>
+
+              {showAdditional && (
+                <div className="space-y-4 rounded-md border p-3">
+                  <div className="space-y-2">
+                    <Label>Eligibility Requirements</Label>
+                    <Textarea
+                      value={eligibilityRequirements}
+                      onChange={(e) => setEligibilityRequirements(e.target.value)}
+                      placeholder="Who can apply, restrictions..."
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Focus Areas</Label>
+                    <Input
+                      value={focusAreas}
+                      onChange={(e) => setFocusAreas(e.target.value)}
+                      placeholder="e.g., Health, Education, Environment"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Match Requirement</Label>
+                      <Input
+                        value={matchPercentage}
+                        onChange={(e) => setMatchPercentage(e.target.value)}
+                        placeholder="e.g., 20% match"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Contact Info</Label>
+                      <Input
+                        value={contactInfo}
+                        onChange={(e) => setContactInfo(e.target.value)}
+                        placeholder="Name or email"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Contact Info</Label>
-                  <Input
-                    value={contactInfo}
-                    onChange={(e) => setContactInfo(e.target.value)}
-                    placeholder="Name or email"
-                  />
-                </div>
-              </div>
-            </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
       {/* Section 2: Screening Report */}
-      {(grant.screening_score != null || grant.screening_notes || eligibility || concerns?.length || recommendations?.length) && (
+      {(grant.screening_score != null || grant.screening_notes || screening || concerns?.length || recommendations?.length) && (
         <Card>
           <CardHeader>
             <CardTitle>Screening Report</CardTitle>
@@ -458,9 +552,9 @@ export function GrantDetail({
                     >
                       {grant.screening_score}%
                     </Badge>
-                    {eligibility?.score && (
+                    {screening?.score && (
                       <span className="text-sm text-muted-foreground">
-                        ({eligibility.score})
+                        ({screening.score})
                       </span>
                     )}
                   </>
@@ -469,7 +563,7 @@ export function GrantDetail({
             )}
 
             {/* Dimension Scores */}
-            {eligibility?.dimension_scores && (
+            {screening?.dimension_scores && (
               <div className="space-y-3">
                 <p className="text-sm font-medium">Scoring Breakdown</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -480,7 +574,7 @@ export function GrantDetail({
                     { key: "geographic_alignment" as const, label: "Geographic Alignment" },
                     { key: "organizational_capacity" as const, label: "Org Capacity" },
                   ].map(({ key, label }) => {
-                    const value = eligibility.dimension_scores?.[key] ?? 0;
+                    const value = screening.dimension_scores?.[key] ?? 0;
                     const pct = (value / 20) * 100;
                     const color =
                       value >= 16
@@ -617,20 +711,20 @@ export function GrantDetail({
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Confidence Score */}
-            {eligibility?.confidence != null && (
+            {screening?.confidence != null && (
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium">Confidence:</span>
                 <Badge
                   variant={
-                    eligibility.confidence >= 80
+                    screening.confidence >= 80
                       ? "default"
-                      : eligibility.confidence >= 50
+                      : screening.confidence >= 50
                         ? "secondary"
                         : "destructive"
                   }
                   className="text-sm"
                 >
-                  {eligibility.confidence}%
+                  {screening.confidence}%
                 </Badge>
               </div>
             )}
@@ -668,7 +762,7 @@ export function GrantDetail({
             </div>
 
             {/* Dimension Scores (same breakdown as screening but shown in drafting context) */}
-            {eligibility?.dimension_scores && (
+            {screening?.dimension_scores && (
               <div className="space-y-3">
                 <p className="text-sm font-medium">Eligibility Breakdown</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -679,7 +773,7 @@ export function GrantDetail({
                     { key: "geographic_alignment" as const, label: "Geographic Alignment" },
                     { key: "organizational_capacity" as const, label: "Org Capacity" },
                   ].map(({ key, label }) => {
-                    const value = eligibility.dimension_scores?.[key] ?? 0;
+                    const value = screening.dimension_scores?.[key] ?? 0;
                     const pct = (value / 20) * 100;
                     const color =
                       value >= 16

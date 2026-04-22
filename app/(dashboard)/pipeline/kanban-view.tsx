@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info, Loader2 } from "lucide-react";
 import Link from "next/link";
 
-type Grant = Tables<"grants">;
+type Grant = Tables<"grants_full">;
 
 const STAGES = [
   { key: "discovery", label: "Discovered", color: "bg-blue-500", tooltip: "Grants found through search or added manually. They haven\u2019t been screened yet." },
@@ -25,8 +25,8 @@ const STAGES = [
 
 function ScreeningScore({ grant }: { grant: Grant }) {
   if (grant.screening_score == null) return null;
-  const elig = (typeof grant.eligibility === "string" ? JSON.parse(grant.eligibility) : grant.eligibility) as { data_quality?: string; score?: string } | null;
-  const insufficient = elig?.data_quality === "insufficient" || elig?.score === "INSUFFICIENT_DATA";
+  const screening = (typeof grant.screening_result === "string" ? JSON.parse(grant.screening_result) : grant.screening_result) as { data_quality?: string; score?: string } | null;
+  const insufficient = screening?.data_quality === "insufficient" || screening?.score === "INSUFFICIENT_DATA";
   if (insufficient) {
     return (
       <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">
@@ -51,10 +51,10 @@ function ScreeningScore({ grant }: { grant: Grant }) {
 
 function ConfidenceScore({ grant }: { grant: Grant }) {
   if (grant.stage !== "drafting") return null;
-  const elig = (typeof grant.eligibility === "string"
-    ? JSON.parse(grant.eligibility)
-    : grant.eligibility) as { confidence?: number } | null;
-  const confidence = elig?.confidence;
+  const screening = (typeof grant.screening_result === "string"
+    ? JSON.parse(grant.screening_result)
+    : grant.screening_result) as { confidence?: number } | null;
+  const confidence = screening?.confidence;
   if (confidence == null) return null;
   const color =
     confidence >= 80
@@ -194,18 +194,20 @@ export function KanbanView({
           <ScrollArea className="flex-1 px-2 pb-2">
             <div className="space-y-2">
               {col.grants.map((grant) => {
-                const isMoving = movingGrants.has(grant.id);
-                const isDragging = draggedGrantId === grant.id;
+                if (!grant.id) return null;
+                const grantId = grant.id;
+                const isMoving = movingGrants.has(grantId);
+                const isDragging = draggedGrantId === grantId;
 
                 return (
                   <div
-                    key={grant.id}
+                    key={grantId}
                     draggable={!isMoving}
-                    onDragStart={(e) => handleDragStart(e, grant.id)}
+                    onDragStart={(e) => handleDragStart(e, grantId)}
                     onDragEnd={handleDragEnd}
                     className={`${isDragging ? "opacity-40" : ""} ${isMoving ? "pointer-events-none opacity-60" : ""}`}
                   >
-                    <Link href={`/pipeline/${grant.id}`}>
+                    <Link href={`/pipeline/${grantId}`}>
                       <Card className="cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md">
                         <CardContent className="p-3 space-y-2">
                           <div className="flex items-center gap-2">
@@ -230,7 +232,7 @@ export function KanbanView({
                             {grant.stage === "drafting" ? (
                               <>
                                 <ConfidenceScore grant={grant} />
-                                <ProposalQualityScore score={proposalQualityMap[grant.id]} />
+                                <ProposalQualityScore score={proposalQualityMap[grantId]} />
                               </>
                             ) : (
                               <ScreeningScore grant={grant} />
@@ -249,6 +251,15 @@ export function KanbanView({
                           })() : (
                             <p className="text-xs text-muted-foreground italic">No deadline mentioned</p>
                           )}
+                          {grant.created_at && (() => {
+                            const added = new Date(grant.created_at);
+                            if (isNaN(added.getTime())) return null;
+                            return (
+                              <p className="text-xs text-muted-foreground">
+                                Added {added.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                              </p>
+                            );
+                          })()}
                         </CardContent>
                       </Card>
                     </Link>

@@ -15,7 +15,7 @@ export async function getProposals() {
     .from('proposals')
     .select(`
       *,
-      grant:grants (
+      grant:grants_full (
         id,
         title,
         funder_name,
@@ -45,7 +45,7 @@ export async function getProposal(proposalId: string) {
     .from('proposals')
     .select(`
       *,
-      grant:grants (
+      grant:grants_full (
         id,
         title,
         funder_name,
@@ -391,12 +391,12 @@ export async function getFunder(grantId: string) {
 
   // Get the grant to find the funder_name
   const { data: grant, error: grantError } = await supabase
-    .from('grants')
+    .from('grants_full')
     .select('funder_name, org_id')
     .eq('id', grantId)
     .single()
 
-  if (grantError || !grant) {
+  if (grantError || !grant || !grant.org_id) {
     return { error: 'Grant not found', data: null }
   }
 

@@ -27,7 +27,7 @@ export async function GET() {
 
   // Fetch all grants
   const { data: grants } = await supabase
-    .from("grants")
+    .from("grants_full")
     .select("id, org_id, title, stage, amount, deadline, funder_name")
     .in("org_id", orgIds);
 

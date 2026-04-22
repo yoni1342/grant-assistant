@@ -26,11 +26,11 @@ export function ReadOnlyProvider({
   return (
     <ReadOnlyContext.Provider value={true}>
       <style>{`
-        .read-only-mode button:not([data-admin-action]),
+        .read-only-mode button:not([data-admin-action]):not([data-slot="tabs-trigger"]),
         .read-only-mode input:not([data-admin-action]),
         .read-only-mode textarea:not([data-admin-action]),
         .read-only-mode select:not([data-admin-action]),
-        .read-only-mode [role="button"]:not([data-admin-action]),
+        .read-only-mode [role="button"]:not([data-admin-action]):not([data-slot="tabs-trigger"]),
         .read-only-mode form:not([data-admin-action]) {
           pointer-events: none !important;
           opacity: 0.6 !important;

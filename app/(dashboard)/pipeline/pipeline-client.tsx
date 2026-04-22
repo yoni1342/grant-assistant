@@ -29,7 +29,9 @@ import { triggerStageWorkflow } from "./actions";
 import { Search, Plus, LayoutGrid, List, Loader2, Lightbulb, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 
-type Grant = Tables<"grants">;
+// `grants_full` view surfaces the denormalized fields (title, funder_name,
+// amount, deadline, etc.) that now live on central_grants/manual_grants.
+type Grant = Tables<"grants_full">;
 
 const STAGES = [
   "discovery",
@@ -93,12 +95,12 @@ export function PipelineClient({
 
     async function fetchGrants() {
       const { data } = await supabase
-        .from("grants")
+        .from("grants_full")
         .select("*")
         .eq("org_id", orgId)
         .neq("stage", "archived")
         .order("created_at", { ascending: false });
-      if (data) setGrants(data as Grant[]);
+      if (data) setGrants(data as unknown as Grant[]);
     }
 
     // Poll every 15 seconds for reliable updates
@@ -159,7 +161,7 @@ export function PipelineClient({
       if (g.stage === "archived") return false;
       const matchesSearch =
         !search ||
-        g.title.toLowerCase().includes(search.toLowerCase()) ||
+        g.title?.toLowerCase().includes(search.toLowerCase()) ||
         g.funder_name?.toLowerCase().includes(search.toLowerCase());
       const matchesStage =
         stageFilter === "all" || g.stage === stageFilter;
@@ -425,7 +427,7 @@ export function PipelineClient({
               Cancel
             </Button>
             <Button onClick={() => {
-              if (confirmGrant) {
+              if (confirmGrant?.id) {
                 executeStageChange(confirmGrant.id, "drafting");
                 setConfirmGrant(null);
               }

@@ -59,6 +59,7 @@ interface OverviewClientProps {
     owner_name: string | null;
     owner_email: string | null;
   }>;
+  mrr: number | null;
 }
 
 function groupByMonth(
@@ -153,6 +154,7 @@ export function OverviewClient({
   workflowExecutions,
   activityLog,
   pendingOrgsWithOwners,
+  mrr,
 }: OverviewClientProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -179,13 +181,14 @@ export function OverviewClient({
     (o) => o.subscription_status === "canceled"
   ).length;
 
-  // Calculate MRR from active + trialing orgs with paid plans
-  const mrr = useMemo(() => {
-    const PLAN_PRICES: Record<string, number> = { professional: 49, agency: 149 };
-    return organizations
-      .filter((o) => o.subscription_status === "active" && o.plan && o.plan !== "free")
-      .reduce((sum, o) => sum + (PLAN_PRICES[o.plan!] || 0), 0);
-  }, [organizations]);
+  const formattedMrr =
+    mrr == null
+      ? "—"
+      : mrr.toLocaleString("en-US", {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: mrr % 1 === 0 ? 0 : 2,
+        });
 
   const registrationData = useMemo(
     () => groupByMonth(organizations),
@@ -326,7 +329,8 @@ export function OverviewClient({
             <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-green-600">${mrr}</p>
+            <p className="text-3xl font-bold text-green-600">{formattedMrr}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Live from Stripe</p>
           </CardContent>
         </Card>
         <Link href="/admin/organizations?billing=active" className="h-full">

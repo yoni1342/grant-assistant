@@ -23,14 +23,14 @@ export default async function AdminProposalsPage() {
 
   // Fetch grant titles for display
   const grantIds = [...new Set((proposals || []).map((p) => p.grant_id).filter(Boolean))];
-  let grantMap: Record<string, string> = {};
+  const grantMap: Record<string, string> = {};
   if (grantIds.length > 0) {
     const { data: grants } = await supabase
-      .from("grants")
+      .from("grants_full")
       .select("id, title")
       .in("id", grantIds);
     for (const g of grants || []) {
-      grantMap[g.id] = g.title;
+      if (g.id && g.title) grantMap[g.id] = g.title;
     }
   }
 

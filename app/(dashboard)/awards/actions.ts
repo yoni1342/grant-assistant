@@ -27,7 +27,7 @@ export async function getAwards() {
     .from('awards')
     .select(`
       *,
-      grant:grants (
+      grant:grants_full (
         id,
         title,
         funder_name,
@@ -57,7 +57,7 @@ export async function getAward(awardId: string) {
     .from('awards')
     .select(`
       *,
-      grant:grants (
+      grant:grants_full (
         id,
         title,
         funder_name,

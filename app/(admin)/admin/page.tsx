@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { OverviewClient } from "./overview-client";
+import { getLiveMrrFromStripe } from "@/lib/stripe/metrics";
 
 export default async function AdminOverviewPage() {
   const supabase = await createClient();
@@ -86,6 +87,13 @@ export default async function AdminOverviewPage() {
     (u) => u.banned_until && new Date(u.banned_until) > new Date()
   ).length;
 
+  let mrr: number | null = null;
+  try {
+    mrr = await getLiveMrrFromStripe();
+  } catch (err) {
+    console.error("[admin/overview] Failed to fetch MRR from Stripe:", err);
+  }
+
   return (
     <div className="p-6">
       <OverviewClient
@@ -97,6 +105,7 @@ export default async function AdminOverviewPage() {
         workflowExecutions={workflowExecutions || []}
         activityLog={activityLog || []}
         pendingOrgsWithOwners={pendingWithOwners}
+        mrr={mrr}
       />
     </div>
   );

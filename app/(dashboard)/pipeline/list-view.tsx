@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 
-type Grant = Tables<"grants">;
+type Grant = Tables<"grants_full">;
 
 const STAGES = [
   { key: "discovery", label: "Discovered", color: "bg-blue-500" },
@@ -25,8 +25,8 @@ const STAGES = [
 
 function ScreeningScore({ grant }: { grant: Grant }) {
   if (grant.screening_score == null) return null;
-  const elig = (typeof grant.eligibility === "string" ? JSON.parse(grant.eligibility) : grant.eligibility) as { data_quality?: string; score?: string } | null;
-  const insufficient = elig?.data_quality === "insufficient" || elig?.score === "INSUFFICIENT_DATA";
+  const screening = (typeof grant.screening_result === "string" ? JSON.parse(grant.screening_result) : grant.screening_result) as { data_quality?: string; score?: string } | null;
+  const insufficient = screening?.data_quality === "insufficient" || screening?.score === "INSUFFICIENT_DATA";
   if (insufficient) {
     return (
       <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700">
@@ -48,10 +48,10 @@ function ScreeningScore({ grant }: { grant: Grant }) {
 }
 
 function ConfidenceScore({ grant }: { grant: Grant }) {
-  const elig = (typeof grant.eligibility === "string"
-    ? JSON.parse(grant.eligibility)
-    : grant.eligibility) as { confidence?: number } | null;
-  const confidence = elig?.confidence;
+  const screening = (typeof grant.screening_result === "string"
+    ? JSON.parse(grant.screening_result)
+    : grant.screening_result) as { confidence?: number } | null;
+  const confidence = screening?.confidence;
   if (confidence == null) return null;
   const color =
     confidence >= 80
@@ -92,6 +92,17 @@ function DeadlineCell({ deadline }: { deadline: string | null }) {
     <span className={`text-xs ${expired ? "text-red-500 font-medium" : "text-muted-foreground"}`}>
       {expired ? "Expired: " : "Due: "}
       {valid ? dl.toLocaleDateString() : deadline}
+    </span>
+  );
+}
+
+function AddedCell({ createdAt }: { createdAt: string | null }) {
+  if (!createdAt) return <span className="text-xs text-muted-foreground">—</span>;
+  const d = new Date(createdAt);
+  if (isNaN(d.getTime())) return <span className="text-xs text-muted-foreground">—</span>;
+  return (
+    <span className="text-xs text-muted-foreground">
+      {d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
     </span>
   );
 }
@@ -158,13 +169,22 @@ export function ListView({
                   {col.key === "drafting" ? (
                     <>
                       <ConfidenceScore grant={g} />
-                      <ProposalQualityScore score={proposalQualityMap[g.id]} />
+                      <ProposalQualityScore score={g.id ? proposalQualityMap[g.id] : undefined} />
                     </>
                   ) : (
                     <ScreeningScore grant={g} />
                   )}
                 </div>
                 <DeadlineCell deadline={g.deadline} />
+                {g.created_at && (() => {
+                  const d = new Date(g.created_at);
+                  if (isNaN(d.getTime())) return null;
+                  return (
+                    <p className="text-xs text-muted-foreground">
+                      Added {d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  );
+                })()}
               </div>
             </Link>
           ))}
@@ -187,11 +207,12 @@ export function ListView({
             <Table className="table-fixed w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[35%]">Grant</TableHead>
-                  <TableHead className="w-[20%]">Funder</TableHead>
-                  <TableHead className="w-[15%]">Score</TableHead>
-                  <TableHead className="w-[15%] text-right">Amount</TableHead>
-                  <TableHead className="w-[15%]">Deadline</TableHead>
+                  <TableHead className="w-[28%]">Grant</TableHead>
+                  <TableHead className="w-[18%]">Funder</TableHead>
+                  <TableHead className="w-[12%]">Score</TableHead>
+                  <TableHead className="w-[14%] text-right">Amount</TableHead>
+                  <TableHead className="w-[14%]">Deadline</TableHead>
+                  <TableHead className="w-[14%]">Added</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -213,7 +234,7 @@ export function ListView({
                         {col.key === "drafting" ? (
                           <>
                             <ConfidenceScore grant={g} />
-                            <ProposalQualityScore score={proposalQualityMap[g.id]} />
+                            <ProposalQualityScore score={g.id ? proposalQualityMap[g.id] : undefined} />
                           </>
                         ) : (
                           <ScreeningScore grant={g} />
@@ -229,6 +250,9 @@ export function ListView({
                     </TableCell>
                     <TableCell>
                       <DeadlineCell deadline={g.deadline} />
+                    </TableCell>
+                    <TableCell>
+                      <AddedCell createdAt={g.created_at} />
                     </TableCell>
                   </TableRow>
                 ))}

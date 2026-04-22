@@ -36,14 +36,14 @@ export default async function OrgDetailPage({
       .eq("org_id", id)
       .order("created_at", { ascending: true }),
     adminClient
-      .from("grants")
+      .from("grants_full")
       .select("*")
       .eq("org_id", id)
       .neq("stage", "archived")
       .order("created_at", { ascending: false }),
     adminClient
       .from("proposals")
-      .select("*, grant:grants(id, title, funder_name, deadline, eligibility)")
+      .select("*, grant:grants!inner(id, central_grant_id, manual_grant_id, screening_result)")
       .eq("org_id", id)
       .order("created_at", { ascending: false }),
     adminClient
@@ -69,6 +69,28 @@ export default async function OrgDetailPage({
 
   // Filter out fetched-expired grants to match the user-facing dashboard
   const filteredGrants = excludeFetchedExpired(grants || []);
+
+  // Attach denormalized grant fields (title/funder/deadline live on
+  // central_grants/manual_grants now). The FK-embedded select above only
+  // pulls columns native to `grants`; we resolve the rest from the
+  // `grants_full` view keyed by id.
+  const grantIds = Array.from(
+    new Set((proposals || []).map((p) => p.grant?.id).filter((g): g is string => !!g)),
+  );
+  const grantsFullById = new Map<string, Record<string, unknown>>();
+  if (grantIds.length > 0) {
+    const { data: fullRows } = await adminClient
+      .from("grants_full")
+      .select("id, title, funder_name, deadline, amount, description")
+      .in("id", grantIds);
+    for (const row of fullRows || []) {
+      if (row.id) grantsFullById.set(row.id, row);
+    }
+  }
+  const hydratedProposals = (proposals || []).map((p) => {
+    const fullRow = p.grant?.id ? grantsFullById.get(p.grant.id) : null;
+    return fullRow ? { ...p, grant: { ...p.grant, ...fullRow } } : p;
+  });
 
   // Derive budgets and narratives from documents
   const allDocs = documents || [];
@@ -98,7 +120,7 @@ export default async function OrgDetailPage({
         organization={organization}
         profiles={profiles || []}
         grants={filteredGrants}
-        proposals={proposals || []}
+        proposals={hydratedProposals}
         workflowExecutions={workflowExecutions || []}
         activityLog={activityLog || []}
         documents={allDocs}

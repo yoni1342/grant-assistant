@@ -34,11 +34,20 @@ export default async function AgencyAnalyticsPage() {
   let allGrants: { id: string; org_id: string; title: string; stage: string; amount: string | null; deadline: string | null; funder_name: string | null; created_at: string | null }[] = [];
   if (orgIds.length > 0) {
     const { data: grants } = await adminClient
-      .from("grants")
+      .from("grants_full")
       .select("id, org_id, title, stage, amount, deadline, funder_name, created_at")
       .in("org_id", orgIds)
       .order("created_at", { ascending: false });
-    allGrants = excludeFetchedExpired(grants || []);
+    allGrants = excludeFetchedExpired(grants || []).map((g) => ({
+      id: g.id ?? "",
+      org_id: g.org_id ?? "",
+      title: g.title ?? "",
+      stage: g.stage ?? "",
+      amount: g.amount,
+      deadline: g.deadline,
+      funder_name: g.funder_name,
+      created_at: g.created_at,
+    }));
   }
 
   // Fetch recent activity across all orgs

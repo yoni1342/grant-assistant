@@ -119,9 +119,9 @@ export async function GET(request: NextRequest) {
   // Load all grant rows in one query.
   const allGrantIds = Array.from(perGrant.keys())
   const { data: grants } = await supabase
-    .from('grants')
+    .from('grants_full')
     .select(
-      'id, org_id, title, funder_name, amount, deadline, stage, screening_score, description, screening_notes, eligibility, concerns, recommendations, categories, source_url',
+      'id, org_id, title, funder_name, amount, deadline, stage, screening_score, description, screening_notes, screening_result, concerns, recommendations, categories, source_url',
     )
     .in('id', allGrantIds)
 

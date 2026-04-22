@@ -31,7 +31,7 @@ export default async function PastDeadlinesPage() {
   const adminDb = createAdminClient();
 
   const { data: grants } = await adminDb
-    .from("grants")
+    .from("grants_full")
     .select("id, title, funder_name, stage, amount, deadline, description, source_url, created_at")
     .eq("org_id", orgId)
     .neq("stage", "archived")

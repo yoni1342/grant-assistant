@@ -2,7 +2,7 @@ import type { GrantEligibilityDimensions } from './types'
 
 type GrantLike = {
   description?: string | null
-  eligibility?: unknown
+  screening_result?: unknown
   screening_notes?: string | null
   concerns?: string[] | null
   recommendations?: unknown
@@ -12,8 +12,8 @@ type GrantLike = {
 
 /**
  * Extract the extended fields the grant-eligible email wants from a raw grant row.
- * Normalizes the JSON columns (eligibility, recommendations, categories) into the
- * typed shapes the template expects.
+ * Normalizes the JSON columns (screening_result, recommendations, categories) into
+ * the typed shapes the template expects.
  */
 export function extractGrantEligibleFields(grant: GrantLike): {
   description: string | null
@@ -24,20 +24,20 @@ export function extractGrantEligibleFields(grant: GrantLike): {
   categories: string[] | null
   sourceUrl: string | null
 } {
-  const eligibility = parseJson(grant.eligibility) as
+  const screening = parseJson(grant.screening_result) as
     | { dimension_scores?: Record<string, number | null | undefined> }
     | null
 
-  const dimensionScores = eligibility?.dimension_scores
+  const dimensionScores = screening?.dimension_scores
     ? {
-        mission_alignment: numOrNull(eligibility.dimension_scores.mission_alignment),
-        target_population: numOrNull(eligibility.dimension_scores.target_population),
-        service_fit: numOrNull(eligibility.dimension_scores.service_fit),
+        mission_alignment: numOrNull(screening.dimension_scores.mission_alignment),
+        target_population: numOrNull(screening.dimension_scores.target_population),
+        service_fit: numOrNull(screening.dimension_scores.service_fit),
         geographic_alignment: numOrNull(
-          eligibility.dimension_scores.geographic_alignment,
+          screening.dimension_scores.geographic_alignment,
         ),
         organizational_capacity: numOrNull(
-          eligibility.dimension_scores.organizational_capacity,
+          screening.dimension_scores.organizational_capacity,
         ),
       }
     : null

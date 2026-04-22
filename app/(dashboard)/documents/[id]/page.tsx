@@ -38,13 +38,13 @@ export default async function DocumentDetailPage({
   let linkedGrant: { id: string; title: string } | null = null
   if (document.grant_id) {
     const { data: grant } = await adminDb
-      .from("grants")
+      .from("grants_full")
       .select("id, title")
       .eq("id", document.grant_id)
       .single()
 
-    if (grant) {
-      linkedGrant = grant
+    if (grant && grant.id && grant.title) {
+      linkedGrant = { id: grant.id, title: grant.title }
     }
   }
 

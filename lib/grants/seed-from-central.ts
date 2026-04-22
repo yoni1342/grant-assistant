@@ -1,10 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { canAutoFetchGrants } from "@/lib/stripe/config";
 
-// Copy every currently-active grant from the central catalog into an
-// organization's `grants` pipeline at stage = 'discovery'. Used when a
-// new org joins so their pipeline is populated immediately, without
-// having to wait for the daily scraper or run a per-org search.
+// Link every currently-active catalog grant into an organization's
+// `grants` pipeline at stage = 'discovery'. Used when a new org joins
+// so their pipeline is populated immediately, without having to wait
+// for the daily scraper or run a per-org search.
 //
 // "Active" = no deadline, or deadline in the future. Mirrors the
 // expired-grant filter used elsewhere in the app.
@@ -31,9 +31,7 @@ export async function seedOrgGrantsFromCentral(orgId: string): Promise<{
 
   const { data: centralGrants, error: fetchError } = await supabase
     .from("central_grants")
-    .select(
-      "title, funder_name, organization, amount, deadline, description, eligibility, categories, metadata, source, source_id, source_url",
-    )
+    .select("id")
     .or(`deadline.is.null,deadline.gte.${today}`);
 
   if (fetchError) {
@@ -43,42 +41,21 @@ export async function seedOrgGrantsFromCentral(orgId: string): Promise<{
     return { copied: 0 };
   }
 
-  // Skip grants this org already has (same source + source_id, or same
-  // source + source_url when no source_id). Cheaper than per-row checks.
   const { data: existing } = await supabase
     .from("grants")
-    .select("source, source_id, source_url")
-    .eq("org_id", orgId);
+    .select("central_grant_id")
+    .eq("org_id", orgId)
+    .not("central_grant_id", "is", null);
 
-  const existingKeys = new Set(
-    (existing ?? []).map((g) =>
-      g.source_id
-        ? `id::${g.source}::${g.source_id}`
-        : `url::${g.source}::${g.source_url}`,
-    ),
+  const existingCentralIds = new Set(
+    (existing ?? []).map((g) => g.central_grant_id),
   );
 
   const rows = centralGrants
-    .filter((g) => {
-      const key = g.source_id
-        ? `id::${g.source}::${g.source_id}`
-        : `url::${g.source}::${g.source_url}`;
-      return !existingKeys.has(key);
-    })
+    .filter((g) => !existingCentralIds.has(g.id))
     .map((g) => ({
       org_id: orgId,
-      title: g.title,
-      funder_name: g.funder_name,
-      organization: g.organization,
-      amount: g.amount,
-      deadline: g.deadline,
-      description: g.description,
-      eligibility: g.eligibility,
-      categories: g.categories,
-      metadata: g.metadata,
-      source: g.source,
-      source_id: g.source_id,
-      source_url: g.source_url,
+      central_grant_id: g.id,
       stage: "discovery" as const,
     }));
 

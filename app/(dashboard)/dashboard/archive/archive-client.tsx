@@ -25,13 +25,13 @@ import {
 import { ArrowLeft, RotateCcw, Trash2, Loader2, Eye } from "lucide-react";
 
 type ArchivedGrant = {
-  id: string;
-  title: string;
+  id: string | null;
+  title: string | null;
   funder_name: string | null;
-  stage: string;
-  amount: number | null;
+  stage: string | null;
+  amount: string | null;
   deadline: string | null;
-  created_at: string;
+  created_at: string | null;
 };
 
 export function ArchiveClient({ initialGrants }: { initialGrants: ArchivedGrant[] }) {
@@ -42,6 +42,7 @@ export function ArchiveClient({ initialGrants }: { initialGrants: ArchivedGrant[
   const [deleting, setDeleting] = useState(false);
 
   async function handleRestore(grant: ArchivedGrant) {
+    if (!grant.id) return;
     setRestoring(grant.id);
     const supabase = createClient();
     const { error } = await supabase
@@ -55,7 +56,7 @@ export function ArchiveClient({ initialGrants }: { initialGrants: ArchivedGrant[
   }
 
   async function handleDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTarget || !deleteTarget.id) return;
     setDeleting(true);
     const supabase = createClient();
     await supabase.from("grants").delete().eq("id", deleteTarget.id);
@@ -112,13 +113,11 @@ export function ArchiveClient({ initialGrants }: { initialGrants: ArchivedGrant[
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm whitespace-normal break-words align-top">
                     {g.amount != null
-                      ? typeof g.amount === "number"
-                        ? `$${g.amount.toLocaleString()}`
-                        : String(g.amount)
+                      ? g.amount
                       : "\u2014"}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm whitespace-normal break-words align-top">
-                    {new Date(g.created_at).toLocaleDateString()}
+                    {g.created_at ? new Date(g.created_at).toLocaleDateString() : "—"}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">

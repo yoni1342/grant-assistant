@@ -60,11 +60,11 @@ export async function getPipelineGrantTitles(): Promise<string[]> {
 
   const adminDb = createAdminClient()
   const { data } = await adminDb
-    .from('grants')
+    .from('grants_full')
     .select('title')
     .eq('org_id', orgId)
 
-  return data?.map((g) => g.title).filter(Boolean) ?? []
+  return data?.map((g) => g.title).filter((t): t is string => !!t) ?? []
 }
 
 export async function triggerEligibilityScreening(grantId: string) {

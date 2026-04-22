@@ -50,7 +50,7 @@ export async function getAnalytics() {
 
   // Pipeline value: sum of amounts for grants in active stages
   const { data: pipelineGrants, error: pipelineError } = await supabase
-    .from('grants')
+    .from('grants_full')
     .select('amount')
     .eq('org_id', profile.org_id)
     .in('stage', ['discovery', 'screening', 'pending_approval', 'drafting', 'submission'])
@@ -128,51 +128,57 @@ export async function getSuccessRateByFunder() {
     return { error: 'User profile or organization not found', data: [] }
   }
 
-  // Fetch awards with grant funder_name
+  // funder_name lives on central_grants / manual_grants now, so we can't
+  // embed it directly through the `grants` FK. Fetch the grant_ids here
+  // and resolve funder_name through the `grants_full` view below.
   const { data: awards, error: awardsError } = await supabase
     .from('awards')
-    .select(`
-      id,
-      grant:grants (
-        funder_name
-      )
-    `)
+    .select('id, grant_id')
     .eq('org_id', profile.org_id)
 
   if (awardsError) {
     return { error: sanitizeError(awardsError, 'Unable to load analytics. Please try again.'), data: [] }
   }
 
-  // Fetch submissions with grant funder_name
   const { data: submissions, error: submissionsError } = await supabase
     .from('submissions')
-    .select(`
-      id,
-      grant:grants (
-        funder_name
-      )
-    `)
+    .select('id, grant_id')
     .eq('org_id', profile.org_id)
 
   if (submissionsError) {
     return { error: sanitizeError(submissionsError, 'Unable to load analytics. Please try again.'), data: [] }
   }
 
-  // Group by funder_name
+  const grantIds = Array.from(
+    new Set(
+      [
+        ...(awards || []).map((a) => a.grant_id),
+        ...(submissions || []).map((s) => s.grant_id),
+      ].filter((id): id is string => !!id),
+    ),
+  )
+
+  const funderByGrantId = new Map<string, string>()
+  if (grantIds.length > 0) {
+    const { data: grantRows } = await supabase
+      .from('grants_full')
+      .select('id, funder_name')
+      .in('id', grantIds)
+    for (const row of grantRows || []) {
+      if (row.id) funderByGrantId.set(row.id, row.funder_name || 'Unknown')
+    }
+  }
+
   const funderMap = new Map<string, { awards: number; submissions: number }>()
 
   for (const award of awards || []) {
-    const grantData = award.grant as unknown
-    const grant = (Array.isArray(grantData) ? grantData[0] : grantData) as Record<string, unknown> | null
-    const funderName = (grant?.funder_name as string) || 'Unknown'
+    const funderName = (award.grant_id && funderByGrantId.get(award.grant_id)) || 'Unknown'
     const current = funderMap.get(funderName) || { awards: 0, submissions: 0 }
     funderMap.set(funderName, { ...current, awards: current.awards + 1 })
   }
 
   for (const submission of submissions || []) {
-    const submissionGrantData = submission.grant as unknown
-    const grant = (Array.isArray(submissionGrantData) ? submissionGrantData[0] : submissionGrantData) as Record<string, unknown> | null
-    const funderName = (grant?.funder_name as string) || 'Unknown'
+    const funderName = (submission.grant_id && funderByGrantId.get(submission.grant_id)) || 'Unknown'
     const current = funderMap.get(funderName) || { awards: 0, submissions: 0 }
     funderMap.set(funderName, { ...current, submissions: current.submissions + 1 })
   }

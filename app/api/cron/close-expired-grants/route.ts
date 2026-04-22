@@ -24,9 +24,11 @@ export async function GET(request: NextRequest) {
   const supabase = getServiceClient()
   const now = new Date().toISOString()
 
-  // Find grants with past deadlines that are still in early pipeline stages
+  // Find grants with past deadlines that are still in early pipeline stages.
+  // Deadline/title live on central_grants/manual_grants, so we read the
+  // `grants_full` view which surfaces them uniformly.
   const { data: expired, error: fetchError } = await supabase
-    .from('grants')
+    .from('grants_full')
     .select('id, title, org_id, stage, deadline')
     .in('stage', ['discovery', 'screening', 'pending_approval'])
     .not('deadline', 'is', null)
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ closed: 0 })
   }
 
-  const ids = expired.map((g) => g.id)
+  const ids = expired.map((g) => g.id).filter((id): id is string => !!id)
 
   const { error: updateError } = await supabase
     .from('grants')
@@ -56,6 +58,7 @@ export async function GET(request: NextRequest) {
   // Create notifications for affected orgs
   const orgGrants = new Map<string, typeof expired>()
   for (const g of expired) {
+    if (!g.org_id) continue
     const list = orgGrants.get(g.org_id) || []
     list.push(g)
     orgGrants.set(g.org_id, list)
@@ -69,7 +72,7 @@ export async function GET(request: NextRequest) {
         grant_id: grants[0].id,
         type: 'grant_closed',
         title: 'Grant deadline passed',
-        message: `"${grants[0].title}" was moved to Closed because its deadline has passed.`,
+        message: `"${grants[0].title ?? 'A grant'}" was moved to Closed because its deadline has passed.`,
       })
     } else {
       notifications.push({

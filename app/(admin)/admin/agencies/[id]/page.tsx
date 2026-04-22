@@ -46,13 +46,14 @@ export default async function AdminAgencyDetailPage({
   const grantCounts: Record<string, number> = {};
   if (orgIds.length > 0) {
     const { data: grants } = await adminClient
-      .from("grants")
+      .from("grants_full")
       .select("org_id, deadline, created_at")
       .in("org_id", orgIds)
       .neq("stage", "archived");
     if (grants) {
       const filtered = excludeFetchedExpired(grants);
       for (const g of filtered) {
+        if (!g.org_id) continue;
         grantCounts[g.org_id] = (grantCounts[g.org_id] || 0) + 1;
       }
     }

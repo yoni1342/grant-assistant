@@ -1085,7 +1085,7 @@ function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
 
 // Read-only grant detail dialog content
 function GrantDetailView({ grant }: { grant: any }) { /* eslint-disable-line @typescript-eslint/no-explicit-any */
-  const eligibility = grant.eligibility as {
+  const screening = (grant.screening_result ?? grant.eligibility) as {
     score?: string;
     indicator?: string;
     dimension_scores?: {
@@ -1152,7 +1152,7 @@ function GrantDetailView({ grant }: { grant: any }) { /* eslint-disable-line @ty
       </div>
 
       {/* Screening Report */}
-      {(grant.screening_score != null || grant.screening_notes || eligibility || concerns?.length || recommendations?.length) && (
+      {(grant.screening_score != null || grant.screening_notes || screening || concerns?.length || recommendations?.length) && (
         <div className="space-y-4 border-t pt-4">
           <h3 className="text-sm font-semibold">Screening Report</h3>
 
@@ -1171,15 +1171,15 @@ function GrantDetailView({ grant }: { grant: any }) { /* eslint-disable-line @ty
               >
                 {grant.screening_score}%
               </Badge>
-              {eligibility?.score && (
+              {screening?.score && (
                 <span className="text-sm text-muted-foreground">
-                  ({eligibility.score})
+                  ({screening.score})
                 </span>
               )}
             </div>
           )}
 
-          {eligibility?.dimension_scores && (
+          {screening?.dimension_scores && (
             <div className="space-y-2">
               <p className="text-sm font-medium">Dimension Breakdown</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1190,7 +1190,7 @@ function GrantDetailView({ grant }: { grant: any }) { /* eslint-disable-line @ty
                   { label: "Geographic Alignment", key: "geographic_alignment" as const, max: 10 },
                   { label: "Org Capacity", key: "organizational_capacity" as const, max: 10 },
                 ].map(({ label, key, max }) => {
-                  const val = eligibility.dimension_scores?.[key] ?? 0;
+                  const val = screening.dimension_scores?.[key] ?? 0;
                   const pct = Math.round((val / max) * 100);
                   return (
                     <div key={key} className="flex items-center gap-2 text-sm">
@@ -2047,8 +2047,8 @@ export function OrgDetailClient({
                           </TableCell>
                           <TableCell>
                             {(() => {
-                              const elig = p.grant?.eligibility as { confidence?: number } | null;
-                              const confidence = elig?.confidence;
+                              const result = (p.grant?.screening_result ?? p.grant?.eligibility) as { confidence?: number } | null;
+                              const confidence = result?.confidence;
                               if (confidence == null) return <span className="text-muted-foreground">-</span>;
                               return (
                                 <Badge

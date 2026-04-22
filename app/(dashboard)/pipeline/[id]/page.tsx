@@ -25,7 +25,7 @@ export default async function GrantDetailPage({
   const adminDb = createAdminClient();
 
   const { data: grant } = await adminDb
-    .from("grants")
+    .from("grants_full")
     .select("*")
     .eq("id", id)
     .eq("org_id", orgId)

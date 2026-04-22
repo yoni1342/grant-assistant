@@ -387,7 +387,7 @@ export function NotificationsClient({
     async function fetchNotifications() {
       const { data } = await supabase
         .from("notifications")
-        .select("*, grants(title, funder_name, stage)")
+        .select("*, grants:grants_full(title, funder_name, stage)")
         .eq("org_id", orgId)
         .order("created_at", { ascending: false })
         .limit(100);

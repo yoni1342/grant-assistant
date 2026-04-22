@@ -1,0 +1,45 @@
+{
+  "name": "Central Grants Description Backfill",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c1000000-0000-0000-0000-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [20000, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Central Grants Description Backfill\n// ------------------------------------------------------------\n// Sweeps every row in central_grants whose description is NULL,\n// empty, or shorter than THIN_LIMIT chars and asks the enrich\n// webhook (the same one the main fetch pipeline uses) to improve\n// it. Writes back only when the returned description is strictly\n// longer than what's already stored, so re-running this workflow\n// can never regress a description and picks up whatever failed\n// last time.\n//\n// Safe by default: DRY_RUN=true prints the counts without mutating.\n// Flip DRY_RUN to false once you've confirmed the numbers.\n//\n// Scope: every thin central_grants row (no org filter). Grants\n// stay where they are - this only edits the description column\n// in place. Org-level pipelines are untouched.\n// ============================================================\n\nconst DRY_RUN     = true;     // <-- flip to false to actually run\nconst THIN_LIMIT  = 200;      // matches enrich workflow's threshold\nconst PAGE_SIZE   = 1000;     // Supabase pagination page\nconst CONCURRENCY = 10;       // parallel enrich calls (same as main fetch)\nconst MAX_GRANTS  = null;     // optional safety cap (e.g. 200 for first real run)\n\nconst SUPABASE_URL = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst ENRICH_URL  = 'https://n8n.thebrownmine.com/webhook/enrich-grant-description';\n\nconst helpers = this.helpers;\nconst supaHeaders = {\n  'apikey':        SUPABASE_KEY,\n  'Authorization': 'Bearer ' + SUPABASE_KEY,\n  'Content-Type':  'application/json',\n};\n\n// PostgREST can't filter by `length(column)`, so we paginate the\n// whole catalog and filter thin rows in JS. ~6-10k rows is fine.\nasync function fetchAllCentralGrants() {\n  const all = [];\n  let offset = 0;\n  const selectCols = 'id,title,funder_name,source,source_url,description,first_seen_at';\n  while (true) {\n    const rows = await helpers.httpRequest({\n      method:  'GET',\n      url:     SUPABASE_URL + '/central_grants?select=' + selectCols + '&order=first_seen_at.asc',\n      headers: Object.assign({}, supaHeaders, {\n        'Range-Unit': 'items',\n        'Range':      offset + '-' + (offset + PAGE_SIZE - 1),\n      }),\n      json: true,\n    });\n    if (!Array.isArray(rows) || rows.length === 0) break;\n    all.push.apply(all, rows);\n    if (rows.length < PAGE_SIZE) break;\n    offset += PAGE_SIZE;\n  }\n  return all;\n}\n\nasync function enrichGrant(g) {\n  try {\n    const resp = await helpers.httpRequest({\n      method:  'POST',\n      url:     ENRICH_URL,\n      headers: { 'Content-Type': 'application/json' },\n      body:    JSON.stringify({\n        title:       g.title || '',\n        funder_name: g.funder_name || '',\n        source_url:  g.source_url || '',\n        description: g.description || '',\n      }),\n      json:    true,\n      timeout: 90000,\n    });\n    const next = (resp && resp.description) || '';\n    const enriched = !!(resp && resp.enriched);\n    const source   = (resp && resp.source) || 'original';\n    return { ok: true, description: next, enriched: enriched, source: source };\n  } catch (e) {\n    return { ok: false, message: String(e.message || e).slice(0, 400) };\n  }\n}\n\nasync function patchDescription(id, description) {\n  if (DRY_RUN) return { ok: true };\n  try {\n    await helpers.httpRequest({\n      method:  'PATCH',\n      url:     SUPABASE_URL + '/central_grants?id=eq.' + encodeURIComponent(id),\n      headers: Object.assign({}, supaHeaders, { 'Prefer': 'return=minimal' }),\n      body:    JSON.stringify({ description: description }),\n    });\n    return { ok: true };\n  } catch (e) {\n    return { ok: false, message: String(e.message || e).slice(0, 400) };\n  }\n}\n\n// -------------------- main --------------------\nconst all = await fetchAllCentralGrants();\nlet thin = all.filter(function (g) { return (g.description || '').length < THIN_LIMIT; });\nif (MAX_GRANTS && thin.length > MAX_GRANTS) thin = thin.slice(0, MAX_GRANTS);\n\n// Counters\nlet enrichedCount  = 0; // enrich webhook returned a longer description\nlet writtenCount   = 0; // we actually PATCHed central_grants (= enrichedCount when not DRY_RUN)\nlet unchangedCount = 0; // enrich returned same/shorter text - left as-is\nlet failedCount    = 0; // enrich call errored out\nconst writeErrors  = [];\nconst enrichErrors = [];\nconst bySource = {}; // source -> { scanned, enriched, unchanged, failed }\n\nfunction bumpSource(source, field) {\n  const key = source || 'unknown';\n  const s = bySource[key] = bySource[key] || { scanned: 0, enriched: 0, unchanged: 0, failed: 0 };\n  s[field]++;\n}\n\nfor (let i = 0; i < thin.length; i += CONCURRENCY) {\n  const slice = thin.slice(i, i + CONCURRENCY);\n  const results = await Promise.all(slice.map(async function (g) {\n    bumpSource(g.source, 'scanned');\n    const r = await enrichGrant(g);\n    return { grant: g, result: r };\n  }));\n\n  for (let j = 0; j < results.length; j++) {\n    const g = results[j].grant;\n    const r = results[j].result;\n    if (!r.ok) {\n      failedCount++;\n      bumpSource(g.source, 'failed');\n      if (enrichErrors.length < 20) enrichErrors.push({ id: g.id, message: r.message });\n      continue;\n    }\n    const existingLen = (g.description || '').length;\n    const nextLen     = (r.description || '').length;\n    if (nextLen > existingLen && nextLen >= 1) {\n      enrichedCount++;\n      bumpSource(g.source, 'enriched');\n      const patched = await patchDescription(g.id, r.description);\n      if (patched.ok) {\n        if (!DRY_RUN) writtenCount++;\n      } else {\n        if (writeErrors.length < 20) writeErrors.push({ id: g.id, message: patched.message });\n      }\n    } else {\n      unchangedCount++;\n      bumpSource(g.source, 'unchanged');\n    }\n  }\n}\n\nreturn [{\n  json: {\n    dry_run:         DRY_RUN,\n    total_scanned:   all.length,\n    thin_found:      thin.length,\n    enriched:        enrichedCount,\n    written:         writtenCount,\n    unchanged:       unchangedCount,\n    failed:          failedCount,\n    thin_limit:      THIN_LIMIT,\n    concurrency:     CONCURRENCY,\n    max_grants_cap:  MAX_GRANTS,\n    by_source:       bySource,\n    errors: {\n      enrich: enrichErrors,\n      write:  writeErrors,\n    },\n  },\n}];"
+      },
+      "id": "c1000000-0000-0000-0000-000000000002",
+      "name": "Backfill Descriptions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [20300, 0],
+      "continueOnFail": false,
+      "notes": "Scans central_grants, asks enrich webhook to rewrite thin descriptions, PATCHes result back. DRY_RUN=true by default."
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          { "node": "Backfill Descriptions", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 3600
+  },
+  "versionId": "c1000000-0000-0000-0000-0000000000ff",
+  "meta": {
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "CentralGrantsDescBackfill01",
+  "tags": []
+}

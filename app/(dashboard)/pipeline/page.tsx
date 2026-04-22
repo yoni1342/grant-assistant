@@ -19,7 +19,7 @@ export default async function PipelinePage() {
 
   const [grantsResult, { data: fetchStatus }, { data: proposals }] = await Promise.all([
     adminDb
-      .from("grants")
+      .from("grants_full")
       .select("*")
       .eq("org_id", orgId)
       .neq("stage", "archived")
