@@ -4,7 +4,7 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Performance Monitoring
-  tracesSampleRate: 1.0, // Lower this in production (e.g. 0.1 for 10%)
+  tracesSampleRate: 0.1,
 
   enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
 });
