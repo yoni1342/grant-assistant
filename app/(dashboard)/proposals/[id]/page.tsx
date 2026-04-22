@@ -14,12 +14,14 @@ export default async function ProposalDetailPage({
 
   const adminDb = createAdminClient();
 
-  // Fetch proposal with sections and grant data
+  // Fetch proposal with sections and grant data. Embed against `grants_full`
+  // (the view that surfaces title/funder/amount/deadline/description now
+  // that those columns live on central_grants/manual_grants, not grants).
   const { data: proposalData, error } = await adminDb
     .from("proposals")
     .select(`
       *,
-      grant:grants (
+      grant:grants_full (
         id,
         title,
         funder_name,

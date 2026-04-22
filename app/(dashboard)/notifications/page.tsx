@@ -20,7 +20,7 @@ export default async function NotificationsPage() {
 
   const { data: notifications } = await supabase
     .from("notifications")
-    .select("*, grants(title, funder_name, stage)")
+    .select("*, grants:grants_full(title, funder_name, stage)")
     .eq("org_id", profile.org_id)
     .order("created_at", { ascending: false })
     .limit(100);

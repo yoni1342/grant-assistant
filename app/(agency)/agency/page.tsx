@@ -32,12 +32,13 @@ export default async function AgencyDashboardPage() {
   let grantCounts: Record<string, number> = {};
   if (orgIds.length > 0) {
     const { data: grants } = await adminClient
-      .from("grants")
+      .from("grants_full")
       .select("org_id, deadline, created_at")
       .in("org_id", orgIds);
     if (grants) {
       const filtered = excludeFetchedExpired(grants);
       grantCounts = filtered.reduce((acc, g) => {
+        if (!g.org_id) return acc;
         acc[g.org_id] = (acc[g.org_id] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);

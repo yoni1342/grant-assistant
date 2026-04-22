@@ -84,9 +84,9 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
     const adminClient = createAdminClient()
 
     const { data: grant } = await adminClient
-      .from('grants')
+      .from('grants_full')
       .select(
-        'title, funder_name, amount, deadline, screening_score, description, screening_notes, eligibility, concerns, recommendations, categories, source_url',
+        'title, funder_name, amount, deadline, screening_score, description, screening_notes, screening_result, concerns, recommendations, categories, source_url',
       )
       .eq('id', grantId)
       .eq('org_id', profile.org_id)
@@ -133,7 +133,7 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
           fullName: userProfile.full_name || 'there',
           organizationName: org.name,
           grantId,
-          grantTitle: grant.title,
+          grantTitle: grant.title ?? 'Untitled Grant',
           funderName: grant.funder_name,
           amount: grant.amount,
           deadline: grant.deadline,
@@ -161,9 +161,10 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
     return { success: true }
   }
 
-  // Fetch grant data to send to workflow
+  // Fetch grant data to send to workflow — grants_full includes
+  // title/funder_name/etc. that n8n workflows still expect in the payload.
   const { data: grant } = await supabase
-    .from('grants')
+    .from('grants_full')
     .select('*')
     .eq('id', grantId)
     .eq('org_id', profile.org_id)

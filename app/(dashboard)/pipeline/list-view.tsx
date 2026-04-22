@@ -13,10 +13,7 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 
-// The pipeline fetches from the `grants_full` view but its shape is a
-// superset of `grants` for the fields we render, so we keep the tighter
-// `Tables<"grants">` type here.
-type Grant = Tables<"grants">;
+type Grant = Tables<"grants_full">;
 
 const STAGES = [
   { key: "discovery", label: "Discovered", color: "bg-blue-500" },
@@ -172,7 +169,7 @@ export function ListView({
                   {col.key === "drafting" ? (
                     <>
                       <ConfidenceScore grant={g} />
-                      <ProposalQualityScore score={proposalQualityMap[g.id]} />
+                      <ProposalQualityScore score={g.id ? proposalQualityMap[g.id] : undefined} />
                     </>
                   ) : (
                     <ScreeningScore grant={g} />
@@ -237,7 +234,7 @@ export function ListView({
                         {col.key === "drafting" ? (
                           <>
                             <ConfidenceScore grant={g} />
-                            <ProposalQualityScore score={proposalQualityMap[g.id]} />
+                            <ProposalQualityScore score={g.id ? proposalQualityMap[g.id] : undefined} />
                           </>
                         ) : (
                           <ScreeningScore grant={g} />

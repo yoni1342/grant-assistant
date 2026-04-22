@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     }
     const adminSupabase = createAdminClient();
     const { data: grant } = await adminSupabase
-      .from("grants")
+      .from("grants_full")
       .select("title")
       .eq("id", data.grantId)
       .eq("org_id", orgId)
@@ -78,7 +78,10 @@ export async function POST(req: Request) {
     }
   }
 
-  // Validate and enforce limits for add-to-pipeline
+  // Validate and enforce limits for add-to-pipeline.
+  // The actual insert happens in the n8n "add new grants to pipeline"
+  // workflow, which is responsible for matching central_grants /
+  // creating manual_grants and setting the correct FK on grants.
   if (service === "grant-screening") {
     // Reject grants with no title
     if (!data.title || !String(data.title).trim()) {
@@ -92,7 +95,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Reject grants whose deadline has already passed
+    // Reject grants whose deadline has already passed.
+    // Deadlines can be free-form strings ("Ongoing", "Rolling", "See listing"),
+    // so only enforce this when the value parses as a real date.
     if (data.deadline && !isNaN(new Date(data.deadline).getTime()) && new Date(data.deadline) < new Date()) {
       return new Response(
         JSON.stringify({
@@ -105,6 +110,31 @@ export async function POST(req: Request) {
     }
 
     const adminSupabase = createAdminClient();
+
+    // Dedup by title within the org across active (non-archived) pipeline
+    // rows — catches the "user hit Add twice" case that no unique index
+    // can express (manual grants have no natural unique key).
+    const submittedTitle = String(data.title).trim();
+    const { data: existingByTitle } = await adminSupabase
+      .from("grants_full")
+      .select("id")
+      .eq("org_id", orgId)
+      .ilike("title", submittedTitle)
+      .neq("stage", "archived")
+      .limit(1)
+      .maybeSingle();
+
+    if (existingByTitle) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "A grant with this title is already in your pipeline.",
+          code: "GRANT_ALREADY_ADDED",
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     const { data: org } = await adminSupabase
       .from("organizations")
       .select("plan, is_tester")

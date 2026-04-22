@@ -21,13 +21,6 @@ interface IncomingGrant {
   source_url?: string | null;
 }
 
-function normalizeDeadline(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString().slice(0, 10);
-}
-
 export async function POST(req: Request) {
   const secret = req.headers.get("x-webhook-secret");
   if (secret !== process.env.N8N_WEBHOOK_SECRET) {
@@ -71,7 +64,7 @@ export async function POST(req: Request) {
       funder_name: g.funder_name ?? null,
       organization: g.organization ?? null,
       amount: g.amount == null ? null : String(g.amount),
-      deadline: normalizeDeadline(g.deadline),
+      deadline: g.deadline ?? null,
       description: g.description ?? null,
       eligibility: g.eligibility ?? null,
       categories: g.categories ?? null,

@@ -22,14 +22,17 @@ export default async function NewAwardPage() {
   }
 
   const { data: grants } = await supabase
-    .from('grants')
+    .from('grants_full')
     .select('id, title')
     .eq('org_id', profile.org_id)
     .order('created_at', { ascending: false })
 
+  const normalizedGrants = (grants || [])
+    .filter((g): g is { id: string; title: string } => !!g.id && !!g.title)
+
   return (
     <NewAwardClient
-      grants={grants || []}
+      grants={normalizedGrants}
     />
   )
 }

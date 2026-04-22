@@ -42,9 +42,9 @@ async function getPipelineBreakdown() {
     return []
   }
 
-  // Fetch all grants for org
+  // Fetch all grants for org (deadline lives on central_grants/manual_grants now)
   const { data: grants, error } = await supabase
-    .from('grants')
+    .from('grants_full')
     .select('stage, deadline, created_at')
     .eq('org_id', profile.org_id)
 

@@ -41,7 +41,7 @@ export default async function SubmissionDetailPage({ params }: SubmissionDetailP
 
   // Fetch grant data
   const { data: grant, error: grantError } = await supabase
-    .from('grants')
+    .from('grants_full')
     .select('id, title, deadline, funder_name, source_url')
     .eq('id', grantId)
     .eq('org_id', profile.org_id)
@@ -61,7 +61,13 @@ export default async function SubmissionDetailPage({ params }: SubmissionDetailP
 
   return (
     <SubmissionPageClient
-      grant={grant}
+      grant={{
+        id: grant.id!,
+        title: grant.title ?? 'Untitled Grant',
+        deadline: grant.deadline,
+        funder_name: grant.funder_name,
+        source_url: grant.source_url,
+      }}
       checklist={checklist}
       submissions={submissions}
     />

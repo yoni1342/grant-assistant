@@ -44,7 +44,7 @@ export async function getReport(reportId: string) {
         award_date,
         start_date,
         end_date,
-        grant:grants (
+        grant:grants_full (
           id,
           title,
           funder_name

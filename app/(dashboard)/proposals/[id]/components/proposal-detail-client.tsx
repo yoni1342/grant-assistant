@@ -143,7 +143,7 @@ export function ProposalDetailClient({
       {/* Back button */}
       <div className="mb-6">
         <Link href="/proposals">
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" data-admin-action>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Proposals
           </Button>
@@ -211,6 +211,7 @@ export function ProposalDetailClient({
                 className="gap-2"
                 disabled={isExporting || sections.length === 0}
                 onClick={() => setShowExportMenu(!showExportMenu)}
+                data-admin-action
               >
                 {isExporting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -229,6 +230,7 @@ export function ProposalDetailClient({
                     <button
                       className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={handleExportPdf}
+                      data-admin-action
                     >
                       <Download className="h-4 w-4" />
                       Export as PDF
@@ -236,6 +238,7 @@ export function ProposalDetailClient({
                     <button
                       className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={handleExportDocx}
+                      data-admin-action
                     >
                       <FileText className="h-4 w-4" />
                       Export as Word
@@ -251,6 +254,7 @@ export function ProposalDetailClient({
               size="sm"
               className="gap-2"
               onClick={() => setShowReviewPanel(!showReviewPanel)}
+              data-admin-action
             >
               {showReviewPanel ? (
                 <PanelRightClose className="h-4 w-4" />
@@ -281,6 +285,7 @@ export function ProposalDetailClient({
                   size="sm"
                   className="h-6 w-6 p-0"
                   onClick={() => setShowReviewPanel(false)}
+                  data-admin-action
                 >
                   <PanelRightClose className="h-4 w-4" />
                 </Button>

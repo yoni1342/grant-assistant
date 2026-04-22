@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: grant } = await supabase
-    .from('grants')
+    .from('grants_full')
     .select('id, title, org_id')
     .eq('id', record.grant_id)
     .single()
@@ -74,6 +74,9 @@ export async function POST(request: NextRequest) {
   }
 
   const orgId = record.org_id || grant.org_id
+  if (!orgId) {
+    return NextResponse.json({ skipped: true, reason: 'missing org_id' })
+  }
 
   const { data: org } = await supabase
     .from('organizations')
@@ -97,6 +100,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    if (!grant.id) {
+      return NextResponse.json({ skipped: true, reason: 'grant id missing' })
+    }
     const { data: proposal } = await supabase
       .from('proposals')
       .select('id')
@@ -115,7 +121,7 @@ export async function POST(request: NextRequest) {
       fullName: profile.full_name || 'there',
       organizationName: org.name,
       proposalId: proposal.id,
-      grantTitle: grant.title,
+      grantTitle: grant.title ?? 'Untitled Grant',
     })
 
     await supabase.from('grant_email_log').insert({

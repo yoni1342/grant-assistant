@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info, Loader2 } from "lucide-react";
 import Link from "next/link";
 
-type Grant = Tables<"grants">;
+type Grant = Tables<"grants_full">;
 
 const STAGES = [
   { key: "discovery", label: "Discovered", color: "bg-blue-500", tooltip: "Grants found through search or added manually. They haven\u2019t been screened yet." },
@@ -194,18 +194,20 @@ export function KanbanView({
           <ScrollArea className="flex-1 px-2 pb-2">
             <div className="space-y-2">
               {col.grants.map((grant) => {
-                const isMoving = movingGrants.has(grant.id);
-                const isDragging = draggedGrantId === grant.id;
+                if (!grant.id) return null;
+                const grantId = grant.id;
+                const isMoving = movingGrants.has(grantId);
+                const isDragging = draggedGrantId === grantId;
 
                 return (
                   <div
-                    key={grant.id}
+                    key={grantId}
                     draggable={!isMoving}
-                    onDragStart={(e) => handleDragStart(e, grant.id)}
+                    onDragStart={(e) => handleDragStart(e, grantId)}
                     onDragEnd={handleDragEnd}
                     className={`${isDragging ? "opacity-40" : ""} ${isMoving ? "pointer-events-none opacity-60" : ""}`}
                   >
-                    <Link href={`/pipeline/${grant.id}`}>
+                    <Link href={`/pipeline/${grantId}`}>
                       <Card className="cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md">
                         <CardContent className="p-3 space-y-2">
                           <div className="flex items-center gap-2">
@@ -230,7 +232,7 @@ export function KanbanView({
                             {grant.stage === "drafting" ? (
                               <>
                                 <ConfidenceScore grant={grant} />
-                                <ProposalQualityScore score={proposalQualityMap[grant.id]} />
+                                <ProposalQualityScore score={proposalQualityMap[grantId]} />
                               </>
                             ) : (
                               <ScreeningScore grant={grant} />

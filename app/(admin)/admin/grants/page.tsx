@@ -12,7 +12,7 @@ export default async function AdminGrantsPage() {
 
   const [{ data: grants }, { data: organizations }] = await Promise.all([
     supabase
-      .from("grants")
+      .from("grants_full")
       .select("id, title, funder_name, amount, stage, screening_score, org_id, deadline, created_at")
       .order("created_at", { ascending: false }),
     supabase

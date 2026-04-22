@@ -92,16 +92,20 @@ export async function GET(
 
   // Org pipeline pickups for this source's grants (lifetime, for the per-grant row).
   const sourceUrls = sourceGrants.map((g) => g.source_url).filter(Boolean) as string[];
-  let orgGrants: Array<{ id: string; source_url: string | null; stage: string | null }> = [];
+  const orgGrants: Array<{ id: string; source_url: string | null; stage: string | null }> = [];
   if (sourceUrls.length > 0) {
     // Fetch in batches of 200 to stay within Supabase query limits
     for (let i = 0; i < sourceUrls.length; i += 200) {
       const batch = sourceUrls.slice(i, i + 200);
       const { data } = await adminClient
-        .from("grants")
+        .from("grants_full")
         .select("id, source_url, stage")
         .in("source_url", batch);
-      if (data) orgGrants = orgGrants.concat(data);
+      if (data) {
+        for (const row of data) {
+          if (row.id) orgGrants.push({ id: row.id, source_url: row.source_url, stage: row.stage });
+        }
+      }
     }
   }
 
@@ -127,14 +131,17 @@ export async function GET(
     let p = 0;
     while (true) {
       let q = adminClient
-        .from("grants")
+        .from("grants_full")
         .select("id, source_url, stage")
         .range(p * PAGE, (p + 1) * PAGE - 1);
       if (fromISO) q = q.gte(dateCol, fromISO);
       if (toISO) q = q.lte(dateCol, toISO);
       const { data } = await q;
       if (!data || data.length === 0) break;
-      for (const row of data) onRow(row);
+      for (const row of data) {
+        if (!row.id) continue;
+        onRow({ id: row.id, source_url: row.source_url, stage: row.stage });
+      }
       if (data.length < PAGE) break;
       p++;
     }
@@ -170,11 +177,11 @@ export async function GET(
     for (let i = 0; i < grantIds.length; i += 200) {
       const batch = grantIds.slice(i, i + 200);
       const { data } = await adminClient
-        .from("grants")
+        .from("grants_full")
         .select("id, source_url")
         .in("id", batch);
       for (const g of data ?? []) {
-        if (extractDomain(g.source_url) === sourceDomain) sourceMatch.add(g.id);
+        if (g.id && extractDomain(g.source_url) === sourceDomain) sourceMatch.add(g.id);
       }
     }
     proposalsInRange = (rangeProposals ?? []).filter(

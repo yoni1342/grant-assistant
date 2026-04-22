@@ -78,7 +78,7 @@ export default async function DashboardPage() {
 
   // Fetch grants for pipeline overview
   const { data: grants } = await adminDb
-    .from("grants")
+    .from("grants_full")
     .select("id, title, funder_name, stage, amount, deadline, created_at")
     .eq("org_id", orgId)
     .neq("stage", "archived")
