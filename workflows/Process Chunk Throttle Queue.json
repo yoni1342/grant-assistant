@@ -1,0 +1,80 @@
+{
+  "name": "Process Chunk Throttle Queue",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "process-chunk-queue",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e3000000-0000-0000-0000-000000000001",
+      "name": "Queue Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        20000,
+        0
+      ],
+      "webhookId": "process-chunk-queue"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"accepted\": true}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "e3000000-0000-0000-0000-000000000002",
+      "name": "Ack",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        20150,
+        -150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Process Chunk Throttle Queue\n// ------------------------------------------------------------\n// Sits in front of the \"Grant fetch - Process Chunk\" webhook.\n// Producers (Grant fetch's Process Chunk (Webhook) node) POST\n// a batch of grants for a single org to /webhook/process-chunk-queue;\n// this workflow unrolls them one grant at a time with a small delay\n// between calls, so the Process Chunk task runner isn't hit with a\n// multi-grant AI classification load in a single execution - which\n// was OOMing the task runner.\n//\n// Pattern: recursive self-dispatch (same as Enrich + Screen queues).\n// Ack returns 202 immediately; the Code node POSTs one grant to\n// PROCESS_URL (preserving org context), sleeps DELAY_MS, then POSTs\n// the tail back to QUEUE_URL (self) as a brand-new execution. Each\n// Process Chunk execution handles exactly one grant - constant\n// memory footprint no matter how big the org's grant list is.\n//\n// IMPORTANT: fire-and-forget. Process Chunk must write its results\n// back to Supabase itself (it already does - 'Insert Into Central\n// Grants' + screener webhook fan-out inside Process Chunk). The\n// producer does NOT see per-grant classification results inline.\n//\n// Expected input (webhook body):\n//   { org_id, org, nicheSummary, callbackUrl, chunk_index,\n//     total_chunks, grants: [ { id, title, ... }, ... ] }\n// The org-level context is preserved on every forwarded call so\n// Process Chunk has everything it needs to classify one grant.\n// ============================================================\n\nconst DELAY_MS    = 500;\nconst TIMEOUT_MS  = 120000;\nconst MAX_RETRIES = 2;\nconst PROCESS_URL = 'https://n8n.thebrownmine.com/webhook/process-grant-chunk';\nconst QUEUE_URL   = 'https://n8n.thebrownmine.com/webhook/process-chunk-queue';\n\nconst helpers = this.helpers;\nconst raw = $input.first().json;\nconst input = raw.body || raw;\n\nconst grants = Array.isArray(input.grants) ? input.grants : [];\n\nif (grants.length === 0) {\n  return [{ json: { success: true, forwarded: 0, org_id: input.org_id || null } }];\n}\n\nconst head = grants[0];\nconst tail = grants.slice(1);\n\n// Preserve org-level context on every forwarded call.\nconst context = {\n  org_id:        input.org_id,\n  org:           input.org,\n  nicheSummary:  input.nicheSummary,\n  callbackUrl:   input.callbackUrl,\n  chunk_index:   input.chunk_index,\n  total_chunks:  input.total_chunks,\n};\n\nasync function post(url, body, attempt) {\n  attempt = attempt || 0;\n  try {\n    await helpers.httpRequest({\n      method:  'POST',\n      url:     url,\n      headers: { 'Content-Type': 'application/json' },\n      body:    JSON.stringify(body),\n      timeout: TIMEOUT_MS,\n    });\n    return { ok: true };\n  } catch (e) {\n    const status = e.httpCode || e.statusCode || (e.response && e.response.status);\n    const transient = status === 429 || (status >= 500 && status < 600) || !status;\n    if (transient && attempt < MAX_RETRIES) {\n      const backoff = Math.min(5000, 500 * Math.pow(2, attempt)) + Math.floor(Math.random() * 250);\n      await new Promise(function (r) { setTimeout(r, backoff); });\n      return post(url, body, attempt + 1);\n    }\n    return { ok: false, status: status, message: String(e.message || e).slice(0, 400) };\n  }\n}\n\nconst processResult = await post(PROCESS_URL, Object.assign({}, context, { grants: [head] }));\n\nif (tail.length > 0) {\n  await new Promise(function (r) { setTimeout(r, DELAY_MS); });\n  await post(QUEUE_URL, Object.assign({}, context, { grants: tail }));\n}\n\nreturn [{\n  json: {\n    success:          true,\n    org_id:           context.org_id || null,\n    forwardedGrantId: head && (head.id || head.grant_id || null),\n    processResult:    processResult,\n    remaining:        tail.length,\n  },\n}];\n"
+      },
+      "id": "e3000000-0000-0000-0000-000000000003",
+      "name": "Throttle Forward",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20300,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Queue Webhook": {
+      "main": [
+        [
+          {
+            "node": "Ack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Throttle Forward",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e3000000-0000-0000-0000-0000000000ff",
+  "meta": {
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "ProcessChunkThrottle01",
+  "tags": []
+}

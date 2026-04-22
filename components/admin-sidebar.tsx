@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronLeft,
   BarChart3,
+  Hash,
   AlertTriangle,
   Menu,
   X,
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/admin/grants", label: "Grants", icon: FileText },
   { href: "/admin/proposals", label: "Proposals", icon: PenTool },
   { href: "/admin/source-analytics", label: "Source Analytics", icon: BarChart3 },
+  { href: "/admin/org-pickup", label: "Org Pickup", icon: Hash },
   { href: "/admin/system-errors", label: "System Errors", icon: AlertTriangle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

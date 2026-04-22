@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -15,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -24,19 +24,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Database,
-  Zap,
-  CalendarCheck,
-  Globe,
-  ArrowRight,
-  ArrowDownUp,
+  Users,
+  Building2,
+  Hash,
+  Layers,
   Search,
   Info,
-  AlertTriangle,
-  Users,
   Loader2,
+  ArrowDownUp,
+  ArrowRight,
+  TrendingUp,
 } from "lucide-react";
-import Link from "next/link";
 import {
   ChartContainer,
   ChartTooltip,
@@ -58,68 +56,45 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-interface SourceStat {
-  source: string;
-  total: number;
-  active: number;
-  new_7d: number;
-  new_today: number;
-  picked_up: number;
-  screened: number;
+interface OrgStat {
+  org_id: string;
+  name: string;
+  total_picks: number;
+  discovery: number;
+  screening: number;
   pending_approval: number;
+  drafting: number;
+  submitted: number;
+  awarded: number;
+  closed: number;
   proposals: number;
-  avg_eligibility: number;
-  eligibility_count: number;
-  last_seen: string | null;
-  stale: boolean;
+  last_pickup_at: string | null;
 }
 
 interface Totals {
-  total: number;
-  active: number;
-  new_7d: number;
-  new_today: number;
-  sources_tracked: number;
-  picked_up: number;
-  screened: number;
-  pending_approval: number;
-  proposals: number;
+  orgs_with_picks: number;
+  orgs_total: number;
+  total_picks: number;
+  unique_central_picks: number;
+  avg_picks_per_active_org: number;
+  sources_used?: number;
 }
 
-type SortField = "source" | "total" | "active" | "new_7d" | "picked_up" | "avg_eligibility";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function InfoTip({ children }: { children: React.ReactNode }) {
-  return (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-64 text-xs">
-          {children}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+interface SourcePickup {
+  source: string;
+  count: number;
 }
 
-function timeAgo(iso: string | null): string {
-  if (!iso) return "Never";
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+type SortField =
+  | "name"
+  | "total_picks"
+  | "discovery"
+  | "screening"
+  | "proposals"
+  | "last_pickup_at";
 
 // ---------------------------------------------------------------------------
-// Component
+// Range filter (duplicated locally so the page is self-contained)
 // ---------------------------------------------------------------------------
 
 type RangePreset =
@@ -172,7 +147,7 @@ function rangeToISO(
       break;
     case "this_week": {
       const dow = start.getDay();
-      const diff = (dow + 6) % 7; // treat Monday as week start
+      const diff = (dow + 6) % 7;
       start.setDate(start.getDate() - diff);
       break;
     }
@@ -197,8 +172,8 @@ function toDateInputValue(d: Date): string {
 }
 
 // ---------------------------------------------------------------------------
-// Chart reuses the page-wide range filter. "all" defaults the chart to the
-// last 30 days so there's always a sensible window to plot.
+// Chart uses the page-wide range filter. "all" + single-day presets get a
+// sensible default window so the line chart always has something to plot.
 // ---------------------------------------------------------------------------
 
 function pageRangeToChartWindow(
@@ -261,12 +236,14 @@ function pageRangeToChartWindow(
           };
         }
       }
+      // Fall through to default window if custom dates aren't valid
       const s = new Date(startOfToday);
       s.setDate(s.getDate() - 29);
       return { from: s, to: endOfToday, granularity: "day" };
     }
     case "all":
     default: {
+      // "All time" would be unbounded — show last 30 days as a sensible default.
       const s = new Date(startOfToday);
       s.setDate(s.getDate() - 29);
       return { from: s, to: endOfToday, granularity: "day" };
@@ -274,23 +251,56 @@ function pageRangeToChartWindow(
   }
 }
 
-export function SourceAnalyticsClient() {
-  const [sources, setSources] = useState<SourceStat[]>([]);
+const pickupRateChartConfig: ChartConfig = {
+  count: { label: "Pickups", color: "hsl(217, 91%, 60%)" },
+};
+
+const pickupsBySourceConfig: ChartConfig = {
+  count: { label: "Pickups", color: "hsl(217, 91%, 60%)" },
+};
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return "Never";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function InfoTip({ children }: { children: React.ReactNode }) {
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-64 text-xs">
+          {children}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export function OrgPickupClient() {
+  const [orgs, setOrgs] = useState<OrgStat[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
+  const [pickupSources, setPickupSources] = useState<SourcePickup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<SortField>("total");
-  const [sortAsc, setSortAsc] = useState(false);
   const [search, setSearch] = useState("");
-  const [range, setRange] = useState<RangePreset>("today");
-  const defaultCustomTo = toDateInputValue(new Date());
-  const defaultCustomFrom = toDateInputValue(
-    new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
-  );
-  const [customFrom, setCustomFrom] = useState<string>(defaultCustomFrom);
-  const [customTo, setCustomTo] = useState<string>(defaultCustomTo);
+  const [sortField, setSortField] = useState<SortField>("total_picks");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [hideZero, setHideZero] = useState(true);
 
-  // Chart shares the page-wide range filter.
+  // Chart shares the page-wide range filter; no separate state needed.
   const [chartPoints, setChartPoints] = useState<
     { bucket: string; count: number }[]
   >([]);
@@ -299,8 +309,45 @@ export function SourceAnalyticsClient() {
   );
   const [chartLoading, setChartLoading] = useState(false);
   const [chartTotal, setChartTotal] = useState(0);
+  // Flag so the caption can say "(default 30 days)" when the page is on All.
   const [chartUsingDefault, setChartUsingDefault] = useState(false);
 
+  const [range, setRange] = useState<RangePreset>("today");
+  const defaultCustomTo = toDateInputValue(new Date());
+  const defaultCustomFrom = toDateInputValue(
+    new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
+  );
+  const [customFrom, setCustomFrom] = useState<string>(defaultCustomFrom);
+  const [customTo, setCustomTo] = useState<string>(defaultCustomTo);
+
+  useEffect(() => {
+    if (range === "custom" && (!customFrom || !customTo)) return;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { from, to } = rangeToISO(range, customFrom, customTo);
+        const params = new URLSearchParams();
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
+        const qs = params.toString();
+        const res = await fetch(
+          `/api/admin/org-pickup-stats${qs ? "?" + qs : ""}`,
+        );
+        if (!res.ok) throw new Error("Failed to fetch org pickup stats");
+        const data = await res.json();
+        setOrgs(data.orgs || []);
+        setTotals(data.totals || null);
+        setPickupSources(data.sources || []);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [range, customFrom, customTo]);
+
+  // --- Chart data fetch — driven by the page-wide range filter ---
   useEffect(() => {
     const win = pageRangeToChartWindow(range, customFrom, customTo);
     setChartUsingDefault(range === "all");
@@ -312,7 +359,7 @@ export function SourceAnalyticsClient() {
         p.set("to", win.to.toISOString());
         p.set("granularity", win.granularity);
         const res = await fetch(
-          `/api/grant-source-stats/daily?${p.toString()}`,
+          `/api/admin/org-pickup-stats/daily?${p.toString()}`,
         );
         if (!res.ok) throw new Error("Failed to load chart data");
         const json = (await res.json()) as {
@@ -332,98 +379,48 @@ export function SourceAnalyticsClient() {
     })();
   }, [range, customFrom, customTo]);
 
-  useEffect(() => {
-    if (range === "custom" && (!customFrom || !customTo)) return;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { from, to } = rangeToISO(range, customFrom, customTo);
-        const params = new URLSearchParams();
-        if (from) params.set("from", from);
-        if (to) params.set("to", to);
-        const qs = params.toString();
-        const res = await fetch(`/api/grant-source-stats${qs ? "?" + qs : ""}`);
-        if (!res.ok) throw new Error("Failed to fetch stats");
-        const data = await res.json();
-        setSources(data.sources || []);
-        setTotals(data.totals || null);
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Unknown error");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [range, customFrom, customTo]);
-
   function handleSort(field: SortField) {
     if (sortField === field) setSortAsc(!sortAsc);
-    else { setSortField(field); setSortAsc(false); }
+    else {
+      setSortField(field);
+      setSortAsc(false);
+    }
   }
 
-  const filtered = useMemo(() => {
-    let list = [...sources];
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter((s) => s.source.toLowerCase().includes(q));
-    }
-    list.sort((a, b) => {
-      if (sortField === "source") {
-        return sortAsc ? a.source.localeCompare(b.source) : b.source.localeCompare(a.source);
-      }
-      const av = a[sortField];
-      const bv = b[sortField];
-      return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
-    });
-    return list;
-  }, [sources, search, sortField, sortAsc]);
-
-  const staleSources = useMemo(() => sources.filter((s) => s.stale), [sources]);
-
-  // Query string to forward the current date range to the detail page.
   const rangeQs = useMemo(() => {
     const { from, to } = rangeToISO(range, customFrom, customTo);
     const p = new URLSearchParams();
     if (from) p.set("from", from);
     if (to) p.set("to", to);
-    if (range !== "all") p.set("range", range);
+    p.set("range", range);
     const qs = p.toString();
     return qs ? `?${qs}` : "";
   }, [range, customFrom, customTo]);
 
-  const chartConfig: ChartConfig = {
-    count: { label: "New Grants", color: "hsl(220, 70%, 50%)" },
-  };
-
-  const sourceBarConfig: ChartConfig = {
-    total: { label: "New Grants", color: "hsl(220, 70%, 50%)" },
-  };
-
-  // Top sources by count in the selected range, for the per-source bar chart.
-  const MAX_BAR_ROWS = 20;
-  const sourceBarData = useMemo(() => {
-    return [...sources]
-      .filter((s) => s.total > 0)
-      .sort((a, b) => b.total - a.total)
-      .slice(0, MAX_BAR_ROWS)
-      .map((s) => ({
-        source: s.source,
-        total: s.total,
-      }));
-  }, [sources]);
-
-  // --- Render ---
-
-  if (error && !loading) {
-    return (
-      <div className="space-y-6">
-        <Header />
-        <Card>
-          <CardContent className="py-10 text-center text-red-600">{error}</CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const filtered = useMemo(() => {
+    let list = [...orgs];
+    if (hideZero) list = list.filter((o) => o.total_picks > 0);
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter((o) => o.name.toLowerCase().includes(q));
+    }
+    list.sort((a, b) => {
+      if (sortField === "name") {
+        return sortAsc
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name);
+      }
+      if (sortField === "last_pickup_at") {
+        const av = a.last_pickup_at ? new Date(a.last_pickup_at).getTime() : 0;
+        const bv = b.last_pickup_at ? new Date(b.last_pickup_at).getTime() : 0;
+        return sortAsc ? av - bv : bv - av;
+      }
+      const av = a[sortField] as number;
+      const bv = b[sortField] as number;
+      return sortAsc ? av - bv : bv - av;
+    });
+    return list;
+  }, [orgs, search, sortField, sortAsc, hideZero]);
 
   const rangeFilter = (
     <RangeFilter
@@ -436,6 +433,19 @@ export function SourceAnalyticsClient() {
     />
   );
 
+  if (error && !loading) {
+    return (
+      <div className="space-y-6">
+        <Header />
+        <Card>
+          <CardContent className="py-10 text-center text-red-600">
+            {error}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -443,150 +453,124 @@ export function SourceAnalyticsClient() {
         {rangeFilter}
         <div className="flex items-center justify-center py-24 text-muted-foreground gap-2">
           <Loader2 className="h-5 w-5 animate-spin" />
-          Loading source analytics...
+          Loading org pickup stats...
         </div>
       </div>
     );
   }
+
+  const coveragePct =
+    totals && totals.orgs_total > 0
+      ? Math.round((totals.orgs_with_picks / totals.orgs_total) * 100)
+      : 0;
 
   return (
     <div className="space-y-6">
       <Header />
       {rangeFilter}
 
-      {/* ====== 1. Summary Cards ====== */}
+      {/* ====== Summary Cards ====== */}
       {totals && (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                Total in Catalog
-                <InfoTip>Total deduped grants stored in the central catalog across all sources. This is the master pool that orgs draw from.</InfoTip>
+                Active Orgs
+                <InfoTip>
+                  Organizations that picked up at least one grant from the
+                  central catalog in the selected range.
+                </InfoTip>
               </CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
+              <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{totals.total.toLocaleString()}</p>
+              <p className="text-2xl font-bold">
+                {totals.orgs_with_picks.toLocaleString()}
+                <span className="text-sm text-muted-foreground font-normal">
+                  {" "}
+                  / {totals.orgs_total.toLocaleString()}
+                </span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {coveragePct}% of all orgs
+              </p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                Active Grants
-                <InfoTip>Grants with a future deadline or no deadline set. These are available for organizations to discover and pursue.</InfoTip>
+                Total Pickups
+                <InfoTip>
+                  Sum of grants picked up across all organizations. A single
+                  catalog grant picked by three orgs counts as three.
+                </InfoTip>
               </CardTitle>
-              <CalendarCheck className="h-4 w-4 text-green-500" />
+              <Hash className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-green-600">{totals.active.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">{totals.total > 0 ? `${Math.round((totals.active / totals.total) * 100)}% of catalog` : ""}</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {totals.total_picks.toLocaleString()}
+              </p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                New This Week
-                <InfoTip>Grants first discovered in the last 7 days. High numbers mean sources are actively producing fresh opportunities.</InfoTip>
+                Unique Grants
+                <InfoTip>
+                  Distinct central-catalog grants that at least one
+                  organization has picked up. Answers: how much of the catalog
+                  is actually being used?
+                </InfoTip>
               </CardTitle>
-              <Zap className="h-4 w-4 text-blue-500" />
+              <Layers className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-blue-600">{totals.new_7d.toLocaleString()}</p>
-              {totals.new_today > 0 && (
-                <p className="text-xs text-muted-foreground">{totals.new_today} added today</p>
-              )}
+              <p className="text-2xl font-bold text-purple-600">
+                {totals.unique_central_picks.toLocaleString()}
+              </p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                Sources Tracked
-                <InfoTip>Distinct grant source websites being crawled. Each source is a domain (e.g. grants.gov, propublica.org).</InfoTip>
+                Avg per Active Org
+                <InfoTip>
+                  Mean number of pickups among organizations that picked up at
+                  least one grant.
+                </InfoTip>
               </CardTitle>
-              <Globe className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-purple-600">{totals.sources_tracked}</p>
-              {staleSources.length > 0 && (
-                <p className="text-xs text-amber-600">{staleSources.length} stale (&gt;48h)</p>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                Org Pickup Rate
-                <InfoTip>Percentage of central catalog grants that at least one organization has added to their pipeline. Higher = better source quality.</InfoTip>
-              </CardTitle>
-              <Users className="h-4 w-4 text-amber-500" />
+              <TrendingUp className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-amber-600">
-                {totals.total > 0 ? `${Math.round((totals.picked_up / totals.total) * 100)}%` : "0%"}
+                {totals.avg_picks_per_active_org.toLocaleString()}
               </p>
-              <p className="text-xs text-muted-foreground">{totals.picked_up.toLocaleString()} of {totals.total.toLocaleString()} picked up</p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* ====== 2. Pipeline Conversion Funnel ====== */}
-      {totals && totals.total > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-              Pipeline Conversion
-              <InfoTip>Shows how central catalog grants flow through the org pipeline stages. Each bar shows the count and the conversion rate from the previous step.</InfoTip>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap items-center gap-0">
-              {[
-                { label: "Central Catalog", value: totals.total, color: "bg-foreground", tooltip: "All deduped grants in the central catalog, ready for orgs to discover." },
-                { label: "Picked Up", value: totals.picked_up, color: "bg-blue-500", tooltip: "Central grants added to at least one organization\u2019s pipeline." },
-                { label: "Screened", value: totals.screened, color: "bg-yellow-500", tooltip: "Grants that have been evaluated for eligibility and fit with an organization." },
-                { label: "Pending Approval", value: totals.pending_approval, color: "bg-amber-500", tooltip: "Screened grants waiting for team approval before drafting begins." },
-                { label: "Proposals", value: totals.proposals, color: "bg-purple-500", tooltip: "Proposal drafts generated from pipeline grants across all organizations." },
-              ].map((step, i, arr) => (
-                <div key={step.label} className="flex items-center">
-                  <div className="flex flex-col items-center px-3 py-2 min-w-[90px]">
-                    <div className="flex items-center gap-1 mb-1">
-                      <div className={`h-2 w-2 rounded-full ${step.color}`} />
-                      <span className="text-xs text-muted-foreground">{step.label}</span>
-                      <InfoTip>{step.tooltip}</InfoTip>
-                    </div>
-                    <span className="text-lg font-bold">{step.value.toLocaleString()}</span>
-                    {i > 0 && arr[i - 1].value > 0 && (
-                      <span className="text-[10px] text-muted-foreground">
-                        {Math.round((step.value / arr[i - 1].value) * 100)}% of prev
-                      </span>
-                    )}
-                  </div>
-                  {i < arr.length - 1 && (
-                    <ArrowRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ====== 3. New Grants Rate — line chart, follows page-wide filter ====== */}
+      {/* ====== Pickup Rate Line Chart ====== */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-            New Grants Rate
+            <TrendingUp className="h-4 w-4" />
+            Pickup Rate
             <InfoTip>
-              Rate at which new grants enter the central catalog. Follows
-              the date range selected above. &quot;Today&quot; /
-              &quot;Yesterday&quot; show per-hour; longer ranges show per-day.
+              Total catalog grants added to pipelines across all
+              organizations over time. Follows the date range selected
+              above. &quot;Today&quot; / &quot;Yesterday&quot; show per-hour;
+              longer ranges show per-day.
             </InfoTip>
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
             {chartLoading
               ? "Loading…"
-              : `${chartTotal.toLocaleString()} new grant${chartTotal === 1 ? "" : "s"} in ${chartUsingDefault ? "the last 30 days (default view)" : "the selected range"}`}
+              : `${chartTotal.toLocaleString()} pickup${chartTotal === 1 ? "" : "s"} in ${chartUsingDefault ? "the last 30 days (default view)" : "the selected range"}`}
           </p>
         </CardHeader>
         <CardContent>
@@ -597,10 +581,13 @@ export function SourceAnalyticsClient() {
             </div>
           ) : chartPoints.every((p) => p.count === 0) ? (
             <div className="flex items-center justify-center h-[220px] text-muted-foreground text-xs">
-              No new grants discovered in this range.
+              No pickups in this range.
             </div>
           ) : (
-            <ChartContainer config={chartConfig} className="h-[220px] w-full">
+            <ChartContainer
+              config={pickupRateChartConfig}
+              className="h-[220px] w-full"
+            >
               <LineChart
                 data={chartPoints}
                 margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
@@ -669,33 +656,34 @@ export function SourceAnalyticsClient() {
         </CardContent>
       </Card>
 
-      {/* ====== 3b. Per-Source Bar Chart — source effectiveness ====== */}
-      {sources.length > 0 && sources.some((s) => s.total > 0) && (
+      {/* ====== Pickups by Source (bar chart) ====== */}
+      {pickupSources.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-              New Grants by Source
+              Pickups by Source
               <InfoTip>
-                Number of new grants each source contributed in the selected
-                range. Use this to compare which sources are most productive.
+                Number of catalog grants picked up from each source in the
+                selected range, summed across all organizations. Use this to
+                compare which sources produce grants that orgs actually adopt.
               </InfoTip>
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              {sourceBarData.length} active source
-              {sourceBarData.length === 1 ? "" : "s"} in {RANGE_LABELS[range].toLowerCase()}
+              {pickupSources.length} source
+              {pickupSources.length === 1 ? "" : "s"} contributed pickups
             </p>
           </CardHeader>
           <CardContent>
             <ChartContainer
-              config={sourceBarConfig}
+              config={pickupsBySourceConfig}
               className="w-full"
               style={{
-                height: `${Math.max(180, sourceBarData.length * 28 + 40)}px`,
+                height: `${Math.max(180, Math.min(pickupSources.length, 20) * 28 + 40)}px`,
                 aspectRatio: "auto",
               }}
             >
               <BarChart
-                data={sourceBarData}
+                data={pickupSources.slice(0, 20)}
                 layout="vertical"
                 margin={{ top: 4, right: 24, left: 0, bottom: 4 }}
               >
@@ -717,9 +705,12 @@ export function SourceAnalyticsClient() {
                   tick={{ fill: "var(--muted-foreground)" }}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="total" fill="var(--color-total)" radius={[0, 3, 3, 0]}>
-                  {sourceBarData.map((entry, i) => (
-                    <Cell key={entry.source} fill={`hsl(${(i * 47) % 360}, 65%, 55%)`} />
+                <Bar dataKey="count" fill="var(--color-count)" radius={[0, 3, 3, 0]}>
+                  {pickupSources.slice(0, 20).map((entry, i) => (
+                    <Cell
+                      key={entry.source}
+                      fill={`hsl(${(i * 47) % 360}, 65%, 55%)`}
+                    />
                   ))}
                 </Bar>
               </BarChart>
@@ -728,143 +719,236 @@ export function SourceAnalyticsClient() {
         </Card>
       )}
 
-      {/* ====== 4. Stale Source Alerts ====== */}
-      {staleSources.length > 0 && (
-        <Card className="border-amber-200 dark:border-amber-900">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
-              <AlertTriangle className="h-4 w-4" />
-              Stale Sources
-              <InfoTip>Sources where no grant has been seen in the last 48 hours. The crawler may have failed or the source may be offline.</InfoTip>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {staleSources.map((s) => (
-                <Link key={s.source} href={`/admin/source-analytics/${encodeURIComponent(s.source)}${rangeQs}`}>
-                  <Badge variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-400 cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/30">
-                    {s.source}
-                    <span className="ml-1.5 text-muted-foreground font-normal">
-                      last seen {timeAgo(s.last_seen)}
-                    </span>
-                  </Badge>
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ====== 5. Source Breakdown Table ====== */}
+      {/* ====== Per-Org Table ====== */}
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-              Source Breakdown
-              <InfoTip>Per-source metrics from the central catalog. Click a source to see its individual grants, eligibility scores, and org pickup details.</InfoTip>
+              <Users className="h-4 w-4" />
+              Per-Organization Pickups
+              <InfoTip>
+                Each row shows how many catalog grants that org added to its
+                pipeline, broken down by stage. Click the org name to view its
+                full admin detail page.
+              </InfoTip>
             </CardTitle>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Filter sources..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-9"
-              />
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={hideZero}
+                  onChange={(e) => setHideZero(e.target.checked)}
+                  className="h-3.5 w-3.5 accent-foreground"
+                />
+                Hide orgs with 0 pickups
+              </label>
+              <div className="relative w-full sm:w-56">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Filter orgs..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-9"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
         <CardContent className="px-0">
           {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              {search ? "No sources match your filter." : "No source data yet."}
+              {search
+                ? "No organizations match your filter."
+                : "No pickups in this range."}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <Table className="table-fixed min-w-[800px]">
                 <colgroup>
                   <col className="w-[22%]" />
+                  <col className="w-[9%]" />
                   <col className="w-[10%]" />
                   <col className="w-[10%]" />
                   <col className="w-[10%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[12%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[10%]" />
                 </colgroup>
                 <TableHeader>
                   <TableRow>
-                    <SortHeader field="source" sortField={sortField} sortAsc={sortAsc} onSort={handleSort}>Source</SortHeader>
-                    <SortHeader field="total" sortField={sortField} sortAsc={sortAsc} onSort={handleSort} align="right">Total</SortHeader>
-                    <SortHeader field="active" sortField={sortField} sortAsc={sortAsc} onSort={handleSort} align="right">Active</SortHeader>
-                    <SortHeader field="new_7d" sortField={sortField} sortAsc={sortAsc} onSort={handleSort} align="right">New (7d)</SortHeader>
-                    <SortHeader field="picked_up" sortField={sortField} sortAsc={sortAsc} onSort={handleSort} align="right">Picked Up</SortHeader>
-                    <SortHeader field="avg_eligibility" sortField={sortField} sortAsc={sortAsc} onSort={handleSort} align="right">Avg Score</SortHeader>
-                    <TableHead className="text-right text-xs px-2 py-1.5">Last Seen</TableHead>
+                    <SortHeader
+                      field="name"
+                      sortField={sortField}
+                      sortAsc={sortAsc}
+                      onSort={handleSort}
+                    >
+                      Organization
+                    </SortHeader>
+                    <SortHeader
+                      field="total_picks"
+                      sortField={sortField}
+                      sortAsc={sortAsc}
+                      onSort={handleSort}
+                      align="right"
+                    >
+                      Pickups
+                    </SortHeader>
+                    <SortHeader
+                      field="discovery"
+                      sortField={sortField}
+                      sortAsc={sortAsc}
+                      onSort={handleSort}
+                      align="right"
+                    >
+                      Discovery
+                    </SortHeader>
+                    <SortHeader
+                      field="screening"
+                      sortField={sortField}
+                      sortAsc={sortAsc}
+                      onSort={handleSort}
+                      align="right"
+                    >
+                      Screening
+                    </SortHeader>
+                    <TableHead className="text-right text-xs px-2 py-1.5">
+                      Approval
+                    </TableHead>
+                    <TableHead className="text-right text-xs px-2 py-1.5">
+                      Drafting+
+                    </TableHead>
+                    <SortHeader
+                      field="proposals"
+                      sortField={sortField}
+                      sortAsc={sortAsc}
+                      onSort={handleSort}
+                      align="right"
+                    >
+                      Proposals
+                    </SortHeader>
+                    <SortHeader
+                      field="last_pickup_at"
+                      sortField={sortField}
+                      sortAsc={sortAsc}
+                      onSort={handleSort}
+                      align="right"
+                    >
+                      Last Pick
+                    </SortHeader>
                     <TableHead className="text-right text-xs px-2 py-1.5"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((row) => (
-                    <TableRow key={row.source} className={row.stale ? "bg-amber-50/50 dark:bg-amber-950/10" : ""}>
-                      <TableCell className="font-medium text-xs px-2 py-1.5 truncate" title={row.source}>
-                        <div className="flex items-center gap-1.5">
-                          {row.stale && <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />}
-                          {row.source}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 font-medium">
-                        {row.total.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-                        <span className="text-green-600">{row.active.toLocaleString()}</span>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-                        {row.new_7d > 0 ? (
-                          <span className="text-blue-600">{row.new_7d}</span>
-                        ) : (
-                          <span className="text-muted-foreground">0</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-                        {row.picked_up > 0 ? (
-                          <span>{row.picked_up} <span className="text-muted-foreground text-[10px]">({row.total > 0 ? Math.round((row.picked_up / row.total) * 100) : 0}%)</span></span>
-                        ) : (
-                          <span className="text-muted-foreground">0</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
-                        {row.eligibility_count > 0 ? (
-                          <span className={row.avg_eligibility >= 75 ? "text-green-600" : row.avg_eligibility >= 50 ? "text-amber-600" : "text-red-600"}>
-                            {row.avg_eligibility}%
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right text-xs px-2 py-1.5 text-muted-foreground">
-                        {timeAgo(row.last_seen)}
-                      </TableCell>
-                      <TableCell className="text-right text-xs px-2 py-1.5">
-                        <Link
-                          href={`/admin/source-analytics/${encodeURIComponent(row.source)}${rangeQs}`}
-                          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+                  {filtered.map((row) => {
+                    const draftingPlus =
+                      row.drafting + row.submitted + row.awarded;
+                    return (
+                      <TableRow key={row.org_id}>
+                        <TableCell
+                          className="font-medium text-xs px-2 py-1.5 truncate"
+                          title={row.name}
                         >
-                          View <ArrowRight className="h-3 w-3" />
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {/* Totals row */}
+                          {row.name}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 font-semibold">
+                          {row.total_picks.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                          {row.discovery > 0 ? (
+                            row.discovery
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                          {row.screening > 0 ? (
+                            <span className="text-yellow-600">
+                              {row.screening}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                          {row.pending_approval > 0 ? (
+                            <span className="text-amber-600">
+                              {row.pending_approval}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                          {draftingPlus > 0 ? (
+                            <span className="text-green-600">
+                              {draftingPlus}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                          {row.proposals > 0 ? (
+                            <span className="text-purple-600">
+                              {row.proposals}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-xs px-2 py-1.5 text-muted-foreground">
+                          {timeAgo(row.last_pickup_at)}
+                        </TableCell>
+                        <TableCell className="text-right text-xs px-2 py-1.5">
+                          <Link
+                            href={`/admin/org-pickup/${row.org_id}${rangeQs}`}
+                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            View <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {totals && (
                     <TableRow className="border-t-2 font-semibold bg-muted/30">
-                      <TableCell className="text-xs px-2 py-1.5">All Sources</TableCell>
-                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{totals.total.toLocaleString()}</TableCell>
-                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-green-600">{totals.active.toLocaleString()}</TableCell>
-                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-blue-600">{totals.new_7d.toLocaleString()}</TableCell>
-                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">{totals.picked_up.toLocaleString()}</TableCell>
-                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">-</TableCell>
-                      <TableCell className="text-right text-xs px-2 py-1.5">-</TableCell>
+                      <TableCell className="text-xs px-2 py-1.5">
+                        All Orgs
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                        {totals.total_picks.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5">
+                        {filtered
+                          .reduce((a, o) => a + o.discovery, 0)
+                          .toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-yellow-600">
+                        {filtered
+                          .reduce((a, o) => a + o.screening, 0)
+                          .toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-amber-600">
+                        {filtered
+                          .reduce((a, o) => a + o.pending_approval, 0)
+                          .toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-green-600">
+                        {filtered
+                          .reduce(
+                            (a, o) =>
+                              a + o.drafting + o.submitted + o.awarded,
+                            0,
+                          )
+                          .toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs px-2 py-1.5 text-purple-600">
+                        {filtered
+                          .reduce((a, o) => a + o.proposals, 0)
+                          .toLocaleString()}
+                      </TableCell>
+                      <TableCell />
                       <TableCell />
                     </TableRow>
                   )}
@@ -885,9 +969,11 @@ export function SourceAnalyticsClient() {
 function Header() {
   return (
     <div>
-      <h1 className="font-display text-xl sm:text-2xl font-black uppercase tracking-tight">Source Analytics</h1>
+      <h1 className="font-display text-xl sm:text-2xl font-black uppercase tracking-tight">
+        Org Pickup
+      </h1>
       <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase">
-        Central grant catalog health, source freshness, and org pipeline conversion
+        How many catalog grants each organization has added to its pipeline
       </p>
     </div>
   );
@@ -919,7 +1005,6 @@ function RangeFilter({
     "custom",
   ];
 
-  // Local draft state — only commits to parent on Apply.
   const [draftFrom, setDraftFrom] = useState(customFrom);
   const [draftTo, setDraftTo] = useState(customTo);
   const [lastProps, setLastProps] = useState({ customFrom, customTo });
@@ -1009,10 +1094,16 @@ function SortHeader({
 }) {
   return (
     <TableHead
-      className={`cursor-pointer select-none text-xs px-2 py-1.5 ${align === "right" ? "text-right" : ""}`}
+      className={`cursor-pointer select-none text-xs px-2 py-1.5 ${
+        align === "right" ? "text-right" : ""
+      }`}
       onClick={() => onSort(field)}
     >
-      <div className={`flex items-center gap-1 ${align === "right" ? "justify-end" : ""}`}>
+      <div
+        className={`flex items-center gap-1 ${
+          align === "right" ? "justify-end" : ""
+        }`}
+      >
         {children}
         {sortField === field && (
           <ArrowDownUp className="h-3 w-3 text-foreground shrink-0" />
