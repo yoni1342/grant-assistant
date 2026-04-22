@@ -1,0 +1,55 @@
+{
+  "name": "Central Grants Description Backfill",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c1000000-0000-0000-0000-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        20000,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Central Grants Description Backfill (queue-based)\n// ------------------------------------------------------------\n// Sweeps every row in central_grants whose description is NULL,\n// empty, or shorter than THIN_LIMIT chars, then hands the whole\n// batch off to the Enrich Throttle Queue (/webhook/enrich-queue).\n// Enrich itself PATCHes central_grants as results come in, so this\n// workflow no longer awaits responses or writes to Supabase.\n//\n// Benefits over the old implementation:\n//   - No 10x parallel fan-out that crashed the task runner.\n//   - No in-process loop holding the execution for 30+ minutes\n//     (we now exit in seconds after queueing).\n//   - Safe to re-run; enrich writes are idempotent.\n//\n// DRY_RUN=true: prints counts only, does not enqueue anything.\n// ============================================================\n\nconst DRY_RUN          = true;   // <-- flip to false to actually enqueue\nconst THIN_LIMIT       = 200;    // matches enrich workflow's threshold\nconst PAGE_SIZE        = 1000;   // Supabase pagination page\nconst MAX_GRANTS       = null;   // optional safety cap (e.g. 200 for first real run)\nconst QUEUE_BATCH_SIZE = 500;    // rows per POST to the enrich queue\n\nconst SUPABASE_URL     = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst SUPABASE_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst ENRICH_QUEUE_URL = 'https://n8n.thebrownmine.com/webhook/enrich-queue';\n\nconst helpers = this.helpers;\nconst supaHeaders = {\n  'apikey':        SUPABASE_KEY,\n  'Authorization': 'Bearer ' + SUPABASE_KEY,\n  'Content-Type':  'application/json',\n};\n\nasync function fetchAllCentralGrants() {\n  const all = [];\n  let offset = 0;\n  const selectCols = 'id,title,funder_name,source,source_url,description,first_seen_at';\n  while (true) {\n    const rows = await helpers.httpRequest({\n      method:  'GET',\n      url:     SUPABASE_URL + '/central_grants?select=' + selectCols + '&order=first_seen_at.asc',\n      headers: Object.assign({}, supaHeaders, {\n        'Range-Unit': 'items',\n        'Range':      offset + '-' + (offset + PAGE_SIZE - 1),\n      }),\n      json: true,\n    });\n    if (!Array.isArray(rows) || rows.length === 0) break;\n    all.push.apply(all, rows);\n    if (rows.length < PAGE_SIZE) break;\n    offset += PAGE_SIZE;\n  }\n  return all;\n}\n\n// -------------------- main --------------------\nconst all = await fetchAllCentralGrants();\nlet thin = all.filter(function (g) { return (g.description || '').length < THIN_LIMIT; });\nif (MAX_GRANTS && thin.length > MAX_GRANTS) thin = thin.slice(0, MAX_GRANTS);\n\nconst bySource = {};\nfor (let i = 0; i < thin.length; i++) {\n  const key = thin[i].source || 'unknown';\n  bySource[key] = (bySource[key] || 0) + 1;\n}\n\nlet queued = 0;\nconst queueErrors = [];\n\nif (!DRY_RUN && thin.length > 0) {\n  for (let i = 0; i < thin.length; i += QUEUE_BATCH_SIZE) {\n    const batch = thin.slice(i, i + QUEUE_BATCH_SIZE).map(function (g) {\n      return {\n        id:          g.id,\n        title:       g.title || '',\n        funder_name: g.funder_name || '',\n        source_url:  g.source_url || '',\n        description: g.description || '',\n      };\n    });\n    try {\n      await helpers.httpRequest({\n        method:  'POST',\n        url:     ENRICH_QUEUE_URL,\n        headers: { 'Content-Type': 'application/json' },\n        body:    JSON.stringify({ grants: batch }),\n        timeout: 30000,\n      });\n      queued += batch.length;\n    } catch (e) {\n      if (queueErrors.length < 20) {\n        queueErrors.push({\n          batchStart: i,\n          size:       batch.length,\n          message:    String(e.message || e).slice(0, 400),\n        });\n      }\n    }\n  }\n}\n\nreturn [{\n  json: {\n    dry_run:          DRY_RUN,\n    total_scanned:    all.length,\n    thin_found:       thin.length,\n    queued:           queued,\n    thin_limit:       THIN_LIMIT,\n    max_grants_cap:   MAX_GRANTS,\n    queue_batch_size: QUEUE_BATCH_SIZE,\n    by_source:        bySource,\n    errors: { queue: queueErrors },\n  },\n}];\n"
+      },
+      "id": "c1000000-0000-0000-0000-000000000002",
+      "name": "Backfill Descriptions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20300,
+        0
+      ],
+      "continueOnFail": false,
+      "notes": "Scans central_grants, batches thin rows off to /webhook/enrich-queue (fire-and-forget). Enrich self-PATCHes. DRY_RUN=true by default."
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Backfill Descriptions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 3600
+  },
+  "versionId": "c1000000-0000-0000-0000-0000000000ff",
+  "meta": {
+    "instanceId": "5a516a6c7b1ae03fb5d181293d1db5fe1a9e8408c1f8c17c962834e82c0a6b9b"
+  },
+  "id": "CentralGrantsDescBackfill01",
+  "tags": []
+}
