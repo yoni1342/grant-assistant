@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info, Loader2 } from "lucide-react";
+import { Info, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 type Grant = Tables<"grants_full">;
@@ -94,10 +94,12 @@ export function KanbanView({
   grants,
   onStageChange,
   proposalQualityMap = {},
+  generatingGrantIds,
 }: {
   grants: Grant[];
   onStageChange?: (grantId: string, targetStage: string) => Promise<void>;
   proposalQualityMap?: Record<string, number>;
+  generatingGrantIds?: Set<string>;
 }) {
   const [draggedGrantId, setDraggedGrantId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
@@ -198,6 +200,7 @@ export function KanbanView({
                 const grantId = grant.id;
                 const isMoving = movingGrants.has(grantId);
                 const isDragging = draggedGrantId === grantId;
+                const isGeneratingProposal = !!generatingGrantIds?.has(grantId);
 
                 return (
                   <div
@@ -208,7 +211,7 @@ export function KanbanView({
                     className={`${isDragging ? "opacity-40" : ""} ${isMoving ? "pointer-events-none opacity-60" : ""}`}
                   >
                     <Link href={`/pipeline/${grantId}`}>
-                      <Card className="cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md">
+                      <Card className={`cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md ${isGeneratingProposal ? "border-purple-300 dark:border-purple-700 ring-1 ring-purple-200 dark:ring-purple-900" : ""}`}>
                         <CardContent className="p-3 space-y-2">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium leading-tight flex-1">
@@ -218,6 +221,12 @@ export function KanbanView({
                               <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
                             )}
                           </div>
+                          {isGeneratingProposal && (
+                            <div className="flex items-center gap-1.5 rounded-md bg-purple-50 dark:bg-purple-950/40 px-2 py-1 text-xs text-purple-700 dark:text-purple-300">
+                              <Sparkles className="h-3 w-3 animate-pulse shrink-0" />
+                              <span className="font-medium">Generating proposal…</span>
+                            </div>
+                          )}
                           <p className={`text-xs text-muted-foreground ${isMissingGrantValue(grant.funder_name) ? "italic" : ""}`}>
                             {isMissingGrantValue(grant.funder_name) ? "No funder mentioned" : grant.funder_name}
                           </p>

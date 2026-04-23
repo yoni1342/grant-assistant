@@ -6,6 +6,7 @@ import { sendGrantEligibleEmail } from '@/lib/email/service'
 import { extractGrantEligibleFields } from '@/lib/email/grant-data'
 import { sanitizeError } from '@/lib/errors'
 import { canAutoFetchGrants } from '@/lib/stripe/config'
+import { beginProposalGenerationOrBlock } from '@/lib/workflow/proposal-concurrency'
 
 const STAGE_WORKFLOWS: Record<string, string> = {
   screening: 'screen-grant',
@@ -187,21 +188,33 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
     return { error: sanitizeError(stageUpdateError, 'Unable to move this grant. Please try again.') }
   }
 
-  // Insert workflow execution record
-  const { data: workflow, error: workflowError } = await supabase
-    .from('workflow_executions')
-    .insert({
-      org_id: profile.org_id,
-      grant_id: grantId,
-      workflow_name: webhookPath,
-      status: 'running',
-      webhook_url: `/webhook/${webhookPath}`,
-    })
-    .select()
-    .single()
+  // Insert workflow execution record. For proposal generation, gate on the
+  // per-org concurrency cap; other stage workflows (screen-grant) still use
+  // a direct insert since they're throttled by the screening queue upstream.
+  let workflowId: string
+  if (webhookPath === 'generate-proposal') {
+    const claim = await beginProposalGenerationOrBlock(supabase, profile.org_id, grantId)
+    if (claim.blocked) {
+      return { error: claim.error }
+    }
+    workflowId = claim.workflowId
+  } else {
+    const { data: workflow, error: workflowError } = await supabase
+      .from('workflow_executions')
+      .insert({
+        org_id: profile.org_id,
+        grant_id: grantId,
+        workflow_name: webhookPath,
+        status: 'running',
+        webhook_url: `/webhook/${webhookPath}`,
+      })
+      .select('id')
+      .single()
 
-  if (workflowError) {
-    return { error: sanitizeError(workflowError, 'Unable to start the workflow. Please try again.') }
+    if (workflowError || !workflow) {
+      return { error: sanitizeError(workflowError, 'Unable to start the workflow. Please try again.') }
+    }
+    workflowId = workflow.id
   }
 
   // Clear screening data when moving to drafting from screening or pending_approval
@@ -223,7 +236,7 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
         grantId: grantId,
         grant_name: grant.title,
         org_id: profile.org_id,
-        workflow_id: workflow.id,
+        workflow_id: workflowId,
         grantData: grant,
       }),
     }).catch((err) => {
@@ -232,5 +245,5 @@ export async function triggerStageWorkflow(grantId: string, targetStage: string)
   }
 
   revalidatePath('/pipeline')
-  return { success: true, workflowId: workflow.id }
+  return { success: true, workflowId }
 }

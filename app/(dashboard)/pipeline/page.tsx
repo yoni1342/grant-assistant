@@ -17,7 +17,12 @@ export default async function PipelinePage() {
   // eslint-disable-next-line react-hooks/purity
   const staleThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-  const [grantsResult, { data: fetchStatus }, { data: proposals }] = await Promise.all([
+  // Match the 10-minute stale window used by proposal-concurrency.ts so a
+  // crashed workflow doesn't leave the UI in a permanent "generating" state.
+  // eslint-disable-next-line react-hooks/purity
+  const generatingCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+  const [grantsResult, { data: fetchStatus }, { data: proposals }, { data: runningProposalRows }] = await Promise.all([
     adminDb
       .from("grants_full")
       .select("*")
@@ -35,7 +40,22 @@ export default async function PipelinePage() {
       .from("proposals")
       .select("id, grant_id, quality_score")
       .eq("org_id", orgId),
+    adminDb
+      .from("workflow_executions")
+      .select("grant_id")
+      .eq("org_id", orgId)
+      .eq("workflow_name", "generate-proposal")
+      .eq("status", "running")
+      .gte("created_at", generatingCutoff),
   ]);
+
+  const generatingGrantIds = Array.from(
+    new Set(
+      (runningProposalRows || [])
+        .map((r) => r.grant_id)
+        .filter((id): id is string => !!id),
+    ),
+  );
 
   // Delete grants that were already expired when fetched (deadline < created_at).
   // These are irrelevant — the user never had a chance at them.
@@ -81,17 +101,23 @@ export default async function PipelinePage() {
           <GrantFetchBanner orgId={orgId} initialStatus={activeFetchStatus} />
         </div>
       )}
-      <PipelineClient initialGrants={grants || []} orgId={orgId} isFetchingGrants={!!activeFetchStatus} proposalQualityMap={
-        (proposals || []).reduce((acc, p) => {
-          if (p.grant_id && p.quality_score != null) {
-            const existing = acc[p.grant_id];
-            if (existing == null || p.quality_score > existing) {
-              acc[p.grant_id] = p.quality_score;
+      <PipelineClient
+        initialGrants={grants || []}
+        orgId={orgId}
+        isFetchingGrants={!!activeFetchStatus}
+        initialGeneratingGrantIds={generatingGrantIds}
+        proposalQualityMap={
+          (proposals || []).reduce((acc, p) => {
+            if (p.grant_id && p.quality_score != null) {
+              const existing = acc[p.grant_id];
+              if (existing == null || p.quality_score > existing) {
+                acc[p.grant_id] = p.quality_score;
+              }
             }
-          }
-          return acc;
-        }, {} as Record<string, number>)
-      } />
+            return acc;
+          }, {} as Record<string, number>)
+        }
+      />
     </div>
   );
 }

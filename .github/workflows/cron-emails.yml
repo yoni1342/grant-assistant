@@ -2,9 +2,11 @@ name: ⏰ Cron — Email notifications
 
 on:
   schedule:
-    # Grant eligible digest — every 30 minutes.
+    # Grant eligible digest — every 10 minutes.
     # The cron groups newly-eligible grants per org into one digest email
     # instead of sending one email per grant.
+    - cron: '*/10 * * * *'
+    # Profile reminders — every 30 minutes (no rush, not time-sensitive).
     - cron: '*/30 * * * *'
   workflow_dispatch:
 
@@ -17,6 +19,8 @@ jobs:
     name: Grant eligible emails
     runs-on: ubuntu-latest
     environment: production
+    # Run on the 10-min cron and any manual dispatch.
+    if: github.event.schedule == '*/10 * * * *' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Trigger grant eligible email cron
         run: |
@@ -28,6 +32,8 @@ jobs:
     name: Profile reminder emails
     runs-on: ubuntu-latest
     environment: production
+    # Run on the 30-min cron and any manual dispatch.
+    if: github.event.schedule == '*/30 * * * *' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Trigger profile reminder cron
         run: |

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import type { Tables } from "@/lib/supabase/database.types";
 import { isMissingGrantValue } from "@/lib/grants/filters";
 import { Button } from "@/components/ui/button";
@@ -25,10 +26,10 @@ import {
   ExternalLink,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   Archive,
   ChevronDown,
   ChevronUp,
+  Sparkles,
 } from "lucide-react";
 import {
   Dialog,
@@ -105,9 +106,7 @@ export function GrantDetail({
   const [matchPercentage, setMatchPercentage] = useState(cleanText(metadata.match_percentage));
   const [contactInfo, setContactInfo] = useState(cleanText(metadata.contact_info));
   const [showAdditional, setShowAdditional] = useState(false);
-  const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
-  const [proposalStatus, setProposalStatus] = useState<"generating" | "done" | "error">("generating");
-  const [proposalError, setProposalError] = useState<string | null>(null);
+  const [generatingProposal, setGeneratingProposal] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -165,40 +164,10 @@ export function GrantDetail({
   }
 
   async function saveGrant(generateProposal: boolean) {
-    // If generating proposal, trigger the workflow first
-    if (generateProposal) {
-      setProposalError(null);
-      setProposalStatus("generating");
-      setProposalDialogOpen(true);
-
-      try {
-        const response = await fetch("/api/webhook", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            service: "proposal-generation",
-            grantId: grant.id,
-            timestamp: new Date().toISOString(),
-          }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok || result.success === false) {
-          setProposalStatus("error");
-          setProposalError(result.error || "Proposal generation failed.");
-          return;
-        }
-
-        setProposalStatus("done");
-      } catch {
-        setProposalStatus("error");
-        setProposalError("Failed to connect to workflow.");
-        return;
-      }
-    }
-
-    // Save the grant fields
+    // Save the grant fields first so the user's stage change + edits are
+    // persisted immediately. Proposal generation fires after and does not
+    // block the page — the button shows its own loading state instead of a
+    // modal, so the rest of the UI stays interactive.
     setSaving(true);
     const supabase = createClient();
 
@@ -239,13 +208,36 @@ export function GrantDetail({
 
     setSaving(false);
 
-    if (generateProposal) {
-      setTimeout(() => {
-        setProposalDialogOpen(false);
-        router.refresh();
-      }, 2000);
-    } else {
+    if (!generateProposal) {
       router.refresh();
+      return;
+    }
+
+    setGeneratingProposal(true);
+    try {
+      const response = await fetch("/api/webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service: "proposal-generation",
+          grantId: grant.id,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        toast.error(result.error || "Proposal generation failed.");
+        return;
+      }
+
+      toast.success("Proposal generated.");
+      router.refresh();
+    } catch {
+      toast.error("Failed to connect to the proposal workflow.");
+    } finally {
+      setGeneratingProposal(false);
     }
   }
 
@@ -669,9 +661,25 @@ export function GrantDetail({
                 setStage("drafting");
                 setConfirmDialogOpen(true);
               }}
+              disabled={generatingProposal}
             >
-              Generate Proposal
+              {generatingProposal ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating Proposal…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Proposal
+                </>
+              )}
             </Button>
+            {generatingProposal && (
+              <p className="text-xs text-muted-foreground">
+                This runs in the background — feel free to keep working. You&apos;ll see a notification when it&apos;s ready.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -696,9 +704,22 @@ export function GrantDetail({
                 setStage("drafting");
                 setConfirmDialogOpen(true);
               }}
+              disabled={generatingProposal}
             >
-              Approve & Generate Proposal
+              {generatingProposal ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating Proposal…
+                </>
+              ) : (
+                "Approve & Generate Proposal"
+              )}
             </Button>
+            {generatingProposal && (
+              <p className="text-xs text-muted-foreground">
+                This runs in the background — feel free to keep working. You&apos;ll see a notification when it&apos;s ready.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -898,50 +919,6 @@ export function GrantDetail({
         </DialogContent>
       </Dialog>
 
-      {/* Proposal Generation Dialog */}
-      <Dialog open={proposalDialogOpen} onOpenChange={() => {}}>
-        <DialogContent
-          className="sm:max-w-sm [&>button]:hidden"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          <DialogHeader>
-            <div className="flex flex-col items-center gap-4 py-4">
-              {proposalStatus === "generating" && (
-                <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-              )}
-              {proposalStatus === "done" && (
-                <CheckCircle2 className="h-8 w-8 text-green-500" />
-              )}
-              {proposalStatus === "error" && (
-                <XCircle className="h-8 w-8 text-red-500" />
-              )}
-              <DialogTitle>
-                {proposalStatus === "generating" && "Generating Proposal..."}
-                {proposalStatus === "done" && "Proposal Generated!"}
-                {proposalStatus === "error" && "Generation Failed"}
-              </DialogTitle>
-              <DialogDescription className="text-center">
-                {proposalStatus === "generating" &&
-                  `Creating a proposal for "${grant.title}". This may take a minute.`}
-                {proposalStatus === "done" && "Your proposal is ready."}
-                {proposalStatus === "error" &&
-                  (proposalError || "Something went wrong.")}
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-          {proposalStatus === "error" && (
-            <DialogFooter className="sm:justify-center">
-              <Button
-                variant="outline"
-                onClick={() => setProposalDialogOpen(false)}
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

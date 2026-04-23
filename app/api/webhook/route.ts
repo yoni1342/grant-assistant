@@ -4,6 +4,7 @@ import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/se
 import { PLANS } from "@/lib/stripe/config";
 import type { PlanId } from "@/lib/stripe/config";
 import { friendlyWorkflowError } from "@/lib/errors";
+import { beginProposalGenerationOrBlock } from "@/lib/workflow/proposal-concurrency";
 
 // Map service names to n8n webhook paths
 const SERVICE_MAP: Record<string, string> = {
@@ -46,11 +47,14 @@ export async function POST(req: Request) {
 
   const webhookPath = SERVICE_MAP[service];
   const fullUrl = `${n8nUrl}/${webhookPath}`;
-  const payload = { ...data, org_id: orgId };
+  const payload: Record<string, unknown> = { ...data, org_id: orgId };
 
   const agent = new https.Agent({ rejectUnauthorized: false });
 
-  // Validate grant exists and has a title before proposal generation
+  // Validate grant exists and has a title, then claim the proposal-generation
+  // slot for this org. The slot gate prevents concurrent proposals from the
+  // same org from exhausting Supabase connections under press traffic.
+  let proposalWorkflowId: string | null = null;
   if (service === "proposal-generation") {
     if (!data.grantId) {
       return new Response(
@@ -76,6 +80,19 @@ export async function POST(req: Request) {
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
+
+    const claim = await beginProposalGenerationOrBlock(supabase, orgId, data.grantId);
+    if (claim.blocked) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: claim.error,
+          code: "PROPOSAL_IN_FLIGHT",
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    proposalWorkflowId = claim.workflowId;
   }
 
   // Validate and enforce limits for add-to-pipeline.
@@ -250,6 +267,33 @@ export async function POST(req: Request) {
     );
   }
 
+  if (proposalWorkflowId) {
+    payload.workflow_id = proposalWorkflowId;
+  }
+
+  // Release the proposal-generation slot so the next click in this org
+  // doesn't have to wait out the 10-minute stale window. n8n itself does
+  // not update workflow_executions today, so we do it here.
+  const releaseProposalSlot = async (
+    status: "completed" | "failed",
+    errorMessage?: string,
+  ) => {
+    if (!proposalWorkflowId) return;
+    try {
+      const adminSupabase = createAdminClient();
+      await adminSupabase
+        .from("workflow_executions")
+        .update({
+          status,
+          completed_at: new Date().toISOString(),
+          ...(errorMessage ? { error: errorMessage.slice(0, 500) } : {}),
+        })
+        .eq("id", proposalWorkflowId);
+    } catch (err) {
+      console.error("[webhook] failed to release proposal slot:", err);
+    }
+  };
+
   try {
     const response = await fetch(fullUrl, {
       method: "POST",
@@ -270,11 +314,10 @@ export async function POST(req: Request) {
     }
 
     if (!response.ok) {
+      const msg = friendlyWorkflowError(service, responseData?.message || responseData);
+      await releaseProposalSlot("failed", msg);
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: friendlyWorkflowError(service, responseData?.message || responseData),
-        }),
+        JSON.stringify({ success: false, error: msg }),
         { status: response.status, headers: { "Content-Type": "application/json" } },
       );
     }
@@ -282,33 +325,34 @@ export async function POST(req: Request) {
     // Empty response means workflow took a wrong path
     if (!text || text.trim() === "") {
       console.error(`[webhook/${service}] Empty response from n8n`);
+      const msg = friendlyWorkflowError(service);
+      await releaseProposalSlot("failed", msg);
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: friendlyWorkflowError(service),
-        }),
+        JSON.stringify({ success: false, error: msg }),
         { status: 502, headers: { "Content-Type": "application/json" } },
       );
     }
 
     // Forward n8n's success/failure status
     if (responseData && responseData.success === false) {
+      const msg = friendlyWorkflowError(service, responseData.message);
+      await releaseProposalSlot("failed", msg);
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: friendlyWorkflowError(service, responseData.message),
-        }),
+        JSON.stringify({ success: false, error: msg }),
         { headers: { "Content-Type": "application/json" } },
       );
     }
 
+    await releaseProposalSlot("completed");
     return new Response(
       JSON.stringify({ success: true, data: responseData }),
       { headers: { "Content-Type": "application/json" } },
     );
   } catch (err) {
+    const msg = friendlyWorkflowError(service, err);
+    await releaseProposalSlot("failed", String(msg));
     return new Response(
-      JSON.stringify({ success: false, error: friendlyWorkflowError(service, err) }),
+      JSON.stringify({ success: false, error: msg }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
