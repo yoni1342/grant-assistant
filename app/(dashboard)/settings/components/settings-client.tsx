@@ -12,11 +12,19 @@ type Profile = Tables<"profiles">
 type Organization = Tables<"organizations">
 type WorkflowExecution = Tables<"workflow_executions">
 
+export interface OrgFetchSchedule {
+  last_grant_fetch_at: string | null
+  queue_position: number
+  hours_until_next_fetch: number
+  estimated_next_fetch_at: string
+}
+
 export interface SettingsData {
   user: User
   profile: Profile & { organization: Organization | null }
   members: Profile[]
   workflows: WorkflowExecution[]
+  fetchSchedule: OrgFetchSchedule | null
 }
 
 export function SettingsClient({ data }: { data: SettingsData }) {
@@ -48,6 +56,7 @@ export function SettingsClient({ data }: { data: SettingsData }) {
             profile={data.profile}
             organization={data.profile.organization}
             members={data.members}
+            fetchSchedule={data.fetchSchedule}
           />
         </TabsContent>
 

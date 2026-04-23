@@ -39,6 +39,9 @@ import {
 import { updateOrganization, updateMemberRole, removeMember } from "../actions"
 import { InviteMemberDialog } from "./invite-member-dialog"
 import type { Tables } from "@/lib/supabase/database.types"
+import type { OrgFetchSchedule } from "./settings-client"
+import { formatTimeAgo, formatTimeUntil, formatClockUTC } from "@/lib/utils/format"
+import { Clock, History } from "lucide-react"
 
 type Profile = Tables<"profiles">
 type Organization = Tables<"organizations">
@@ -78,9 +81,10 @@ interface OrganizationTabProps {
   profile: Profile
   organization: Organization | null
   members: Profile[]
+  fetchSchedule: OrgFetchSchedule | null
 }
 
-export function OrganizationTab({ profile, organization, members }: OrganizationTabProps) {
+export function OrganizationTab({ profile, organization, members, fetchSchedule }: OrganizationTabProps) {
   const [saving, setSaving] = useState(false)
   const isAdmin = profile.role === "owner" || profile.role === "admin"
 
@@ -190,6 +194,32 @@ export function OrganizationTab({ profile, organization, members }: Organization
           <CardDescription>
             Information about your nonprofit organization.
           </CardDescription>
+          {fetchSchedule && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
+              <div className="flex items-center gap-1.5">
+                <History className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-mono uppercase tracking-wide text-muted-foreground">
+                  Last grant check
+                </span>
+                <span className="font-medium text-foreground">
+                  {formatTimeAgo(fetchSchedule.last_grant_fetch_at)}
+                </span>
+              </div>
+              <span className="text-muted-foreground/50">·</span>
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-mono uppercase tracking-wide text-muted-foreground">
+                  Next check
+                </span>
+                <span className="font-medium text-foreground">
+                  {formatTimeUntil(fetchSchedule.estimated_next_fetch_at)}
+                </span>
+                <span className="text-muted-foreground">
+                  ({formatClockUTC(fetchSchedule.estimated_next_fetch_at)})
+                </span>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">

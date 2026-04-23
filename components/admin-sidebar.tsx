@@ -16,6 +16,7 @@ import {
   BarChart3,
   Hash,
   AlertTriangle,
+  Clock,
   Menu,
   X,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/admin/proposals", label: "Proposals", icon: PenTool },
   { href: "/admin/source-analytics", label: "Source Analytics", icon: BarChart3 },
   { href: "/admin/org-pickup", label: "Org Pickup", icon: Hash },
+  { href: "/admin/fetch-queue", label: "Fetch Queue", icon: Clock },
   { href: "/admin/system-errors", label: "System Errors", icon: AlertTriangle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

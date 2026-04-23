@@ -42,6 +42,17 @@ export default async function SettingsPage() {
     workflows = data || []
   }
 
+  // Fetch this org's position in the hourly grant-fetch queue.
+  let fetchSchedule: SettingsData['fetchSchedule'] = null
+  if (profile.org_id) {
+    const { data } = await supabase
+      .from("org_fetch_schedule")
+      .select("last_grant_fetch_at, queue_position, hours_until_next_fetch, estimated_next_fetch_at")
+      .eq("id", profile.org_id)
+      .maybeSingle()
+    fetchSchedule = data ?? null
+  }
+
   return (
     <SettingsClient
       data={{
@@ -49,6 +60,7 @@ export default async function SettingsPage() {
         profile: profile as unknown as SettingsData['profile'],
         members: members as unknown as SettingsData['members'],
         workflows,
+        fetchSchedule,
       }}
     />
   )
