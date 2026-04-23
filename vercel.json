@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/hourly-org-fetch",
-      "schedule": "0 * * * *"
-    }
-  ]
-}

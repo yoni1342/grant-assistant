@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServiceRoleClient } from "@supabase/supabase-js";
 
 // Hourly staggered grant-fetch rotation. Replaces the old n8n scheduleTrigger
-// so that if n8n is briefly down we at least get Vercel cron logs + retries.
+// so that if n8n is briefly down we at least get a logged fire attempt
+// independent of n8n's uptime.
 //
 // Each fire calls the Supabase RPC `next_org_fetch_batch()` which atomically
 // picks ceil(approved_orgs / 24) oldest orgs and stamps their
 // last_grant_fetch_at = now(), then fans out to the n8n /webhook/fetch-grants
 // endpoint per org (fire-and-forget).
 //
-// Configured in vercel.json to run at `0 * * * *`.
+// Scheduled by .github/workflows/cron-org-fetch.yml (cron `0 * * * *`).
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
