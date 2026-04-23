@@ -11,7 +11,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Sparkles } from "lucide-react";
 import Link from "next/link";
+
+function GeneratingBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
+      <Sparkles className="h-3 w-3 animate-pulse" />
+      Generating…
+    </span>
+  );
+}
 
 type Grant = Tables<"grants_full">;
 
@@ -124,9 +134,11 @@ function groupByStage(grants: Grant[]) {
 export function ListView({
   grants,
   proposalQualityMap = {},
+  generatingGrantIds,
 }: {
   grants: Grant[];
   proposalQualityMap?: Record<string, number>;
+  generatingGrantIds?: Set<string>;
 }) {
   if (grants.length === 0) {
     return (
@@ -153,7 +165,7 @@ export function ListView({
           </div>
           {col.grants.map((g) => (
             <Link key={g.id} href={`/pipeline/${g.id}`}>
-              <div className="rounded-lg border bg-card p-3 space-y-2 hover:shadow-md transition-shadow">
+              <div className={`rounded-lg border bg-card p-3 space-y-2 hover:shadow-md transition-shadow ${g.id && generatingGrantIds?.has(g.id) ? "border-purple-300 dark:border-purple-700 ring-1 ring-purple-200 dark:ring-purple-900" : ""}`}>
                 <p className="text-sm font-medium leading-tight">{g.title}</p>
                 <p className={`text-xs text-muted-foreground ${isMissingGrantValue(g.funder_name) ? "italic" : ""}`}>
                   {isMissingGrantValue(g.funder_name) ? "No funder mentioned" : g.funder_name}
@@ -174,6 +186,7 @@ export function ListView({
                   ) : (
                     <ScreeningScore grant={g} />
                   )}
+                  {g.id && generatingGrantIds?.has(g.id) && <GeneratingBadge />}
                 </div>
                 <DeadlineCell deadline={g.deadline} />
                 {g.created_at && (() => {
@@ -217,13 +230,14 @@ export function ListView({
               </TableHeader>
               <TableBody>
                 {col.grants.map((g) => (
-                  <TableRow key={g.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableRow key={g.id} className={`cursor-pointer hover:bg-muted/50 ${g.id && generatingGrantIds?.has(g.id) ? "bg-purple-50/40 dark:bg-purple-950/20" : ""}`}>
                     <TableCell className="truncate">
                       <Link
                         href={`/pipeline/${g.id}`}
-                        className="font-medium hover:underline"
+                        className="font-medium hover:underline inline-flex items-center gap-2"
                       >
                         {g.title}
+                        {g.id && generatingGrantIds?.has(g.id) && <GeneratingBadge />}
                       </Link>
                     </TableCell>
                     <TableCell className={`text-muted-foreground truncate ${isMissingGrantValue(g.funder_name) ? "italic" : ""}`}>

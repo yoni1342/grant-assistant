@@ -48,11 +48,13 @@ export function PipelineClient({
   initialGrants,
   orgId,
   isFetchingGrants = false,
+  initialGeneratingGrantIds = [],
   proposalQualityMap = {},
 }: {
   initialGrants: Grant[];
   orgId: string;
   isFetchingGrants?: boolean;
+  initialGeneratingGrantIds?: string[];
   proposalQualityMap?: Record<string, number>;
 }) {
   const [grants, setGrants] = useState<Grant[]>(initialGrants);
@@ -64,6 +66,9 @@ export function PipelineClient({
   const [sortBy, setSortBy] = useState<"none" | "deadline" | "amount" | "score">("none");
   const [confirmGrant, setConfirmGrant] = useState<Grant | null>(null);
   const [orgName, setOrgName] = useState<string>("");
+  const [generatingGrantIds, setGeneratingGrantIds] = useState<Set<string>>(
+    () => new Set(initialGeneratingGrantIds),
+  );
 
   // Fetch org name for confirmation dialog
   useEffect(() => {
@@ -103,8 +108,29 @@ export function PipelineClient({
       if (data) setGrants(data as unknown as Grant[]);
     }
 
+    async function fetchGeneratingProposals() {
+      const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from("workflow_executions")
+        .select("grant_id")
+        .eq("org_id", orgId)
+        .eq("workflow_name", "generate-proposal")
+        .eq("status", "running")
+        .gte("created_at", cutoff);
+      setGeneratingGrantIds(
+        new Set(
+          (data || [])
+            .map((r) => r.grant_id)
+            .filter((id): id is string => !!id),
+        ),
+      );
+    }
+
     // Poll every 15 seconds for reliable updates
-    const interval = setInterval(fetchGrants, 15_000);
+    const interval = setInterval(() => {
+      fetchGrants();
+      fetchGeneratingProposals();
+    }, 15_000);
 
     const channel = supabase
       .channel("grants-realtime")
@@ -257,6 +283,16 @@ export function PipelineClient({
       )
     );
 
+    // Optimistically flag as "generating proposal" so the card indicator
+    // appears immediately. The 15s poll or a failure path will reconcile it.
+    if (targetStage === "drafting") {
+      setGeneratingGrantIds((prev) => {
+        const next = new Set(prev);
+        next.add(grantId);
+        return next;
+      });
+    }
+
     const result = await triggerStageWorkflow(grantId, targetStage);
 
     if (result.error) {
@@ -264,6 +300,13 @@ export function PipelineClient({
       setGrants((prev) =>
         prev.map((g) => (g.id === grantId ? { ...g, stage: previousStage } : g))
       );
+      if (targetStage === "drafting") {
+        setGeneratingGrantIds((prev) => {
+          const next = new Set(prev);
+          next.delete(grantId);
+          return next;
+        });
+      }
       toast.error(`Failed to move grant: ${result.error}`);
     } else {
       toast.success(
@@ -364,9 +407,18 @@ export function PipelineClient({
           <p className="text-xs mt-1">This may take a minute. Grants will appear automatically.</p>
         </div>
       ) : view === "kanban" ? (
-        <KanbanView grants={filtered} onStageChange={handleStageChange} proposalQualityMap={proposalQualityMap} />
+        <KanbanView
+          grants={filtered}
+          onStageChange={handleStageChange}
+          proposalQualityMap={proposalQualityMap}
+          generatingGrantIds={generatingGrantIds}
+        />
       ) : (
-        <ListView grants={filtered} proposalQualityMap={proposalQualityMap} />
+        <ListView
+          grants={filtered}
+          proposalQualityMap={proposalQualityMap}
+          generatingGrantIds={generatingGrantIds}
+        />
       )}
 
       <AddGrantDialog

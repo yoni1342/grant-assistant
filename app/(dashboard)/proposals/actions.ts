@@ -3,6 +3,7 @@
 import { createClient, getUserOrgId } from '@/lib/supabase/server'
 import { sanitizeError } from '@/lib/errors'
 import { revalidatePath } from 'next/cache'
+import { beginProposalGenerationOrBlock } from '@/lib/workflow/proposal-concurrency'
 
 export async function getProposals() {
   const supabase = await createClient()
@@ -113,22 +114,11 @@ export async function triggerProposalGeneration(grantId: string) {
     return { error: 'User profile or organization not found' }
   }
 
-  // Insert workflow_executions record
-  const { data: workflow, error: workflowError } = await supabase
-    .from('workflow_executions')
-    .insert({
-      org_id: profile.org_id,
-      grant_id: grantId,
-      workflow_name: 'generate-proposal',
-      status: 'running',
-      webhook_url: '/webhook/generate-proposal',
-    })
-    .select()
-    .single()
-
-  if (workflowError) {
-    return { error: sanitizeError(workflowError, 'Unable to start this workflow. Please try again.') }
+  const claim = await beginProposalGenerationOrBlock(supabase, profile.org_id, grantId)
+  if (claim.blocked) {
+    return { error: claim.error }
   }
+  const workflowId = claim.workflowId
 
   // Trigger n8n workflow
   const n8nUrl = process.env.N8N_WEBHOOK_URL
@@ -140,7 +130,7 @@ export async function triggerProposalGeneration(grantId: string) {
     const payload = {
       grantId: grantId,
       org_id: profile.org_id,
-      workflow_id: workflow.id,
+      workflow_id: workflowId,
     }
     console.log('[proposal-gen] Calling:', fullUrl)
     console.log('[proposal-gen] Payload:', JSON.stringify(payload))
@@ -157,15 +147,29 @@ export async function triggerProposalGeneration(grantId: string) {
       console.log('[proposal-gen] n8n response status:', resp.status)
       const text = await resp.text()
       console.log('[proposal-gen] n8n response body:', text.substring(0, 500))
+
+      // Release the slot so the next attempt doesn't have to wait out the
+      // 10-minute stale window. n8n itself doesn't update workflow_executions.
+      await supabase
+        .from('workflow_executions')
+        .update({
+          status: resp.ok ? 'completed' : 'failed',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', workflowId)
     } catch (err) {
       console.error('[proposal-gen] n8n webhook failed:', err)
+      await supabase
+        .from('workflow_executions')
+        .update({ status: 'failed', completed_at: new Date().toISOString() })
+        .eq('id', workflowId)
     }
   } else {
     console.log('[proposal-gen] N8N_WEBHOOK_URL not set, skipping')
   }
 
   revalidatePath('/proposals')
-  return { success: true, workflowId: workflow.id }
+  return { success: true, workflowId }
 }
 
 export async function triggerQualityReview(proposalId: string) {
