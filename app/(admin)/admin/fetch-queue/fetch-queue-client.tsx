@@ -102,6 +102,11 @@ export function FetchQueueClient({ rows, errorMessage, history, historyError, fi
         <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase mt-1">
           Hourly rotation — who gets checked for grants next
         </p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Only <span className="font-medium text-foreground">Professional</span> and{" "}
+          <span className="font-medium text-foreground">Agency</span> orgs (plus testers)
+          appear here. Free tier is excluded — free orgs fetch grants manually via Discovery.
+        </p>
       </div>
 
       {errorMessage && (
@@ -116,8 +121,9 @@ export function FetchQueueClient({ rows, errorMessage, history, historyError, fi
       <div className="grid gap-4 sm:grid-cols-4">
         <SummaryCard
           icon={<ListOrdered className="h-4 w-4" />}
-          label="Approved orgs"
+          label="Eligible orgs"
           value={String(totalOrgs)}
+          sub="professional + agency"
         />
         <SummaryCard
           icon={<Layers className="h-4 w-4" />}
