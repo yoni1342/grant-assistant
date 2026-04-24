@@ -14,27 +14,27 @@ export default async function PipelinePage() {
   // who switch between orgs. Auth is already validated by getUserOrgId above.
   const adminDb = createAdminClient();
 
-  // eslint-disable-next-line react-hooks/purity
-  const staleThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-
   // Match the 10-minute stale window used by proposal-concurrency.ts so a
   // crashed workflow doesn't leave the UI in a permanent "generating" state.
   // eslint-disable-next-line react-hooks/purity
-  const generatingCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const nowMs = Date.now();
+  const generatingCutoff = new Date(nowMs - 10 * 60 * 1000).toISOString();
 
-  const [grantsResult, { data: fetchStatus }, { data: proposals }, { data: runningProposalRows }] = await Promise.all([
+  const [grantsResult, { data: fetchSchedule }, { data: proposals }, { data: runningProposalRows }] = await Promise.all([
     adminDb
       .from("grants_full")
       .select("*")
       .eq("org_id", orgId)
       .neq("stage", "archived")
       .order("created_at", { ascending: false }),
+    // Single source of truth for "is a fetch in progress?" — the same view
+    // the admin Fetch Queue reads. run_state='running' iff last_grant_fetch_at
+    // is within the 30-minute window and no catalog/manual grants have landed
+    // yet. Decouples UI from n8n's (unreliable) terminal status write.
     adminDb
-      .from("grant_fetch_status")
-      .select("*")
-      .eq("org_id", orgId)
-      .neq("status", "complete")
-      .gte("updated_at", staleThreshold)
+      .from("org_fetch_schedule")
+      .select("run_state, last_grant_fetch_at")
+      .eq("id", orgId)
       .single(),
     adminDb
       .from("proposals")
@@ -49,11 +49,23 @@ export default async function PipelinePage() {
       .gte("created_at", generatingCutoff),
   ]);
 
+  // A grant is "generating" only if a workflow row says so AND no proposal
+  // artifact exists yet. The proposals row is the source of truth for
+  // completion — once it's there, the card must show "done" regardless of
+  // whether workflow_executions was ever flipped from 'running' to 'completed'
+  // (n8n doesn't reliably do that write).
+  const grantsWithProposals = new Set(
+    (proposals || [])
+      .map((p) => p.grant_id)
+      .filter((id): id is string => !!id),
+  );
   const generatingGrantIds = Array.from(
     new Set(
       (runningProposalRows || [])
         .map((r) => r.grant_id)
-        .filter((id): id is string => !!id),
+        .filter(
+          (id): id is string => !!id && !grantsWithProposals.has(id),
+        ),
     ),
   );
 
@@ -72,7 +84,7 @@ export default async function PipelinePage() {
   // Auto-trigger fetch-grants when pipeline is empty and no fetch is in progress
   // Only for professional and agency plans — free tier must use Discovery manually
   const isEmpty = !grants || grants.length === 0;
-  const isFetching = !!fetchStatus;
+  const isFetching = fetchSchedule?.run_state === "running";
 
   const { data: org } = await adminDb
     .from("organizations")
@@ -86,25 +98,29 @@ export default async function PipelinePage() {
     await triggerFetchGrants(orgId);
   }
 
-  // Use existing status if already fetching, or construct it directly
-  // when we just triggered — avoids a re-fetch race condition
-  const activeFetchStatus = isFetching
-    ? fetchStatus
-    : didTriggerFetch
-      ? { org_id: orgId, status: "searching", stage_message: "Automatically fetching grants for your organization…", error_message: null }
-      : null;
+  // Banner visibility window: same 30-minute cutoff the view uses to classify
+  // run_state='running'. When this timestamp passes client-side, the banner
+  // self-hides even if the page isn't reloaded.
+  const bannerHideAt =
+    isFetching && fetchSchedule?.last_grant_fetch_at
+      ? new Date(
+          new Date(fetchSchedule.last_grant_fetch_at).getTime() + 30 * 60 * 1000,
+        ).toISOString()
+      : didTriggerFetch
+        ? new Date(nowMs + 30 * 60 * 1000).toISOString()
+        : null;
 
   return (
     <div data-tour="pipeline-board">
-      {activeFetchStatus && (
+      {bannerHideAt && (
         <div className="px-4 sm:px-6 pt-4 sm:pt-6">
-          <GrantFetchBanner orgId={orgId} initialStatus={activeFetchStatus} />
+          <GrantFetchBanner hideAt={bannerHideAt} />
         </div>
       )}
       <PipelineClient
         initialGrants={grants || []}
         orgId={orgId}
-        isFetchingGrants={!!activeFetchStatus}
+        isFetchingGrants={!!bannerHideAt}
         initialGeneratingGrantIds={generatingGrantIds}
         proposalQualityMap={
           (proposals || []).reduce((acc, p) => {

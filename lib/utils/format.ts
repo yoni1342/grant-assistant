@@ -20,7 +20,7 @@ export function formatTimeUntil(iso: string | null | undefined): string {
   const diffMs = new Date(iso).getTime() - Date.now();
   if (diffMs < 60000) return "soon";
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 60) return `in ${mins}m`;
+  if (mins < 60) return `in ~${mins}m`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `in ~${hours}h`;
   const days = Math.floor(hours / 24);

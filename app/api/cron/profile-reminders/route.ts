@@ -17,7 +17,7 @@ function getServiceClient() {
 export async function GET(request: NextRequest) {
   // Verify cron secret — supports both CRON_SECRET and Vercel's built-in cron auth
   const authHeader = request.headers.get('authorization')
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

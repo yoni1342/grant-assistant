@@ -34,18 +34,13 @@ export async function triggerFetchGrants(orgId: string) {
     return
   }
 
-  // Insert a fetch status row so the banner shows immediately
+  // Stamp last_grant_fetch_at so org_fetch_schedule.run_state flips to
+  // 'running' immediately — this is the single source of truth the pipeline
+  // banner and admin Fetch Queue both read from.
   await adminClient
-    .from('grant_fetch_status')
-    .upsert(
-      {
-        org_id: orgId,
-        status: 'searching',
-        stage_message: 'Automatically fetching grants for your organization…',
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'org_id' },
-    )
+    .from('organizations')
+    .update({ last_grant_fetch_at: new Date().toISOString() })
+    .eq('id', orgId)
 
   // Fire-and-forget: trigger the n8n fetch-grants workflow
   fetch(`${n8nUrl}/fetch-grants`, {

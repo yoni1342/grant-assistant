@@ -524,6 +524,11 @@ function RunStateCell({ row }: { row: QueueRow }) {
     return (
       <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
         <Loader2 className="h-3.5 w-3.5 animate-spin" /> running…
+        {grants_added_in_run > 0 && (
+          <span className="text-muted-foreground">
+            · {grants_added_in_run} {grants_added_in_run === 1 ? "grant" : "grants"} so far
+          </span>
+        )}
       </span>
     );
   }
