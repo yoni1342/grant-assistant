@@ -1,7 +1,7 @@
 # Press Release Readiness — Open Issues
 
 **Date:** 2026-04-24 (updated)
-**Status:** Only open items. All fixed items removed. Ordered by priority — top of the list first.
+**Status:** Only open infrastructure items. Ordered by priority — top of the list first.
 
 ---
 
@@ -9,30 +9,11 @@
 
 Work top to bottom. Each item has: what it means in simple words, why it matters for the press release, what needs to happen, and roughly how long it takes.
 
-Total estimated effort: **~3 hours of active work + 1–3 day wait on OpenAI tier upgrade.**
+Total estimated effort: **~2.5 hours of active work + 1–3 day wait on OpenAI tier upgrade.**
 
 ---
 
-## 1. Cap narratives to 5 in proposal generation 🔴
-
-**What it means in simple words:**
-Inside the proposal generator, there's a step that takes every narrative document in the organization's library and makes a separate OpenAI call for each one. There's no limit on how many. For an organization with 20 narratives, that's 20 sequential AI calls — about 6–10 minutes just for this one step of proposal generation.
-
-**Why it matters for the press release:**
-Organizations with rich document libraries will see proposal generation take 10+ minutes. The user's browser times out long before that. Meanwhile, the database connection stays locked the whole time, making connection exhaustion worse.
-
-**What needs to happen:**
-In the n8n workflow "5. Narrative Library with AI Customization," open the "Prepare Context" code node and change one line so it only keeps the top 5 most relevant narratives:
-```js
-relevant = relevant.slice(0, 5)
-```
-Save, then test by regenerating a proposal.
-
-**Effort:** 10 minutes including test.
-
----
-
-## 2. Supabase database can only handle 60 connections 🔴
+## 1. Supabase database can only handle 60 connections 🔴
 
 **What it means in simple words:**
 The database is what stores all your data. Right now it can talk to only 60 "customers" at the same time. Every server-rendered page uses one slot. Normal traffic uses around 14. Under press traffic, those 60 fill up in seconds, and new visitors see error pages.
@@ -50,7 +31,7 @@ This is the single biggest thing that will break. Even if you add more web serve
 
 ---
 
-## 3. Only 5 web servers can run at once 🔴
+## 2. Only 5 web servers can run at once 🔴
 
 **What it means in simple words:**
 Your app runs on AWS as a small fleet of web servers. Each server handles 30–80 visitors at once. Today, the fleet grows from 2 servers up to a maximum of 5. Under press traffic, 5 is way too few — the 6th, 7th, 8th server never gets created because you capped it.
@@ -70,11 +51,11 @@ Then `terraform apply` and watch the deployment.
 
 **Effort:** 30 minutes — file edit is 1 minute; rest is careful apply + monitoring.
 
-**Pair with #2 above.** Don't do this first.
+**Pair with #1 above.** Don't do this first.
 
 ---
 
-## 4. OpenAI budget and rate limits could cut you off mid-spike 🔴
+## 3. OpenAI budget and rate limits could cut you off mid-spike 🔴
 
 **What it means in simple words:**
 Every AI call costs money and tokens. There are three separate ways OpenAI can stop working under heavy traffic:
@@ -85,7 +66,7 @@ Every AI call costs money and tokens. There are three separate ways OpenAI can s
 
 Rough cost math for a press week:
 - 10,000 proposals generated = ~$300
-- 10,000 proposals for orgs with many narratives (before fix #1) = **$2,000–$3,000**
+- 10,000 proposals for orgs with many narratives = **$2,000–$3,000**
 
 **Why it matters for the press release:**
 If you hit Mode 2 or Mode 3, retry logic won't save you. The app's AI features just stop working. Users see "failed to generate proposal" with no fix in sight until someone manually intervenes.
@@ -101,7 +82,7 @@ If you hit Mode 2 or Mode 3, retry logic won't save you. The app's AI features j
 
 ---
 
-## 5. CloudFront isn't caching anything for the homepage 🟠
+## 4. CloudFront isn't caching anything for the homepage 🟠
 
 **What it means in simple words:**
 CloudFront is AWS's worldwide network of mini-servers. Their job is to remember popular pages so your main server doesn't answer the same question 10,000 times. Right now CloudFront is set to "remember answers for zero seconds" — it throws each answer away immediately. Every single visitor reaches all the way back to your main AWS server.
@@ -120,10 +101,9 @@ In `terraform/modules/cloudfront/main.tf`, change `default_ttl = 0` to `default_
 
 | # | Task | Effort | Status |
 |---|---|---|---|
-| 1 | Cap narratives to 5 | 10 min | ← start here |
-| 2 | Supabase pooler + plan upgrade | 1–2 hrs | |
-| 3 | Raise ECS server limits | 30 min | pair with #2 |
-| 4 | OpenAI budget & tier checkup | 30 min + 1–3 day wait | request early |
-| 5 | CloudFront caching | 15 min | |
+| 1 | Supabase pooler + plan upgrade | 1–2 hrs | ← start here |
+| 2 | Raise ECS server limits | 30 min | pair with #1 |
+| 3 | OpenAI budget & tier checkup | 30 min + 1–3 day wait | request early |
+| 4 | CloudFront caching | 15 min | |
 
-**Must-fix total: ~3 hours of work + 1–3 day wait on OpenAI tier.**
+**Must-fix total: ~2.5 hours of work + 1–3 day wait on OpenAI tier.**
