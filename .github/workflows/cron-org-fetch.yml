@@ -1,0 +1,25 @@
+name: ⏰ Cron — Hourly org grant fetch
+
+on:
+  schedule:
+    # Hourly staggered grant-fetch rotation. Each fire picks
+    # ceil(approved_orgs / 24) oldest orgs via the next_org_fetch_batch()
+    # Supabase RPC so every approved org is refreshed at least once per day.
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: cron-org-fetch
+  cancel-in-progress: false
+
+jobs:
+  hourly-org-fetch:
+    name: Hourly org grant fetch
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Trigger hourly org grant fetch
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/cron/hourly-org-fetch"
