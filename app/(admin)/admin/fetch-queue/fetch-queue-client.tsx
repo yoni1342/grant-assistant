@@ -102,6 +102,11 @@ export function FetchQueueClient({ rows, errorMessage, history, historyError, fi
         <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase mt-1">
           Hourly rotation — who gets checked for grants next
         </p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Only <span className="font-medium text-foreground">Professional</span> and{" "}
+          <span className="font-medium text-foreground">Agency</span> orgs (plus testers)
+          appear here. Free tier is excluded — free orgs fetch grants manually via Discovery.
+        </p>
       </div>
 
       {errorMessage && (
@@ -116,8 +121,9 @@ export function FetchQueueClient({ rows, errorMessage, history, historyError, fi
       <div className="grid gap-4 sm:grid-cols-4">
         <SummaryCard
           icon={<ListOrdered className="h-4 w-4" />}
-          label="Approved orgs"
+          label="Eligible orgs"
           value={String(totalOrgs)}
+          sub="professional + agency"
         />
         <SummaryCard
           icon={<Layers className="h-4 w-4" />}
@@ -524,6 +530,11 @@ function RunStateCell({ row }: { row: QueueRow }) {
     return (
       <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
         <Loader2 className="h-3.5 w-3.5 animate-spin" /> running…
+        {grants_added_in_run > 0 && (
+          <span className="text-muted-foreground">
+            · {grants_added_in_run} {grants_added_in_run === 1 ? "grant" : "grants"} so far
+          </span>
+        )}
       </span>
     );
   }

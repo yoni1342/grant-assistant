@@ -16,7 +16,7 @@ function getServiceClient() {
 // the workflow doesn't get swamped when many orgs exist.
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
