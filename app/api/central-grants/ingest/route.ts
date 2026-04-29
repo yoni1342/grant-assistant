@@ -6,6 +6,28 @@ import { createAdminClient } from "@/lib/supabase/server";
 // (source, source_id) — falling back to (source, source_url) when the
 // source doesn't expose a stable id.
 
+const REFERENCE_DB_URL_PATTERNS: RegExp[] = [
+  /\bprojects\.propublica\.org\/nonprofits\b/i,
+  /\busaspending\.gov\b/i,
+];
+
+function isReferenceDatabaseUrl(url: string): boolean {
+  return REFERENCE_DB_URL_PATTERNS.some((re) => re.test(url));
+}
+
+// Funder-overview placeholders: when the discovery agent can't find a real
+// program for a foundation, it returns the foundation's homepage and tags
+// the title with one of these suffixes. The funder is real, but the row is
+// not an opportunity — no application page, no deadline, fabricated amount.
+const FUNDER_OVERVIEW_TITLE_PATTERNS: RegExp[] = [
+  / - (Major )?Philanthropic Foundation$/i,
+  / - Potential Grant Source$/i,
+];
+
+function isFunderOverviewTitle(title: string): boolean {
+  return FUNDER_OVERVIEW_TITLE_PATTERNS.some((re) => re.test(title));
+}
+
 interface IncomingGrant {
   title: string;
   funder_name?: string | null;
@@ -44,6 +66,7 @@ export async function POST(req: Request) {
 
   let inserted = 0;
   let updated = 0;
+  let rejected = 0;
   const errors: string[] = [];
 
   // Upsert one grant at a time so we can pick the right conflict target
@@ -56,6 +79,21 @@ export async function POST(req: Request) {
     }
     if (!g.source_id && !g.source_url) {
       errors.push(`Skipped "${g.title}": no source_id or source_url`);
+      continue;
+    }
+    // Reject rows whose source is a reference database, not a grant listing.
+    // ProPublica /nonprofits/ pages are 990 tax filings; usaspending.gov pages
+    // are historical award records (formula-grant disbursements). Neither is
+    // an open opportunity, but discovery agents have been ingesting them as if
+    // they were — see 2026-04-28 cleanup that purged 2,668 rows.
+    if (g.source_url && isReferenceDatabaseUrl(g.source_url)) {
+      rejected++;
+      errors.push(`Rejected "${g.title}": ${g.source_url} is a reference database, not a grant opportunity`);
+      continue;
+    }
+    if (isFunderOverviewTitle(g.title)) {
+      rejected++;
+      errors.push(`Rejected "${g.title}": funder overview, not a specific grant program`);
       continue;
     }
 
@@ -102,6 +140,7 @@ export async function POST(req: Request) {
     success: true,
     inserted,
     updated,
+    rejected,
     errors: errors.length > 0 ? errors : undefined,
   });
 }

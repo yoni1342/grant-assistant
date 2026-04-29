@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
@@ -79,7 +79,34 @@ interface Props {
 }
 
 export function FetchQueueClient({ rows, errorMessage, history, historyError, filters }: Props) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
+
+  // Live updates: re-run the server fetch every 5s while the tab is visible.
+  // run_state and grants_added_in_run change as workflows progress; this is
+  // what makes "Running…" appear/disappear without a manual refresh.
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (timer) return;
+      timer = setInterval(() => router.refresh(), 5000);
+    };
+    const stop = () => {
+      if (!timer) return;
+      clearInterval(timer);
+      timer = null;
+    };
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else start();
+    };
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [router]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

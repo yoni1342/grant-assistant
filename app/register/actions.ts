@@ -117,6 +117,41 @@ export async function checkEmailAvailable(email: string): Promise<{ available: b
   return { available: true }
 }
 
+interface PrebuiltNarrative {
+  ai_category: string
+  title: string
+  content: string
+  source_url?: string | null
+}
+
+async function savePrebuiltNarratives(
+  serviceClient: ReturnType<typeof getServiceClient>,
+  orgId: string,
+  narratives: PrebuiltNarrative[]
+) {
+  const rows = narratives
+    .filter(n => n.content.trim())
+    .map(n => ({
+      org_id: orgId,
+      title: n.title,
+      name: n.title,
+      category: 'narrative' as const,
+      ai_category: n.ai_category,
+      extracted_text: n.content,
+      extraction_status: 'completed' as const,
+      metadata: {
+        source: 'website_auto',
+        source_url: n.source_url || null,
+        generated_at: new Date().toISOString(),
+      },
+    }))
+  if (rows.length === 0) return
+  const { error } = await serviceClient.from('documents').insert(rows)
+  if (error) {
+    console.error('[register] savePrebuiltNarratives error:', error.message)
+  }
+}
+
 export async function registerOrganization(data: {
   fullName: string
   email: string
@@ -124,6 +159,7 @@ export async function registerOrganization(data: {
   org: OrgData
   questionnaire?: QuestionnaireData | null
   plan?: string
+  prebuiltNarratives?: PrebuiltNarrative[] | null
 }) {
   const serviceClient = getServiceClient()
 
@@ -205,6 +241,11 @@ export async function registerOrganization(data: {
     await processQuestionnaire(serviceClient, org.id, data.questionnaire)
   }
 
+  // 4b. Save AI-generated narratives that the user reviewed before submitting
+  if (data.prebuiltNarratives && data.prebuiltNarratives.length > 0) {
+    await savePrebuiltNarratives(serviceClient, org.id, data.prebuiltNarratives)
+  }
+
   // 5. Send welcome email (fire-and-forget)
   try {
     await sendWelcomeEmail({
@@ -224,6 +265,7 @@ export async function registerOrganizationForExistingUser(data: {
   org: OrgData
   questionnaire?: QuestionnaireData | null
   plan?: string
+  prebuiltNarratives?: PrebuiltNarrative[] | null
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -275,6 +317,11 @@ export async function registerOrganizationForExistingUser(data: {
   // Process questionnaire if provided
   if (data.questionnaire) {
     await processQuestionnaire(serviceClient, org.id, data.questionnaire)
+  }
+
+  // Save AI-generated narratives that the user reviewed before submitting
+  if (data.prebuiltNarratives && data.prebuiltNarratives.length > 0) {
+    await savePrebuiltNarratives(serviceClient, org.id, data.prebuiltNarratives)
   }
 
   // Send welcome email (fire-and-forget)
