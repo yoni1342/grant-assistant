@@ -1,0 +1,169 @@
+{
+  "id": "bf345db9-9812-4182-8cfa-86f680cc6136",
+  "versionId": "4d1f595a-14e8-429a-bb7c-61c4241fdfa4",
+  "name": "Org Website Narrative Generator",
+  "nodes": [
+    {
+      "id": "webhook-org-website",
+      "name": "Website Narrative Request",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "webhookId": "org-website-narrative",
+      "parameters": {
+        "path": "org-website-narrative",
+        "options": {},
+        "httpMethod": "POST",
+        "responseMode": "lastNode"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "code-validate",
+      "name": "Validate + Normalize",
+      "type": "n8n-nodes-base.code",
+      "position": [460, 300],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst body = raw.body || raw;\nconst payload = body.$json || body;\n\nconst preview = payload.preview === true || payload.preview === 'true';\nconst org_id = payload.org_id || null;\nlet website_url = (payload.website_url || payload.website || '').trim();\n\nif (!website_url) {\n  throw new Error('Missing required field: website_url');\n}\nif (!preview && !org_id) {\n  throw new Error('Missing required field: org_id (required unless preview=true)');\n}\n\nif (!/^https?:\\/\\//i.test(website_url)) {\n  website_url = 'https://' + website_url;\n}\nwebsite_url = website_url.replace(/#.*$/, '').replace(/\\/$/, '');\n\n// Parse origin manually — URL global isn't always available in task-runner sandbox\nconst originMatch = website_url.match(/^(https?:\\/\\/[^\\/]+)/i);\nif (!originMatch) {\n  throw new Error(`Invalid website_url: ${website_url}`);\n}\nconst origin = originMatch[1];\n\nreturn [{ json: { org_id, website_url, origin, preview } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "code-scrape",
+      "name": "Scrape Site",
+      "type": "n8n-nodes-base.code",
+      "position": [680, 300],
+      "parameters": {
+        "jsCode": "// Fetches homepage, picks up to 5 same-origin subpages of interest, fetches them, and returns combined cleaned text.\nconst helpers = this.helpers;\nconst { org_id, website_url, origin, preview } = $input.first().json;\n\nconst USER_AGENT = 'Mozilla/5.0 (compatible; FundoryBot/1.0; +https://fundory.app)';\nconst PAGE_TIMEOUT_MS = 15000;\nconst MAX_SUBPAGES = 5;\nconst MAX_TOTAL_CHARS = 16000;\n\nfunction stripHtml(s) {\n  if (!s) return '';\n  return s\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n    .replace(/<noscript[\\s\\S]*?<\\/noscript>/gi, ' ')\n    .replace(/<!--([\\s\\S]*?)-->/g, ' ')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nasync function fetchPage(url) {\n  try {\n    const res = await helpers.httpRequest({\n      method: 'GET',\n      url,\n      headers: { 'User-Agent': USER_AGENT, 'Accept': 'text/html,application/xhtml+xml' },\n      timeout: PAGE_TIMEOUT_MS,\n      returnFullResponse: false,\n      json: false,\n      followRedirect: true,\n    });\n    return typeof res === 'string' ? res : (res && res.body) || '';\n  } catch (e) {\n    return '';\n  }\n}\n\nfunction parseUrl(href) {\n  const m = href.match(/^(https?:\\/\\/[^\\/]+)(\\/[^?]*)?/i);\n  if (!m) return null;\n  return { origin: m[1], pathname: m[2] || '/' };\n}\nfunction findSubpages(html) {\n  const linkRe = /<a\\b[^>]*href=[\"']([^\"'#]+)[\"'][^>]*>([\\s\\S]*?)<\\/a>/gi;\n  const keywords = ['about', 'mission', 'who-we-are', 'whoweare', 'our-story', 'history', 'programs', 'program', 'services', 'what-we-do', 'whatwedo', 'impact', 'outcomes', 'team', 'leadership', 'staff'];\n  const seen = new Set();\n  const found = [];\n  let m;\n  while ((m = linkRe.exec(html)) !== null) {\n    let href = m[1];\n    const label = stripHtml(m[2] || '').toLowerCase();\n    if (href.startsWith('//')) href = 'https:' + href;\n    else if (href.startsWith('/')) href = origin + href;\n    else if (!/^https?:\\/\\//i.test(href)) continue;\n    const u = parseUrl(href);\n    if (!u) continue;\n    if (u.origin !== origin) continue;\n    if (/\\.(jpg|jpeg|png|gif|svg|webp|pdf|zip|mp4|mp3)$/i.test(u.pathname)) continue;\n    const lowered = (u.pathname + ' ' + label).toLowerCase();\n    if (!keywords.some(k => lowered.includes(k))) continue;\n    const key = u.origin + u.pathname;\n    if (seen.has(key)) continue;\n    if (key === website_url) continue;\n    seen.add(key);\n    found.push(key);\n    if (found.length >= MAX_SUBPAGES) break;\n  }\n  return found;\n}\n\nconst homeHtml = await fetchPage(website_url);\nif (!homeHtml || homeHtml.length < 200) {\n  throw new Error(`Could not fetch homepage at ${website_url} (empty or too small response)`);\n}\nconst homeText = stripHtml(homeHtml);\n\nconst subpageUrls = findSubpages(homeHtml);\n\nconst pages = [{ url: website_url, label: 'Homepage', text: homeText }];\nfor (const u of subpageUrls) {\n  const html = await fetchPage(u);\n  if (!html) continue;\n  const text = stripHtml(html);\n  if (text.length < 200) continue;\n  pages.push({ url: u, label: 'Subpage', text });\n}\n\nlet remaining = MAX_TOTAL_CHARS;\nconst sections = [];\nfor (const p of pages) {\n  if (remaining <= 0) break;\n  const slice = p.text.slice(0, Math.min(p.text.length, remaining));\n  sections.push(`### ${p.label}: ${p.url}\\n${slice}`);\n  remaining -= slice.length;\n}\n\nreturn [{\n  json: {\n    org_id,\n    website_url,\n    preview,\n    page_count: pages.length,\n    combined_text: sections.join('\\n\\n'),\n  }\n}];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "openai-generate",
+      "name": "Generate Narratives",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [900, 300],
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a grant-writing assistant. Given the text scraped from a nonprofit's website, draft narrative sections that the organization can reuse across grant applications.\n\nReturn ONLY a JSON object with these keys (each value is a string of 150-300 words, plain text, no markdown):\n- mission: the organization's mission statement, written in first person plural (\"we\")\n- community_need: the problem or need the organization addresses, including who is affected and why it matters\n- programs: the organization's main programs, services, or interventions, with concrete details if present in the source\n- impact: outcomes, results, populations served, geographic reach — only what is stated or clearly implied in the source\n- history: when and why the organization was founded, key milestones (only if present in source)\n- leadership: leadership / team structure (only if present in source; otherwise an empty string)\n\nSTRICT RULES:\n1. Only use facts present in the provided website text. Do NOT invent statistics, dates, names, or programs.\n2. If a section's information is missing from the source, return an empty string for that section rather than fabricating.\n3. Use clear, active voice. Avoid jargon and filler.\n4. Spell out any acronyms on first use.\n5. Output must be valid JSON. No prose outside the JSON object."
+            },
+            {
+              "content": "=WEBSITE: {{ $json.website_url }}\n\nSCRAPED CONTENT ({{ $json.page_count }} pages):\n\n{{ $json.combined_text }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "MzaTLJ5BZh2FPO85",
+          "name": "OpenAi account"
+        }
+      },
+      "maxTries": 4,
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "typeVersion": 1.8
+    },
+    {
+      "id": "code-parse-sections",
+      "name": "Split Sections",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 300],
+      "parameters": {
+        "jsCode": "const ai = $input.first().json;\nconst src = $('Scrape Site').first().json;\n\nlet parsed = ai && ai.message && ai.message.content;\n\nif (typeof parsed === 'string') {\n  let cleaned = parsed.trim().replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  try { parsed = JSON.parse(cleaned); }\n  catch (e) { throw new Error('OpenAI response was not valid JSON: ' + cleaned.slice(0, 300)); }\n}\n\nif (!parsed || typeof parsed !== 'object') {\n  throw new Error('No usable JSON returned from OpenAI node');\n}\n\nconst SECTION_TITLES = {\n  mission: 'Mission Statement',\n  community_need: 'Community Need',\n  programs: 'Programs & Services',\n  impact: 'Impact & Outcomes',\n  history: 'Organization History',\n  leadership: 'Leadership & Team',\n};\n\nconst out = [];\nfor (const [key, title] of Object.entries(SECTION_TITLES)) {\n  const content = (parsed[key] || '').toString().trim();\n  if (!content) continue;\n  out.push({\n    json: {\n      org_id: src.org_id,\n      ai_category: 'narrative_' + key,\n      title,\n      content,\n      source_url: src.website_url,\n      preview: src.preview,\n    }\n  });\n}\n\nif (out.length === 0) {\n  throw new Error('OpenAI returned no usable sections from the website content');\n}\n\nreturn out;"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "if-preview",
+      "name": "Skip Insert if Preview?",
+      "type": "n8n-nodes-base.if",
+      "position": [1340, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "preview-true",
+              "leftValue": "={{ $json.preview }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "typeVersion": 2.2
+    },
+    {
+      "id": "http-insert-narrative",
+      "name": "Insert Narrative Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1560, 420],
+      "parameters": {
+        "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents",
+        "method": "POST",
+        "options": {
+          "timeout": 20000,
+          "batching": { "batch": { "batchSize": 3, "batchInterval": 250 } }
+        },
+        "sendHeaders": true,
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ org_id: $json.org_id, title: $json.title, name: $json.title, category: 'narrative', ai_category: $json.ai_category, extracted_text: $json.content, extraction_status: 'completed', metadata: { source: 'website_auto', source_url: $json.source_url, generated_at: new Date().toISOString() } }) }}",
+        "credentials": {
+          "httpHeaderAuth": { "id": "42Gs7Nuquctvpx8P", "name": "New Plane Production" }
+        }
+      },
+      "typeVersion": 4.2
+    },
+    {
+      "id": "code-build-response",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "position": [1780, 300],
+      "parameters": {
+        "jsCode": "const src = $('Scrape Site').first().json;\nconst sectionItems = $('Split Sections').all().map(i => i.json);\n\n// Inserted rows (only present in non-preview path) come from $input — flatten Supabase return arrays.\nconst inserted = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  if (Array.isArray(j)) {\n    for (const r of j) if (r && r.id) inserted.push(r);\n  } else if (j && j.id) {\n    inserted.push(j);\n  }\n}\n\n// Always echo the generated narratives so the caller can render/edit them.\nconst narratives = sectionItems.map(s => ({\n  ai_category: s.ai_category,\n  title: s.title,\n  content: s.content,\n}));\n\nreturn [{\n  json: {\n    success: true,\n    preview: !!src.preview,\n    org_id: src.org_id,\n    website_url: src.website_url,\n    pages_scraped: src.page_count,\n    narratives,\n    narratives_inserted: inserted.length,\n    document_ids: inserted.map(d => d.id).filter(Boolean),\n    generated_at: new Date().toISOString(),\n  }\n}];"
+      },
+      "typeVersion": 2
+    }
+  ],
+  "connections": {
+    "Website Narrative Request": { "main": [[{ "node": "Validate + Normalize", "type": "main", "index": 0 }]] },
+    "Validate + Normalize": { "main": [[{ "node": "Scrape Site", "type": "main", "index": 0 }]] },
+    "Scrape Site": { "main": [[{ "node": "Generate Narratives", "type": "main", "index": 0 }]] },
+    "Generate Narratives": { "main": [[{ "node": "Split Sections", "type": "main", "index": 0 }]] },
+    "Split Sections": { "main": [[{ "node": "Skip Insert if Preview?", "type": "main", "index": 0 }]] },
+    "Skip Insert if Preview?": {
+      "main": [
+        [{ "node": "Build Response", "type": "main", "index": 0 }],
+        [{ "node": "Insert Narrative Document", "type": "main", "index": 0 }]
+      ]
+    },
+    "Insert Narrative Document": { "main": [[{ "node": "Build Response", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

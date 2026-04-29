@@ -452,8 +452,8 @@ const viewerStyles = `
   }
 
   .pdf-thumb-active .pdf-thumb-page {
-    border-color: hsl(0 72% 51%);
-    box-shadow: 0 0 0 1px hsl(0 72% 51%);
+    border-color: hsl(174 72% 41%);
+    box-shadow: 0 0 0 1px hsl(174 72% 41%);
   }
 
   .pdf-thumb-content {
@@ -472,7 +472,7 @@ const viewerStyles = `
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
+    background: linear-gradient(135deg, #0d6e6e 0%, #14b8a6 50%, #0d6e6e 100%);
     z-index: 1;
   }
 
@@ -484,7 +484,7 @@ const viewerStyles = `
   }
 
   .pdf-thumb-active .pdf-thumb-label {
-    color: hsl(0 72% 51%);
+    color: hsl(174 72% 41%);
     font-weight: 600;
   }
 
@@ -542,7 +542,7 @@ const viewerStyles = `
     display: block;
     width: 100%;
     height: 8px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
+    background: linear-gradient(135deg, #0d6e6e 0%, #14b8a6 50%, #0d6e6e 100%);
     flex-shrink: 0;
   }
 
@@ -586,7 +586,7 @@ const viewerStyles = `
     display: block;
     width: 80px;
     height: 3px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
+    background: linear-gradient(135deg, #0d6e6e 0%, #14b8a6 100%);
     margin: 1.25rem auto 0;
     border-radius: 2px;
   }
@@ -602,7 +602,7 @@ const viewerStyles = `
   .doc-cover-page .doc-page-content h2 {
     font-size: 1.2rem;
     font-weight: 600;
-    color: #2d5a8e;
+    color: #0d6e6e;
     margin: 1rem 0 0.3rem 0;
     text-align: center;
   }
@@ -769,8 +769,8 @@ const viewerStyles = `
   }
 
   .doc-page-content [contenteditable="true"]:focus {
-    background: hsl(45 100% 95%);
-    box-shadow: inset 0 0 0 1px hsl(0 72% 51%);
+    background: hsl(174 50% 96%);
+    box-shadow: inset 0 0 0 1px hsl(174 72% 41%);
   }
 
   .doc-cover-page .doc-page-content [data-field="title"][contenteditable="true"] {
