@@ -11,7 +11,10 @@
       "name": "Process Document Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-4336, 2256],
+      "position": [
+        -4336,
+        2256
+      ],
       "webhookId": "process-document"
     },
     {
@@ -23,9 +26,18 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
-            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
-            { "name": "Prefer", "value": "return=representation" }
+            {
+              "name": "apikey",
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
           ]
         },
         "sendBody": true,
@@ -36,11 +48,17 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [-4064, 2256],
+      "position": [
+        -4064,
+        2256
+      ],
       "id": "e6fe6f42-501e-425a-8bfe-027d9682ff84",
       "name": "Mark as Processing",
       "credentials": {
-        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
       }
     },
     {
@@ -51,20 +69,35 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
-            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
-            { "name": "Prefer", "value": "return=representation" }
+            {
+              "name": "apikey",
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
           ]
         },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [-3840, 2256],
+      "position": [
+        -3840,
+        2256
+      ],
       "id": "cd499ae3-66c3-4bb5-81f5-3eca055b08bc",
       "name": "Download File",
       "credentials": {
-        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
       }
     },
     {
@@ -73,12 +106,18 @@
           "values": [
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
                     "rightValue": "application/pdf",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -88,12 +127,18 @@
             },
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
                     "rightValue": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -103,12 +148,18 @@
             },
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
                     "rightValue": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -118,12 +169,18 @@
             },
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
                     "rightValue": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -133,12 +190,18 @@
             },
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $('Process Document Webhook').item.json.body.file_type }}",
                     "rightValue": "image/",
-                    "operator": { "type": "string", "operation": "startsWith" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -156,7 +219,10 @@
       "name": "Switch on File Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
-      "position": [-3600, 2256]
+      "position": [
+        -3600,
+        2256
+      ]
     },
     {
       "parameters": {
@@ -165,7 +231,10 @@
       },
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1.1,
-      "position": [-3360, 2016],
+      "position": [
+        -3360,
+        2016
+      ],
       "id": "c6365285-cdda-4f03-a356-7d5969d7e16c",
       "name": "Extract PDF"
     },
@@ -177,7 +246,10 @@
       "name": "Extract DOCX Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-3360, 2236]
+      "position": [
+        -3360,
+        2236
+      ]
     },
     {
       "parameters": {
@@ -187,7 +259,10 @@
       "name": "Extract XLSX Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-3360, 2456]
+      "position": [
+        -3360,
+        2456
+      ]
     },
     {
       "parameters": {
@@ -197,7 +272,10 @@
       "name": "Extract PPTX Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-3360, 2676]
+      "position": [
+        -3360,
+        2676
+      ]
     },
     {
       "parameters": {
@@ -207,7 +285,10 @@
       "name": "Prepare Image Base64",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-3360, 2696]
+      "position": [
+        -3360,
+        2696
+      ]
     },
     {
       "parameters": {
@@ -225,9 +306,15 @@
       "name": "OCR Image with AI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [-3120, 2696],
+      "position": [
+        -3120,
+        2696
+      ],
       "credentials": {
-        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "Brownmine"
+        }
       }
     },
     {
@@ -257,20 +344,29 @@
       "name": "AI Categorize Upload",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
-      "position": [-3080, 2256],
+      "position": [
+        -3080,
+        2256
+      ],
       "credentials": {
-        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "Brownmine"
+        }
       }
     },
     {
       "parameters": {
-        "jsCode": "const webhookData = $('Process Document Webhook').first().json.body;\nconst aiResponse = $input.first().json;\n\n// Detect if this came from the image OCR path (direct from OpenAI HTTP Request)\n// vs the text extraction path (through AI Categorize langchain node)\nconst isImagePath = !!aiResponse.choices;\n\nlet extractedText = '';\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\nif (isImagePath) {\n  // Image path: OCR + categorization done in one Vision API call\n  // Response is raw OpenAI API format: { choices: [{ message: { content: '...' } }] }\n  try {\n    const responseText = aiResponse.choices?.[0]?.message?.content || '';\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      extractedText = parsed.extracted_text || '';\n      metadata.category = parsed.category || 'other';\n      metadata.description = parsed.description || '';\n      metadata.fiscalPeriod = parsed.fiscalPeriod || null;\n      metadata.isTemplate = parsed.isTemplate || false;\n    }\n  } catch (e) {\n    metadata.description = 'Failed to parse Vision AI response';\n  }\n} else {\n  // Text path: came through AI Categorize langchain node\n  // Get extracted text from whichever extraction node ran\n  const textNodes = ['Extract PDF', 'Extract DOCX Text', 'Extract XLSX Text', 'Extract PPTX Text'];\n  for (const name of textNodes) {\n    try {\n      const r = $(name).first().json.text;\n      if (r !== undefined && r !== '') { extractedText = r; break; }\n    } catch(e) {}\n  }\n  // Parse AI categorization response\n  try {\n    const responseText = aiResponse.message?.content || aiResponse.text || '';\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      metadata = JSON.parse(jsonMatch[0]);\n    }\n  } catch (e) {\n    metadata.description = 'Failed to parse AI response';\n  }\n}\n\nreturn [{\n  json: {\n    documentId: webhookData.document_id,\n    orgId: webhookData.org_id || '',\n    extractedText: extractedText,\n    aiCategory: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || null,\n    isTemplate: metadata.isTemplate || false\n  }\n}];"
+        "jsCode": "const webhookData = $('Process Document Webhook').first().json.body;\nconst aiResponse = $input.first().json;\n\n// Detect if this came from the image OCR path (direct from OpenAI HTTP Request)\n// vs the text extraction path (through AI Categorize langchain node)\nconst isImagePath = !!aiResponse.choices;\n\nlet extractedText = '';\nlet metadata = { category: 'other', description: '', fiscalPeriod: null, isTemplate: false };\n\nif (isImagePath) {\n  // Image path: OCR + categorization done in one Vision API call\n  // Response is raw OpenAI API format: { choices: [{ message: { content: '...' } }] }\n  try {\n    const responseText = aiResponse.choices?.[0]?.message?.content || '';\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      extractedText = parsed.extracted_text || '';\n      metadata.category = parsed.category || 'other';\n      metadata.description = parsed.description || '';\n      metadata.fiscalPeriod = parsed.fiscalPeriod || null;\n      metadata.isTemplate = parsed.isTemplate || false;\n    }\n  } catch (e) {\n    metadata.description = 'Failed to parse Vision AI response';\n  }\n} else {\n  // Text path: came through AI Categorize langchain node\n  // Detect which extraction node ran from webhook's file_type so we only call\n  // $('NodeName') for an executed node \u2014 calling for an un-executed one throws,\n  // and n8n's task runner can't always catch it cleanly (frozen-Error issue).\n  const ft = String(webhookData.file_type || '').toLowerCase();\n  let extractionNode = null;\n  if (ft === 'application/pdf') extractionNode = 'Extract PDF';\n  else if (ft === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') extractionNode = 'Extract DOCX Text';\n  else if (ft === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') extractionNode = 'Extract XLSX Text';\n  else if (ft === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') extractionNode = 'Extract PPTX Text';\n  if (extractionNode) {\n    try {\n      const r = $(extractionNode).first().json.text;\n      if (r) extractedText = r;\n    } catch (e) {}\n  }\n  // Parse AI categorization response\n  try {\n    const responseText = aiResponse.message?.content || aiResponse.text || '';\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      metadata = JSON.parse(jsonMatch[0]);\n    }\n  } catch (e) {\n    metadata.description = 'Failed to parse AI response';\n  }\n}\n\nreturn [{\n  json: {\n    documentId: webhookData.document_id,\n    orgId: webhookData.org_id || '',\n    extractedText: extractedText,\n    aiCategory: metadata.category || 'other',\n    description: metadata.description || '',\n    fiscalPeriod: metadata.fiscalPeriod || null,\n    isTemplate: metadata.isTemplate || false\n  }\n}];"
       },
       "id": "4fe43aaa-70f6-4fed-80c2-1614d1ee8244",
       "name": "Parse AI Category",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-2672, 2224]
+      "position": [
+        -2672,
+        2224
+      ]
     },
     {
       "parameters": {
@@ -281,9 +377,18 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
-            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
-            { "name": "Prefer", "value": "return=representation" }
+            {
+              "name": "apikey",
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
           ]
         },
         "sendBody": true,
@@ -294,11 +399,17 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [-2464, 2224],
+      "position": [
+        -2464,
+        2224
+      ],
       "id": "a43cbf28-1793-4c90-bd87-91a0424d618e",
       "name": "Update Document Record",
       "credentials": {
-        "httpHeaderAuth": { "id": "58HU1FxffRqvjWUp", "name": "x-webhook-secret" }
+        "httpHeaderAuth": {
+          "id": "58HU1FxffRqvjWUp",
+          "name": "x-webhook-secret"
+        }
       }
     },
     {
@@ -312,7 +423,10 @@
       "name": "Document Retrieval Webhook2",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-4432, 2896],
+      "position": [
+        -4432,
+        2896
+      ],
       "webhookId": "get-documents"
     },
     {
@@ -323,7 +437,10 @@
       "name": "Extract Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-4192, 2896]
+      "position": [
+        -4192,
+        2896
+      ]
     },
     {
       "parameters": {
@@ -333,8 +450,14 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
-            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" }
+            {
+              "name": "apikey",
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
+            }
           ]
         },
         "options": {}
@@ -343,10 +466,16 @@
       "name": "Get Grant",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-3936, 2896],
+      "position": [
+        -3936,
+        2896
+      ],
       "alwaysOutputData": true,
       "credentials": {
-        "httpHeaderAuth": { "id": "42Gs7Nuquctvpx8P", "name": "New Plane Production" }
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
       }
     },
     {
@@ -357,8 +486,14 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" },
-            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I" }
+            {
+              "name": "apikey",
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
+            }
           ]
         },
         "options": {}
@@ -367,10 +502,16 @@
       "name": "Get All Documents2",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-3680, 2896],
+      "position": [
+        -3680,
+        2896
+      ],
       "alwaysOutputData": true,
       "credentials": {
-        "httpHeaderAuth": { "id": "42Gs7Nuquctvpx8P", "name": "New Plane Production" }
+        "httpHeaderAuth": {
+          "id": "42Gs7Nuquctvpx8P",
+          "name": "New Plane Production"
+        }
       }
     },
     {
@@ -381,7 +522,10 @@
       "name": "Prepare for AI Filter",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-3408, 2896]
+      "position": [
+        -3408,
+        2896
+      ]
     },
     {
       "parameters": {
@@ -391,7 +535,10 @@
       "name": "Build Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-2832, 2896]
+      "position": [
+        -2832,
+        2896
+      ]
     },
     {
       "parameters": {
@@ -404,7 +551,7 @@
         "messages": {
           "values": [
             {
-              "content": "You are a Grant Application Document Specialist.\n\nYour job is to review a list of documents from a nonprofit's document vault and determine which ones are RELEVANT to a specific grant application.\n\nA document is relevant if it would typically be required or useful for the grant application. Common relevant documents include:\n- 501(c)(3) determination letter (almost always required)\n- Board roster / list of board members\n- Financial statements, audits, or IRS Form 990\n- Operating or program budgets\n- Impact metrics or outcomes data\n- Program narratives that relate to the grant's focus area\n- Organizational charts, bylaws, or governance docs\n- Letters of support or partnership agreements\n\nA document is IRRELEVANT if:\n- It's a template that hasn't been filled out\n- It's about a completely unrelated program or topic\n- It's outdated beyond usefulness (e.g. financials from 5+ years ago)\n- It's a duplicate of another document already selected\n\nReturn ONLY valid JSON — no markdown, no explanation:\n{\n  \"relevant_indices\": [0, 2, 5],\n  \"reasoning\": {\n    \"0\": \"501c3 letter - required for most grant applications\",\n    \"2\": \"Operating budget - needed for NIH application\",\n    \"5\": \"Impact data - supports program effectiveness\"\n  }\n}",
+              "content": "You are a Grant Application Document Specialist.\n\nYour job is to review a list of documents from a nonprofit's document vault and determine which ones are RELEVANT to a specific grant application.\n\nA document is relevant if it would typically be required or useful for the grant application. Common relevant documents include:\n- 501(c)(3) determination letter (almost always required)\n- Board roster / list of board members\n- Financial statements, audits, or IRS Form 990\n- Operating or program budgets\n- Impact metrics or outcomes data\n- Program narratives that relate to the grant's focus area\n- Organizational charts, bylaws, or governance docs\n- Letters of support or partnership agreements\n\nA document is IRRELEVANT if:\n- It's a template that hasn't been filled out\n- It's about a completely unrelated program or topic\n- It's outdated beyond usefulness (e.g. financials from 5+ years ago)\n- It's a duplicate of another document already selected\n\nReturn ONLY valid JSON \u2014 no markdown, no explanation:\n{\n  \"relevant_indices\": [0, 2, 5],\n  \"reasoning\": {\n    \"0\": \"501c3 letter - required for most grant applications\",\n    \"2\": \"Operating budget - needed for NIH application\",\n    \"5\": \"Impact data - supports program effectiveness\"\n  }\n}",
               "role": "system"
             },
             {
@@ -420,14 +567,20 @@
       "name": "AI Filter Documents",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
-      "position": [-3152, 3024],
+      "position": [
+        -3152,
+        3024
+      ],
       "credentials": {
-        "openAiApi": { "id": "XbaNaQyEtQBSUnml", "name": "Brownmine" }
+        "openAiApi": {
+          "id": "XbaNaQyEtQBSUnml",
+          "name": "Brownmine"
+        }
       }
     },
     {
       "parameters": {
-        "content": "## WF4: Document Vault Manager\n\n### Path 1: Process Document\nWebhook: POST /process-document\nReceives { document_id, org_id, file_name, file_type }\n1. Marks document as 'processing'\n2. Downloads file from Supabase Storage\n3. Routes by file_type (Switch):\n   - PDF → Extract from File (pdf)\n   - DOCX → Code (ZIP/XML parser)\n   - XLSX → Code (ZIP/XML shared strings)\n   - PPTX → Code (ZIP/XML slide text)\n   - Image → OCR via OpenAI Vision API\n4. AI categorizes the document\n5. Updates DB with ai_category + extracted_text\n\n### Path 2: Retrieve Documents\nWebhook: POST /get-documents\nFetches from Supabase DB (no re-download)",
+        "content": "## WF4: Document Vault Manager\n\n### Path 1: Process Document\nWebhook: POST /process-document\nReceives { document_id, org_id, file_name, file_type }\n1. Marks document as 'processing'\n2. Downloads file from Supabase Storage\n3. Routes by file_type (Switch):\n   - PDF \u2192 Extract from File (pdf)\n   - DOCX \u2192 Code (ZIP/XML parser)\n   - XLSX \u2192 Code (ZIP/XML shared strings)\n   - PPTX \u2192 Code (ZIP/XML slide text)\n   - Image \u2192 OCR via OpenAI Vision API\n4. AI categorizes the document\n5. Updates DB with ai_category + extracted_text\n\n### Path 2: Retrieve Documents\nWebhook: POST /get-documents\nFetches from Supabase DB (no re-download)",
         "height": 380,
         "width": 520
       },
@@ -435,99 +588,234 @@
       "name": "Sticky Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-4600, 1780]
+      "position": [
+        -4600,
+        1780
+      ]
     }
   ],
   "pinData": {},
   "connections": {
     "Process Document Webhook": {
       "main": [
-        [{ "node": "Mark as Processing", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Mark as Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Mark as Processing": {
       "main": [
-        [{ "node": "Download File", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Download File": {
       "main": [
-        [{ "node": "Switch on File Type", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Switch on File Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Switch on File Type": {
       "main": [
-        [{ "node": "Extract PDF", "type": "main", "index": 0 }],
-        [{ "node": "Extract DOCX Text", "type": "main", "index": 0 }],
-        [{ "node": "Extract XLSX Text", "type": "main", "index": 0 }],
-        [{ "node": "Extract PPTX Text", "type": "main", "index": 0 }],
-        [{ "node": "Prepare Image Base64", "type": "main", "index": 0 }],
-        [{ "node": "Prepare Image Base64", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Extract PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract DOCX Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract XLSX Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract PPTX Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Image Base64",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Image Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract PDF": {
       "main": [
-        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "AI Categorize Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract DOCX Text": {
       "main": [
-        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "AI Categorize Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract XLSX Text": {
       "main": [
-        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "AI Categorize Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract PPTX Text": {
       "main": [
-        [{ "node": "AI Categorize Upload", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "AI Categorize Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Prepare Image Base64": {
       "main": [
-        [{ "node": "OCR Image with AI", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "OCR Image with AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "OCR Image with AI": {
       "main": [
-        [{ "node": "Parse AI Category", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Parse AI Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "AI Categorize Upload": {
       "main": [
-        [{ "node": "Parse AI Category", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Parse AI Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Parse AI Category": {
       "main": [
-        [{ "node": "Update Document Record", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Update Document Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Document Retrieval Webhook2": {
       "main": [
-        [{ "node": "Extract Context", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Extract Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract Context": {
       "main": [
-        [{ "node": "Get Grant", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Get Grant",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Get Grant": {
       "main": [
-        [{ "node": "Get All Documents2", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Get All Documents2",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Get All Documents2": {
       "main": [
-        [{ "node": "Prepare for AI Filter", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Prepare for AI Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Prepare for AI Filter": {
       "main": [
-        [{ "node": "Build Response", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },

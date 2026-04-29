@@ -3,6 +3,8 @@
 > **Purpose:** Walk through every feature in the app, page by page, in the order a real user experiences them. Nothing should be skipped. Each item is a discrete testable action.
 >
 > **How to use:** Go through each flow in order. Check off each item as you test it. If a test fails, note the issue inline.
+>
+> **Last revision:** 2026-04-29 — refreshed to cover changes since 2026-04-17, including the website-to-narratives onboarding mode + 5-step wizard, pipeline added-date column, inline (non-blocking) proposal generation, live Stripe MRR on admin overview, source-analytics charts + date range filter, hourly per-org grant fetch with 24h cooldown, grant digest email, and three new admin pages (Org Pickup, Fetch Queue, System Errors).
 
 ---
 
@@ -50,6 +52,9 @@
 40. [Flow 40: Stripe Webhooks](#flow-40-stripe-webhooks)
 41. [Flow 41: Real-time & WebSocket Features](#flow-41-real-time--websocket-features)
 42. [Flow 42: Responsive & Cross-Browser](#flow-42-responsive--cross-browser)
+43. [Flow 43: Admin — Org Pickup](#flow-43-admin--org-pickup)
+44. [Flow 44: Admin — Fetch Queue](#flow-44-admin--fetch-queue)
+45. [Flow 45: Admin — System Errors](#flow-45-admin--system-errors)
 
 ---
 
@@ -111,9 +116,13 @@
 
 ### 1.6 Step 4 — Organization Profile (Free/Professional)
 
-- [ ] Two mode options displayed: "Upload Documents" and "Answer Questions"
+- [ ] **Three** mode options displayed: "Upload Documents", "Answer Questions", "Use My Website"
 - [ ] Click "Upload Documents" — shows file upload form
 - [ ] Click "Answer Questions" — shows questionnaire form
+- [ ] Click "Use My Website" — shows website URL input
+- [ ] "Back" button on the mode-picker returns to Step 3 (org details)
+- [ ] After picking a mode, "Back" within that mode returns to mode selection (not Step 3)
+- [ ] All three modes lead to the **Step 5 review screen**, not direct registration
 
 #### 1.6a Upload Documents Mode
 
@@ -125,7 +134,7 @@
 - [ ] Additional Documents input accepts multiple files
 - [ ] Multiple files shown as list with X to remove each
 - [ ] "Back" button returns to mode selection
-- [ ] Submit with at least one file — triggers registration
+- [ ] "Continue to review" button advances to Step 5 (must have at least one file)
 
 #### 1.6b Answer Questions Mode
 
@@ -139,9 +148,41 @@
 - [ ] Budget Narrative textarea is present
 - [ ] All fields are optional
 - [ ] "Back" button returns to mode selection
-- [ ] Submit with any combination — triggers registration
+- [ ] "Continue to review" button advances to Step 5
 
-### 1.7 Registration Completion
+#### 1.6c Use My Website Mode (NEW)
+
+- [ ] Website URL input is present with placeholder `https://yourorganization.org`
+- [ ] "Generate" button is disabled when URL is empty
+- [ ] Click Generate — button shows spinner with "Generating..." label
+- [ ] Status banner appears: teal-tinted card with "Reading your website…" and "This usually takes 20–60 seconds."
+- [ ] Generation failure — red error card shows the error message; can retry
+- [ ] Generation success — sub-step switches from "input" to "edit"
+- [ ] Edit sub-step header shows "Generated N narrative(s) — review and edit below."
+- [ ] Each generated narrative renders as a document-style sheet with:
+  - [ ] Emerald gradient ribbon at the top (distinct from the navy proposal style)
+  - [ ] Category label (uppercase, mono font) and live word count
+  - [ ] Title (serif heading, e.g., Georgia)
+  - [ ] Editable textarea pre-filled with generated content
+  - [ ] Footer index "i / N" and "Fundory.ai narrative draft" caption
+- [ ] "Regenerate" link in the header re-runs generation (resets edits)
+- [ ] "Back" button returns to the input sub-step (URL preserved)
+- [ ] "Continue to review" advances to Step 5
+
+### 1.7 Step 5 — Review & Register (NEW)
+
+- [ ] Header instruction: "Confirm everything below, then register. Use Back to fix anything."
+- [ ] **Account section** shown only for unauthenticated users (full name + email)
+- [ ] **Plan section** shows selected plan label
+- [ ] **Organization section** shows: Name, EIN, Sector, Mission, Address, Phone, Website, Founded, Geographic focus
+- [ ] If profile mode = questionnaire: **Questionnaire section** shows all entered narratives + budget/staff
+- [ ] If profile mode = documents: **Documents section** lists narrative file + additional file names (or "No files attached")
+- [ ] If profile mode = website + generation succeeded: **AI-generated narratives section** shows each generated section with title, word count, and full content preview (saved to library on register)
+- [ ] If profile mode = website + generation NOT ready: section shows "None — you can generate them in the library after registering."
+- [ ] "Back" button returns to Step 4 (mode-specific page) with all data preserved
+- [ ] "Register Organization" button submits the registration
+
+### 1.8 Registration Completion
 
 - [ ] Free plan: Shows success card "Registration Submitted"
 - [ ] Success message mentions org name and "pending admin approval"
@@ -150,14 +191,17 @@
 - [ ] After Stripe checkout completion: Returns to app
 - [ ] Agency plan: Redirects to Stripe checkout page
 - [ ] Welcome email is received by the user
+- [ ] Website-mode users: generated narratives appear in their narratives library after first login
 
-### 1.8 Registration Edge Cases
+### 1.9 Registration Edge Cases
 
 - [ ] Register with existing email (has org) — shows "account already exists" error
 - [ ] Register with existing email (no org, orphaned) — succeeds (auto-cleans orphan)
-- [ ] Authenticated user visits `/register` — shows org creation form (no account step)
+- [ ] Authenticated user visits `/register` — wizard starts at Step 2 (no account step)
 - [ ] Authenticated user who already has org — shows error "each user can only have one organization"
 - [ ] Authenticated user who already has agency — shows error "each user can only create one agency"
+- [ ] Website mode: enter a URL that fails to fetch (404, blocked) — error card shows; user can edit URL and retry
+- [ ] Website mode: regenerate after editing URL — replaces previously generated narratives
 
 ---
 
@@ -231,7 +275,7 @@
 ### 4.1 Free Tier Tour (base)
 
 - [ ] New free user lands on `/dashboard` — tour auto-starts after 1 second
-- [ ] Tour shows "1 of 44" progress counter
+- [ ] Tour shows "1 of 30" progress counter (BASE_TOUR has 30 steps; verify against `lib/tour/definitions.ts`)
 - [ ] Tour highlights Dashboard nav item first
 - [ ] Tour navigates through: Dashboard → Discovery → Pipeline → Documents → Narratives → Proposals → Notifications → Billing → Settings → Dashboard
 - [ ] Each step highlights correct element with popover
@@ -246,7 +290,7 @@
 
 - [ ] New professional user lands on `/dashboard` — professional tour auto-starts
 - [ ] Tour mentions "Unlimited grants", "RFP parsing", "Full content library"
-- [ ] 46 steps total
+- [ ] 30 steps total (PROFESSIONAL_TOUR)
 
 ### 4.3 Upgrade Tour
 
@@ -257,7 +301,7 @@
 ### 4.4 Agency Tour
 
 - [ ] New agency user lands on `/agency` — agency tour auto-starts
-- [ ] 22 steps across agency pages
+- [ ] 18 steps across agency pages (AGENCY_TOUR)
 - [ ] Navigates through: Dashboard → Organizations → Analytics → Billing → Settings → Dashboard
 
 ### 4.5 Tour Replay
@@ -398,8 +442,10 @@
 
 - [ ] Columns for each stage with: colored dot, label, tooltip, count
 - [ ] Grant cards show: title, funder, amount badge, score badge, deadline
+- [ ] Cards now also show **"Added [Mon DD, YYYY]"** (date the org picked the grant up — based on `created_at`)
 - [ ] Score badge colors: green (>= 80%), yellow (>= 50%), red (< 50%)
 - [ ] Drafting stage cards show: confidence % and proposal quality %
+- [ ] Cards with a proposal-generation run in flight show an inline "Generating proposal…" indicator (driven by 15s client poll over running workflow_executions)
 - [ ] Drag a card from one column to another — triggers stage move
 - [ ] Drop target column highlights with ring during drag
 - [ ] Card shows opacity change while dragging
@@ -410,11 +456,13 @@
 
 ### 7.4 List View
 
-- [ ] Desktop: table layout with columns (Grant, Funder, Score, Amount, Deadline)
-- [ ] Mobile: card layout with same data
+- [ ] Desktop: table layout with columns (Grant, Funder, **Added**, Score, Amount, Deadline)
+- [ ] Mobile: card layout shows the same data including the Added date
+- [ ] "Added" column displays the org pickup date (`created_at`)
 - [ ] Grants grouped by stage with section headers (label + count)
 - [ ] Click grant title — navigates to `/pipeline/[id]`
 - [ ] Score display: screening score for most stages, confidence/quality for drafting
+- [ ] In-flight proposal generation surfaces on the matching list row
 
 ### 7.5 Recommendation Banner
 
@@ -467,17 +515,20 @@
 - [ ] Concerns list (yellow bullets)
 - [ ] Recommendations list (blue bullets)
 
-### 8.4 Proposal Generation
+### 8.4 Proposal Generation (background / non-blocking)
 
 - [ ] Discovery/Screening stage: Blue card "Generate Proposal" with button
 - [ ] Pending Approval stage: Amber card "Awaiting Your Approval" with "Approve & Generate Proposal"
 - [ ] Click generate/approve — confirmation dialog opens
 - [ ] Dialog shows: grant title, funder, org name, screening score
-- [ ] Click "Approve & Generate" — proposal generation modal appears
-- [ ] Modal shows: spinner, "Generating Proposal..." (non-dismissible)
-- [ ] On success: modal shows green checkmark, "Proposal Generated!", auto-dismisses
-- [ ] On error: modal shows red X, error message, close button
-- [ ] After generation: grant moves to Drafting stage
+- [ ] Click "Approve & Generate" — **inline loading state** on the button (no blocking modal); user can navigate away
+- [ ] While generation is running:
+  - [ ] The matching grant card on `/pipeline` shows a "Generating proposal…" indicator (15s poll)
+  - [ ] Re-clicking generate on the same grant within 10 minutes is blocked by the per-org concurrency gate
+  - [ ] Other orgs are unaffected (gate is per-org, not global)
+- [ ] On success: notification toast "Proposal generated", grant moves to Drafting stage, proposal link surfaces on detail page
+- [ ] On error: inline error message shown next to the button, slot is released so user can retry
+- [ ] If generation crashes mid-run, the slot auto-releases after a 10-minute stale window so the user is never permanently locked out
 
 ### 8.5 Drafting Stage View
 
@@ -912,7 +963,8 @@
 
 - [ ] Avatar with initials fallback
 - [ ] "Change Photo" button — file picker (PNG, JPEG, WebP, max 2MB)
-- [ ] Upload photo — avatar updates
+- [ ] Upload photo — avatar updates (now uploads directly from the browser via the client-side Supabase SDK, matching the agency settings pattern; the old Server Action path was removed because Next.js's 1MB body limit was silently capping 1–2MB uploads)
+- [ ] **Regression check:** upload a 1.5–2MB image — should complete (previously hung at "Uploading...")
 - [ ] Full Name input
 - [ ] Email input
 - [ ] "Save Changes" button (disabled if no changes)
@@ -1056,7 +1108,9 @@
 
 ### 22.2 Billing Stats
 
-- [ ] MRR card shows calculated monthly recurring revenue
+- [ ] **MRR card** shows live monthly recurring revenue fetched from Stripe (not derived from app data)
+- [ ] MRR formats as currency (e.g., `$12,345`)
+- [ ] If Stripe fetch fails, the card degrades gracefully (no error banner, value falls back to `—` or 0)
 - [ ] Active Subscriptions — links to `/admin/organizations?billing=active`
 - [ ] Trialing — links to `/admin/organizations?billing=trialing`
 - [ ] Past Due — links to `/admin/organizations?billing=past_due`
@@ -1243,39 +1297,55 @@
 
 ## Flow 28: Admin — Source Analytics
 
-### 28.1 Header Stats
+### 28.1 Date Range Filter (NEW)
+
+- [ ] Top-of-page date-range picker present with preset pills: Last 7 days, Last 30 days, Custom
+- [ ] Selecting a preset re-loads charts and tables for the new window
+- [ ] Custom range opens start/end date pickers
+- [ ] Selected range is reflected in the URL query (e.g., `?from=...&to=...`) and survives page reload
+- [ ] Date range is inherited by the source detail page when navigating from "View"
+
+### 28.2 Header Stats
 
 - [ ] Total in Catalog
 - [ ] Active Grants (with % of catalog)
 - [ ] New This Week (with today count)
 - [ ] Sources Tracked (with stale count)
 - [ ] Org Pickup Rate (with fraction)
+- [ ] Stats reflect the selected date range
 
-### 28.2 Pipeline Conversion Funnel
+### 28.3 Pipeline Conversion Funnel
 
 - [ ] Central Catalog → Picked Up → Screened → Pending Approval → Proposals
 - [ ] Each step shows count and "X% of prev"
 
-### 28.3 New Grants Per Day Chart
+### 28.4 New Grants Over Time Chart
 
-- [ ] Bar chart showing last 14 days
-- [ ] Per-day grant counts
+- [ ] Chart shows daily grant counts across the selected date range (defaults to last 7 days)
+- [ ] X-axis: dates in range; Y-axis: per-day count
+- [ ] Empty range shows zero-state placeholder (no error)
 
-### 28.4 Stale Sources Panel
+### 28.5 Source Effectiveness Chart (NEW)
+
+- [ ] Horizontal bar chart shows per-source totals across the selected range
+- [ ] Sources are ordered by volume; long source names truncate cleanly
+- [ ] Tooltip on hover shows exact source name + count
+
+### 28.6 Stale Sources Panel
 
 - [ ] List of sources with stale flag (> 48h since last seen)
 - [ ] Each shows: source name, "last seen Xd ago"
 
-### 28.5 Source Breakdown Table
+### 28.7 Source Breakdown Table
 
 - [ ] Search input filters sources
 - [ ] Table columns: Source, Total, Active, New, Picked Up, Avg Eligibility, Last Seen, Stale indicator, "View" link
 - [ ] Summary row at bottom: "All Sources" totals
-- [ ] "View" link navigates to source detail page
+- [ ] "View" link navigates to source detail page (carries the selected date range via URL params)
 
-### 28.6 Source Detail Page
+### 28.8 Source Detail Page
 
-- [ ] Back link to source analytics
+- [ ] Back link to source analytics (preserves date range)
 - [ ] Source name header
 - [ ] Summary stats: Total, Active, Expired, Picked Up, Green/Yellow/Red, No score, Proposals
 - [ ] Filter buttons: All, Active, Expired, Green, Yellow, Red
@@ -1513,24 +1583,37 @@
 - [ ] Subject: "Proposal Draft Ready: [Grant Title]"
 - [ ] Contains: grant title, org name, proposal link
 
+### 38.8 Grant Digest Email (NEW)
+
+- [ ] Sent by the every-10-minutes cron when an org has multiple newly-eligible grants in the same window
+- [ ] Replaces (or supplements) per-grant emails to avoid spamming the user with many separate messages
+- [ ] Subject mentions the count of eligible grants (e.g., "N eligible grants ready for review")
+- [ ] Body lists each grant with: title, funder, amount, deadline, screening score, urgency badge
+- [ ] Footer CTA links to `/pipeline`
+- [ ] Dedup via `grant_email_log` so the same grant isn't included in two digests
+- [ ] If only one grant qualifies, the system still sends a single-grant email (not a 1-item digest)
+
 ---
 
 ## Flow 39: Cron Jobs & Background Processes
 
 ### 39.1 Grant Eligible Emails Cron (`/api/cron/grant-eligible-emails`)
 
-- [ ] Runs every 15 minutes (GitHub Actions)
+- [ ] Runs **every 10 minutes** via GitHub Actions (`.github/workflows/cron-emails.yml`, schedule `*/10 * * * *`)
+- [ ] Endpoint requires `Authorization: Bearer ${CRON_SECRET}` (returns 401 otherwise — fail-closed)
 - [ ] Finds screening_completed notifications from last 24 hours
-- [ ] Checks grant_email_log for dedup
+- [ ] Checks `grant_email_log` for dedup
+- [ ] Groups multiple eligible grants for the same org into a single digest email (see 38.8)
 - [ ] Sends emails for grants in screening or pending_approval stage
 - [ ] Logs sent emails
 
 ### 39.2 Profile Reminders Cron (`/api/cron/profile-reminders`)
 
-- [ ] Runs every 15 minutes (GitHub Actions)
+- [ ] Runs **every 30 minutes** via GitHub Actions (schedule `*/30 * * * *`)
+- [ ] Endpoint requires `CRON_SECRET` bearer auth
 - [ ] Targets: day 3, 7, 14 after registration
 - [ ] Only approved orgs with incomplete profiles
-- [ ] Checks profile_reminder_log for dedup
+- [ ] Checks `profile_reminder_log` for dedup
 
 ### 39.3 Close Expired Grants Cron (`/api/cron/close-expired-grants`)
 
@@ -1538,14 +1621,26 @@
 - [ ] Moves them to "closed" stage
 - [ ] Creates grant_closed notifications per org
 
-### 39.4 Fan-Out Central Grants (`/api/cron/fan-out-central-grants`)
+### 39.4 Hourly Org Grant Fetch (`/api/cron/hourly-org-fetch`) (NEW)
+
+- [ ] Runs **every hour on the hour** via GitHub Actions (`.github/workflows/cron-org-fetch.yml`, schedule `0 * * * *`)
+- [ ] Endpoint requires `CRON_SECRET` bearer auth (fail-closed)
+- [ ] Calls Supabase RPC `next_org_fetch_batch()` to pick the oldest orgs due for refresh
+- [ ] Picks roughly `ceil(eligible_orgs / 24)` orgs per tick so every eligible org refreshes ≥ once per 24h
+- [ ] **Eligibility filter:** only Professional / Agency / tester orgs — free-tier orgs are excluded from rotation
+- [ ] **24-hour cooldown:** orgs whose `last_grant_fetch_at` is within the last 24h are skipped, so each org is fetched at most once per day
+- [ ] Hours where no orgs qualify: cron returns success with an empty batch (no error)
+- [ ] Each picked org triggers the n8n `fetch-grants` webhook; results update the `grant_fetch_status` table
+
+### 39.5 Fan-Out Central Grants (`/api/cron/fan-out-central-grants`)
 
 - [ ] Gets all approved orgs
 - [ ] Triggers n8n fetch-grants workflow for each
 - [ ] 2-second stagger between webhook calls
-- [ ] Updates grant_fetch_status table
+- [ ] Updates `grant_fetch_status` table
+- [ ] Endpoint requires `CRON_SECRET` bearer auth
 
-### 39.5 Notification Email Listener (PM2 process)
+### 39.6 Notification Email Listener (PM2 process)
 
 - [ ] Subscribes to `notifications` table INSERT events
 - [ ] Subscribes to `grants` table UPDATE events
@@ -1611,6 +1706,12 @@
 
 - [ ] Sections update during n8n generation
 - [ ] Quality review results stream in
+- [ ] Pipeline cards (kanban + list) show "Generating proposal…" state for in-flight runs (15s client poll)
+
+### 41.6 Admin View-Mode Side-Effects
+
+- [ ] When an admin uses "View as Organization", visiting `/notifications` does **not** mark that org's notifications as read
+- [ ] Workflow events fired during admin view are scoped via `getUserOrgId` + `isAdminViewMode` so the org's own users still see fresh badges
 
 ---
 
@@ -1649,3 +1750,99 @@
 - [ ] All pages render correctly in dark mode
 - [ ] No contrast issues with text/badges
 - [ ] Charts and graphs visible in dark mode
+
+---
+
+## Flow 43: Admin — Org Pickup
+
+### 43.1 List Page (`/admin/org-pickup`)
+
+- [ ] Navigate to `/admin/org-pickup` from the admin sidebar
+- [ ] Date-range picker at the top with presets: Last 7 days, Last 30 days, Custom
+- [ ] Selecting a preset re-loads all metrics, charts, and tables
+- [ ] Selected range survives page reload (URL params)
+
+### 43.2 Summary Cards
+
+- [ ] Orgs (total eligible orgs in range)
+- [ ] Total pickups (grants picked up across all orgs)
+- [ ] Pickup rate (% of catalog that orgs are picking up)
+- [ ] Avg pickups per org
+
+### 43.3 Charts
+
+- [ ] Pickup-rate trend line across the selected range
+- [ ] Per-source pickup horizontal bar chart (which catalog sources are converting into pickups)
+
+### 43.4 Org Breakdown Table
+
+- [ ] Sortable columns: Org Name, Sector, Status, Pickups, Pickup Rate (%), Stage Distribution
+- [ ] Rows color-code stages (discovery / screening / pending / drafting / closed)
+- [ ] Click a row — navigates to `/admin/org-pickup/[orgId]` (date range carries via URL)
+- [ ] Empty range shows zero-state placeholder
+
+### 43.5 Org Detail Page (`/admin/org-pickup/[orgId]`)
+
+- [ ] Back link returns to list with the same date range applied
+- [ ] Stage breakdown for the selected org over the range
+- [ ] Source breakdown for the selected org
+- [ ] Full picked-up grants list: title, funder, source, picked-up date, stage
+
+---
+
+## Flow 44: Admin — Fetch Queue
+
+### 44.1 Queue Order Section
+
+- [ ] Navigate to `/admin/fetch-queue` from the admin sidebar
+- [ ] Header note clarifies that only Professional / Agency / tester orgs appear (free-tier excluded)
+- [ ] Sortable table columns: Org, Status, Grants added, Last checked, Next check, Error
+- [ ] Status badges color-coded: success (green), failed (red), running (blue), never/pending (gray)
+- [ ] Failed rows expose the underlying error (tooltip or expand row)
+- [ ] "Next check" reflects the 24-hour cooldown — orgs fetched recently show a future timestamp ≥ 24h out
+
+### 44.2 Date-Range Pills
+
+- [ ] Pills present: Yesterday, Last 7 days, Last 30 days, Custom
+- [ ] Clicking a pill filters Execution History below
+
+### 44.3 Execution History
+
+- [ ] Per-org day-level drilldown: org name, date, grants added count
+- [ ] **Yesterday tab now reports correct org counts** (e.g., orgs that picked up grants from `central_grants` show up; previously Yesterday showed 0 because the view only counted `manual_grants`)
+- [ ] Counts include catalog pickups via `central_grants` UNION `manual_grants` (the `grants_full` view)
+- [ ] Click a row to drill into that org's daily history if applicable
+
+### 44.4 Detail Page (`/admin/fetch-queue/[orgId]`)
+
+- [ ] Per-org history view with full timeline of fetch executions
+- [ ] Each entry: timestamp, source, grants added, status, error
+- [ ] Back button returns to fetch-queue list
+
+---
+
+## Flow 45: Admin — System Errors
+
+### 45.1 List Page (`/admin/system-errors`)
+
+- [ ] Navigate to `/admin/system-errors` from the admin sidebar
+- [ ] Title and subtitle indicate this is a rollup of n8n workflow failures (logged by the Error Notification Handler workflow alongside Slack alerts)
+- [ ] Search input filters by keyword (workflow name, error message, org)
+- [ ] Filter controls: by error type, by org, by time range
+
+### 45.2 Grouped Rollup
+
+- [ ] Errors are grouped by fingerprint (similar errors collapsed into a single row)
+- [ ] Each row shows: error fingerprint / message, count, error type, org, last occurrence timestamp
+- [ ] Sortable by count and last occurrence
+
+### 45.3 Error Detail
+
+- [ ] Click a row — expands or navigates to detail showing full stack trace, workflow ID, timestamp, org name
+- [ ] Stack trace is readable (monospace, scrollable for long traces)
+- [ ] Errors logged via HTTP Request node (so the row is written even if a Supabase node fails inside the failing workflow)
+
+### 45.4 Cross-checks
+
+- [ ] Trigger the throwaway error-test workflow in n8n — within ~1 min the row appears in `/admin/system-errors` AND a Slack alert fires
+- [ ] Confirm error_type and workflow_id match the original failure

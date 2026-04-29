@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -28,9 +28,6 @@ import {
   Loader2,
   CircleDashed,
   History,
-  Calendar,
-  ChevronDown,
-  ChevronRight,
 } from "lucide-react";
 import {
   Tooltip,
@@ -39,6 +36,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatTimeAgo, formatTimeUntil, formatClockUTC } from "@/lib/utils/format";
+import { DateRangePills } from "./date-range-pills";
 
 export type RunState = "never" | "running" | "success" | "failed";
 export type HistoryOutcome = "success" | "failed" | "quiet";
@@ -80,7 +78,6 @@ interface Props {
 
 export function FetchQueueClient({ rows, errorMessage, history, historyError, filters }: Props) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
 
   // Live updates: re-run the server fetch every 5s while the tab is visible.
   // run_state and grants_added_in_run change as workflows progress; this is
@@ -107,12 +104,6 @@ export function FetchQueueClient({ rows, errorMessage, history, historyError, fi
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [router]);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => r.name.toLowerCase().includes(q));
-  }, [rows, search]);
 
   const batchSize = rows[0]?.batch_size ?? 1;
   const totalOrgs = rows.length;
@@ -172,154 +163,100 @@ export function FetchQueueClient({ rows, errorMessage, history, historyError, fi
         />
       </div>
 
-      {/* Queue table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <CardTitle className="text-base">Queue order</CardTitle>
-          <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search organization"
-              className="pl-7 h-8 text-xs"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <TooltipProvider delayDuration={150}>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12 text-center">#</TableHead>
-                  <TableHead>Organization</TableHead>
-                  <TableHead>Last run</TableHead>
-                  <TableHead>Last checked</TableHead>
-                  <TableHead>Next check</TableHead>
-                  <TableHead>Scheduled fire</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
-                      {rows.length === 0 ? "No approved organizations." : "No matches."}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filtered.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="text-center font-mono text-xs text-muted-foreground">
-                        {r.queue_position}
-                      </TableCell>
-                      <TableCell className="font-medium">{r.name}</TableCell>
-                      <TableCell className="text-xs">
-                        <RunStateCell row={r} />
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {r.last_grant_fetch_at ? (
-                          <span>{formatTimeAgo(r.last_grant_fetch_at)}</span>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] font-mono uppercase">
-                            never
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {formatTimeUntil(r.estimated_next_fetch_at)}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {formatClockUTC(r.estimated_next_fetch_at)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TooltipProvider>
-        </CardContent>
-      </Card>
-
-      {/* Execution History */}
-      <ExecutionHistory history={history} error={historyError} filters={filters} />
+      {/* Single merged table that switches by date preset */}
+      <QueueHistoryTable
+        history={history}
+        queueRows={rows}
+        error={historyError}
+        filters={filters}
+      />
     </div>
   );
 }
 
-function ExecutionHistory({
+function QueueHistoryTable({
   history,
+  queueRows,
   error,
   filters,
 }: {
   history: HistoryRow[];
+  queueRows: QueueRow[];
   error: string | null;
   filters: { preset: string; from: string; to: string };
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const isLive = filters.preset === "live";
 
-  function setParam(updates: Record<string, string | null>) {
-    const p = new URLSearchParams(searchParams.toString());
-    Object.entries(updates).forEach(([k, v]) => {
-      if (v === null || v === "") p.delete(k);
-      else p.set(k, v);
-    });
-    startTransition(() => router.replace(`?${p.toString()}`));
-  }
-
-  // Group by org for the per-org expandable view.
-  const byOrg = useMemo(() => {
+  // Aggregate per-org from history rows; queue state used for Next/Scheduled.
+  const historyByOrg = useMemo(() => {
+    const queueById = new Map(queueRows.map((q) => [q.id, q]));
     const m = new Map<string, { name: string; days: HistoryRow[] }>();
     history.forEach((h) => {
       if (!m.has(h.org_id)) m.set(h.org_id, { name: h.org_name, days: [] });
       m.get(h.org_id)!.days.push(h);
     });
-    return Array.from(m.entries()).map(([id, v]) => ({
-      org_id: id,
-      org_name: v.name,
-      days: v.days,
-      total_grants: v.days.reduce((a, b) => a + b.grants_added, 0),
-      total_errors: v.days.reduce((a, b) => a + b.error_count, 0),
-      status:
-        v.days.some((d) => d.outcome === "failed")
-          ? "failed"
-          : v.days.some((d) => d.outcome === "success")
+    return Array.from(m.entries()).map(([id, v]) => {
+      const sortedDays = [...v.days].sort((a, b) =>
+        a.day < b.day ? 1 : a.day > b.day ? -1 : 0,
+      );
+      const lastActive =
+        sortedDays.find((d) => d.outcome !== "quiet") || sortedDays[0];
+      const totalGrants = v.days.reduce((a, b) => a + b.grants_added, 0);
+      const totalErrors = v.days.reduce((a, b) => a + b.error_count, 0);
+      const status: HistoryOutcome = v.days.some((d) => d.outcome === "failed")
+        ? "failed"
+        : v.days.some((d) => d.outcome === "success")
           ? "success"
-          : "quiet",
-    }));
-  }, [history]);
+          : "quiet";
+      return {
+        org_id: id,
+        org_name: v.name,
+        total_grants: totalGrants,
+        total_errors: totalErrors,
+        status,
+        last_active_day: lastActive?.day ?? null,
+        last_active_grants: lastActive?.grants_added ?? 0,
+        last_active_outcome: lastActive?.outcome ?? "quiet",
+        queue: queueById.get(id) ?? null,
+      };
+    });
+  }, [history, queueRows]);
 
-  const filtered = useMemo(() => {
+  const liveFiltered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = q
-      ? byOrg.filter((o) => o.org_name.toLowerCase().includes(q))
-      : byOrg;
+      ? queueRows.filter((r) => r.name.toLowerCase().includes(q))
+      : queueRows;
+    return [...list].sort((a, b) => a.queue_position - b.queue_position);
+  }, [queueRows, search]);
+
+  const historyFiltered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = q
+      ? historyByOrg.filter((o) => o.org_name.toLowerCase().includes(q))
+      : historyByOrg;
     return [...list].sort((a, b) => {
-      // failed first, then by total_grants desc
       if (a.status === "failed" && b.status !== "failed") return -1;
       if (b.status === "failed" && a.status !== "failed") return 1;
       return b.total_grants - a.total_grants;
     });
-  }, [byOrg, search]);
+  }, [historyByOrg, search]);
 
-  const toggle = (id: string) => {
-    setExpanded((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
-  };
+  function buildOrgHref(orgId: string) {
+    const p = new URLSearchParams();
+    p.set("preset", filters.preset);
+    if (filters.preset === "custom") {
+      p.set("from", filters.from);
+      p.set("to", filters.to);
+    }
+    return `/admin/fetch-queue/${orgId}?${p.toString()}`;
+  }
 
-  const presetBtns: { value: string; label: string }[] = [
-    { value: "yesterday", label: "Yesterday" },
-    { value: "7d", label: "Last 7 days" },
-    { value: "30d", label: "Last 30 days" },
-    { value: "custom", label: "Custom" },
-  ];
+  const headerLabel = isLive
+    ? "Queue order — live"
+    : `Execution history · ${filters.from} → ${filters.to} UTC`;
 
   return (
     <Card>
@@ -327,10 +264,10 @@ function ExecutionHistory({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              <History className="h-4 w-4" /> Execution History
+              <History className="h-4 w-4" /> {isLive ? "Queue order" : "Execution history"}
             </CardTitle>
             <p className="mt-1 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
-              Per-org outcomes derived from grants added + errors · {filters.from} → {filters.to} UTC
+              {headerLabel}
             </p>
           </div>
           <div className="relative w-full sm:w-64">
@@ -344,166 +281,130 @@ function ExecutionHistory({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-md border border-border p-0.5">
-            {presetBtns.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => {
-                  setParam({
-                    preset: p.value,
-                    from: p.value === "custom" ? filters.from : null,
-                    to: p.value === "custom" ? filters.to : null,
-                  });
-                }}
-                className={`px-2.5 py-1 text-xs font-mono uppercase rounded ${
-                  filters.preset === p.value
-                    ? "bg-foreground/[0.06] text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          {filters.preset === "custom" && (
-            <div className="flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                type="date"
-                value={filters.from}
-                onChange={(e) => setParam({ preset: "custom", from: e.target.value, to: filters.to })}
-                className="h-8 w-[140px] text-xs"
-              />
-              <span className="text-muted-foreground text-xs">→</span>
-              <Input
-                type="date"
-                value={filters.to}
-                onChange={(e) => setParam({ preset: "custom", from: filters.from, to: e.target.value })}
-                className="h-8 w-[140px] text-xs"
-              />
-            </div>
-          )}
-        </div>
+        <DateRangePills
+          preset={filters.preset}
+          from={filters.from}
+          to={filters.to}
+        />
       </CardHeader>
       <CardContent className="p-0">
-        {error && (
-          <div className="py-4 px-6 text-sm text-red-500">Failed to load history: {error}</div>
+        {!isLive && error && (
+          <div className="py-4 px-6 text-sm text-red-500">
+            Failed to load history: {error}
+          </div>
         )}
-        {!error && (
+        {(isLive || !error) && (
           <TooltipProvider delayDuration={150}>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-8"></TableHead>
+                  <TableHead className="w-12 text-center">#</TableHead>
                   <TableHead>Organization</TableHead>
-                  <TableHead>Active days</TableHead>
-                  <TableHead>Grants added</TableHead>
-                  <TableHead>Errors</TableHead>
-                  <TableHead>Outcome</TableHead>
+                  <TableHead>Last run</TableHead>
+                  <TableHead>Last checked</TableHead>
+                  <TableHead>Next check</TableHead>
+                  <TableHead>Scheduled fire</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.length === 0 ? (
+                {isLive ? (
+                  liveFiltered.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="py-8 text-center text-sm text-muted-foreground"
+                      >
+                        {queueRows.length === 0
+                          ? "No approved organizations."
+                          : "No matches."}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    liveFiltered.map((r) => (
+                      <TableRow
+                        key={r.id}
+                        className="cursor-pointer hover:bg-muted/40"
+                        onClick={() => router.push(buildOrgHref(r.id))}
+                      >
+                        <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                          {r.queue_position}
+                        </TableCell>
+                        <TableCell className="font-medium">{r.name}</TableCell>
+                        <TableCell className="text-xs">
+                          <RunStateCell row={r} />
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {r.last_grant_fetch_at ? (
+                            <span>{formatTimeAgo(r.last_grant_fetch_at)}</span>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] font-mono uppercase"
+                            >
+                              never
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {formatTimeUntil(r.estimated_next_fetch_at)}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {formatClockUTC(r.estimated_next_fetch_at)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )
+                ) : historyFiltered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell
+                      colSpan={6}
+                      className="py-10 text-center text-sm text-muted-foreground"
+                    >
                       No activity in this range.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((o) => {
-                    const open = expanded.has(o.org_id);
-                    return (
-                      <>
-                        <TableRow
-                          key={o.org_id}
-                          className="cursor-pointer hover:bg-muted/40"
-                          onClick={() => toggle(o.org_id)}
-                        >
-                          <TableCell className="text-muted-foreground">
-                            {open ? (
-                              <ChevronDown className="h-3.5 w-3.5" />
-                            ) : (
-                              <ChevronRight className="h-3.5 w-3.5" />
-                            )}
-                          </TableCell>
-                          <TableCell className="font-medium">{o.org_name}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {o.days.length}
-                          </TableCell>
-                          <TableCell className="text-xs">{o.total_grants}</TableCell>
-                          <TableCell className="text-xs">
-                            {o.total_errors > 0 ? (
-                              <span className="text-red-600 dark:text-red-400">
-                                {o.total_errors}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">0</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <OutcomeBadge outcome={o.status as HistoryOutcome} />
-                          </TableCell>
-                        </TableRow>
-                        {open && (
-                          <TableRow key={o.org_id + ":detail"} className="bg-muted/20 hover:bg-muted/20">
-                            <TableCell></TableCell>
-                            <TableCell colSpan={5} className="py-3">
-                              <Table className="text-xs">
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="h-7">Day (UTC)</TableHead>
-                                    <TableHead className="h-7">Grants</TableHead>
-                                    <TableHead className="h-7">Errors</TableHead>
-                                    <TableHead className="h-7">Outcome</TableHead>
-                                    <TableHead className="h-7">Details</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {o.days.map((d) => (
-                                    <TableRow key={o.org_id + ":" + d.day}>
-                                      <TableCell className="py-1 font-mono">{d.day}</TableCell>
-                                      <TableCell className="py-1">{d.grants_added}</TableCell>
-                                      <TableCell className="py-1">
-                                        {d.error_count > 0 ? (
-                                          <span className="text-red-600 dark:text-red-400">
-                                            {d.error_count}
-                                          </span>
-                                        ) : (
-                                          <span className="text-muted-foreground">0</span>
-                                        )}
-                                      </TableCell>
-                                      <TableCell className="py-1">
-                                        <OutcomeBadge outcome={d.outcome} />
-                                      </TableCell>
-                                      <TableCell className="py-1">
-                                        {d.last_error_message ? (
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <span className="inline-flex items-center gap-1 cursor-help text-red-600 dark:text-red-400">
-                                                {d.last_error_type || "error"}
-                                              </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="top" className="max-w-sm">
-                                              <div className="font-mono text-xs whitespace-pre-wrap break-words text-red-600 dark:text-red-400">
-                                                {d.last_error_message}
-                                              </div>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        ) : (
-                                          <span className="text-muted-foreground">—</span>
-                                        )}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </TableCell>
-                          </TableRow>
+                  historyFiltered.map((o, idx) => (
+                    <TableRow
+                      key={o.org_id}
+                      className="cursor-pointer hover:bg-muted/40"
+                      onClick={() => router.push(buildOrgHref(o.org_id))}
+                    >
+                      <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                        {idx + 1}
+                      </TableCell>
+                      <TableCell className="font-medium">{o.org_name}</TableCell>
+                      <TableCell className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <OutcomeBadge outcome={o.last_active_outcome} />
+                          <span className="text-muted-foreground">
+                            {o.last_active_grants}{" "}
+                            {o.last_active_grants === 1 ? "grant" : "grants"}
+                          </span>
+                          {o.total_errors > 0 && (
+                            <span className="text-red-600 dark:text-red-400">
+                              · {o.total_errors} err
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-mono">
+                        {o.last_active_day || "—"}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {o.queue ? (
+                          formatTimeUntil(o.queue.estimated_next_fetch_at)
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
                         )}
-                      </>
-                    );
-                  })
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {o.queue
+                          ? formatClockUTC(o.queue.estimated_next_fetch_at)
+                          : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>

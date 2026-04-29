@@ -72,11 +72,9 @@ import {
   extendTrial,
   updateSubscriptionStatus,
   toggleTester,
-  getAdminProposalSections,
 } from "../actions";
 import { PLANS } from "@/lib/stripe/config";
 import type { PlanId } from "@/lib/stripe/config";
-import { ProposalSections } from "@/app/(dashboard)/proposals/[id]/components/proposal-sections";
 
 interface DocumentItem {
   id: string;
@@ -1259,63 +1257,6 @@ function GrantDetailView({ grant }: { grant: any }) { /* eslint-disable-line @ty
   );
 }
 
-// Read-only proposal detail dialog content
-function ProposalDetailView({ proposal }: { proposal: any }) { /* eslint-disable-line @typescript-eslint/no-explicit-any */
-  const [sections, setSections] = useState<any[]>([]); /* eslint-disable-line @typescript-eslint/no-explicit-any */
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true); // eslint-disable-line react-hooks/set-state-in-effect
-    getAdminProposalSections(proposal.id).then((result) => {
-      if (!cancelled) {
-        setSections(
-          (result.data || []).sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)) /* eslint-disable-line @typescript-eslint/no-explicit-any */
-        );
-        setLoading(false);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [proposal.id]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 text-sm">
-        <div>
-          <span className="text-muted-foreground">Grant: </span>
-          <span className="font-medium">{proposal.grant?.title || "-"}</span>
-        </div>
-        {proposal.quality_score != null && (
-          <Badge
-            variant={
-              proposal.quality_score >= 80
-                ? "default"
-                : proposal.quality_score >= 60
-                  ? "secondary"
-                  : "destructive"
-            }
-          >
-            Quality: {proposal.quality_score}%
-          </Badge>
-        )}
-      </div>
-      <div className="h-[70vh]">
-        {loading ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Loading sections...
-          </div>
-        ) : (
-          <ProposalSections
-            sections={sections}
-            proposalId={proposal.id}
-            proposalTitle={proposal.title}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function OrgDetailClient({
   organization,
   profiles,
@@ -1337,8 +1278,6 @@ export function OrgDetailClient({
   const [billingSuccess, setBillingSuccess] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedGrant, setSelectedGrant] = useState<any | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [selectedProposal, setSelectedProposal] = useState<any | null>(null);
 
   // Grants filtering & pagination
   const [grantSearch, setGrantSearch] = useState("");
@@ -2018,7 +1957,11 @@ export function OrgDetailClient({
                     </TableHeader>
                     <TableBody>
                       {filteredProposals.slice(0, proposalsVisible).map((p) => (
-                        <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedProposal(p)}>
+                        <TableRow
+                          key={p.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => router.push(`/admin/organizations/${organization.id}/proposals/${p.id}`)}
+                        >
                           <TableCell className="font-medium max-w-[200px] truncate">{p.title || "Untitled"}</TableCell>
                           <TableCell className="text-muted-foreground max-w-[150px] truncate">{p.grant?.title || "-"}</TableCell>
                           <TableCell>
@@ -2547,17 +2490,6 @@ export function OrgDetailClient({
             <DialogDescription>Read-only view of grant details</DialogDescription>
           </DialogHeader>
           {selectedGrant && <GrantDetailView grant={selectedGrant} />}
-        </DialogContent>
-      </Dialog>
-
-      {/* Proposal Detail Dialog (read-only) */}
-      <Dialog open={!!selectedProposal} onOpenChange={(open) => !open && setSelectedProposal(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>{selectedProposal?.title || "Proposal"}</DialogTitle>
-            <DialogDescription>Read-only view of proposal</DialogDescription>
-          </DialogHeader>
-          {selectedProposal && <ProposalDetailView proposal={selectedProposal} />}
         </DialogContent>
       </Dialog>
 

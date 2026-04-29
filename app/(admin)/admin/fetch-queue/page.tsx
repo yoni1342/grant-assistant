@@ -13,7 +13,7 @@ type SearchParams = Promise<{
   to?: string;
 }>;
 
-const PRESETS = ["yesterday", "7d", "30d", "custom"] as const;
+const PRESETS = ["live", "yesterday", "7d", "30d", "custom"] as const;
 type Preset = (typeof PRESETS)[number];
 
 function resolveRange(preset: Preset, from?: string, to?: string) {
@@ -25,6 +25,7 @@ function resolveRange(preset: Preset, from?: string, to?: string) {
     return d.toISOString().slice(0, 10);
   };
 
+  if (preset === "live") return { from: todayIso, to: todayIso };
   if (preset === "yesterday") {
     const y = utcDay(-1);
     return { from: y, to: y };
@@ -46,7 +47,7 @@ export default async function FetchQueuePage({
   const params = await searchParams;
   const preset: Preset = (PRESETS as readonly string[]).includes(params.preset ?? "")
     ? (params.preset as Preset)
-    : "yesterday";
+    : "live";
   const range = resolveRange(preset, params.from, params.to);
 
   const admin = createAdminClient();
