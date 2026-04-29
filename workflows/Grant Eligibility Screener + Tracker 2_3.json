@@ -25,11 +25,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Content-Type",
@@ -54,7 +54,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.body.org_id,\n    grant_id: items[0].json.body.grantId || items[0].json.body.grant_id,\n    type: 'screening_started',\n    title: 'Screening started for \"' + (items[0].json.body.grantData?.title || items[0].json.body.grant_name || 'Unknown') + '\"'\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
+        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'REPLACE_ME_SUPABASE_SERVICE_KEY',\n      'Authorization': 'Bearer REPLACE_ME_SUPABASE_SERVICE_KEY',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.body.org_id,\n    grant_id: items[0].json.body.grantId || items[0].json.body.grant_id,\n    type: 'screening_started',\n    title: 'Screening started for \"' + (items[0].json.body.grantData?.title || items[0].json.body.grant_name || 'Unknown') + '\"'\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
       },
       "id": "de759ef6-a1f3-4c12-b7c7-657029efc94a",
       "name": "Notify Screening Started1",
@@ -68,7 +68,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.org_id,\n    grant_id: items[0].json.grant_id,\n    type: 'screening_completed',\n    title: 'Screening completed for \"' + ($('update grant5').item.json.title|| 'Unknown') + '\"',\n    message: 'Score: ' + (items[0].json.eligibility?.score || 'N/A') + ' | Confidence: ' + (items[0].json.eligibility?.confidence || $('update grant5').item.json.eligibility?.confidence || 'N/A') + '% | ' + (items[0].json.screening_notes || '')\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
+        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'REPLACE_ME_SUPABASE_SERVICE_KEY',\n      'Authorization': 'Bearer REPLACE_ME_SUPABASE_SERVICE_KEY',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.org_id,\n    grant_id: items[0].json.grant_id,\n    type: 'screening_completed',\n    title: 'Screening completed for \"' + ($('update grant5').item.json.title|| 'Unknown') + '\"',\n    message: 'Score: ' + (items[0].json.eligibility?.score || 'N/A') + ' | Confidence: ' + (items[0].json.eligibility?.confidence || $('update grant5').item.json.eligibility?.confidence || 'N/A') + '% | ' + (items[0].json.screening_notes || '')\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
       },
       "id": "53ac3e4c-e84c-47cf-b1f9-826fd7ae7f15",
       "name": "Notify Screening Completed1",
@@ -305,11 +305,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
             }
           ]
         },
@@ -390,7 +390,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\n  const aiResponse = item.json;\n\n  let analysis = null;\n  let parseError = null;\n\n  // Extract JSON from AI response\n  try {\n    let responseText = '';\n\n    if (aiResponse.text) {\n      responseText = aiResponse.text;\n    } else if (aiResponse.message?.content) {\n      responseText = aiResponse.message.content;\n    } else if (aiResponse.output && Array.isArray(aiResponse.output)) {\n      responseText = aiResponse.output[0]?.content?.[0]?.text || '';\n    } else if (typeof aiResponse === 'string') {\n      responseText = aiResponse;\n    }\n\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);\n  } catch (e) {\n    parseError = e.message;\n  }\n\n  const originalData = $('Combine Context1').first().json;\n  const scannerData = originalData.originalGrantData || {};\n\n  if (!analysis) {\n    return [{\n      json: {\n        success: false,\n        error: 'Failed to parse AI response',\n        parseError,\n        sourceUrl: originalData.sourceUrl,\n        sourceType: originalData.sourceType\n      }\n    }];\n  }\n\n  // ===== BUILD RESULT =====\n  const dataQuality = analysis.dataQuality || 'sufficient';\n  const isInsufficient = dataQuality === 'insufficient' || (analysis.overallScore || '').toUpperCase() === 'INSUFFICIENT_DATA';\n  const score = isInsufficient ? 'insufficient_data' : (analysis.overallScore || 'YELLOW').toLowerCase();\n  const allowedScores = ['green', 'yellow', 'red', 'insufficient_data'];\n  const screening_result = allowedScores.includes(score) ? score : 'yellow';\n\n  // Calculate confidence from dimension scores if available\n  const dims = analysis.dimensionScores || {};\n  const hasAllDimensions = dims.missionAlignment != null\n    && dims.targetPopulation != null\n    && dims.serviceFit != null\n    && dims.geographicAlignment != null\n    && dims.organizationalCapacity != null;\n\n  const calculatedConfidence = hasAllDimensions\n    ? dims.missionAlignment + dims.targetPopulation + dims.serviceFit + dims.geographicAlignment + dims.organizationalCapacity\n    : (analysis.confidence || 50);\n\n  const result = {\n    success: true,\n    data: {\n      id: analysis.grantid,\n      org_id: analysis.org_id || originalData.org_id || scannerData.org_id,\n      title: analysis.grantTitle,\n      stage: (score === 'red' || score === 'insufficient_data') ? 'screening' : 'pending_approval',\n      funder_name: (analysis.agency && analysis.agency !== 'Not specified') ? analysis.agency : (scannerData.funder_name || 'Unknown'),\n      amount: (analysis.fundingRange && analysis.fundingRange !== 'Not specified') ? analysis.fundingRange : (scannerData.amount || null),\n      deadline: (analysis.deadline && analysis.deadline !== 'Not specified') ? analysis.deadline : (scannerData.deadline || null),\n\n      eligibility: {\n        score: score.toUpperCase(),\n        confidence: calculatedConfidence,\n        data_quality: dataQuality,\n        indicator: {\n          green: '\ud83d\udfe2',\n          yellow: '\ud83d\udfe1',\n          red: '\ud83d\udd34',\n          insufficient_data: '\u26aa'\n        }[score] || '\u26aa',\n        dimension_scores: {\n          mission_alignment: dims.missionAlignment || 0,\n          target_population: dims.targetPopulation || 0,\n          service_fit: dims.serviceFit || 0,\n          geographic_alignment: dims.geographicAlignment || 0,\n          organizational_capacity: dims.organizationalCapacity || 0\n        }\n      },\n\n      screening_score: calculatedConfidence,\n\n      screening_notes: analysis.summary || 'Unable to determine eligibility',\n      categories: analysis.categories || {},\n      concerns: analysis.concerns || [],\n      recommendations: analysis.recommendations || [],\n\n      source: (() => {\n        const url = originalData.sourceUrl || '';\n        try {\n          const hostname = new URL(url).hostname.replace('www.', '').replace('projects.', '');\n          const domainMap = {\n            'grants.gov': 'Grants.gov',\n            'sam.gov': 'SAM.gov',\n            'propublica.org': 'ProPublica',\n            'sbir.gov': 'SBIR.gov',\n            'nsf.gov': 'NSF Awards',\n            'nih.gov': 'NIH Reporter',\n            'usaspending.gov': 'USA Spending',\n            'grants.ca.gov': 'CA Grants Portal',\n            'gatesfoundation.org': 'Gates Foundation',\n            'fordfoundation.org': 'Ford Foundation',\n            'yieldgiving.com': 'Yield Giving',\n            'rwjf.org': 'RWJF',\n            'kresge.org': 'Kresge Foundation',\n            'jpbfoundation.org': 'JPB Foundation',\n            'chanzuckerberg.com': 'Chan Zuckerberg Initiative',\n            'aecf.org': 'Annie E. Casey Foundation',\n            'ballmergroup.org': 'Ballmer Group',\n            'arnoldventures.org': 'Arnold Ventures',\n          };\n          for (const [domain, name] of Object.entries(domainMap)) {\n            if (hostname.includes(domain)) return name;\n          }\n          return hostname;\n        } catch(e) {\n          return url || 'Unknown';\n        }\n      })(),\n      source_url: originalData.sourceUrl || null\n    }\n  };\n  return result;"
+        "jsCode": "const item = $input.first();\n  const aiResponse = item.json;\n\n  let analysis = null;\n  let parseError = null;\n\n  // Extract JSON from AI response\n  try {\n    let responseText = '';\n\n    if (aiResponse.text) {\n      responseText = aiResponse.text;\n    } else if (aiResponse.message?.content) {\n      responseText = aiResponse.message.content;\n    } else if (aiResponse.output && Array.isArray(aiResponse.output)) {\n      responseText = aiResponse.output[0]?.content?.[0]?.text || '';\n    } else if (typeof aiResponse === 'string') {\n      responseText = aiResponse;\n    }\n\n    const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) analysis = JSON.parse(jsonMatch[0]);\n  } catch (e) {\n    parseError = e.message;\n  }\n\n  const originalData = $('Combine Context1').first().json;\n  const scannerData = originalData.originalGrantData || {};\n\n  if (!analysis) {\n    return [{\n      json: {\n        success: false,\n        error: 'Failed to parse AI response',\n        parseError,\n        sourceUrl: originalData.sourceUrl,\n        sourceType: originalData.sourceType\n      }\n    }];\n  }\n\n  // ===== BUILD RESULT =====\n  const dataQuality = analysis.dataQuality || 'sufficient';\n  const isInsufficient = dataQuality === 'insufficient' || (analysis.overallScore || '').toUpperCase() === 'INSUFFICIENT_DATA';\n  const score = isInsufficient ? 'insufficient_data' : (analysis.overallScore || 'YELLOW').toLowerCase();\n  const allowedScores = ['green', 'yellow', 'red', 'insufficient_data'];\n  const screening_result = allowedScores.includes(score) ? score : 'yellow';\n\n  // Calculate confidence from dimension scores if available\n  const dims = analysis.dimensionScores || {};\n  const hasAllDimensions = dims.missionAlignment != null\n    && dims.targetPopulation != null\n    && dims.serviceFit != null\n    && dims.geographicAlignment != null\n    && dims.organizationalCapacity != null;\n\n  const calculatedConfidence = hasAllDimensions\n    ? dims.missionAlignment + dims.targetPopulation + dims.serviceFit + dims.geographicAlignment + dims.organizationalCapacity\n    : (analysis.confidence || 50);\n\n  const result = {\n    success: true,\n    data: {\n      id: analysis.grantid,\n      org_id: analysis.org_id || originalData.org_id || scannerData.org_id,\n      title: analysis.grantTitle,\n      stage: (score === 'red' || score === 'insufficient_data') ? 'screening' : 'pending_approval',\n      funder_name: (analysis.agency && analysis.agency !== 'Not specified') ? analysis.agency : (scannerData.funder_name || 'Unknown'),\n      amount: (analysis.fundingRange && analysis.fundingRange !== 'Not specified') ? analysis.fundingRange : (scannerData.amount || null),\n      deadline: (analysis.deadline && analysis.deadline !== 'Not specified') ? analysis.deadline : (scannerData.deadline || null),\n\n      eligibility: {\n        score: score.toUpperCase(),\n        confidence: calculatedConfidence,\n        data_quality: dataQuality,\n        indicator: {\n          green: '\ud83d\udfe2',\n          yellow: '\ud83d\udfe1',\n          red: '\ud83d\udd34',\n          insufficient_data: '\u26aa'\n        }[score] || '\u26aa',\n        dimension_scores: {\n          mission_alignment: dims.missionAlignment || 0,\n          target_population: dims.targetPopulation || 0,\n          service_fit: dims.serviceFit || 0,\n          geographic_alignment: dims.geographicAlignment || 0,\n          organizational_capacity: dims.organizationalCapacity || 0\n        }\n      },\n\n      screening_score: calculatedConfidence,\n\n      screening_notes: analysis.summary || 'Unable to determine eligibility',\n      categories: analysis.categories || {},\n      concerns: analysis.concerns || [],\n      recommendations: analysis.recommendations || [],\n\n      source: (() => {\n        const url = originalData.sourceUrl || '';\n        try {\n          const hm = url.match(/^https?:\\/\\/([^\\/?#]+)/i); const hostname = (hm ? hm[1] : '').replace('www.', '').replace('projects.', '');\n          const domainMap = {\n            'grants.gov': 'Grants.gov',\n            'sam.gov': 'SAM.gov',\n            'propublica.org': 'ProPublica',\n            'sbir.gov': 'SBIR.gov',\n            'nsf.gov': 'NSF Awards',\n            'nih.gov': 'NIH Reporter',\n            'usaspending.gov': 'USA Spending',\n            'grants.ca.gov': 'CA Grants Portal',\n            'gatesfoundation.org': 'Gates Foundation',\n            'fordfoundation.org': 'Ford Foundation',\n            'yieldgiving.com': 'Yield Giving',\n            'rwjf.org': 'RWJF',\n            'kresge.org': 'Kresge Foundation',\n            'jpbfoundation.org': 'JPB Foundation',\n            'chanzuckerberg.com': 'Chan Zuckerberg Initiative',\n            'aecf.org': 'Annie E. Casey Foundation',\n            'ballmergroup.org': 'Ballmer Group',\n            'arnoldventures.org': 'Arnold Ventures',\n          };\n          for (const [domain, name] of Object.entries(domainMap)) {\n            if (hostname.includes(domain)) return name;\n          }\n          return hostname;\n        } catch(e) {\n          return url || 'Unknown';\n        }\n      })(),\n      source_url: originalData.sourceUrl || null\n    }\n  };\n  return result;"
       },
       "id": "a23e965c-49c8-445e-b1f9-d1d158e45703",
       "name": "Format Analysis Response1",
@@ -476,11 +476,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Prefer",
@@ -491,7 +491,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "=  {{ JSON.stringify(Object.fromEntries(Object.entries($json.data).filter(([k]) => k !== 'id'))) }}",
+        "body": "={{ JSON.stringify({ stage: $json.data.stage, screening_score: $json.data.screening_score, screening_notes: $json.data.screening_notes, concerns: $json.data.concerns, recommendations: $json.data.recommendations, screening_result: $json.data.eligibility }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -520,11 +520,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Prefer",
@@ -579,11 +579,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Prefer",
@@ -594,7 +594,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "=  {{ JSON.stringify(Object.fromEntries(Object.entries($json.data).filter(([k]) => k !== 'id'))) }}",
+        "body": "={{ JSON.stringify({ stage: $json.data.stage, screening_score: $json.data.screening_score, screening_notes: $json.data.screening_notes, concerns: $json.data.concerns, recommendations: $json.data.recommendations, screening_result: $json.data.eligibility }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -623,11 +623,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
+              "value": "Bearer REPLACE_ME_SUPABASE_SERVICE_KEY"
             },
             {
               "name": "Prefer",
