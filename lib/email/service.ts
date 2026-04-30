@@ -11,6 +11,7 @@ import type {
   GrantEligibleEmailParams,
   GrantDigestEmailParams,
   ProposalReadyEmailParams,
+  InviteMemberEmailParams,
 } from './types'
 import WelcomeEmail from './templates/welcome'
 import OrganizationApprovedEmail from './templates/organization-approved'
@@ -20,6 +21,7 @@ import CompleteProfileEmail from './templates/complete-profile'
 import GrantEligibleEmail from './templates/grant-eligible'
 import GrantDigestEmail from './templates/grant-digest'
 import ProposalReadyEmail from './templates/proposal-ready'
+import InviteMemberEmail from './templates/invite-member'
 
 const FROM_EMAIL = process.env.AWS_SES_FROM_EMAIL || 'noreply@fundory.ai'
 const FROM_NAME = process.env.AWS_SES_FROM_NAME || 'Fundory'
@@ -239,6 +241,33 @@ export async function sendProposalReadyEmail(
 
   const htmlBody = await render(ProposalReadyEmail(params), { pretty: true })
   const textBody = await render(ProposalReadyEmail(params), { plainText: true })
+
+  await sendEmail({
+    to: params.toEmail,
+    subject,
+    htmlBody,
+    textBody,
+  })
+}
+
+/**
+ * Send team-member invitation email — branded replacement for the default
+ * Supabase Auth invite email.
+ */
+export async function sendInviteMemberEmail(
+  params: InviteMemberEmailParams
+): Promise<void> {
+  console.log('[sendInviteMemberEmail] Sending to:', {
+    toEmail: params.toEmail,
+    org: params.organizationName,
+    inviter: params.inviterName,
+    role: params.role,
+  })
+
+  const subject = `${params.inviterName} invited you to ${params.organizationName} on Fundory`
+
+  const htmlBody = await render(InviteMemberEmail(params), { pretty: true })
+  const textBody = await render(InviteMemberEmail(params), { plainText: true })
 
   await sendEmail({
     to: params.toEmail,

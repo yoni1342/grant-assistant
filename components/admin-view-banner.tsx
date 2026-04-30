@@ -11,12 +11,23 @@ export function AdminViewBanner({ orgName }: { orgName: string }) {
 
   async function handleExit() {
     setExiting(true);
+    // Pull the entry point captured when the admin clicked "View as
+    // Organization" so they go back where they started — works for the
+    // agency detail page or the org list. Falls back to /admin/organizations
+    // for older sessions.
+    const returnPath =
+      (typeof window !== "undefined" &&
+        sessionStorage.getItem("viewOrg.returnPath")) ||
+      "/admin/organizations";
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("viewOrg.returnPath");
+    }
     await fetch("/api/admin/view-org", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orgId: null }),
     });
-    router.push("/admin/organizations");
+    router.push(returnPath);
   }
 
   return (

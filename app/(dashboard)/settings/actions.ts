@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceRoleClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { sanitizeError } from '@/lib/errors'
+import { sendInviteMemberEmail } from '@/lib/email/service'
 
 // ─── Profile ────────────────────────────────────────────────────────────────
 
@@ -137,13 +138,25 @@ export async function removeMember(memberId: string) {
   }
   if (memberId === user.id) return { error: 'Cannot remove yourself' }
 
-  const { error } = await supabase
+  // RLS prevents the regular client from updating another user's profile row,
+  // so the update silently affects 0 rows. Use the service-role client and
+  // verify a row was actually returned.
+  const serviceClient = createServiceRoleClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  const { data: updated, error } = await serviceClient
     .from('profiles')
     .update({ org_id: null, role: null, updated_at: new Date().toISOString() })
     .eq('id', memberId)
     .eq('org_id', profile.org_id)
+    .select('id')
 
   if (error) return { error: sanitizeError(error, 'Unable to remove member. Please try again.') }
+  if (!updated || updated.length === 0) {
+    return { error: 'Member not found in your organization.' }
+  }
 
   revalidatePath('/settings')
   return { success: true }
@@ -156,7 +169,7 @@ export async function inviteMember(email: string, role: string) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('org_id, role')
+    .select('org_id, role, full_name, email')
     .eq('id', user.id)
     .single()
 
@@ -165,23 +178,74 @@ export async function inviteMember(email: string, role: string) {
     return { error: 'Insufficient permissions' }
   }
 
-  // Use service-role client for admin invite
+  // Look up org name for the email
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('name')
+    .eq('id', profile.org_id)
+    .single()
+
+  // Service-role client to mint the invite link & write the profile row
   const serviceClient = createServiceRoleClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
-  const { data: inviteData, error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email)
-  if (inviteError) return { error: sanitizeError(inviteError, 'Unable to send the invitation. Please try again.') }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fundory.ai'
 
-  // Create profile for invited user
-  if (inviteData.user) {
+  // Check if an auth user already exists for this email. The `invite` link
+  // type fails when the user already exists, which happens when a previously
+  // removed member is re-invited (we clear org_id but don't delete auth.users).
+  // Fall back to a magic-link in that case and reuse the existing user id.
+  const { data: existing } = await serviceClient
+    .from('profiles')
+    .select('id, org_id')
+    .eq('email', email)
+    .maybeSingle()
+
+  // Block re-inviting someone who's currently a member of another org.
+  if (existing?.org_id && existing.org_id !== profile.org_id) {
+    return { error: 'This email already belongs to a member of another organization.' }
+  }
+
+  const linkType = existing ? 'magiclink' : 'invite'
+  const { data: linkData, error: linkError } = await serviceClient.auth.admin.generateLink({
+    type: linkType,
+    email,
+    options: {
+      redirectTo: `${appUrl}/auth/set-password`,
+    },
+  })
+  if (linkError || !linkData?.properties?.action_link) {
+    return { error: sanitizeError(linkError ?? new Error('No invite link'), 'Unable to send the invitation. Please try again.') }
+  }
+
+  // Attach (or re-attach) the user to this org.
+  const userId = linkData.user?.id ?? existing?.id
+  if (userId) {
     await serviceClient.from('profiles').upsert({
-      id: inviteData.user.id,
+      id: userId,
       email,
       org_id: profile.org_id,
       role,
     })
+  }
+
+  // Send our branded invite email
+  const inviterName = profile.full_name || profile.email || 'A teammate'
+  const orgName = org?.name || 'your organization'
+  try {
+    await sendInviteMemberEmail({
+      toEmail: email,
+      fullName: '',
+      inviterName,
+      organizationName: orgName,
+      inviteUrl: linkData.properties.action_link,
+      role,
+    })
+  } catch (err) {
+    console.error('[inviteMember] Failed to send invite email:', err)
+    return { error: 'Invitation created but email failed to send. Please try again or share the link manually.' }
   }
 
   revalidatePath('/settings')

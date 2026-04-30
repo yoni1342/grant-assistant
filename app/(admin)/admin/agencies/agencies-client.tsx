@@ -27,7 +27,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MoreHorizontal, Trash2, Building2, Briefcase, Eye, Ban, RotateCcw, MonitorPlay } from "lucide-react";
+import { Search, MoreHorizontal, Trash2, Building2, Briefcase, Ban, RotateCcw, MonitorPlay, ArrowUpRight } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { deleteAgency, suspendAgency, unsuspendAgency } from "./actions";
 
@@ -170,7 +171,7 @@ export function AgenciesClient({ agencies: initialAgencies }: AgenciesClientProp
               <TableHead>Status</TableHead>
               <TableHead className="text-center">Orgs</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="w-10"></TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -209,60 +210,62 @@ export function AgenciesClient({ agencies: initialAgencies }: AgenciesClientProp
                       ? new Date(agency.created_at).toLocaleDateString()
                       : "—"}
                   </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => router.push(`/admin/agencies/${agency.id}`)}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={viewAsLoading === agency.id}
-                          onClick={async () => {
-                            setViewAsLoading(agency.id);
-                            await fetch("/api/admin/view-agency", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ agencyId: agency.id }),
-                            });
-                            router.push("/agency");
-                          }}
-                        >
-                          <MonitorPlay className="mr-2 h-4 w-4" />
-                          View as Agency
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        {agency.subscription_status === "suspended" ? (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/admin/agencies/${agency.id}`}
+                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        View <ArrowUpRight className="h-3 w-3" />
+                      </Link>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="outline">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => setSuspendDialog({ agency, action: "unsuspend" })}
+                            disabled={viewAsLoading === agency.id}
+                            onClick={async () => {
+                              setViewAsLoading(agency.id);
+                              await fetch("/api/admin/view-agency", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ agencyId: agency.id }),
+                              });
+                              router.push("/agency");
+                            }}
                           >
-                            <RotateCcw className="mr-2 h-4 w-4" />
-                            Unsuspend
+                            <MonitorPlay className="mr-2 h-4 w-4" />
+                            View as Agency
                           </DropdownMenuItem>
-                        ) : (
+                          <DropdownMenuSeparator />
+                          {agency.subscription_status === "suspended" ? (
+                            <DropdownMenuItem
+                              onClick={() => setSuspendDialog({ agency, action: "unsuspend" })}
+                            >
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                              Unsuspend
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              onClick={() => setSuspendDialog({ agency, action: "suspend" })}
+                            >
+                              <Ban className="mr-2 h-4 w-4" />
+                              Suspend
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
-                            onClick={() => setSuspendDialog({ agency, action: "suspend" })}
+                            className="text-destructive"
+                            onClick={() => setDeleteDialog(agency)}
                           >
-                            <Ban className="mr-2 h-4 w-4" />
-                            Suspend
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Agency
                           </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => setDeleteDialog(agency)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Agency
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

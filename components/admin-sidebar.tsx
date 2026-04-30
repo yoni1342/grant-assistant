@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
   Building2,
   Users,
-  FileText,
-  PenTool,
+  Briefcase,
   Settings,
   LogOut,
   ChevronLeft,
@@ -26,9 +25,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/admin/organizations", label: "Organizations", icon: Building2 },
+  { href: "/admin/agencies", label: "Agencies", icon: Briefcase },
   { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/grants", label: "Grants", icon: FileText },
-  { href: "/admin/proposals", label: "Proposals", icon: PenTool },
   { href: "/admin/source-analytics", label: "Source Analytics", icon: BarChart3 },
   { href: "/admin/org-pickup", label: "Org Pickup", icon: Hash },
   { href: "/admin/fetch-queue", label: "Fetch Queue", icon: Clock },
@@ -49,6 +47,12 @@ function FundoryMark({ className }: { className?: string }) {
 
 export function AdminSidebar({ user }: { user: User }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // When the admin clicks an org from inside an agency detail page, the org
+  // detail URL carries ?from=agency. Treat that case as "still browsing
+  // agencies" so the sidebar highlight stays on Agencies instead of jumping
+  // to Organizations.
+  const fromAgency = searchParams?.get("from") === "agency";
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const initials =
@@ -115,10 +119,17 @@ export function AdminSidebar({ user }: { user: User }) {
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = item.exact
-            ? pathname === item.href
-            : pathname === item.href ||
-              pathname.startsWith(item.href + "/");
+          let isActive: boolean;
+          if (fromAgency) {
+            // Override: viewing an org via ?from=agency is conceptually still
+            // the Agencies section, so only the Agencies tile should light up.
+            isActive = item.href === "/admin/agencies";
+          } else {
+            isActive = item.exact
+              ? pathname === item.href
+              : pathname === item.href ||
+                pathname.startsWith(item.href + "/");
+          }
           return (
             <Link
               key={item.href}

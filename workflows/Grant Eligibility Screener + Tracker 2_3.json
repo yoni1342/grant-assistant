@@ -68,7 +68,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'REPLACE_ME_SUPABASE_SERVICE_KEY',\n      'Authorization': 'Bearer REPLACE_ME_SUPABASE_SERVICE_KEY',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.org_id,\n    grant_id: items[0].json.grant_id,\n    type: 'screening_completed',\n    title: 'Screening completed for \"' + ($('update grant5').item.json.title|| 'Unknown') + '\"',\n    message: 'Score: ' + (items[0].json.eligibility?.score || 'N/A') + ' | Confidence: ' + (items[0].json.eligibility?.confidence || $('update grant5').item.json.eligibility?.confidence || 'N/A') + '% | ' + (items[0].json.screening_notes || '')\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
+        "jsCode": "// Send notification via n8n HTTP helper, then pass through ALL original input data\nconst items = $input.all();\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/notifications',\n    headers: {\n      'apikey': 'REPLACE_ME_SUPABASE_SERVICE_KEY',\n      'Authorization': 'Bearer REPLACE_ME_SUPABASE_SERVICE_KEY',\n      'Content-Type': 'application/json'\n    },\n    body: {\n    org_id: items[0].json.org_id,\n    grant_id: items[0].json.grant_id,\n    type: 'screening_completed',\n    title: 'Screening completed for \"' + ($('Webhook Trigger1').first().json.body.grantData?.title || $('Webhook Trigger1').first().json.body.grant_name || $('update grant5').item.json.title || 'Unknown') + '\"',\n    message: 'Score: ' + (items[0].json.eligibility?.score || 'N/A') + ' | Confidence: ' + (items[0].json.eligibility?.confidence || $('update grant5').item.json.eligibility?.confidence || 'N/A') + '% | ' + (items[0].json.screening_notes || '')\n  }\n  });\n} catch (e) {\n  // Notification failure should not break the workflow\n}\nreturn items;"
       },
       "id": "53ac3e4c-e84c-47cf-b1f9-826fd7ae7f15",
       "name": "Notify Screening Completed1",
@@ -297,7 +297,7 @@
     },
     {
       "parameters": {
-        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?org_id=eq.{{ $json.org_id }}&category=eq.narrative&select=*",
+        "url": "=https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/documents?org_id=eq.{{ $json.org_id }}&or=(category.eq.narrative,ai_category.like.narrative*)&select=*",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -535,7 +535,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n    org_id: $json.org_id,\n    grant_id: $json.id,\n    action: \"screening_completed\",\n    details: {\n      score: $json.eligibility?.score || null,\n      confidence: $json.eligibility?.confidence || null,\n      summary: $json.screening_notes || null,\n      grant_name: $json.title || null,\n      funder: $json.funder_name || null,\n      workflow: \"WF2_eligibility_screener\"\n    }\n  }) }}",
+        "body": "={{ JSON.stringify({\n    org_id: $json.org_id,\n    grant_id: $json.id,\n    action: \"screening_completed\",\n    details: {\n      score: $json.eligibility?.score || null,\n      confidence: $json.eligibility?.confidence || null,\n      summary: $json.screening_notes || null,\n      grant_name: $json.title || $('Webhook Trigger1').first().json.body.grantData?.title || $('Webhook Trigger1').first().json.body.grant_name || null,\n      funder: $json.funder_name || $('Webhook Trigger1').first().json.body.grantData?.agency || $('Webhook Trigger1').first().json.body.grantData?.funder_name || null,\n      workflow: \"WF2_eligibility_screener\"\n    }\n  }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -638,7 +638,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({\n    org_id: $json.org_id,\n    grant_id: $json.id,\n    action: \"screening_completed\",\n    details: {\n      score: $json.eligibility?.score || null,\n      confidence: $json.eligibility?.confidence || null,\n      summary: $json.screening_notes || null,\n      grant_name: $json.title || null,\n      funder: $json.funder_name || null,\n      workflow: \"WF2_eligibility_screener\"\n    }\n  }) }}",
+        "body": "={{ JSON.stringify({\n    org_id: $json.org_id,\n    grant_id: $json.id,\n    action: \"screening_completed\",\n    details: {\n      score: $json.eligibility?.score || null,\n      confidence: $json.eligibility?.confidence || null,\n      summary: $json.screening_notes || null,\n      grant_name: $json.title || $('Webhook Trigger1').first().json.body.grantData?.title || $('Webhook Trigger1').first().json.body.grant_name || null,\n      funder: $json.funder_name || $('Webhook Trigger1').first().json.body.grantData?.agency || $('Webhook Trigger1').first().json.body.grantData?.funder_name || null,\n      workflow: \"WF2_eligibility_screener\"\n    }\n  }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",

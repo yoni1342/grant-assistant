@@ -423,6 +423,39 @@ interface SearchSession {
   error: string | null;
 }
 
+interface SavedFilters {
+  orgType?: string[];
+  profitStatus?: string[];
+  industry?: string[];
+  fundingCategory?: string[];
+  location?: string[];
+}
+
+interface RecentSearch {
+  id: string;
+  query: string;
+  search_id?: string;
+  filters?: SavedFilters | null;
+}
+
+const FILTER_LABELS: Record<keyof SavedFilters, string> = {
+  orgType: "Org type",
+  profitStatus: "Status",
+  industry: "Industry",
+  fundingCategory: "Category",
+  location: "Location",
+};
+
+function filterEntries(f: SavedFilters | null | undefined): Array<[keyof SavedFilters, string[]]> {
+  if (!f) return [];
+  const out: Array<[keyof SavedFilters, string[]]> = [];
+  (Object.keys(FILTER_LABELS) as Array<keyof SavedFilters>).forEach((k) => {
+    const v = f[k];
+    if (Array.isArray(v) && v.length > 0) out.push([k, v]);
+  });
+  return out;
+}
+
 interface SessionRefs {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   channel: any;
@@ -505,7 +538,7 @@ export default function DiscoveryPage() {
   }
 
   const [storageKey, setStorageKey] = useState<string | null>(null);
-  const [recentSearches, setRecentSearches] = useState<{ id: string; query: string; search_id?: string }[]>([]);
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [deleteSearchConfirm, setDeleteSearchConfirm] = useState<{ id: string; query: string } | null>(null);
 
   // Resolve org-specific storage key
@@ -530,20 +563,21 @@ export default function DiscoveryPage() {
   useEffect(() => {
     fetch("/api/search-history")
       .then((r) => r.ok ? r.json() : [])
-      .then((data: { id: string; query: string; search_id?: string }[]) => setRecentSearches(data))
+      .then((data: RecentSearch[]) => setRecentSearches(data))
       .catch(() => {});
   }, []);
 
-  function saveRecentSearch(q: string, searchId?: string) {
+  function saveRecentSearch(q: string, searchId?: string, filters?: SavedFilters) {
     if (!q.trim()) return;
+    const cleanFilters = filters && filterEntries(filters).length > 0 ? filters : null;
     setRecentSearches((prev) => [
-      { id: "temp-" + Date.now(), query: q.trim(), search_id: searchId },
+      { id: "temp-" + Date.now(), query: q.trim(), search_id: searchId, filters: cleanFilters },
       ...prev.filter((s) => s.query !== q.trim()),
     ].slice(0, 8));
     fetch("/api/search-history", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: q.trim(), search_id: searchId }),
+      body: JSON.stringify({ query: q.trim(), search_id: searchId, filters: cleanFilters }),
     }).catch(() => {});
   }
 
@@ -840,7 +874,8 @@ export default function DiscoveryPage() {
 
   async function triggerDiscovery() {
     if (!query.trim()) return;
-    saveRecentSearch(query);
+    const filtersForSearch: SavedFilters = { orgType, profitStatus, industry, fundingCategory, location };
+    saveRecentSearch(query, undefined, filtersForSearch);
 
     // Create a temporary session ID, will be replaced with real searchId
     const tempId = "pending-" + Date.now();
@@ -887,13 +922,14 @@ export default function DiscoveryPage() {
 
       // Update the recent search entry with the search_id
       if (searchId) {
+        const cleanFilters = filterEntries(filtersForSearch).length > 0 ? filtersForSearch : null;
         setRecentSearches((prev) =>
-          prev.map((s) => s.query === query.trim() ? { ...s, search_id: searchId } : s)
+          prev.map((s) => s.query === query.trim() ? { ...s, search_id: searchId, filters: cleanFilters } : s)
         );
         fetch("/api/search-history", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: query.trim(), search_id: searchId }),
+          body: JSON.stringify({ query: query.trim(), search_id: searchId, filters: cleanFilters }),
         }).catch(() => {});
       }
 
@@ -1073,16 +1109,37 @@ export default function DiscoveryPage() {
           </div>
 
           {/* Recent Searches */}
-          {recentSearches.length > 0 && (
-            <div data-tour="discovery-recent" className="flex items-center gap-2 mt-3 flex-wrap">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground">Recent:</span>
-              {recentSearches.map((s) => (
+          {recentSearches.length > 0 && (() => {
+            const active = recentSearches.find((s) => s.search_id && s.search_id === activeSessionId);
+            const activeFilters = filterEntries(active?.filters);
+            return (
+            <div data-tour="discovery-recent" className="mt-3 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="text-xs text-muted-foreground">Recent:</span>
+                {recentSearches.map((s) => {
+                  const fc = filterEntries(s.filters).length;
+                  const isActive = active?.id === s.id;
+                  return (
                 <button
                   key={s.id}
-                  className="group inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                  className={`group inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                    isActive
+                      ? "border-primary text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                  }`}
                   onClick={async () => {
                     setQuery(s.query);
+                    if (s.filters) {
+                      setOrgType(s.filters.orgType ?? []);
+                      setProfitStatus(s.filters.profitStatus ?? []);
+                      setIndustry(s.filters.industry ?? []);
+                      setFundingCategory(s.filters.fundingCategory ?? []);
+                      setLocation(s.filters.location ?? []);
+                    } else {
+                      setOrgType([]); setProfitStatus([]); setIndustry([]);
+                      setFundingCategory([]); setLocation([]);
+                    }
                     // Check if there's already a session for this query
                     const existing = sessions.find((sess) => sess.query === s.query);
                     if (existing) {
@@ -1122,6 +1179,16 @@ export default function DiscoveryPage() {
                   }}
                 >
                   {s.query}
+                  {fc > 0 && (
+                    <span
+                      className={`ml-0.5 inline-flex items-center justify-center rounded-full text-[10px] font-medium px-1.5 ${
+                        isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                      }`}
+                      title={`${fc} filter${fc === 1 ? "" : "s"}`}
+                    >
+                      <Filter className="h-2.5 w-2.5 mr-0.5" />{fc}
+                    </span>
+                  )}
                   <X
                     className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => {
@@ -1130,9 +1197,30 @@ export default function DiscoveryPage() {
                     }}
                   />
                 </button>
-              ))}
+                  );
+                })}
+              </div>
+              {active && (
+                <div className="text-xs flex flex-wrap items-center gap-1.5 pl-5">
+                  <span className="text-muted-foreground">Filters used in this search:</span>
+                  {activeFilters.length === 0 ? (
+                    <span className="italic text-muted-foreground/70">none</span>
+                  ) : (
+                    activeFilters.map(([key, values]) => (
+                      <span
+                        key={key}
+                        className="inline-flex items-center gap-1 rounded-md border bg-muted/40 px-2 py-0.5"
+                      >
+                        <span className="font-medium text-foreground">{FILTER_LABELS[key]}:</span>
+                        <span className="text-muted-foreground">{values.join(", ")}</span>
+                      </span>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
-          )}
+            );
+          })()}
 
           {showFilters && (
             <div className="space-y-3 mt-3">

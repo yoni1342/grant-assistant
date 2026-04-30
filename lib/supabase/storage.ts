@@ -1,5 +1,25 @@
 import { createClient } from '@/lib/supabase/server'
 
+// Supabase Storage rejects keys with non-ASCII characters (em-dash —, smart
+// quotes, etc.) and most symbols. Strip them from the user-supplied filename
+// before using it as the storage key. Original filename is still kept on the
+// document row for display.
+export function sanitizeStorageFilename(name: string): string {
+  const dot = name.lastIndexOf('.')
+  const base = dot > 0 ? name.slice(0, dot) : name
+  const ext = dot > 0 ? name.slice(dot) : ''
+  const cleanBase = base
+    .normalize('NFKD')
+    .replace(/[‐-―−]/g, '-')
+    .replace(/[‘-‛]/g, "'")
+    .replace(/[“-‟]/g, '"')
+    .replace(/[^\w\-.()]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+  const cleanExt = ext.replace(/[^\w.]+/g, '')
+  return ((cleanBase || 'file') + cleanExt).slice(0, 200)
+}
+
 /**
  * Upload a file to the documents storage bucket.
  * Returns the file path on success.
@@ -10,7 +30,7 @@ export async function uploadFile(
 ): Promise<{ path: string; error: string | null }> {
   const supabase = await createClient()
 
-  const fileName = `${userId}/${Date.now()}-${file.name}`
+  const fileName = `${userId}/${Date.now()}-${sanitizeStorageFilename(file.name)}`
 
   const { data, error } = await supabase.storage
     .from('documents')

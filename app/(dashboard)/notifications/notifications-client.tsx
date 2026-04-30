@@ -11,9 +11,10 @@ import {
   CheckCircle2,
   XCircle,
   ArrowRight,
-  Loader2,
   Clock,
   ChevronLeft,
+  Search,
+  PenLine,
 } from "lucide-react";
 import {
   formatDistanceToNow,
@@ -87,7 +88,7 @@ const TYPE_CONFIG: Record<
   { icon: typeof Bell; color: string; badge: string; badgeVariant: "default" | "secondary" | "destructive" | "outline" }
 > = {
   screening_started: {
-    icon: Loader2,
+    icon: Search,
     color: "text-blue-500",
     badge: "Screening",
     badgeVariant: "secondary",
@@ -105,7 +106,7 @@ const TYPE_CONFIG: Record<
     badgeVariant: "destructive",
   },
   proposal_started: {
-    icon: Loader2,
+    icon: PenLine,
     color: "text-purple-500",
     badge: "Proposal",
     badgeVariant: "secondary",
@@ -246,10 +247,6 @@ function BucketDetail({
               ? { icon: XCircle, color: "text-yellow-500", badge: "Timed Out", badgeVariant: "outline" as const }
               : TYPE_CONFIG[notif.type] || DEFAULT_CONFIG;
             const Icon = config.icon;
-            const isSpinner =
-              !isStale &&
-              (notif.type === "screening_started" ||
-              notif.type === "proposal_started");
 
             return (
               <Card
@@ -258,9 +255,7 @@ function BucketDetail({
               >
                 <CardContent className="flex items-start gap-4 py-4">
                   <div className="mt-0.5">
-                    <Icon
-                      className={`h-5 w-5 ${config.color} ${isSpinner ? "animate-spin" : ""}`}
-                    />
+                    <Icon className={`h-5 w-5 ${config.color}`} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">

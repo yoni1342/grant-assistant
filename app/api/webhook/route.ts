@@ -81,6 +81,11 @@ export async function POST(req: Request) {
       );
     }
 
+    // n8n's "Notify Proposal Started1" reads body.grant_name for the
+    // notification title. The frontend doesn't send it, so attach it here.
+    payload.grant_name = grant.title;
+    payload.grant_id = data.grantId;
+
     const claim = await beginProposalGenerationOrBlock(supabase, orgId, data.grantId);
     if (claim.blocked) {
       return new Response(

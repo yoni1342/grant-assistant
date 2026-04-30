@@ -26,6 +26,77 @@ type Narrative = {
   version: number
   created_at: string | null
   updated_at: string | null
+  file_path?: string | null
+  file_type?: string | null
+  file_name?: string | null
+  signed_url?: string | null
+}
+
+const OFFICE_FILE_TYPES = new Set([
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.ms-powerpoint",
+])
+
+function NarrativeFileViewer({
+  signedUrl,
+  fileType,
+  title,
+}: {
+  signedUrl: string
+  fileType: string | null
+  title: string
+}) {
+  if (fileType === "application/pdf") {
+    return (
+      <iframe
+        src={signedUrl}
+        className="w-full h-[80vh] rounded-lg border"
+        title={title}
+      />
+    )
+  }
+  if (fileType?.startsWith("image/")) {
+    return (
+      <div className="flex items-center justify-center rounded-lg border bg-card p-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={signedUrl} alt={title} className="max-w-full max-h-[80vh] object-contain rounded" />
+      </div>
+    )
+  }
+  if (fileType && OFFICE_FILE_TYPES.has(fileType)) {
+    const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(signedUrl)}`
+    return (
+      <iframe
+        src={officeUrl}
+        className="w-full h-[80vh] rounded-lg border"
+        title={title}
+      />
+    )
+  }
+  if (fileType?.startsWith("text/") || fileType === "application/json") {
+    return (
+      <iframe
+        src={signedUrl}
+        className="w-full h-[80vh] rounded-lg border"
+        title={title}
+      />
+    )
+  }
+  return (
+    <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-12 gap-4">
+      <p className="text-sm text-muted-foreground">Preview not available for this file type.</p>
+      <Button asChild variant="outline">
+        <a href={signedUrl} target="_blank" rel="noopener noreferrer">
+          <Download className="mr-2 h-4 w-4" />
+          Download to view
+        </a>
+      </Button>
+    </div>
+  )
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -328,14 +399,22 @@ export function NarrativeDetailClient({ narrative: initialNarrative }: Narrative
       <div className="flex gap-6">
         {/* Document viewer */}
         <div className="flex-1 min-w-0">
-          <NarrativeDocumentViewer
-            ref={viewerRef}
-            title={narrative.title}
-            content={narrative.content}
-            category={narrative.category}
-            narrativeId={narrative.id}
-            tags={narrative.tags}
-          />
+          {narrative.signed_url && !isEditing ? (
+            <NarrativeFileViewer
+              signedUrl={narrative.signed_url}
+              fileType={narrative.file_type ?? null}
+              title={narrative.title}
+            />
+          ) : (
+            <NarrativeDocumentViewer
+              ref={viewerRef}
+              title={narrative.title}
+              content={narrative.content}
+              category={narrative.category}
+              narrativeId={narrative.id}
+              tags={narrative.tags}
+            />
+          )}
         </div>
 
         {/* Metadata sidebar */}

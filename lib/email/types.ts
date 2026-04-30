@@ -115,6 +115,16 @@ export interface CompleteProfileEmailParams extends BaseEmailParams {
 }
 
 /**
+ * Invite team member email parameters
+ */
+export interface InviteMemberEmailParams extends BaseEmailParams {
+  inviterName: string
+  organizationName: string
+  inviteUrl: string
+  role: string
+}
+
+/**
  * Generic send email parameters
  */
 export interface SendEmailParams {

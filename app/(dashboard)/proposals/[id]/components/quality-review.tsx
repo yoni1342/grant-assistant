@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ClipboardCheck, ChevronDown, ChevronUp } from 'lucide-react'
+import { ClipboardCheck, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { triggerQualityReview } from '../../actions'
+import { createClient } from '@/lib/supabase/client'
 
 interface RewriteSuggestion {
   original: string
@@ -42,7 +43,12 @@ interface QualityReviewProps {
 }
 
 export function QualityReview({ proposalId, qualityReview, embedded }: QualityReviewProps) {
-  const [triggering, setTriggering] = useState(false)
+  // The review is fire-and-forget: triggerQualityReview returns immediately,
+  // n8n updates the proposals row asynchronously. We subscribe to that row so
+  // the new review appears without a page refresh.
+  const [liveReview, setLiveReview] = useState<QualityReviewData | null>(qualityReview)
+  const [waiting, setWaiting] = useState(false)
+  const baselineUpdatedAtRef = useRef<string | null>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     strengths: true,
     weaknesses: true,
@@ -54,14 +60,69 @@ export function QualityReview({ proposalId, qualityReview, embedded }: QualityRe
     closing: false,
   })
 
+  const effectiveReview = liveReview ?? qualityReview
+
+  useEffect(() => {
+    setLiveReview(qualityReview)
+  }, [qualityReview])
+
+  // Realtime subscription — updates `liveReview` when n8n writes the result
+  // back to the proposals row. Also clears the waiting state so the button
+  // returns to normal once the review lands.
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`proposal-quality-${proposalId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'proposals', filter: `id=eq.${proposalId}` },
+        (payload) => {
+          const row = payload.new as { quality_review?: QualityReviewData | null; updated_at?: string }
+          if (row?.quality_review) {
+            setLiveReview(row.quality_review)
+            // Stop the spinner only when the row genuinely updated AFTER we
+            // started waiting (avoids race where we get an echo of the old row).
+            if (
+              !baselineUpdatedAtRef.current ||
+              (row.updated_at && row.updated_at > baselineUpdatedAtRef.current)
+            ) {
+              setWaiting(false)
+            }
+          }
+        },
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [proposalId])
+
   const toggleSection = (key: string) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
   const handleTriggerReview = async () => {
-    setTriggering(true)
-    await triggerQualityReview(proposalId)
-    setTriggering(false)
+    setWaiting(true)
+    // Capture the current updated_at so the realtime listener can detect a
+    // genuine update (not an echo) and only then stop the spinner.
+    try {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('proposals')
+        .select('updated_at')
+        .eq('id', proposalId)
+        .single()
+      baselineUpdatedAtRef.current = data?.updated_at ?? null
+    } catch {
+      baselineUpdatedAtRef.current = null
+    }
+    const result = await triggerQualityReview(proposalId)
+    if (result?.error) {
+      setWaiting(false)
+    }
+    // Safety net — if n8n never writes the row back, drop the spinner after
+    // 5 minutes so the user can retry instead of being stuck in "Running...".
+    setTimeout(() => setWaiting(false), 5 * 60 * 1000)
   }
 
   const getScoreColor = (score: number) => {
@@ -162,13 +223,22 @@ export function QualityReview({ proposalId, qualityReview, embedded }: QualityRe
           variant="outline"
           size="sm"
           onClick={handleTriggerReview}
-          disabled={triggering}
+          disabled={waiting}
         >
-          <ClipboardCheck className="mr-2 h-4 w-4" />
-          {triggering ? 'Running...' : 'Run Review'}
+          {waiting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <ClipboardCheck className="mr-2 h-4 w-4" />
+          )}
+          {waiting ? 'Running review…' : effectiveReview ? 'Re-run Review' : 'Run Review'}
         </Button>
       </div>
-      {!qualityReview ? (
+      {waiting && !effectiveReview ? (
+        <div className="text-center py-8 text-muted-foreground space-y-2">
+          <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+          <p className="text-sm">Analyzing proposal — this usually takes 30-60 seconds. Results will appear here automatically.</p>
+        </div>
+      ) : !effectiveReview ? (
         <div className="text-center py-8 text-muted-foreground space-y-4">
           <p>No quality review yet.</p>
           <p className="text-sm">Click &quot;Run Review&quot; to analyze this proposal.</p>
@@ -176,16 +246,16 @@ export function QualityReview({ proposalId, qualityReview, embedded }: QualityRe
       ) : (
         <div className="space-y-4">
           {/* Overall Score + Recommendation */}
-          <div className={`text-center space-y-2 rounded-lg border p-4 ${getScoreBgColor(qualityReview.overall_score)}`}>
-            <div className={`text-5xl font-bold ${getScoreColor(qualityReview.overall_score)}`}>
-              {qualityReview.overall_score}
+          <div className={`text-center space-y-2 rounded-lg border p-4 ${getScoreBgColor(effectiveReview.overall_score)}`}>
+            <div className={`text-5xl font-bold ${getScoreColor(effectiveReview.overall_score)}`}>
+              {effectiveReview.overall_score}
             </div>
             <p className="text-sm text-muted-foreground">Overall Quality Score</p>
-            <div>{getRecommendationBadge(qualityReview.overall_score, qualityReview.recommendation)}</div>
+            <div>{getRecommendationBadge(effectiveReview.overall_score, effectiveReview.recommendation)}</div>
           </div>
 
           {/* Ready to Submit Message */}
-          {qualityReview.overall_score >= 85 && (
+          {effectiveReview.overall_score >= 85 && (
             <div className="rounded-lg border border-green-200 bg-green-50 p-3 space-y-1">
               <p className="text-sm font-medium text-green-800">Ready to Submit</p>
               <p className="text-xs text-green-700">
@@ -195,7 +265,7 @@ export function QualityReview({ proposalId, qualityReview, embedded }: QualityRe
           )}
 
           {/* Below threshold message */}
-          {qualityReview.overall_score < 85 && qualityReview.overall_score >= 70 && (
+          {effectiveReview.overall_score < 85 && effectiveReview.overall_score >= 70 && (
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 space-y-1">
               <p className="text-sm font-medium text-yellow-800">Almost There</p>
               <p className="text-xs text-yellow-700">
@@ -205,11 +275,11 @@ export function QualityReview({ proposalId, qualityReview, embedded }: QualityRe
           )}
 
           {/* Section Scores */}
-          {qualityReview.section_scores && qualityReview.section_scores.length > 0 && (
+          {effectiveReview.section_scores && effectiveReview.section_scores.length > 0 && (
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Section Scores</h4>
               <div className="grid grid-cols-2 gap-2">
-                {qualityReview.section_scores.map((section, idx) => (
+                {effectiveReview.section_scores.map((section, idx) => (
                   <div
                     key={idx}
                     className="border rounded-md p-2 flex items-center justify-between"
@@ -225,10 +295,10 @@ export function QualityReview({ proposalId, qualityReview, embedded }: QualityRe
           )}
 
           {/* Strengths */}
-          {qualityReview.strengths && qualityReview.strengths.length > 0 && (
-            <CollapsibleSection title="Strengths" sectionKey="strengths" count={qualityReview.strengths.length}>
+          {effectiveReview.strengths && effectiveReview.strengths.length > 0 && (
+            <CollapsibleSection title="Strengths" sectionKey="strengths" count={effectiveReview.strengths.length}>
               <ul className="space-y-1">
-                {qualityReview.strengths.map((s, idx) => (
+                {effectiveReview.strengths.map((s, idx) => (
                   <li key={idx} className="text-xs text-green-700 flex gap-2">
                     <span className="shrink-0">+</span>
                     <span>{s}</span>
@@ -239,10 +309,10 @@ export function QualityReview({ proposalId, qualityReview, embedded }: QualityRe
           )}
 
           {/* Weaknesses / Areas to Improve */}
-          {qualityReview.weaknesses && qualityReview.weaknesses.length > 0 && (
-            <CollapsibleSection title="Areas to Improve" sectionKey="weaknesses" count={qualityReview.weaknesses.length}>
+          {effectiveReview.weaknesses && effectiveReview.weaknesses.length > 0 && (
+            <CollapsibleSection title="Areas to Improve" sectionKey="weaknesses" count={effectiveReview.weaknesses.length}>
               <ul className="space-y-1">
-                {qualityReview.weaknesses.map((w, idx) => (
+                {effectiveReview.weaknesses.map((w, idx) => (
                   <li key={idx} className="text-xs text-orange-700 flex gap-2">
                     <span className="shrink-0">-</span>
                     <span>{w}</span>
@@ -253,10 +323,10 @@ export function QualityReview({ proposalId, qualityReview, embedded }: QualityRe
           )}
 
           {/* Quick Wins */}
-          {qualityReview.quick_wins && qualityReview.quick_wins.length > 0 && (
-            <CollapsibleSection title="Quick Wins" sectionKey="quickWins" count={qualityReview.quick_wins.length}>
+          {effectiveReview.quick_wins && effectiveReview.quick_wins.length > 0 && (
+            <CollapsibleSection title="Quick Wins" sectionKey="quickWins" count={effectiveReview.quick_wins.length}>
               <ul className="space-y-1">
-                {qualityReview.quick_wins.map((qw, idx) => (
+                {effectiveReview.quick_wins.map((qw, idx) => (
                   <li key={idx} className="text-xs flex gap-2">
                     <input type="checkbox" className="mt-0.5 shrink-0" />
                     <span>{qw}</span>
@@ -267,10 +337,10 @@ export function QualityReview({ proposalId, qualityReview, embedded }: QualityRe
           )}
 
           {/* Suggested Rewrites */}
-          {qualityReview.rewrites && qualityReview.rewrites.length > 0 && (
-            <CollapsibleSection title="Suggested Rewrites" sectionKey="rewrites" count={qualityReview.rewrites.length}>
+          {effectiveReview.rewrites && effectiveReview.rewrites.length > 0 && (
+            <CollapsibleSection title="Suggested Rewrites" sectionKey="rewrites" count={effectiveReview.rewrites.length}>
               <div className="space-y-3">
-                {qualityReview.rewrites.map((r, idx) => (
+                {effectiveReview.rewrites.map((r, idx) => (
                   <div key={idx} className="space-y-1 border-l-2 border-blue-300 pl-2">
                     <p className="text-xs">
                       <span className="font-medium text-red-600">Before:</span>{' '}
@@ -288,31 +358,31 @@ export function QualityReview({ proposalId, qualityReview, embedded }: QualityRe
           )}
 
           {/* Story Suggestion */}
-          {qualityReview.story_suggestion && (
+          {effectiveReview.story_suggestion && (
             <CollapsibleSection title="Story to Add" sectionKey="story">
-              <p className="text-xs">{qualityReview.story_suggestion}</p>
+              <p className="text-xs">{effectiveReview.story_suggestion}</p>
             </CollapsibleSection>
           )}
 
           {/* Improved Opening */}
-          {qualityReview.improved_opening && (
+          {effectiveReview.improved_opening && (
             <CollapsibleSection title="Improved Opening Paragraph" sectionKey="opening">
-              <p className="text-xs italic">{qualityReview.improved_opening}</p>
+              <p className="text-xs italic">{effectiveReview.improved_opening}</p>
             </CollapsibleSection>
           )}
 
           {/* Improved Closing */}
-          {qualityReview.improved_closing && (
+          {effectiveReview.improved_closing && (
             <CollapsibleSection title="Improved Closing Paragraph" sectionKey="closing">
-              <p className="text-xs italic">{qualityReview.improved_closing}</p>
+              <p className="text-xs italic">{effectiveReview.improved_closing}</p>
             </CollapsibleSection>
           )}
 
           {/* Issues */}
-          {qualityReview.issues && qualityReview.issues.length > 0 && (
-            <CollapsibleSection title="Issues Found" sectionKey="issues" count={qualityReview.issues.length}>
+          {effectiveReview.issues && effectiveReview.issues.length > 0 && (
+            <CollapsibleSection title="Issues Found" sectionKey="issues" count={effectiveReview.issues.length}>
               <div className="space-y-3">
-                {qualityReview.issues.map((issue, idx) => (
+                {effectiveReview.issues.map((issue, idx) => (
                   <div
                     key={idx}
                     className={`border-l-4 ${getSeverityColor(issue.severity)} bg-muted/30 rounded-md p-3 space-y-2`}
