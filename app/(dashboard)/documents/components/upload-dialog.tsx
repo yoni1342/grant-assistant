@@ -165,8 +165,8 @@ export function UploadDialog() {
             Upload documents to your organization&apos;s vault. Accepted formats: PDF, DOCX, XLSX, PPTX, PNG, JPG (max 25MB each).
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+        <form onSubmit={handleSubmit} className="space-y-4 min-w-0">
+          <div className="space-y-2 min-w-0">
             <Label htmlFor="file">Files</Label>
             <Input
               ref={fileInputRef}
@@ -177,6 +177,7 @@ export function UploadDialog() {
               multiple
               onChange={handleFileChange}
               disabled={isPending}
+              className="w-full overflow-hidden"
             />
           </div>
           {files.length > 0 && (
@@ -184,10 +185,15 @@ export function UploadDialog() {
               {files.map((file, index) => (
                 <div
                   key={`${file.name}-${file.size}`}
-                  className="flex items-center gap-2 text-sm bg-muted rounded-md px-3 py-1.5"
+                  className="flex items-center gap-2 text-sm bg-muted rounded-md px-3 py-1.5 min-w-0"
                 >
                   <FileIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="truncate flex-1">{file.name}</span>
+                  <span
+                    className="truncate flex-1 min-w-0"
+                    title={file.name}
+                  >
+                    {file.name}
+                  </span>
                   <span className="text-muted-foreground shrink-0">{formatFileSize(file.size)}</span>
                   <button
                     type="button"

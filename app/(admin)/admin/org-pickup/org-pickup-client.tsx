@@ -75,6 +75,9 @@ interface Totals {
   orgs_with_picks: number;
   orgs_total: number;
   total_picks: number;
+  picks_of_new_grants: number;
+  picks_of_older_grants: number;
+  range_applied: boolean;
   unique_central_picks: number;
   avg_picks_per_active_org: number;
   sources_used?: number;
@@ -258,6 +261,51 @@ const pickupRateChartConfig: ChartConfig = {
 const pickupsBySourceConfig: ChartConfig = {
   count: { label: "Pickups", color: "hsl(217, 91%, 60%)" },
 };
+
+function rangePhrasing(p: RangePreset): {
+  newGrantsLabel: string;
+  olderGrantsLabel: string;
+} {
+  switch (p) {
+    case "today":
+      return {
+        newGrantsLabel: "today's new grants",
+        olderGrantsLabel: "grants from earlier",
+      };
+    case "yesterday":
+      return {
+        newGrantsLabel: "yesterday's new grants",
+        olderGrantsLabel: "grants from before yesterday",
+      };
+    case "this_week":
+      return {
+        newGrantsLabel: "this week's new grants",
+        olderGrantsLabel: "grants from before this week",
+      };
+    case "this_month":
+      return {
+        newGrantsLabel: "this month's new grants",
+        olderGrantsLabel: "grants from before this month",
+      };
+    case "last_7":
+      return {
+        newGrantsLabel: "grants posted in the last 7 days",
+        olderGrantsLabel: "grants posted before that",
+      };
+    case "last_30":
+      return {
+        newGrantsLabel: "grants posted in the last 30 days",
+        olderGrantsLabel: "grants posted before that",
+      };
+    case "custom":
+    case "all":
+    default:
+      return {
+        newGrantsLabel: "new grants from this range",
+        olderGrantsLabel: "older grants from before this range",
+      };
+  }
+}
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "Never";
@@ -502,8 +550,11 @@ export function OrgPickupClient() {
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
                 Total Pickups
                 <InfoTip>
-                  Sum of grants picked up across all organizations. A single
-                  catalog grant picked by three orgs counts as three.
+                  How many grants orgs added to their pipeline in this date
+                  range. A pickup happening in this range doesn&rsquo;t mean
+                  the grant was newly posted in this range &mdash; orgs often
+                  pick up grants that have been in the catalog for a while.
+                  The breakdown below splits that out.
                 </InfoTip>
               </CardTitle>
               <Hash className="h-4 w-4 text-blue-500" />
@@ -512,6 +563,26 @@ export function OrgPickupClient() {
               <p className="text-2xl font-bold text-blue-600">
                 {totals.total_picks.toLocaleString()}
               </p>
+              {totals.range_applied && totals.total_picks > 0 && (
+                <div className="mt-1.5 space-y-0.5 text-xs leading-tight">
+                  <p>
+                    <span className="font-semibold text-emerald-600">
+                      {totals.picks_of_new_grants.toLocaleString()}
+                    </span>{" "}
+                    <span className="text-muted-foreground">
+                      of {rangePhrasing(range).newGrantsLabel} got picked up
+                    </span>
+                  </p>
+                  <p>
+                    <span className="font-semibold text-amber-600">
+                      {totals.picks_of_older_grants.toLocaleString()}
+                    </span>{" "}
+                    <span className="text-muted-foreground">
+                      picks were of {rangePhrasing(range).olderGrantsLabel}
+                    </span>
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

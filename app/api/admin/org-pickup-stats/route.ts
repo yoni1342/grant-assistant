@@ -74,6 +74,26 @@ export async function GET(req: Request) {
     page++;
   }
 
+  // --- Pull first_seen_at for the central_grants behind these picks, so we
+  //     can split picks into "of grants newly discovered in this range" vs
+  //     "of older catalog grants". Avoids the confusion where a pickup
+  //     created today is actually of a grant that's been in the catalog
+  //     for weeks. ---
+  const centralIds = Array.from(
+    new Set(picks.map((p) => p.central_grant_id).filter((x): x is string => !!x)),
+  );
+  const centralFirstSeenById: Record<string, string | null> = {};
+  for (let i = 0; i < centralIds.length; i += 500) {
+    const slice = centralIds.slice(i, i + 500);
+    const { data } = await adminClient
+      .from("central_grants")
+      .select("id, first_seen_at")
+      .in("id", slice);
+    for (const r of data || []) {
+      centralFirstSeenById[r.id] = r.first_seen_at as string | null;
+    }
+  }
+
   // --- Pull proposals (joined by grant_id to count per-org) ---
   const { data: proposalRows } = await adminClient
     .from("proposals")
@@ -193,10 +213,34 @@ export async function GET(req: Request) {
   const orgsWithPicks = orgs.length;
   const orgsTotal = Object.keys(orgNameById).length;
 
+  // Split: how many of these picks are of grants that were ALSO discovered
+  // in this same range (true "fresh discoveries that landed in pipelines")
+  // vs picks of older catalog grants (orgs catching up on the backlog).
+  // Only computed when a range is actually applied — for "all time" both
+  // counts collapse to the total and the breakdown isn't meaningful.
+  let picksOfNewGrants = 0;
+  let picksOfOlderGrants = 0;
+  if (fromISO || toISO) {
+    for (const p of picks) {
+      const cgFirstSeen = p.central_grant_id
+        ? centralFirstSeenById[p.central_grant_id]
+        : null;
+      const inRange =
+        cgFirstSeen != null &&
+        (!fromISO || cgFirstSeen >= fromISO) &&
+        (!toISO || cgFirstSeen <= toISO);
+      if (inRange) picksOfNewGrants++;
+      else picksOfOlderGrants++;
+    }
+  }
+
   const totals = {
     orgs_with_picks: orgsWithPicks,
     orgs_total: orgsTotal,
     total_picks: totalsTotalPicks,
+    picks_of_new_grants: picksOfNewGrants,
+    picks_of_older_grants: picksOfOlderGrants,
+    range_applied: !!(fromISO || toISO),
     unique_central_picks: uniqueCentralIds.size,
     avg_picks_per_active_org:
       orgsWithPicks > 0 ? Math.round((totalsTotalPicks / orgsWithPicks) * 10) / 10 : 0,

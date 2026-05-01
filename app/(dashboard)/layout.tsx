@@ -99,17 +99,19 @@ export default async function DashboardLayout({
 
   const activeOrgId = profile?.agency_id ? await getActiveOrgId() : null;
 
-  // Fetch plan and tour preferences for the tour provider
+  // Fetch plan, name and tour preferences for the tour provider / sidebar
   const resolvedOrgId = isAdminView ? adminViewOrgId : (activeOrgId || profile?.org_id);
   let orgPlan = "free";
+  let orgName: string | null = null;
   if (resolvedOrgId) {
     const adminClient = createAdminClient();
     const { data: org } = await adminClient
       .from("organizations")
-      .select("plan")
+      .select("plan, name")
       .eq("id", resolvedOrgId)
       .single();
     if (org?.plan) orgPlan = org.plan;
+    if (org?.name) orgName = org.name;
   }
   const prefs = (profile?.preferences as Record<string, unknown>) || {};
   const toursCompleted = (prefs.tours_completed as Record<string, string>) || {};
@@ -120,6 +122,7 @@ export default async function DashboardLayout({
         user={user}
         agencyId={isAdminView ? undefined : (profile?.agency_id ?? null)}
         activeOrgId={isAdminView ? adminViewOrgId : activeOrgId}
+        organizationName={orgName}
       />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 pt-14 md:pt-0">
         {isAdminView && adminViewOrgName && (

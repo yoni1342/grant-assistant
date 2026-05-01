@@ -3,6 +3,94 @@
 import { createClient, createAdminClient, getUserOrgId } from '@/lib/supabase/server'
 import { sanitizeError } from '@/lib/errors'
 import { revalidatePath } from 'next/cache'
+import { uploadFile, deleteFile } from '@/lib/supabase/storage'
+
+const NARRATIVE_UPLOAD_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'image/png',
+  'image/jpeg',
+  'text/plain',
+]
+const NARRATIVE_UPLOAD_MAX_SIZE = 25 * 1024 * 1024 // 25MB
+
+export async function uploadNarrativeFile(formData: FormData) {
+  const supabase = await createClient()
+
+  const file = formData.get('file') as File
+  if (!file || !file.name) return { error: 'No file provided' }
+  if (!NARRATIVE_UPLOAD_TYPES.includes(file.type)) {
+    return { error: 'Invalid file type. Allowed: PDF, DOCX, XLSX, PPTX, PNG, JPG, TXT.' }
+  }
+  if (file.size > NARRATIVE_UPLOAD_MAX_SIZE) {
+    return { error: 'File too large. Maximum size is 25MB.' }
+  }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { orgId } = await getUserOrgId(supabase)
+  if (!orgId) return { error: 'Organization not found' }
+
+  const aiCategory = ((formData.get('category') as string) || '').trim() || null
+  const tagsString = (formData.get('tags') as string) || ''
+  const tags = tagsString
+    ? tagsString.split(',').map((t) => t.trim()).filter(Boolean)
+    : []
+
+  const titleOverride = ((formData.get('title') as string) || '').trim()
+  const title = titleOverride || file.name
+
+  const { path, error: uploadError } = await uploadFile(file, user.id)
+  if (uploadError) return { error: uploadError }
+
+  const adminDb = createAdminClient()
+  const { data: doc, error: dbError } = await adminDb
+    .from('documents')
+    .insert({
+      org_id: orgId,
+      title,
+      name: file.name,
+      file_path: path,
+      file_type: file.type,
+      file_size: file.size,
+      category: 'narrative',
+      ai_category: aiCategory,
+      metadata: tags.length > 0 ? { tags } : null,
+    })
+    .select()
+    .single()
+
+  if (dbError) {
+    await deleteFile(path)
+    return { error: sanitizeError(dbError, 'Unable to save narrative. Please try again.') }
+  }
+
+  // Fire-and-forget: trigger n8n extraction so the narrative gets text.
+  if (process.env.N8N_WEBHOOK_URL) {
+    fetch(`${process.env.N8N_WEBHOOK_URL}/process-document`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
+      },
+      body: JSON.stringify({
+        document_id: doc.id,
+        org_id: orgId,
+        file_name: file.name,
+        file_type: file.type,
+        category: 'narrative',
+      }),
+    }).catch((err) => {
+      console.error('[uploadNarrativeFile] n8n process-document webhook failed:', err)
+    })
+  }
+
+  revalidatePath('/narratives')
+  return { data: { id: doc.id }, error: null }
+}
 
 export async function getNarratives() {
   const supabase = await createClient()
@@ -207,6 +295,16 @@ export async function getNarrative(narrativeId: string) {
     return { error: error?.message || 'Not found', data: null }
   }
 
+  // If the narrative is backed by an uploaded file, generate a signed URL so
+  // the org can view the original document instead of the extracted text.
+  let signedUrl: string | null = null
+  if (doc.file_path) {
+    const { data: signed } = await adminDb.storage
+      .from('documents')
+      .createSignedUrl(doc.file_path, 60 * 60)
+    signedUrl = signed?.signedUrl ?? null
+  }
+
   const narrative = {
     id: doc.id,
     org_id: doc.org_id,
@@ -219,6 +317,10 @@ export async function getNarrative(narrativeId: string) {
     version: doc.version || 1,
     created_at: doc.created_at,
     updated_at: doc.updated_at,
+    file_path: doc.file_path ?? null,
+    file_type: doc.file_type ?? null,
+    file_name: doc.name ?? null,
+    signed_url: signedUrl,
   }
 
   return { data: narrative, error: null }

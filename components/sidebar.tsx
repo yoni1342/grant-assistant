@@ -57,11 +57,12 @@ interface SidebarProps {
   user: User;
   agencyId?: string | null;
   activeOrgId?: string | null;
+  organizationName?: string | null;
 }
 
 const DASHBOARD_FROM_SOURCES = new Set(["deadlines", "no-deadline", "past-deadlines"]);
 
-export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
+export function Sidebar({ user, agencyId, activeOrgId, organizationName }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fromDashboard =
@@ -70,12 +71,15 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const displayName = organizationName?.trim() || user.user_metadata?.full_name || user.email || "";
   const initials =
-    user.user_metadata?.full_name
-      ?.split(" ")
+    displayName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
       .map((n: string) => n[0])
       .join("")
-      .toUpperCase() || user.email?.[0]?.toUpperCase() || "?";
+      .toUpperCase() || "?";
 
   // Close mobile menu when a nav link is clicked
   const closeMobile = useCallback(() => setMobileOpen(false), []);
@@ -249,8 +253,8 @@ export function Sidebar({ user, agencyId, activeOrgId }: SidebarProps) {
           </Avatar>
           {!collapsed && (
             <div className="flex-1 truncate">
-              <p className="truncate text-xs font-medium">
-                {user.user_metadata?.full_name || user.email}
+              <p className="truncate text-xs font-medium" title={displayName}>
+                {displayName}
               </p>
             </div>
           )}

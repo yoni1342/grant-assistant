@@ -22,6 +22,7 @@ interface Section {
   header1: ChapterItem[] | null
   header2: ChapterItem[] | null
   tabulation: ChapterItem[] | null
+  sectionType?: string
 }
 
 export interface ProposalSectionsHandle {
@@ -237,7 +238,7 @@ export const ProposalSections = forwardRef<ProposalSectionsHandle, ProposalSecti
 
     for (let idx = 0; idx < sorted.length; idx++) {
       const section = sorted[idx]
-      const isCover = idx === 0 || section.title === 'Cover Page' || (section as any).sectionType === 'cover'
+      const isCover = idx === 0 || section.title === 'Cover Page' || section.sectionType === 'cover'
       const isToc = /table of contents/i.test(section.title)
 
       if (isCover) {
@@ -803,6 +804,26 @@ const viewerStyles = `
   .doc-page-content {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Wide tables: give them their own scrollable container so they
+     don't push the page wider than the A4 frame. */
+  .doc-page-content .table-wrap {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  /* Cover banner — make sure long org names / project titles wrap
+     inside the navy banner instead of bleeding past the page edge. */
+  .cover-banner .cover-org,
+  .cover-banner .cover-project,
+  .cover-banner .cover-label {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
   }
 
   /* ══════════════════════════════════════════
@@ -957,8 +978,9 @@ const viewerStyles = `
     color: #ffffff;
     background-color: #1B3A5C;
     width: 30%;
-    white-space: nowrap;
     border: 1px solid #1B3A5C;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .doc-page-content .kv-table .kv-value {

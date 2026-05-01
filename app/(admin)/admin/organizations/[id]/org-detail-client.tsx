@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Card,
@@ -142,6 +142,15 @@ interface OrgDetailClientProps {
   budgets: Record<string, unknown>[];
   narratives: Record<string, unknown>[];
 }
+
+const OFFICE_FILE_TYPES = new Set([
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.ms-powerpoint",
+]);
 
 function groupByMonth(items: Array<{ created_at: string | null }>, months = 6) {
   const now = new Date();
@@ -476,6 +485,273 @@ function buildFlatHtml(text: string): string {
 
   return htmlParts.join('\n');
 }
+
+function SlideViewer({ text, title }: { text: string; title: string }) {
+  const slides = useMemo(() => {
+    const chunks = text
+      .split(/\n{3,}/)
+      .map((c) => c.replace(/\t/g, " ").trim())
+      .filter(Boolean);
+    return chunks.map((chunk) => {
+      const lines = chunk.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+      const slideTitle = lines[0] || "";
+      const body = lines.slice(1);
+      return { title: slideTitle, body };
+    });
+  }, [text]);
+
+  const [active, setActive] = useState(0);
+  const total = slides.length;
+  const current = slides[active] ?? { title: "", body: [] };
+  const escape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  return (
+    <div className="slide-viewer">
+      <div className="slide-strip">
+        {slides.map((s, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setActive(i)}
+            className={`slide-thumb${i === active ? " slide-thumb-active" : ""}`}
+            aria-label={`Slide ${i + 1}`}
+          >
+            <div className="slide-thumb-frame">
+              <div className="slide-thumb-content">
+                <div className="slide-thumb-title">{s.title}</div>
+                {s.body.slice(0, 3).map((b, j) => (
+                  <div key={j} className="slide-thumb-line">{b}</div>
+                ))}
+              </div>
+            </div>
+            <span className="slide-thumb-num">{i + 1}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="slide-stage">
+        <div className="slide-canvas">
+          <div className="slide-aspect">
+            <div className="slide-paper">
+              <div
+                className="slide-title"
+                dangerouslySetInnerHTML={{ __html: escape(current.title) }}
+              />
+              <div className="slide-body">
+                {current.body.map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+              </div>
+              <div className="slide-footer-bar">
+                <span className="slide-deck-name">{title.replace(/\.\w{2,5}$/, "")}</span>
+                <span className="slide-num">{active + 1} / {total}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="slide-controls">
+          <button
+            type="button"
+            className="slide-nav"
+            onClick={() => setActive((a) => Math.max(0, a - 1))}
+            disabled={active === 0}
+          >
+            ← Prev
+          </button>
+          <span className="slide-counter">Slide {active + 1} of {total}</span>
+          <button
+            type="button"
+            className="slide-nav"
+            onClick={() => setActive((a) => Math.min(total - 1, a + 1))}
+            disabled={active >= total - 1}
+          >
+            Next →
+          </button>
+        </div>
+      </div>
+
+      <style jsx global>{slideViewerStyles}</style>
+    </div>
+  );
+}
+
+const slideViewerStyles = `
+  .slide-viewer {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    min-height: 560px;
+    background: #1a1a1a;
+    border: 1px solid hsl(var(--border));
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .slide-strip {
+    width: 160px;
+    flex-shrink: 0;
+    background: #232323;
+    border-right: 1px solid #333;
+    overflow-y: auto;
+    padding: 12px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .slide-strip::-webkit-scrollbar { width: 4px; }
+  .slide-strip::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
+  .slide-thumb {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    width: 100%;
+  }
+  .slide-thumb-frame {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #fff;
+    border: 2px solid #444;
+    border-radius: 3px;
+    overflow: hidden;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+  }
+  .slide-thumb:hover .slide-thumb-frame { border-color: #888; }
+  .slide-thumb-active .slide-thumb-frame {
+    border-color: hsl(0 72% 55%);
+    box-shadow: 0 0 0 1px hsl(0 72% 55%);
+  }
+  .slide-thumb-content {
+    padding: 6px 8px;
+    color: #1a1a1a;
+    font-size: 4px;
+    line-height: 1.2;
+    overflow: hidden;
+    height: 100%;
+  }
+  .slide-thumb-title {
+    font-weight: 700;
+    font-size: 5px;
+    margin-bottom: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .slide-thumb-line {
+    font-size: 3.5px;
+    color: #555;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .slide-thumb-num {
+    font-size: 11px;
+    color: #aaa;
+    font-weight: 500;
+  }
+  .slide-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    gap: 16px;
+    min-width: 0;
+  }
+  .slide-canvas {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+  .slide-aspect {
+    width: 100%;
+    max-width: 960px;
+    aspect-ratio: 16 / 9;
+    max-height: 100%;
+  }
+  .slide-paper {
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    padding: 48px 56px 64px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    color: #1a1a1a;
+    overflow: hidden;
+  }
+  .slide-title {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: #1a2b42;
+    line-height: 1.25;
+    margin-bottom: 1.4rem;
+    border-bottom: 3px solid hsl(0 72% 55%);
+    padding-bottom: 0.6rem;
+    word-break: break-word;
+  }
+  .slide-body {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 1rem;
+    line-height: 1.65;
+    color: #2a2a2a;
+  }
+  .slide-body p {
+    margin: 0 0 0.75rem 0;
+  }
+  .slide-body::-webkit-scrollbar { width: 6px; }
+  .slide-body::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+  .slide-footer-bar {
+    position: absolute;
+    bottom: 16px;
+    left: 56px;
+    right: 56px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #888;
+    border-top: 1px solid #eee;
+    padding-top: 8px;
+  }
+  .slide-deck-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 70%;
+  }
+  .slide-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    color: #ddd;
+    font-size: 0.85rem;
+  }
+  .slide-nav {
+    background: #333;
+    border: 1px solid #555;
+    color: #eee;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.15s ease;
+  }
+  .slide-nav:hover:not(:disabled) { background: #444; }
+  .slide-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+  .slide-counter { min-width: 110px; text-align: center; }
+`;
 
 function ExtractedTextViewer({
   text,
@@ -899,6 +1175,7 @@ function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
   );
   const [urlCache, setUrlCache] = useState<Record<string, string | null>>({});
   const [loadingDocId, setLoadingDocId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"text" | "file">("text");
 
   const selectedDoc = documents.find((d) => d.id === selectedDocId) || null;
 
@@ -945,6 +1222,14 @@ function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
 
   const isPdf = selectedDoc?.file_type === "application/pdf";
   const isImage = selectedDoc?.file_type?.startsWith("image/");
+  const isPpt = selectedDoc?.file_type === "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    || selectedDoc?.file_type === "application/vnd.ms-powerpoint";
+  const isOfficeDoc = selectedDoc?.file_type
+    ? OFFICE_FILE_TYPES.has(selectedDoc.file_type)
+    : false;
+  const canRenderFile = !!signedUrl && (isPdf || isImage || isOfficeDoc);
+  const hasText = !!selectedDoc?.extracted_text;
+  const showToggle = !!selectedDoc?.file_path && hasText && canRenderFile;
 
   return (
     <div className="flex gap-4 min-h-[600px]">
@@ -1014,61 +1299,146 @@ function DocumentViewer({ documents }: { documents: DocumentItem[] }) {
                   </span>
                 </div>
               </div>
-              {signedUrl && (
-                <Button size="sm" variant="outline" asChild>
-                  <a href={signedUrl} target="_blank" rel="noopener noreferrer" download>
-                    <Download className="h-3.5 w-3.5 mr-1.5" />
-                    Download
-                  </a>
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {showToggle && (
+                  <div className="inline-flex rounded-md border overflow-hidden text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("text")}
+                      className={`px-2.5 py-1 ${viewMode === "text" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}
+                    >
+                      Extracted text
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("file")}
+                      className={`px-2.5 py-1 border-l ${viewMode === "file" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}
+                    >
+                      Original file
+                    </button>
+                  </div>
+                )}
+                {signedUrl && (
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={signedUrl} target="_blank" rel="noopener noreferrer" download>
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      Download
+                    </a>
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {showToggle && viewMode === "text" && (
+              <div className="px-4 py-2 border-b bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-900 dark:text-amber-200">
+                <span className="font-medium">Admin view:</span> showing extracted text to verify the extraction worked. Switch to <span className="font-medium">Original file</span> to see what the user uploaded.
+              </div>
+            )}
 
             {/* Document content */}
             <div className="flex-1 overflow-auto">
-              {urlLoading ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : signedUrl && isPdf ? (
-                <iframe
-                  src={signedUrl}
-                  className="w-full h-full min-h-[500px]"
-                  title={selectedDoc.title || selectedDoc.name || "Document"}
-                />
-              ) : signedUrl && isImage ? (
-                <div className="p-4 flex items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- signed URL from Supabase storage; next/image cannot optimize dynamic external URLs */}
-                  <img
-                    src={signedUrl}
-                    alt={selectedDoc.title || selectedDoc.name || "Document"}
-                    className="max-w-full max-h-[500px] rounded-md"
-                  />
-                </div>
-              ) : !selectedDoc.file_path ? (
-                <div className="p-4">
-                  <p className="text-sm text-muted-foreground italic">
-                    This document was created from questionnaire input (no file uploaded).
-                  </p>
-                  {selectedDoc.extracted_text && (
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed mt-2">
-                      {selectedDoc.extracted_text}
-                    </p>
-                  )}
-                </div>
-              ) : selectedDoc.extracted_text ? (
-                <ExtractedTextViewer
-                  text={selectedDoc.extracted_text}
-                  title={selectedDoc.title || selectedDoc.name || "Document"}
-                  category={selectedDoc.ai_category || selectedDoc.category}
-                  signedUrl={signedUrl}
-                />
+              {(() => {
+                // Decide what to show:
+                // - viewMode "file" + we can render the file → render file
+                // - viewMode "text" + we have extracted text → render text
+                // - fall through to status / unsupported messages
+                const wantsFile = viewMode === "file" && canRenderFile;
+                const wantsText = !wantsFile && hasText;
 
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <p className="text-sm">Unable to preview this file type. Use download button.</p>
-                </div>
-              )}
+                if (wantsFile) {
+                  if (urlLoading) {
+                    return (
+                      <div className="flex items-center justify-center h-full">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    );
+                  }
+                  if (isPdf) {
+                    return (
+                      <iframe
+                        src={signedUrl!}
+                        className="w-full h-full min-h-[500px]"
+                        title={selectedDoc.title || selectedDoc.name || "Document"}
+                      />
+                    );
+                  }
+                  if (isImage) {
+                    return (
+                      <div className="p-4 flex items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- signed URL from Supabase storage; next/image cannot optimize dynamic external URLs */}
+                        <img
+                          src={signedUrl!}
+                          alt={selectedDoc.title || selectedDoc.name || "Document"}
+                          className="max-w-full max-h-[500px] rounded-md"
+                        />
+                      </div>
+                    );
+                  }
+                  if (isOfficeDoc) {
+                    const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(signedUrl!)}`;
+                    return (
+                      <iframe
+                        src={officeUrl}
+                        className="w-full h-full min-h-[500px]"
+                        title={selectedDoc.title || selectedDoc.name || "Document"}
+                      />
+                    );
+                  }
+                }
+
+                if (wantsText) {
+                  return !selectedDoc.file_path ? (
+                    <div className="p-4">
+                      <p className="text-sm text-muted-foreground italic mb-2">
+                        This document was created from questionnaire input (no file uploaded).
+                      </p>
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                        {selectedDoc.extracted_text}
+                      </p>
+                    </div>
+                  ) : isPpt ? (
+                    <SlideViewer
+                      text={selectedDoc.extracted_text!}
+                      title={selectedDoc.title || selectedDoc.name || "Document"}
+                    />
+                  ) : (
+                    <ExtractedTextViewer
+                      text={selectedDoc.extracted_text!}
+                      title={selectedDoc.title || selectedDoc.name || "Document"}
+                      category={selectedDoc.ai_category || selectedDoc.category}
+                      signedUrl={signedUrl}
+                    />
+                  );
+                }
+
+                if (urlLoading) {
+                  return (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  );
+                }
+                if (selectedDoc.extraction_status === "pending" || selectedDoc.extraction_status === "processing") {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <p className="text-sm">Extraction {selectedDoc.extraction_status}…</p>
+                    </div>
+                  );
+                }
+                if (selectedDoc.extraction_status === "failed") {
+                  return (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      <p className="text-sm">Extraction failed for this document.</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    <p className="text-sm">Unable to preview this file type. Use download button.</p>
+                  </div>
+                );
+              })()}
             </div>
           </>
         ) : (
@@ -1294,10 +1664,29 @@ export function OrgDetailClient({
   const [proposalsVisible, setProposalsVisible] = useState(5);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // When the user lands here from the agency detail page (admin/agencies/<id>),
+  // the parent passes ?from=agency&agencyId=<id>. Honor that for the back link
+  // so the breadcrumb returns to where they came from instead of dumping them
+  // on the global Organizations list.
+  const fromAgency = searchParams.get("from") === "agency";
+  const fromAgencyId = searchParams.get("agencyId");
+  const backHref = fromAgency && fromAgencyId
+    ? `/admin/agencies/${fromAgencyId}`
+    : "/admin/organizations";
+  const backLabel = fromAgency ? "Back to Agency" : "Back to Organizations";
   const [viewAsOrgLoading, setViewAsOrgLoading] = useState(false);
 
   async function handleViewAsOrg() {
     setViewAsOrgLoading(true);
+    // Capture origin so AdminViewBanner's exit returns here (or to the agency
+    // detail page if that's where the admin came from).
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(
+        "viewOrg.returnPath",
+        window.location.pathname + window.location.search,
+      );
+    }
     await fetch("/api/admin/view-org", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1466,21 +1855,23 @@ export function OrgDetailClient({
       {/* Back link + View as Org */}
       <div className="flex items-center justify-between">
         <Link
-          href="/admin/organizations"
+          href={backHref}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Organizations
+          {backLabel}
         </Link>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleViewAsOrg}
-          disabled={viewAsOrgLoading}
-        >
-          <MonitorPlay className="mr-1.5 h-3.5 w-3.5" />
-          {viewAsOrgLoading ? "Loading..." : "View as Organization"}
-        </Button>
+        {organization.status !== "pending" && organization.status !== "rejected" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleViewAsOrg}
+            disabled={viewAsOrgLoading}
+          >
+            <MonitorPlay className="mr-1.5 h-3.5 w-3.5" />
+            {viewAsOrgLoading ? "Loading..." : "View as Organization"}
+          </Button>
+        )}
       </div>
 
       {/* Header */}

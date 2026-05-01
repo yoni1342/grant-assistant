@@ -96,6 +96,14 @@ export function OrganizationsClient({
 
   async function handleViewAsOrg(orgId: string) {
     setLoading(orgId);
+    // Remember where the admin clicked "View as Org" from so the exit banner
+    // can return them here instead of the default /admin/organizations.
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(
+        "viewOrg.returnPath",
+        window.location.pathname + window.location.search,
+      );
+    }
     await fetch("/api/admin/view-org", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -389,13 +397,17 @@ export function OrganizationsClient({
                                 <DropdownMenuSeparator />
                               </>
                             )}
-                            <DropdownMenuItem
-                              onClick={() => handleViewAsOrg(org.id)}
-                            >
-                              <MonitorPlay className="mr-2 h-4 w-4" />
-                              View as Organization
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
+                            {org.status !== "pending" && org.status !== "rejected" && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => handleViewAsOrg(org.id)}
+                                >
+                                  <MonitorPlay className="mr-2 h-4 w-4" />
+                                  View as Organization
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
                             {org.status === "pending" && (
                               <>
                                 <DropdownMenuItem
