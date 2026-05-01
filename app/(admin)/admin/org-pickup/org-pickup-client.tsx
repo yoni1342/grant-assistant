@@ -350,7 +350,12 @@ export function OrgPickupClient() {
 
   // Chart shares the page-wide range filter; no separate state needed.
   const [chartPoints, setChartPoints] = useState<
-    { bucket: string; count: number }[]
+    {
+      bucket: string;
+      count: number;
+      orgs?: { id: string; name: string; count: number }[];
+      otherOrgsCount?: number;
+    }[]
   >([]);
   const [chartGranularity, setChartGranularity] = useState<"hour" | "day">(
     "day",
@@ -411,7 +416,12 @@ export function OrgPickupClient() {
         );
         if (!res.ok) throw new Error("Failed to load chart data");
         const json = (await res.json()) as {
-          points: { bucket: string; count: number }[];
+          points: {
+            bucket: string;
+            count: number;
+            orgs?: { id: string; name: string; count: number }[];
+            otherOrgsCount?: number;
+          }[];
           total: number;
           granularity: "hour" | "day";
         };
@@ -691,27 +701,77 @@ export function OrgPickupClient() {
                   width={28}
                 />
                 <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      labelFormatter={(v: string) => {
-                        const d = new Date(v);
-                        if (chartGranularity === "hour") {
-                          return d.toLocaleString("en-US", {
+                  cursor={{ stroke: "var(--color-count)", strokeOpacity: 0.2 }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload || payload.length === 0) return null;
+                    const point = payload[0]?.payload as {
+                      bucket: string;
+                      count: number;
+                      orgs?: { id: string; name: string; count: number }[];
+                      otherOrgsCount?: number;
+                    };
+                    if (!point) return null;
+                    const d = new Date(point.bucket);
+                    const label =
+                      chartGranularity === "hour"
+                        ? d.toLocaleString("en-US", {
                             month: "short",
                             day: "numeric",
                             hour: "numeric",
                             hour12: true,
+                          })
+                        : d.toLocaleDateString("en-US", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
                           });
-                        }
-                        return d.toLocaleDateString("en-US", {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        });
-                      }}
-                    />
-                  }
+                    const orgs = point.orgs || [];
+                    const other = point.otherOrgsCount || 0;
+                    return (
+                      <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-md">
+                        <div className="font-medium text-foreground">{label}</div>
+                        <div className="mt-1 flex items-center gap-1.5 text-muted-foreground">
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ background: "var(--color-count)" }}
+                          />
+                          <span>
+                            {point.count.toLocaleString()} pickup
+                            {point.count === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        {orgs.length > 0 && (
+                          <div className="mt-2 border-t pt-2">
+                            <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                              Organizations
+                            </div>
+                            <ul className="space-y-0.5">
+                              {orgs.map((o) => (
+                                <li
+                                  key={o.id}
+                                  className="flex items-center justify-between gap-3"
+                                >
+                                  <span className="max-w-[180px] truncate text-foreground">
+                                    {o.name}
+                                  </span>
+                                  <span className="font-mono text-muted-foreground">
+                                    {o.count}
+                                  </span>
+                                </li>
+                              ))}
+                              {other > 0 && (
+                                <li className="flex items-center justify-between gap-3 text-muted-foreground">
+                                  <span className="italic">+ others</span>
+                                  <span className="font-mono">{other}</span>
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }}
                 />
                 <Line
                   type="monotone"

@@ -77,41 +77,80 @@ export async function GET(req: Request) {
   const adminClient = createAdminClient();
 
   const PAGE_SIZE = 1000;
-  const timestamps: string[] = [];
+  type Row = { created_at: string; org_id: string | null };
+  const rows: Row[] = [];
   let page = 0;
   while (true) {
     const { data } = await adminClient
       .from("grants_full")
-      .select("created_at")
+      .select("created_at, org_id")
       .eq("source_type", "catalog")
       .gte("created_at", from.toISOString())
       .lte("created_at", to.toISOString())
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
     if (!data || data.length === 0) break;
-    for (const r of data) if (r.created_at) timestamps.push(r.created_at);
+    for (const r of data) {
+      if (r.created_at) rows.push({ created_at: r.created_at, org_id: r.org_id ?? null });
+    }
     if (data.length < PAGE_SIZE) break;
     page++;
   }
 
-  const counts = new Map<string, number>();
-  for (const ts of timestamps) {
-    const bucket = startOfBucket(new Date(ts), granularity).toISOString();
-    counts.set(bucket, (counts.get(bucket) || 0) + 1);
+  // Resolve org_id → name once, in a single query, for tooltip display.
+  const orgIds = Array.from(new Set(rows.map((r) => r.org_id).filter(Boolean) as string[]));
+  const orgNames = new Map<string, string>();
+  if (orgIds.length > 0) {
+    const { data: orgsData } = await adminClient
+      .from("organizations")
+      .select("id, name")
+      .in("id", orgIds);
+    for (const o of orgsData || []) orgNames.set(o.id, o.name || "Unknown org");
   }
 
-  const points: { bucket: string; count: number }[] = [];
+  // Per-bucket totals + per-org-per-bucket breakdown.
+  const counts = new Map<string, number>();
+  const orgCounts = new Map<string, Map<string, number>>();
+  for (const r of rows) {
+    const bucket = startOfBucket(new Date(r.created_at), granularity).toISOString();
+    counts.set(bucket, (counts.get(bucket) || 0) + 1);
+    if (r.org_id) {
+      let inner = orgCounts.get(bucket);
+      if (!inner) {
+        inner = new Map();
+        orgCounts.set(bucket, inner);
+      }
+      inner.set(r.org_id, (inner.get(r.org_id) || 0) + 1);
+    }
+  }
+
+  const TOP_ORGS_PER_BUCKET = 5;
+  type OrgSlice = { id: string; name: string; count: number };
+  type Point = { bucket: string; count: number; orgs: OrgSlice[]; otherOrgsCount: number };
+
+  const points: Point[] = [];
   let cursor = startOfBucket(from, granularity);
   const end = startOfBucket(to, granularity);
   const MAX_BUCKETS = 3000;
   let safety = 0;
   while (cursor <= end && safety++ < MAX_BUCKETS) {
     const key = cursor.toISOString();
-    points.push({ bucket: key, count: counts.get(key) || 0 });
+    const total = counts.get(key) || 0;
+    const inner = orgCounts.get(key);
+    let orgs: OrgSlice[] = [];
+    let otherOrgsCount = 0;
+    if (inner) {
+      const sorted = Array.from(inner.entries())
+        .map(([id, count]) => ({ id, count, name: orgNames.get(id) || "Unknown org" }))
+        .sort((a, b) => b.count - a.count);
+      orgs = sorted.slice(0, TOP_ORGS_PER_BUCKET);
+      otherOrgsCount = sorted.slice(TOP_ORGS_PER_BUCKET).reduce((s, x) => s + x.count, 0);
+    }
+    points.push({ bucket: key, count: total, orgs, otherOrgsCount });
     cursor = addBucket(cursor, granularity);
   }
 
   return new Response(
-    JSON.stringify({ points, total: timestamps.length, granularity }),
+    JSON.stringify({ points, total: rows.length, granularity }),
     { headers: { "Content-Type": "application/json" } },
   );
 }
