@@ -232,7 +232,8 @@ export function GrantDetail({
         return;
       }
 
-      toast.success("Proposal generated.");
+      // Generation runs in the background; user gets a notification when done.
+      toast.success("Generating proposal — we'll notify you when it's ready.");
       router.refresh();
     } catch {
       toast.error("Failed to connect to the proposal workflow.");
