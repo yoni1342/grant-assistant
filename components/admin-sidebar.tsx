@@ -16,6 +16,7 @@ import {
   Hash,
   AlertTriangle,
   Clock,
+  LifeBuoy,
   Menu,
   X,
 } from "lucide-react";
@@ -31,6 +32,7 @@ const navItems = [
   { href: "/admin/org-pickup", label: "Org Pickup", icon: Hash },
   { href: "/admin/fetch-queue", label: "Fetch Queue", icon: Clock },
   { href: "/admin/system-errors", label: "System Errors", icon: AlertTriangle },
+  { href: "/admin/support-requests", label: "Support", icon: LifeBuoy },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
