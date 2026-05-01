@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   Library,
+  LifeBuoy,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -39,6 +40,7 @@ const navItems = [
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/directory", label: "Directory", icon: Library },
+  { href: "/support", label: "Help & support", icon: LifeBuoy },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
