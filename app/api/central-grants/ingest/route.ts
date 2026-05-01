@@ -1,10 +1,26 @@
 import { createAdminClient } from "@/lib/supabase/server";
+import {
+  normalizeSourceUrl,
+  normalizeTitle,
+  normalizeSource,
+} from "@/lib/grants/source-url";
 
 // Daily ingest endpoint for the global grant scraper workflow.
 // The n8n workflow (running once per day, not per-org) POSTs batches
 // of grants here. We upsert them into `central_grants` keyed by
-// (source, source_id) — falling back to (source, source_url) when the
-// source doesn't expose a stable id.
+// `(source_url, title_norm)` when a URL is present, falling back to
+// `(source, source_id)` only when the source doesn't expose a URL.
+//
+// Why title+url together: the same grant gets scraped by Grants.gov,
+// Grantivia, and the scanner; they share the URL but each pick a
+// different `source` value. URL alone would be tempting, but some
+// scrapers (e.g. CFNJ) point every grant at a generic landing page
+// and would collapse unrelated grants into one. URL+title catches
+// the cross-source dupes without merging unrelated ones.
+//
+// `source` is also normalized — the scanner workflow has historically
+// sent JSON-blob source values with a per-run timestamp, which broke
+// the old `(source, source_id)` index. They collapse to "Scanner" now.
 
 const REFERENCE_DB_URL_PATTERNS: RegExp[] = [
   /\bprojects\.propublica\.org\/nonprofits\b/i,
@@ -97,8 +113,70 @@ export async function POST(req: Request) {
       continue;
     }
 
+    const normalizedUrl = normalizeSourceUrl(g.source_url);
+    const normalizedTitle = normalizeTitle(g.title);
+    const normalizedSource = normalizeSource(g.source);
+
+    // Prefer (source_url, title_norm) dedup so the same opportunity scraped
+    // by different sources collapses to one row. Existing-row writes only
+    // bump last_seen_at — title/funder/source stay with whichever scraper
+    // found the grant first, so re-ingest doesn't overwrite canonical data.
+    if (normalizedUrl && normalizedTitle) {
+      const { data: existing, error: lookupError } = await supabase
+        .from("central_grants")
+        .select("id, created_at")
+        .eq("source_url", normalizedUrl)
+        .eq("title_norm", normalizedTitle)
+        .maybeSingle();
+
+      if (lookupError) {
+        errors.push(`${g.title}: ${lookupError.message}`);
+        continue;
+      }
+
+      if (existing) {
+        const { error: touchError } = await supabase
+          .from("central_grants")
+          .update({ last_seen_at: now })
+          .eq("id", existing.id);
+        if (touchError) {
+          errors.push(`${g.title}: ${touchError.message}`);
+          continue;
+        }
+        updated++;
+        continue;
+      }
+
+      const { error: insertError } = await supabase
+        .from("central_grants")
+        .insert({
+          title: g.title,
+          title_norm: normalizedTitle,
+          funder_name: g.funder_name ?? null,
+          organization: g.organization ?? null,
+          amount: g.amount == null ? null : String(g.amount),
+          deadline: g.deadline ?? null,
+          description: g.description ?? null,
+          eligibility: g.eligibility ?? null,
+          categories: g.categories ?? null,
+          metadata: g.metadata ?? null,
+          source: normalizedSource,
+          source_id: g.source_id ?? null,
+          source_url: normalizedUrl,
+          last_seen_at: now,
+        });
+      if (insertError) {
+        errors.push(`${g.title}: ${insertError.message}`);
+        continue;
+      }
+      inserted++;
+      continue;
+    }
+
+    // Fallback: no URL or no title, dedup on (source, source_id).
     const row = {
       title: g.title,
+      title_norm: normalizedTitle,
       funder_name: g.funder_name ?? null,
       organization: g.organization ?? null,
       amount: g.amount == null ? null : String(g.amount),
@@ -107,17 +185,15 @@ export async function POST(req: Request) {
       eligibility: g.eligibility ?? null,
       categories: g.categories ?? null,
       metadata: g.metadata ?? null,
-      source: g.source,
+      source: normalizedSource,
       source_id: g.source_id ?? null,
-      source_url: g.source_url ?? null,
+      source_url: normalizedUrl,
       last_seen_at: now,
     };
 
-    const conflictTarget = g.source_id ? "source,source_id" : "source,source_url";
-
     const { data, error } = await supabase
       .from("central_grants")
-      .upsert(row, { onConflict: conflictTarget, ignoreDuplicates: false })
+      .upsert(row, { onConflict: "source,source_id", ignoreDuplicates: false })
       .select("id, created_at, updated_at")
       .single();
 
