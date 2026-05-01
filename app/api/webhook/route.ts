@@ -299,6 +299,63 @@ export async function POST(req: Request) {
     }
   };
 
+  // Proposal generation runs longer than the platform's edge/proxy request
+  // budget, so we fire-and-forget the n8n call and return the workflow_id
+  // immediately. The client subscribes to workflow_executions to learn
+  // when n8n finishes (status flips to completed/failed via the .then
+  // below). Other services can stay synchronous — they're fast.
+  if (service === "proposal-generation") {
+    fetch(fullUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Webhook-Secret": process.env.N8N_WEBHOOK_SECRET || "",
+      },
+      body: JSON.stringify(payload),
+      agent,
+    })
+      .then(async (response) => {
+        const text = await response.text();
+        let responseData: unknown = text;
+        try {
+          responseData = JSON.parse(text);
+        } catch {
+          // already plain text
+        }
+        const data = responseData as { success?: boolean; message?: unknown } | string;
+
+        if (!response.ok) {
+          const detail = typeof data === "object" && data ? data.message ?? data : data;
+          const msg = friendlyWorkflowError(service, detail);
+          console.error(`[webhook/proposal-generation] n8n returned ${response.status}: ${text}`);
+          await releaseProposalSlot("failed", msg);
+          return;
+        }
+        if (!text || text.trim() === "") {
+          console.error(`[webhook/proposal-generation] Empty response from n8n`);
+          await releaseProposalSlot("failed", friendlyWorkflowError(service));
+          return;
+        }
+        if (typeof data === "object" && data && data.success === false) {
+          await releaseProposalSlot(
+            "failed",
+            friendlyWorkflowError(service, data.message),
+          );
+          return;
+        }
+        await releaseProposalSlot("completed");
+      })
+      .catch(async (err) => {
+        console.error(`[webhook/proposal-generation] Fetch error:`, err);
+        await releaseProposalSlot("failed", String(friendlyWorkflowError(service, err)));
+      });
+
+    return new Response(
+      JSON.stringify({ success: true, workflow_id: proposalWorkflowId }),
+      { status: 202, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   try {
     const response = await fetch(fullUrl, {
       method: "POST",
@@ -320,7 +377,6 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       const msg = friendlyWorkflowError(service, responseData?.message || responseData);
-      await releaseProposalSlot("failed", msg);
       return new Response(
         JSON.stringify({ success: false, error: msg }),
         { status: response.status, headers: { "Content-Type": "application/json" } },
@@ -331,7 +387,6 @@ export async function POST(req: Request) {
     if (!text || text.trim() === "") {
       console.error(`[webhook/${service}] Empty response from n8n`);
       const msg = friendlyWorkflowError(service);
-      await releaseProposalSlot("failed", msg);
       return new Response(
         JSON.stringify({ success: false, error: msg }),
         { status: 502, headers: { "Content-Type": "application/json" } },
@@ -341,21 +396,18 @@ export async function POST(req: Request) {
     // Forward n8n's success/failure status
     if (responseData && responseData.success === false) {
       const msg = friendlyWorkflowError(service, responseData.message);
-      await releaseProposalSlot("failed", msg);
       return new Response(
         JSON.stringify({ success: false, error: msg }),
         { headers: { "Content-Type": "application/json" } },
       );
     }
 
-    await releaseProposalSlot("completed");
     return new Response(
       JSON.stringify({ success: true, data: responseData }),
       { headers: { "Content-Type": "application/json" } },
     );
   } catch (err) {
     const msg = friendlyWorkflowError(service, err);
-    await releaseProposalSlot("failed", String(msg));
     return new Response(
       JSON.stringify({ success: false, error: msg }),
       { status: 500, headers: { "Content-Type": "application/json" } },
