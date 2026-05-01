@@ -12,6 +12,8 @@ import type {
   GrantDigestEmailParams,
   ProposalReadyEmailParams,
   InviteMemberEmailParams,
+  SupportRequestReceivedEmailParams,
+  SupportRequestInternalEmailParams,
 } from './types'
 import WelcomeEmail from './templates/welcome'
 import OrganizationApprovedEmail from './templates/organization-approved'
@@ -22,6 +24,8 @@ import GrantEligibleEmail from './templates/grant-eligible'
 import GrantDigestEmail from './templates/grant-digest'
 import ProposalReadyEmail from './templates/proposal-ready'
 import InviteMemberEmail from './templates/invite-member'
+import SupportRequestReceivedEmail from './templates/support-request-received'
+import SupportRequestInternalEmail from './templates/support-request-internal'
 
 const FROM_EMAIL = process.env.AWS_SES_FROM_EMAIL || 'noreply@fundory.ai'
 const FROM_NAME = process.env.AWS_SES_FROM_NAME || 'Fundory'
@@ -30,8 +34,9 @@ const REPLY_TO_EMAIL = process.env.AWS_SES_REPLY_TO_EMAIL || 'support@fundory.ai
 /**
  * Send email via AWS SES
  */
-export async function sendEmail({ to, subject, htmlBody, textBody }: SendEmailParams): Promise<void> {
-  console.log('[sendEmail] Preparing to send:', { to, subject, from: `${FROM_NAME} <${FROM_EMAIL}>`, replyTo: REPLY_TO_EMAIL })
+export async function sendEmail({ to, subject, htmlBody, textBody, replyTo }: SendEmailParams): Promise<void> {
+  const replyToAddress = replyTo || REPLY_TO_EMAIL
+  console.log('[sendEmail] Preparing to send:', { to, subject, from: `${FROM_NAME} <${FROM_EMAIL}>`, replyTo: replyToAddress })
 
   const sesClient = getSESClient()
 
@@ -56,7 +61,7 @@ export async function sendEmail({ to, subject, htmlBody, textBody }: SendEmailPa
         },
       },
     },
-    ReplyToAddresses: [REPLY_TO_EMAIL],
+    ReplyToAddresses: [replyToAddress],
   })
 
   try {
@@ -274,5 +279,57 @@ export async function sendInviteMemberEmail(
     subject,
     htmlBody,
     textBody,
+  })
+}
+
+/**
+ * Send support-request acknowledgment email to the user who submitted.
+ * Reply-to is forced to support@fundory.ai so the user can hit Reply and
+ * land in the support inbox.
+ */
+export async function sendSupportRequestReceivedEmail(
+  params: SupportRequestReceivedEmailParams
+): Promise<void> {
+  console.log('[sendSupportRequestReceivedEmail] Sending to:', { toEmail: params.toEmail, ticketRef: params.ticketRef })
+
+  const subject = `[${params.ticketRef}] We received your message`
+
+  const htmlBody = await render(SupportRequestReceivedEmail(params), { pretty: true })
+  const textBody = await render(SupportRequestReceivedEmail(params), { plainText: true })
+
+  await sendEmail({
+    to: params.toEmail,
+    subject,
+    htmlBody,
+    textBody,
+    replyTo: REPLY_TO_EMAIL,
+  })
+}
+
+/**
+ * Send the internal team-facing copy of a support request to support@fundory.ai
+ * so the team has a real email thread to reply from. Reply-to is set to the
+ * submitter so a direct reply goes to the user, not back to the support inbox.
+ */
+export async function sendSupportRequestInternalEmail(
+  params: SupportRequestInternalEmailParams
+): Promise<void> {
+  console.log('[sendSupportRequestInternalEmail] Sending to support inbox:', {
+    ticketRef: params.ticketRef,
+    submitter: params.submitterEmail,
+    org: params.organizationName,
+  })
+
+  const subject = `[${params.ticketRef}] ${params.subject}`
+
+  const htmlBody = await render(SupportRequestInternalEmail(params), { pretty: true })
+  const textBody = await render(SupportRequestInternalEmail(params), { plainText: true })
+
+  await sendEmail({
+    to: REPLY_TO_EMAIL,
+    subject,
+    htmlBody,
+    textBody,
+    replyTo: params.submitterEmail,
   })
 }

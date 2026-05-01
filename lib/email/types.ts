@@ -125,6 +125,31 @@ export interface InviteMemberEmailParams extends BaseEmailParams {
 }
 
 /**
+ * Support-request acknowledgment email (sent to the user who submitted).
+ */
+export interface SupportRequestReceivedEmailParams extends BaseEmailParams {
+  ticketRef: string
+  subject: string
+  message: string
+}
+
+/**
+ * Support-request internal notification email (sent to the support@ inbox so
+ * the team has a real thread they can reply from).
+ */
+export interface SupportRequestInternalEmailParams {
+  ticketRef: string
+  category: string
+  subject: string
+  message: string
+  submitterName: string
+  submitterEmail: string
+  organizationName?: string | null
+  organizationPlan?: string | null
+  adminUrl?: string | null
+}
+
+/**
  * Generic send email parameters
  */
 export interface SendEmailParams {
@@ -132,4 +157,5 @@ export interface SendEmailParams {
   subject: string
   htmlBody: string
   textBody: string
+  replyTo?: string
 }
