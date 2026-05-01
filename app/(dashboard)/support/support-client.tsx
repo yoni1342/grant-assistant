@@ -14,7 +14,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, LifeBuoy } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CheckCircle2, LifeBuoy, Mail } from "lucide-react";
 
 const CATEGORIES = [
   { value: "general", label: "General question" },
@@ -25,6 +32,21 @@ const CATEGORIES = [
   { value: "feature", label: "Feature request" },
 ];
 
+const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
+  CATEGORIES.map((c) => [c.value, c.label]),
+);
+
+const STATUS_LABEL: Record<string, string> = {
+  open: "Awaiting reply",
+  in_progress: "In progress",
+  resolved: "Resolved",
+  closed: "Closed",
+};
+
+function formatTicketRef(id: string): string {
+  return "FND-" + id.replace(/-/g, "").slice(0, 8).toUpperCase();
+}
+
 const SUBJECT_MAX = 200;
 const MESSAGE_MAX = 5000;
 
@@ -34,6 +56,7 @@ interface RecentRequest {
   category: string;
   status: string;
   created_at: string;
+  message: string;
 }
 
 interface SupportClientProps {
@@ -53,6 +76,7 @@ export function SupportClient({
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [lastTicket, setLastTicket] = useState<string | null>(null);
+  const [openRequest, setOpenRequest] = useState<RecentRequest | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -193,21 +217,73 @@ export function SupportClient({
           </h2>
           <div className="divide-y rounded-lg border">
             {recentRequests.map((r) => (
-              <div key={r.id} className="flex items-center justify-between px-4 py-3 text-sm">
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setOpenRequest(r)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
+              >
                 <div className="min-w-0">
                   <div className="truncate font-medium">{r.subject}</div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(r.created_at).toLocaleString()} · {r.category}
+                    {new Date(r.created_at).toLocaleString()} ·{" "}
+                    {CATEGORY_LABEL[r.category] || r.category}
                   </div>
                 </div>
-                <span className="rounded-full border bg-muted px-2 py-0.5 text-xs capitalize text-muted-foreground">
-                  {r.status}
+                <span className="shrink-0 rounded-full border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                  {STATUS_LABEL[r.status] || r.status}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
       )}
+
+      <Dialog open={!!openRequest} onOpenChange={(o) => !o && setOpenRequest(null)}>
+        <DialogContent className="max-w-2xl">
+          {openRequest && (
+            <>
+              <DialogHeader>
+                <div className="mb-1 flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                  <span>{formatTicketRef(openRequest.id)}</span>
+                  <span aria-hidden>·</span>
+                  <span>{CATEGORY_LABEL[openRequest.category] || openRequest.category}</span>
+                </div>
+                <DialogTitle className="text-xl">{openRequest.subject}</DialogTitle>
+                <DialogDescription>
+                  Submitted {new Date(openRequest.created_at).toLocaleString()} ·{" "}
+                  <span className="font-medium text-foreground">
+                    {STATUS_LABEL[openRequest.status] || openRequest.status}
+                  </span>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="mt-2">
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Your message
+                </div>
+                <div className="whitespace-pre-wrap rounded-md border bg-muted/30 px-4 py-3 text-sm leading-relaxed">
+                  {openRequest.message}
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-start gap-3 rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
+                <Mail className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  Replies from our team come by email. Need to add something? Just reply to the
+                  confirmation email — it&apos;ll attach to this ticket.
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <Button variant="outline" onClick={() => setOpenRequest(null)}>
+                  Close
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

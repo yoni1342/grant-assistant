@@ -23,7 +23,7 @@ export default async function SupportPage() {
       .maybeSingle(),
     supabase
       .from("support_requests")
-      .select("id, subject, category, status, created_at")
+      .select("id, subject, category, status, created_at, message")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(5),
