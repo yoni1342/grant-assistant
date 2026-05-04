@@ -38,10 +38,19 @@ import {
   registerAgency,
   registerAgencyForExistingUser,
   uploadRegistrationDocuments,
-  checkEmailAvailable,
 } from "./actions";
-import { PLANS, TRIAL_DAYS } from "@/lib/stripe/config";
-import type { PlanId } from "@/lib/stripe/config";
+import {
+  requestSignupOtp,
+  verifySignupOtp,
+  resendSignupOtp,
+} from "./otp-actions";
+import {
+  PLANS,
+  TRIAL_DAYS,
+  BILLING_CYCLES,
+  getCyclePrice,
+} from "@/lib/stripe/config";
+import type { PlanId, BillingCycleId } from "@/lib/stripe/config";
 
 const SECTORS = [
   "Education",
@@ -91,15 +100,24 @@ interface RegisterWizardProps {
 }
 
 export function RegisterWizard({
-  isAuthenticated,
+  isAuthenticated: isAuthenticatedProp,
   userEmail,
   userName,
 }: RegisterWizardProps) {
-  const [step, setStep] = useState(isAuthenticated ? 2 : 1);
-  const firstStep = isAuthenticated ? 2 : 1;
+  // After OTP verification we sign the user in client-side, so we need a
+  // mutable authenticated flag rather than the static prop.
+  const [isAuthenticated, setIsAuthenticated] = useState(isAuthenticatedProp);
+  const [step, setStep] = useState(isAuthenticatedProp ? 2 : 1);
+  const firstStep = isAuthenticatedProp ? 2 : 1;
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // OTP sub-state (active only while step === 1)
+  const [awaitingOtp, setAwaitingOtp] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpExpiresInMin, setOtpExpiresInMin] = useState<number>(10);
+  const [otpResendCooldown, setOtpResendCooldown] = useState(0);
 
   // Step 1: Account
   const [fullName, setFullName] = useState(userName || "");
@@ -155,6 +173,7 @@ export function RegisterWizard({
 
   // Step 2: Plan selection (moved up)
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("free");
+  const [billingCycle, setBillingCycle] = useState<BillingCycleId>("monthly");
 
   // Agency-specific
   const [agencyName, setAgencyName] = useState("");
@@ -207,8 +226,8 @@ export function RegisterWizard({
       setError("Please enter a valid email address");
       return;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
     if (password !== confirmPassword) {
@@ -217,15 +236,76 @@ export function RegisterWizard({
     }
 
     setLoading(true);
-    const { available, error: checkError } = await checkEmailAvailable(trimmedEmail);
+    const otpRes = await requestSignupOtp({
+      email: trimmedEmail,
+      password,
+      fullName: fullName.trim(),
+    });
     setLoading(false);
-    if (!available) {
-      setError(checkError || "This email is not available");
+    if (otpRes.error || !otpRes.success) {
+      setError(otpRes.error || "Could not start signup. Please try again.");
+      return;
+    }
+    setOtpExpiresInMin(otpRes.data?.expiresInMinutes ?? 10);
+    setOtpCode("");
+    setAwaitingOtp(true);
+    setOtpResendCooldown(30);
+  }
+
+  async function handleVerifyOtp() {
+    setError(null);
+    const trimmedEmail = email.trim();
+    const code = otpCode.trim();
+    if (!/^\d{6}$/.test(code)) {
+      setError("Please enter the 6-digit code from your email.");
+      return;
+    }
+    setLoading(true);
+    const verifyRes = await verifySignupOtp({ email: trimmedEmail, code });
+    if (verifyRes.error || !verifyRes.success) {
+      setLoading(false);
+      setError(verifyRes.error || "Could not verify code. Please try again.");
       return;
     }
 
+    // OTP verified — sign the user in client-side using the password they
+    // just typed in step 1 (still in component state).
+    const supa = createClient();
+    const { error: signInErr } = await supa.auth.signInWithPassword({
+      email: trimmedEmail,
+      password,
+    });
+    setLoading(false);
+    if (signInErr) {
+      console.error("[handleVerifyOtp] signInWithPassword failed:", signInErr.message);
+      setError("Verified, but couldn't sign in automatically. Please try logging in.");
+      return;
+    }
+
+    setIsAuthenticated(true);
+    setAwaitingOtp(false);
     setStep(2);
   }
+
+  async function handleResendOtp() {
+    setError(null);
+    if (otpResendCooldown > 0) return;
+    setLoading(true);
+    const res = await resendSignupOtp({ email: email.trim() });
+    setLoading(false);
+    if (res.error || !res.success) {
+      setError(res.error || "Could not resend code.");
+      return;
+    }
+    setOtpResendCooldown(30);
+  }
+
+  // Tick down the resend cooldown (1s).
+  useEffect(() => {
+    if (otpResendCooldown <= 0) return;
+    const t = setInterval(() => setOtpResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [otpResendCooldown]);
 
   function handleNextFromPlan() {
     setError(null);
@@ -404,6 +484,7 @@ export function RegisterWizard({
               agencyId: result.agencyId,
               plan: "agency",
               email: isAuthenticated ? userEmail : email.trim(),
+              billingCycle,
             }),
           });
           const data = await res.json();
@@ -518,6 +599,7 @@ export function RegisterWizard({
             orgId: result.orgId,
             plan: selectedPlan,
             email: isAuthenticated ? userEmail : email.trim(),
+            billingCycle,
           }),
         });
         const data = await res.json();
@@ -542,20 +624,18 @@ export function RegisterWizard({
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-semibold">
-              Registration Submitted
+              You&apos;re in.
             </CardTitle>
             <CardDescription>
               {isAgency ? (
                 <>
-                  Your agency <strong>{agencyName}</strong> has been registered
-                  and is pending admin approval. You will be able to access the
-                  agency dashboard once approved.
+                  Your agency <strong>{agencyName}</strong> is live. Sign in to
+                  open your agency dashboard.
                 </>
               ) : (
                 <>
-                  Your organization <strong>{orgName}</strong> has been registered
-                  and is pending admin approval. You will be able to access the
-                  dashboard once approved.
+                  Your organization <strong>{orgName}</strong> is live on Fundory.
+                  Your dashboard is ready.
                 </>
               )}
             </CardDescription>
@@ -609,7 +689,7 @@ export function RegisterWizard({
         </CardHeader>
         <CardContent>
           {/* Step 1: Account */}
-          {step === 1 && (
+          {step === 1 && !awaitingOtp && (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="fullName">Full Name</Label>
@@ -659,16 +739,114 @@ export function RegisterWizard({
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button onClick={handleNextToStep2} disabled={loading} className="w-full">
-                {loading ? "Checking..." : "Next"}
+                {loading ? "Sending code..." : "Send verification code"}
               </Button>
+            </div>
+          )}
+
+          {/* Step 1.5: OTP verification */}
+          {step === 1 && awaitingOtp && (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-md border border-muted p-4 bg-muted/30">
+                <p className="text-sm text-foreground">
+                  We just sent a 6-digit code to{" "}
+                  <span className="font-medium">{email.trim()}</span>. It expires in{" "}
+                  {otpExpiresInMin} minutes.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="otp">Verification code</Label>
+                <Input
+                  id="otp"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  placeholder="123456"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="font-mono tracking-[0.5em] text-center text-lg"
+                />
+              </div>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <Button
+                onClick={handleVerifyOtp}
+                disabled={loading || otpCode.length !== 6}
+                className="w-full"
+              >
+                {loading ? "Verifying..." : "Verify and continue"}
+              </Button>
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAwaitingOtp(false);
+                    setOtpCode("");
+                    setError(null);
+                  }}
+                  className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                >
+                  Use a different email
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={otpResendCooldown > 0 || loading}
+                  className="text-primary disabled:text-muted-foreground disabled:cursor-not-allowed underline-offset-2 hover:underline"
+                >
+                  {otpResendCooldown > 0
+                    ? `Resend in ${otpResendCooldown}s`
+                    : "Resend code"}
+                </button>
+              </div>
             </div>
           )}
 
           {/* Step 2: Plan Selection */}
           {step === 2 && (
             <div className="flex flex-col gap-4">
+              {/* Billing-cycle selector — applies to every paid plan card below */}
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Billing cycle
+                </span>
+                <div className="inline-flex rounded-md border border-muted p-0.5">
+                  {(Object.keys(BILLING_CYCLES) as BillingCycleId[]).map((id) => {
+                    const c = BILLING_CYCLES[id];
+                    const active = billingCycle === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setBillingCycle(id)}
+                        className={`relative inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {c.label}
+                        {c.discountPct > 0 && (
+                          <span
+                            className={`text-[10px] font-semibold rounded px-1.5 py-0.5 ${
+                              active
+                                ? "bg-primary-foreground/15 text-primary-foreground"
+                                : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                            }`}
+                          >
+                            -{c.discountPct}%
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {(Object.entries(PLANS) as [PlanId, typeof PLANS[PlanId]][]).map(([planId, plan]) => (
+                {(Object.entries(PLANS) as [PlanId, typeof PLANS[PlanId]][]).map(([planId, plan]) => {
+                  const cyclePrice = getCyclePrice(planId, billingCycle);
+                  const isPaid = plan.basePriceMonthly > 0;
+                  return (
                   <button
                     key={planId}
                     type="button"
@@ -685,12 +863,32 @@ export function RegisterWizard({
                       </div>
                     )}
                     <p className="font-semibold text-lg">{plan.name}</p>
-                    <p className="text-2xl font-bold mt-1">
-                      {plan.price === 0 ? "Free" : `$${plan.price}`}
-                      {plan.price > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
-                    </p>
-                    {plan.price > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">{TRIAL_DAYS}-day free trial</p>
+                    {isPaid ? (
+                      <>
+                        <p className="text-2xl font-bold mt-1">
+                          ${cyclePrice.perMonth}
+                          <span className="text-sm font-normal text-muted-foreground">/mo</span>
+                        </p>
+                        {cyclePrice.months > 1 ? (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            ${cyclePrice.total.toFixed(2)} billed every {cyclePrice.months} months
+                            {cyclePrice.discountPct > 0 && (
+                              <span className="ml-1 text-green-600 dark:text-green-400 font-medium">
+                                ({cyclePrice.discountPct}% off)
+                              </span>
+                            )}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            ${cyclePrice.total.toFixed(2)} billed monthly
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {TRIAL_DAYS}-day free trial
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-2xl font-bold mt-1">Free</p>
                     )}
                     <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
                     <ul className="mt-3 space-y-1.5">
@@ -702,7 +900,8 @@ export function RegisterWizard({
                       ))}
                     </ul>
                   </button>
-                ))}
+                  );
+                })}
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <div className="flex gap-3">

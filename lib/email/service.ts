@@ -14,8 +14,10 @@ import type {
   InviteMemberEmailParams,
   SupportRequestReceivedEmailParams,
   SupportRequestInternalEmailParams,
+  SignupOtpEmailParams,
 } from './types'
 import WelcomeEmail from './templates/welcome'
+import SignupOtpEmail from './templates/signup-otp'
 import OrganizationApprovedEmail from './templates/organization-approved'
 import OrganizationRejectedEmail from './templates/organization-rejected'
 import TrialEndingEmail from './templates/trial-ending'
@@ -75,6 +77,22 @@ export async function sendEmail({ to, subject, htmlBody, textBody, replyTo }: Se
     console.error('[sendEmail] Failed to send email:', error)
     throw error
   }
+}
+
+/**
+ * Send signup OTP email — used by the self-serve registration flow before
+ * the auth.users row is created.
+ */
+export async function sendSignupOtpEmail(params: SignupOtpEmailParams): Promise<void> {
+  const subject = `Your Fundory verification code: ${params.code}`
+  const htmlBody = await render(SignupOtpEmail(params), { pretty: true })
+  const textBody = await render(SignupOtpEmail(params), { plainText: true })
+  await sendEmail({
+    to: params.toEmail,
+    subject,
+    htmlBody,
+    textBody,
+  })
 }
 
 /**

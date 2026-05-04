@@ -5,8 +5,8 @@ import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
   try {
-    const { orgId, agencyId, plan, email, mode } = await req.json()
-    console.log('[stripe/checkout-session] Request received:', { orgId, agencyId, plan, email, mode })
+    const { orgId, agencyId, plan, email, mode, billingCycle } = await req.json()
+    console.log('[stripe/checkout-session] Request received:', { orgId, agencyId, plan, email, mode, billingCycle })
 
     if ((!orgId && !agencyId) || !plan || !email) {
       console.error('[stripe/checkout-session] Missing required fields:', { orgId: !!orgId, agencyId: !!agencyId, plan: !!plan, email: !!email })
@@ -18,16 +18,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
     }
 
+    const cycle: 'monthly' | 'quarterly' | 'annual' =
+      billingCycle === 'quarterly' || billingCycle === 'annual'
+        ? billingCycle
+        : 'monthly'
+
     console.log('[stripe/checkout-session] Initializing Stripe client...')
     const stripe = getStripeClient()
-    const { PLANS } = await import('@/lib/stripe/config')
+    const { getStripePriceId } = await import('@/lib/stripe/config')
 
-    const planConfig = PLANS[plan as keyof typeof PLANS]
-    console.log('[stripe/checkout-session] Plan config:', { plan, stripePriceId: planConfig.stripePriceId || 'NOT SET', price: planConfig.price })
+    const priceId = getStripePriceId(plan as 'professional' | 'agency', cycle)
+    console.log('[stripe/checkout-session] Plan config:', { plan, cycle, priceId: priceId || 'NOT SET' })
 
-    if (!planConfig.stripePriceId) {
-      console.error('[stripe/checkout-session] stripePriceId is not set for plan:', plan, '— check STRIPE_PROFESSIONAL_PRICE_ID / STRIPE_AGENCY_PRICE_ID env vars')
-      return NextResponse.json({ error: `Stripe price ID not configured for plan: ${plan}` }, { status: 500 })
+    if (!priceId) {
+      console.error(
+        '[stripe/checkout-session] price ID not set for',
+        plan,
+        cycle,
+        '— check STRIPE_*_PRICE_ID env vars (incl. _QUARTERLY_/_ANNUAL_ variants)',
+      )
+      return NextResponse.json(
+        { error: `Stripe price ID not configured for ${plan} / ${cycle}.` },
+        { status: 500 },
+      )
     }
 
     const adminClient = createAdminClient()
@@ -103,16 +116,16 @@ export async function POST(req: Request) {
     console.log('[stripe/checkout-session] Session mode:', needsSubscription ? 'subscription' : 'setup', { mode, subscription_status: existingSubscriptionStatus })
 
     const sessionMetadata: Record<string, string> = entityType === 'agency'
-      ? { agency_id: entityId, org_id: orgId || '', plan }
-      : { org_id: entityId, plan }
+      ? { agency_id: entityId, org_id: orgId || '', plan, billing_cycle: cycle }
+      : { org_id: entityId, plan, billing_cycle: cycle }
 
     let session
-    if (needsSubscription && planConfig.stripePriceId) {
-      console.log('[stripe/checkout-session] Creating subscription checkout:', { customerId, priceId: planConfig.stripePriceId })
+    if (needsSubscription && priceId) {
+      console.log('[stripe/checkout-session] Creating subscription checkout:', { customerId, priceId, cycle })
       session = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: 'subscription',
-        line_items: [{ price: planConfig.stripePriceId, quantity: 1 }],
+        line_items: [{ price: priceId, quantity: 1 }],
         metadata: sessionMetadata,
         success_url: entityType === 'agency' ? `${appUrl}/agency/billing?payment=success` : `${appUrl}/billing?payment=success`,
         cancel_url: entityType === 'agency' ? `${appUrl}/agency/billing` : `${appUrl}/billing`,

@@ -14,6 +14,16 @@ export interface WelcomeEmailParams extends BaseEmailParams {
 }
 
 /**
+ * Signup OTP email parameters — sent during the new self-serve registration
+ * flow before the auth.users row is created. The code lives in email_otps
+ * with a 10-minute expiry; this template just delivers it.
+ */
+export interface SignupOtpEmailParams extends BaseEmailParams {
+  code: string
+  expiresInMinutes: number
+}
+
+/**
  * Organization approved email parameters
  */
 export interface OrganizationApprovedEmailParams extends BaseEmailParams {

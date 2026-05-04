@@ -47,7 +47,14 @@ function clearCachedProfile(response: NextResponse) {
   response.cookies.delete("x-profile-cache");
 }
 
+// Paths that should bypass auth/profile routing entirely (public preview pages).
+const PUBLIC_BYPASS_PREFIXES = ["/instagram-post"];
+
 export async function updateSession(request: NextRequest) {
+  if (PUBLIC_BYPASS_PREFIXES.some((p) => request.nextUrl.pathname.startsWith(p))) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -202,15 +209,16 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // --- Has org, status = pending ---
+  // The 'pending' status was used by the old admin-approval flow. The new
+  // self-serve flow auto-activates orgs at registration end, so no new orgs
+  // ever land in 'pending'. Any legacy pending row that survived the migration
+  // is treated as a stuck registration → bounce to /register so the user can
+  // resume the wizard.
   if (hasOrg && orgStatus === "pending") {
-    if (
-      pathname.startsWith("/pending-approval") ||
-      pathname.startsWith("/auth")
-    ) {
+    if (pathname.startsWith("/register") || pathname.startsWith("/auth")) {
       return supabaseResponse;
     }
-    return NextResponse.redirect(getRedirectUrl(request, "/pending-approval"));
+    return NextResponse.redirect(getRedirectUrl(request, "/register"));
   }
 
   // --- Has org, status = rejected ---
