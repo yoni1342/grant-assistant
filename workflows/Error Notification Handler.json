@@ -2,86 +2,92 @@
   "name": "Error Notification Handler",
   "nodes": [
     {
-      "parameters": {},
-      "id": "b1e2c3d4-0001-4000-8000-000000000001",
+      "id": "60f2dc9b-0fd8-4d2f-a6d4-c94f1c4074bd",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
-      "typeVersion": 1,
+      "notes": "Fires whenever any workflow that references this workflow as its Error Workflow fails. Set N8N_DEFAULT_ERROR_WORKFLOW to this workflow's id so every workflow inherits it.",
       "position": [
-        240,
-        0
+        16,
+        64
       ],
-      "notes": "Fires whenever any workflow that references this workflow as its Error Workflow fails. Set N8N_DEFAULT_ERROR_WORKFLOW to this workflow's id so every workflow inherits it."
+      "parameters": {},
+      "typeVersion": 1
     },
     {
+      "id": "77210759-304c-4a3c-80be-9f47895c133d",
+      "name": "Code in JavaScript",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        272,
+        64
+      ],
       "parameters": {
+        "jsCode": "\n// ---- Fundory allowlist gate ----\n// This n8n instance hosts workflows from multiple unrelated projects.\n// Only surface errors from Fundory workflows in our Slack channel + dashboard.\n// Keep this array in sync with /lib/n8n/fundory-workflows.ts in the repo.\nconst FUNDORY_WORKFLOWS = [\n  \"5. Narrative Library with AI Customization\",\n  \"6. Grant Proposal Generator\",\n  \"add new grants to pipeline\",\n  \"AI Proposal Critic 8\",\n  \"Auto-Submit 11\",\n  \"Award Notification Handler My workflow 13\",\n  \"Budget Generator 7\",\n  \"Central Grants Description Backfill\",\n  \"Centralized Scheduled Grant fetch\",\n  \"Centralized Scheduled Grant fetch - Enrich Description\",\n  \"Daily Org Grant Fetch Scheduler\",\n  \"Discovery Cleanup Replay\",\n  \"Enrich Throttle Queue\",\n  \"_Error Handler Test\",\n  \"Error Notification Handler\",\n  \"funder Analyzer 9\",\n  \"Grant Automation 4: Document Vault Manager\",\n  \"Grant Eligibility Screener + Tracker 2/3\",\n  \"Grant fetch\",\n  \"Grant fetch - Process Chunk\",\n  \"Grant Report Auto-Drafter 14\",\n  \"Org Website Narrative Generator\",\n  \"plane state router15\",\n  \"Process Chunk Throttle Queue\",\n  \"Screening Throttle Queue\",\n  \"search for grants using query\",\n  \"Submission Checklist GeneratorMy workflow 10\",\n  \"Support Request Notifier\",\n  \"WF12 - Post Submission Tracker\",\n];\nconst _wfName = ($input.first().json && $input.first().json.workflow && $input.first().json.workflow.name) || null;\nif (!_wfName || FUNDORY_WORKFLOWS.indexOf(_wfName) === -1) {\n  return [{ json: { should_post: false, skipped_reason: 'non-fundory-workflow', workflow_name: _wfName } }];\n}\n\nconst supabaseUrl = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\n\nconst supaHeaders = {\n  'apikey': supabaseKey,\n  'Authorization': 'Bearer ' + supabaseKey,\n  'Content-Type': 'application/json',\n};\n\nconst input = $input.first().json;\nconst workflow_name  = (input.workflow && input.workflow.name) || null;\nconst failed_node    = (input.execution && input.execution.lastNodeExecuted) || null;\nconst execution_id   = (input.execution && input.execution.id) ? String(input.execution.id) : null;\nconst execution_mode = (input.execution && input.execution.mode) || null;\nconst error_message      = (input.execution && input.execution.error && input.execution.error.message) || null;\nconst error_description  = (input.execution && input.execution.error && input.execution.error.description) || null;\nconst execution_url      = (input.execution && input.execution.url) || null;\n\n// ---- classify error_type ----\nfunction classify(msg) {\n  if (!msg) return 'unknown';\n  const m = String(msg).toLowerCase();\n  if (m.includes('timeout') || m.includes('timed out') || m.includes('etimedout')) return 'timeout';\n  if (m.includes('out of memory') || m.includes('heap') || m.includes('fatal javascript oom')) return 'oom';\n  if (m.includes('econnreset') || m.includes('socket hang up') || m.includes('enotfound') || m.includes('eai_again')) return 'network';\n  if (m.includes('rate limit') || m.match(/\\b429\\b/)) return 'rate_limit';\n  if (m.includes('quota')) return 'quota';\n  if (m.match(/\\b5\\d\\d\\b/) || m.includes('internal server error') || m.includes('bad gateway') || m.includes('service unavailable')) return 'http_5xx';\n  if (m.match(/\\b4\\d\\d\\b/) || m.includes('unauthorized') || m.includes('forbidden') || m.includes('bad request')) return 'http_4xx';\n  if (m.includes('syntax error') || m.includes('referenceerror') || m.includes('typeerror') || m.includes('cannot read properties')) return 'script_error';\n  return 'other';\n}\nconst error_type = classify(error_message);\n\n// ---- fingerprint ----\nconst fingerprint = (workflow_name || '') + '::' + (failed_node || '') + '::' + error_type;\n\n// ---- try to extract org_id from the payload ----\nlet org_id = null;\ntry {\n  const blob = JSON.stringify(input);\n  const uuidRe = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;\n  const candidates = Array.from(new Set((blob.match(uuidRe) || []).map(function(x){return x.toLowerCase();})));\n  if (candidates.length > 0) {\n    const inList = '(' + candidates.map(function(c){return '\"' + c + '\"';}).join(',') + ')';\n    const lookup = await this.helpers.httpRequest({\n      method: 'GET',\n      url: supabaseUrl + '/organizations?id=in.' + encodeURIComponent(inList) + '&select=id&limit=1',\n      headers: Object.assign({}, supaHeaders, { 'Accept': 'application/json' }),\n      json: true,\n    });\n    if (Array.isArray(lookup) && lookup.length > 0) {\n      org_id = lookup[0].id;\n    }\n  }\n} catch (e) { /* best effort */ }\n\nconst payload = { workflow_name, failed_node, execution_id, execution_mode, error_message, error_description, execution_url, error_type, fingerprint, org_id };\n\n// ---- atomic dedup via DB lock (race-free) ----\n// n8n_error_dedup_acquire(fingerprint, window_minutes) returns:\n//   true  → caller acquired the lock, post the alert\n//   false → another caller already holds the lock for this fingerprint\n// Because the function uses INSERT...ON CONFLICT DO UPDATE...WHERE expired\n// RETURNING, only one of N concurrent error triggers wins. The rest are\n// silently suppressed until the window expires.\nconst DEDUP_WINDOW_MINUTES = 10;\nlet should_post = false;\ntry {\n  const ack = await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl + '/rpc/n8n_error_dedup_acquire',\n    headers: Object.assign({}, supaHeaders, { 'Accept': 'application/json' }),\n    body: JSON.stringify({ p_fingerprint: fingerprint, p_window_minutes: DEDUP_WINDOW_MINUTES }),\n    json: true,\n  });\n  // PostgREST returns the scalar boolean directly when the function returns BOOLEAN.\n  should_post = ack === true || ack === 'true';\n} catch (e) {\n  // If the dedup check fails, fail OPEN (post) so we don't silently lose alerts.\n  should_post = true;\n}\n\n// ---- always log every occurrence to the audit table ----\n// NOTE: payload includes error_description for the Slack node, but the\n// n8n_workflow_errors table has no such column — sending it causes\n// PostgREST 400 which the catch below swallows. Build a DB-only payload\n// that matches the table schema.\ntry {\n  const dbPayload = { workflow_name, failed_node, execution_id, execution_mode, error_message: (error_description || error_message), execution_url, error_type, fingerprint, org_id };\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: supabaseUrl + '/n8n_workflow_errors',\n    headers: Object.assign({}, supaHeaders, { 'Prefer': 'return=minimal' }),\n    body: JSON.stringify(dbPayload),\n  });\n} catch (e) { console.error('[ErrorHandler] Supabase log failed:', e && e.message || e); }\n\nreturn [{\n  json: Object.assign({}, payload, {\n    should_post: should_post,\n    dedup_window_minutes: DEDUP_WINDOW_MINUTES,\n  }),\n}];\n"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "e0560660-508a-4db6-9d82-95269831d440",
+      "name": "Post to Slack?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        528,
+        64
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "3b705304-a2f3-4e55-b03f-7adbfcff8914",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.should_post }}",
+              "rightValue": ""
+            }
+          ]
+        }
+      },
+      "typeVersion": 2.2
+    },
+    {
+      "id": "9dd9699b-3ca0-456c-a8ae-ccf39cf954c6",
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "position": [
+        784,
+        -64
+      ],
+      "webhookId": "32b39bb8-c059-4e95-aca9-701dfcd5bc76",
+      "parameters": {
+        "text": "=🚨 *n8n Workflow Error* (duplicate alerts suppressed for {{ $json.dedup_window_minutes }}m)\n\n*Workflow:* {{ $json.workflow_name }}\n*Failed node:* {{ $json.failed_node || 'unknown' }}\n*Execution ID:* {{ $json.execution_id }}\n\n*Error:*\n```{{ $json.error_description || $json.error_message || 'No message' }}```\n\n{{ $json.execution_url ? '<' + $json.execution_url + '|View execution>' : '' }}",
         "select": "channel",
         "channelId": {
           "__rl": true,
-          "value": "C0ABUATDHG9",
-          "mode": "list",
-          "cachedResultName": "grant-assistant"
+          "mode": "name",
+          "value": "#fundory-n8n-errors"
         },
-        "text": "=🚨 *n8n Workflow Error*\n\n*Workflow:* {{ $json.workflow.name }}\n*Failed node:* {{ $json.execution.lastNodeExecuted || 'unknown' }}\n*Mode:* {{ $json.execution.mode }}\n*Execution ID:* {{ $json.execution.id }}\n\n*Error:*\n```{{ ($json.execution.error && $json.execution.error.message) || 'No message' }}```\n\n{{ $json.execution.url ? '<' + $json.execution.url + '|View execution in n8n>' : '' }}",
         "otherOptions": {
-          "includeLinkToWorkflow": false,
-          "mrkdwn": true
+          "mrkdwn": true,
+          "includeLinkToWorkflow": false
         }
       },
-      "id": "b1e2c3d4-0002-4000-8000-000000000002",
-      "name": "Send Slack Alert",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.4,
-      "position": [
-        496,
-        -120
-      ],
       "credentials": {
         "slackApi": {
-          "id": "rFSQaYpz4DWprrfA",
-          "name": "Grant Assistant"
+          "id": "XnlyHWgE53r5Cn5y",
+          "name": "Grant Assist Internal"
         }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1/n8n_workflow_errors",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=minimal"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify({ workflow_name: ($json.workflow && $json.workflow.name) || null, failed_node: ($json.execution && $json.execution.lastNodeExecuted) || null, execution_id: ($json.execution && $json.execution.id) ? String($json.execution.id) : null, execution_mode: ($json.execution && $json.execution.mode) || null, error_message: ($json.execution && $json.execution.error && $json.execution.error.message) || null, execution_url: ($json.execution && $json.execution.url) || null }) }}",
-        "options": {}
       },
-      "id": "b1e2c3d4-0003-4000-8000-000000000003",
-      "name": "Log to Supabase",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        496,
-        120
-      ]
+      "typeVersion": 2.4
     }
   ],
   "connections": {
@@ -89,12 +95,30 @@
       "main": [
         [
           {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Slack?": {
+      "main": [
+        [
+          {
             "node": "Send Slack Alert",
             "type": "main",
             "index": 0
-          },
+          }
+        ],
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
           {
-            "node": "Log to Supabase",
+            "node": "Post to Slack?",
             "type": "main",
             "index": 0
           }
@@ -102,8 +126,9 @@
       ]
     }
   },
-  "pinData": {},
   "settings": {
-    "executionOrder": "v1"
-  }
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "pinData": {}
 }
