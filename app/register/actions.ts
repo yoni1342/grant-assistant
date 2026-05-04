@@ -1,8 +1,10 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createClient as createServiceRoleClient } from '@supabase/supabase-js'
 import { sendWelcomeEmail } from '@/lib/email/service'
+import { seedOrgGrantsFromCentral } from '@/lib/grants/seed-from-central'
+import { canAutoFetchGrants } from '@/lib/stripe/config'
 
 interface OrgData {
   name: string
@@ -124,6 +126,53 @@ interface PrebuiltNarrative {
   source_url?: string | null
 }
 
+/**
+ * Seed an org's pipeline from the central grant catalog and trigger the n8n
+ * grant-fetch workflow. Used at the *end* of self-serve registration in place
+ * of the old admin-approval-time hook. Runs only for plans that allow auto
+ * grant discovery (matches the previous approveOrganization() gate).
+ */
+async function activateNewOrgGrants(orgId: string) {
+  const adminClient = createAdminClient()
+  const { data: orgData } = await adminClient
+    .from('organizations')
+    .select('plan, is_tester')
+    .eq('id', orgId)
+    .single()
+  if (!canAutoFetchGrants(orgData)) return
+
+  const seedResult = await seedOrgGrantsFromCentral(orgId)
+  if (seedResult.error) {
+    console.error('[register] seedOrgGrantsFromCentral error:', seedResult.error)
+  } else {
+    console.log(`[register] seeded ${seedResult.copied} central grants for org ${orgId}`)
+  }
+
+  if (process.env.N8N_WEBHOOK_URL) {
+    await adminClient.from('grant_fetch_status').upsert({
+      org_id: orgId,
+      status: 'searching',
+      stage_message: 'Starting grant search...',
+    }, { onConflict: 'org_id' })
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}`
+    fetch(`${process.env.N8N_WEBHOOK_URL}/fetch-grants`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET || '',
+      },
+      body: JSON.stringify({
+        org_id: orgId,
+        callback_url: `${appUrl}/api/grant-fetch-status`,
+        is_new_org: true,
+      }),
+    }).catch((err) => {
+      console.error('[register] n8n fetch-grants webhook failed:', err)
+    })
+  }
+}
+
 async function savePrebuiltNarratives(
   serviceClient: ReturnType<typeof getServiceClient>,
   orgId: string,
@@ -212,10 +261,25 @@ export async function registerOrganization(data: {
 
   const userId = userData.user.id
 
-  // 2. Insert organization (status defaults to 'pending')
+  // 2. Insert organization — auto-active in the new self-serve flow.
+  const approvedAt = new Date().toISOString()
   const { data: org, error: orgError } = await serviceClient
     .from('organizations')
-    .insert({ name: data.org.name, ein: data.org.ein, mission: data.org.mission, sector: data.org.sector, address: data.org.address, phone: data.org.phone, email: data.org.email, website: data.org.website, founding_year: data.org.founding_year, geographic_focus: data.org.geographic_focus, plan: data.plan || 'free' })
+    .insert({
+      name: data.org.name,
+      ein: data.org.ein,
+      mission: data.org.mission,
+      sector: data.org.sector,
+      address: data.org.address,
+      phone: data.org.phone,
+      email: data.org.email,
+      website: data.org.website,
+      founding_year: data.org.founding_year,
+      geographic_focus: data.org.geographic_focus,
+      plan: data.plan || 'free',
+      status: 'approved',
+      approved_at: approvedAt,
+    })
     .select('id')
     .single()
 
@@ -224,10 +288,16 @@ export async function registerOrganization(data: {
     return { error: 'Failed to create organization. Please try again.' }
   }
 
-  // 3. Update profile with org_id + role
+  // 3. Update profile with org_id + role + mark signup complete
   const { error: profileError } = await serviceClient
     .from('profiles')
-    .update({ org_id: org.id, role: 'owner', full_name: data.fullName, email: data.email })
+    .update({
+      org_id: org.id,
+      role: 'owner',
+      full_name: data.fullName,
+      email: data.email,
+      signup_step: 'complete',
+    })
     .eq('id', userId)
 
   if (profileError) {
@@ -246,7 +316,12 @@ export async function registerOrganization(data: {
     await savePrebuiltNarratives(serviceClient, org.id, data.prebuiltNarratives)
   }
 
-  // 5. Send welcome email (fire-and-forget)
+  // 5. Activate grants + send welcome email
+  try {
+    await activateNewOrgGrants(org.id)
+  } catch (err) {
+    console.error('[registerOrganization] activateNewOrgGrants failed:', err)
+  }
   try {
     await sendWelcomeEmail({
       toEmail: data.email,
@@ -284,10 +359,25 @@ export async function registerOrganizationForExistingUser(data: {
     return { error: 'You already have an organization. Each user can only have one organization.' }
   }
 
-  // Insert organization
+  // Insert organization — auto-active in the new self-serve flow.
+  const approvedAt = new Date().toISOString()
   const { data: org, error: orgError } = await serviceClient
     .from('organizations')
-    .insert({ name: data.org.name, ein: data.org.ein, mission: data.org.mission, sector: data.org.sector, address: data.org.address, phone: data.org.phone, email: data.org.email, website: data.org.website, founding_year: data.org.founding_year, geographic_focus: data.org.geographic_focus, plan: data.plan || 'free' })
+    .insert({
+      name: data.org.name,
+      ein: data.org.ein,
+      mission: data.org.mission,
+      sector: data.org.sector,
+      address: data.org.address,
+      phone: data.org.phone,
+      email: data.org.email,
+      website: data.org.website,
+      founding_year: data.org.founding_year,
+      geographic_focus: data.org.geographic_focus,
+      plan: data.plan || 'free',
+      status: 'approved',
+      approved_at: approvedAt,
+    })
     .select('id')
     .single()
 
@@ -296,7 +386,9 @@ export async function registerOrganizationForExistingUser(data: {
     return { error: 'Failed to create organization. Please try again.' }
   }
 
-  // Upsert profile with org_id + role (handles OAuth users who may not have a profile yet)
+  // Upsert profile with org_id + role + mark signup complete (handles OAuth
+  // users who may not have a profile yet, plus the OTP flow which has the
+  // profile parked at signup_step='verify_email').
   const { error: profileError } = await serviceClient
     .from('profiles')
     .upsert({
@@ -306,6 +398,7 @@ export async function registerOrganizationForExistingUser(data: {
       full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
       email: user.email || null,
       avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+      signup_step: 'complete',
     }, { onConflict: 'id' })
 
   if (profileError) {
@@ -322,6 +415,14 @@ export async function registerOrganizationForExistingUser(data: {
   // Save AI-generated narratives that the user reviewed before submitting
   if (data.prebuiltNarratives && data.prebuiltNarratives.length > 0) {
     await savePrebuiltNarratives(serviceClient, org.id, data.prebuiltNarratives)
+  }
+
+  // Activate grants (seed central catalog + n8n fetch) — replaces what the
+  // old admin approveOrganization() used to do.
+  try {
+    await activateNewOrgGrants(org.id)
+  } catch (err) {
+    console.error('[registerOrganizationForExistingUser] activateNewOrgGrants failed:', err)
   }
 
   // Send welcome email (fire-and-forget)
@@ -405,10 +506,17 @@ export async function registerAgency(data: {
     return { error: 'Failed to set up agency. Please try again.' }
   }
 
-  // 4. Update profile with org_id, agency_id, and role
+  // 4. Update profile with org_id, agency_id, role + mark signup complete
   const { error: profileError } = await serviceClient
     .from('profiles')
-    .update({ org_id: org.id, agency_id: agency.id, role: 'owner', full_name: data.fullName, email: data.email })
+    .update({
+      org_id: org.id,
+      agency_id: agency.id,
+      role: 'owner',
+      full_name: data.fullName,
+      email: data.email,
+      signup_step: 'complete',
+    })
     .eq('id', userId)
 
   if (profileError) {
@@ -491,6 +599,7 @@ export async function registerAgencyForExistingUser(data: {
       role: 'owner',
       full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
       email: user.email || null,
+      signup_step: 'complete',
     }, { onConflict: 'id' })
 
   if (profileError) {

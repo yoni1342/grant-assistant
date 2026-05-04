@@ -21,7 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,9 +30,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { Eye, Trash2, Ban, RotateCcw, Search, MoreHorizontal, CheckCircle2, XCircle, MonitorPlay, ArrowUpRight } from "lucide-react";
+import { Eye, Trash2, Ban, RotateCcw, Search, MoreHorizontal, MonitorPlay, ArrowUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { approveOrganization, rejectOrganization, deleteOrganization, suspendOrganization, unsuspendOrganization } from "./actions";
+import { deleteOrganization, suspendOrganization, unsuspendOrganization } from "./actions";
 
 interface Organization {
   id: string;
@@ -78,9 +77,6 @@ export function OrganizationsClient({
   const initialBillingFilter = (searchParams.get("billing") as BillingFilter) || "all";
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [billingFilter, setBillingFilter] = useState<BillingFilter>(initialBillingFilter);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -146,27 +142,6 @@ export function OrganizationsClient({
     }
     return true;
   });
-
-  async function handleApprove(orgId: string) {
-    setLoading(orgId);
-    await approveOrganization(orgId);
-    setLoading(null);
-  }
-
-  function openRejectDialog(orgId: string) {
-    setSelectedOrgId(orgId);
-    setRejectReason("");
-    setRejectDialogOpen(true);
-  }
-
-  async function handleReject() {
-    if (!selectedOrgId) return;
-    setLoading(selectedOrgId);
-    await rejectOrganization(selectedOrgId, rejectReason || undefined);
-    setRejectDialogOpen(false);
-    setSelectedOrgId(null);
-    setLoading(null);
-  }
 
   async function handleConfirmAction() {
     if (!confirmDialog) return;
@@ -360,25 +335,12 @@ export function OrganizationsClient({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        {org.status === "pending" ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-green-600 text-green-700 hover:bg-green-50 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-950"
-                            onClick={() => handleApprove(org.id)}
-                            disabled={loading === org.id}
-                          >
-                            <CheckCircle2 className="mr-1 h-3 w-3" />
-                            Approve
-                          </Button>
-                        ) : (
-                          <Link
-                            href={`/admin/organizations/${org.id}`}
-                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            View <ArrowUpRight className="h-3 w-3" />
-                          </Link>
-                        )}
+                        <Link
+                          href={`/admin/organizations/${org.id}`}
+                          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          View <ArrowUpRight className="h-3 w-3" />
+                        </Link>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button size="sm" variant="outline" disabled={loading === org.id}>
@@ -404,18 +366,6 @@ export function OrganizationsClient({
                                 >
                                   <MonitorPlay className="mr-2 h-4 w-4" />
                                   View as Organization
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                              </>
-                            )}
-                            {org.status === "pending" && (
-                              <>
-                                <DropdownMenuItem
-                                  className="text-red-700 dark:text-red-400"
-                                  onClick={() => openRejectDialog(org.id)}
-                                >
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Reject
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                               </>
@@ -474,36 +424,6 @@ export function OrganizationsClient({
         </CardContent>
       </Card>
 
-      {/* Reject dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Organization</DialogTitle>
-            <DialogDescription>
-              Provide an optional reason for rejecting this organization. This
-              will be visible to the user.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            placeholder="Reason for rejection (optional)"
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            rows={3}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleReject}
-              disabled={loading === selectedOrgId}
-            >
-              {loading === selectedOrgId ? "Rejecting..." : "Reject"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       {/* Confirm dialog for delete/suspend/unsuspend */}
       <Dialog
         open={!!confirmDialog}

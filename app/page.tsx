@@ -105,9 +105,9 @@ function HeroSection() {
 function StatsBar() {
   const stats = [
     { value: "10K+", label: "Grants Indexed" },
-    { value: "5", label: "Data Sources Unified" },
-    { value: "79%", label: "Avg. Eligibility Score" },
-    { value: "$2.4M+", label: "Pipeline Managed" },
+    { value: "15+", label: "Data Sources Unified" },
+    { value: "85%", label: "Avg. Eligibility Score" },
+    { value: "Millions", label: "Pipeline Managed" },
   ];
   return (
     <section className="bg-white border-b-2 border-[#0A0A0A]">

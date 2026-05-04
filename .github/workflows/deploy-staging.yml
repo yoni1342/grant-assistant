@@ -48,7 +48,11 @@ jobs:
             --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}" \
             --build-arg STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
             --build-arg STRIPE_PROFESSIONAL_PRICE_ID="${{ secrets.STRIPE_PROFESSIONAL_PRICE_ID }}" \
+            --build-arg STRIPE_PROFESSIONAL_QUARTERLY_PRICE_ID="${{ secrets.STRIPE_PROFESSIONAL_QUARTERLY_PRICE_ID }}" \
+            --build-arg STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID="${{ secrets.STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID }}" \
             --build-arg STRIPE_AGENCY_PRICE_ID="${{ secrets.STRIPE_AGENCY_PRICE_ID }}" \
+            --build-arg STRIPE_AGENCY_QUARTERLY_PRICE_ID="${{ secrets.STRIPE_AGENCY_QUARTERLY_PRICE_ID }}" \
+            --build-arg STRIPE_AGENCY_ANNUAL_PRICE_ID="${{ secrets.STRIPE_AGENCY_ANNUAL_PRICE_ID }}" \
             --build-arg STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
             --build-arg NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}" \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:staging \

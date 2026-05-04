@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -74,6 +76,8 @@ interface Props {
   orgOptions: FilterOption[];
   filters: {
     range: string;
+    from: string;
+    to: string;
     workflow: string;
     org: string;
     type: string;
@@ -99,7 +103,30 @@ const RANGES: FilterOption[] = [
   { value: "7d", label: "Last 7 days" },
   { value: "30d", label: "Last 30 days" },
   { value: "all", label: "All time" },
+  { value: "custom", label: "Custom range…" },
 ];
+
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function formatLocalDatetime(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
+}
+
+function isoToLocalInput(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "" : formatLocalDatetime(d);
+}
+
+function localInputToIso(local: string): string {
+  if (!local) return "";
+  const d = new Date(local);
+  return isNaN(d.getTime()) ? "" : d.toISOString();
+}
 
 function typeBadgeClass(t: string) {
   switch (t) {
@@ -137,6 +164,56 @@ export function SystemErrorsClient({
     else p.set(key, value);
     startTransition(() => router.replace(`?${p.toString()}`));
   };
+
+  const handleRangeChange = (v: string) => {
+    const p = new URLSearchParams(searchParams.toString());
+    if (v === "custom") {
+      p.set("range", "custom");
+      if (!p.get("from") && !p.get("to")) {
+        const now = new Date();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        p.set("from", weekAgo.toISOString());
+        p.set("to", now.toISOString());
+      }
+    } else {
+      p.delete("from");
+      p.delete("to");
+      if (v === "all") p.delete("range");
+      else p.set("range", v);
+    }
+    startTransition(() => router.replace(`?${p.toString()}`));
+  };
+
+  const filterFromLocal = isoToLocalInput(filters.from);
+  const filterToLocal = isoToLocalInput(filters.to);
+  const [customFrom, setCustomFrom] = useState(filterFromLocal);
+  const [customTo, setCustomTo] = useState(filterToLocal);
+  // Reset the editable inputs when the URL-driven filters change (e.g. user
+  // picked a preset). Using the in-render reset pattern from React docs
+  // instead of a useEffect — see "You Might Not Need an Effect".
+  const [prevFromLocal, setPrevFromLocal] = useState(filterFromLocal);
+  const [prevToLocal, setPrevToLocal] = useState(filterToLocal);
+  if (prevFromLocal !== filterFromLocal || prevToLocal !== filterToLocal) {
+    setPrevFromLocal(filterFromLocal);
+    setPrevToLocal(filterToLocal);
+    setCustomFrom(filterFromLocal);
+    setCustomTo(filterToLocal);
+  }
+
+  const applyCustomRange = () => {
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("range", "custom");
+    const fromIso = localInputToIso(customFrom);
+    const toIso = localInputToIso(customTo);
+    if (fromIso) p.set("from", fromIso);
+    else p.delete("from");
+    if (toIso) p.set("to", toIso);
+    else p.delete("to");
+    startTransition(() => router.replace(`?${p.toString()}`));
+  };
+
+  const customDirty =
+    customFrom !== filterFromLocal || customTo !== filterToLocal;
 
   const totalOccurrences = useMemo(
     () => groupedRows.reduce((acc, r) => acc + r.occurrences, 0),
@@ -185,8 +262,39 @@ export function SystemErrorsClient({
             label="Range"
             value={filters.range}
             options={RANGES}
-            onChange={(v) => updateParam("range", v)}
+            onChange={handleRangeChange}
           />
+          {filters.range === "custom" && (
+            <div className="flex flex-col gap-1">
+              <label className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                From → To
+              </label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="datetime-local"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="h-8 text-xs w-[180px]"
+                />
+                <span className="text-muted-foreground text-xs">→</span>
+                <Input
+                  type="datetime-local"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="h-8 text-xs w-[180px]"
+                />
+                <Button
+                  size="sm"
+                  variant={customDirty ? "default" : "outline"}
+                  onClick={applyCustomRange}
+                  disabled={!customDirty}
+                  className="h-8 text-xs"
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          )}
           <FilterSearchable
             label="Workflow"
             value={filters.workflow || "all"}
