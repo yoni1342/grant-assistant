@@ -112,10 +112,21 @@ export async function POST(req: Request) {
             updateData.trial_ends_at = new Date(subscription.trial_end * 1000).toISOString()
           }
 
-          // Update plan based on price
-          if (priceId === process.env.STRIPE_PROFESSIONAL_PRICE_ID) {
+          // Update plan based on price — every plan has a price for each billing
+          // cycle (monthly / quarterly / annual), so check all variants.
+          const professionalPriceIds = [
+            process.env.STRIPE_PROFESSIONAL_PRICE_ID,
+            process.env.STRIPE_PROFESSIONAL_QUARTERLY_PRICE_ID,
+            process.env.STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID,
+          ].filter(Boolean)
+          const agencyPriceIds = [
+            process.env.STRIPE_AGENCY_PRICE_ID,
+            process.env.STRIPE_AGENCY_QUARTERLY_PRICE_ID,
+            process.env.STRIPE_AGENCY_ANNUAL_PRICE_ID,
+          ].filter(Boolean)
+          if (priceId && professionalPriceIds.includes(priceId)) {
             updateData.plan = 'professional'
-          } else if (priceId === process.env.STRIPE_AGENCY_PRICE_ID) {
+          } else if (priceId && agencyPriceIds.includes(priceId)) {
             updateData.plan = 'agency'
           }
 
