@@ -107,7 +107,7 @@ function StatsBar() {
   const stats = [
     { value: "10K+", label: "Grants Indexed" },
     { value: "15+", label: "Data Sources Unified" },
-    { value: "85%", label: "Avg. Eligibility Score" },
+    { value: "85%", label: "Target Grant Matching and Alignment Score" },
     { value: "Millions", label: "Pipeline Managed" },
   ];
   return (
