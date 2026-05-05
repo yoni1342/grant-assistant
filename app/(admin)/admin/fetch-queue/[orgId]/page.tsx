@@ -1,6 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { OrgFetchHistoryClient, type DayRow } from "./org-history-client";
+import { FUNDORY_WORKFLOWS } from "@/lib/n8n/fundory-workflows";
+import {
+  OrgFetchHistoryClient,
+  type DayRow,
+  type ErrorRow,
+} from "./org-history-client";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +83,34 @@ export default async function OrgFetchHistoryPage({
     .select("id", { count: "exact", head: true })
     .eq("org_id", orgId);
 
+  // Individual error rows for this org in the same date window. Bound to
+  // FUNDORY_WORKFLOWS so unrelated n8n projects on the same host never leak in.
+  const sinceIso = `${range.from}T00:00:00.000Z`;
+  const untilIso = `${range.to}T23:59:59.999Z`;
+  const { data: errorRowsData, error: errorRowsErr } = await admin
+    .from("n8n_workflow_errors")
+    .select(
+      "id, workflow_name, failed_node, error_type, error_message, execution_id, execution_mode, execution_url, created_at",
+    )
+    .eq("org_id", orgId)
+    .in("workflow_name", FUNDORY_WORKFLOWS as unknown as string[])
+    .gte("created_at", sinceIso)
+    .lte("created_at", untilIso)
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  const errorRows: ErrorRow[] = (errorRowsData ?? []).map((r) => ({
+    id: r.id as string,
+    workflow_name: (r.workflow_name as string | null) ?? null,
+    failed_node: (r.failed_node as string | null) ?? null,
+    error_type: (r.error_type as string | null) ?? null,
+    error_message: (r.error_message as string | null) ?? null,
+    execution_id: (r.execution_id as string | null) ?? null,
+    execution_mode: (r.execution_mode as string | null) ?? null,
+    execution_url: (r.execution_url as string | null) ?? null,
+    created_at: r.created_at as string,
+  }));
+
   const days: DayRow[] = (historyData ?? []).map((h) => ({
     day: h.day as string,
     grants_added: Number(h.grants_added ?? 0),
@@ -133,6 +166,8 @@ export default async function OrgFetchHistoryPage({
         days={days}
         lifetimeGrants={lifetimeGrants ?? 0}
         historyError={historyErr?.message ?? null}
+        errorRows={errorRows}
+        errorRowsError={errorRowsErr?.message ?? null}
         filters={{ preset, from: range.from, to: range.to }}
       />
     </div>

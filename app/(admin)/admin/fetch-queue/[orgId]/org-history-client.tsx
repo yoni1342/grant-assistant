@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,14 +24,24 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   AlertTriangle,
   ArrowLeft,
   BarChart3,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Clock,
   ExternalLink,
+  Eye,
   History,
   Layers,
+  List,
   Loader2,
   Package,
   Percent,
@@ -60,6 +71,18 @@ export interface DayRow {
   last_error_message: string | null;
   last_error_at: string | null;
   outcome: DayOutcome;
+}
+
+export interface ErrorRow {
+  id: string;
+  workflow_name: string | null;
+  failed_node: string | null;
+  error_type: string | null;
+  error_message: string | null;
+  execution_id: string | null;
+  execution_mode: string | null;
+  execution_url: string | null;
+  created_at: string;
 }
 
 interface QueueRow {
@@ -93,6 +116,8 @@ export function OrgFetchHistoryClient({
   days,
   lifetimeGrants,
   historyError,
+  errorRows,
+  errorRowsError,
   filters,
 }: {
   orgId: string;
@@ -101,6 +126,8 @@ export function OrgFetchHistoryClient({
   days: DayRow[];
   lifetimeGrants: number;
   historyError: string | null;
+  errorRows: ErrorRow[];
+  errorRowsError: string | null;
   filters: { preset: string; from: string; to: string };
 }) {
   const totalGrants = days.reduce((a, b) => a + b.grants_added, 0);
@@ -439,6 +466,402 @@ export function OrgFetchHistoryClient({
           )}
         </CardContent>
       </Card>
+
+      <ErrorListSection
+        errorRows={errorRows}
+        errorRowsError={errorRowsError}
+        filters={filters}
+      />
+    </div>
+  );
+}
+
+interface ErrorGroup {
+  key: string;
+  workflow_name: string | null;
+  failed_node: string | null;
+  error_type: string;
+  occurrences: number;
+  first_seen_at: string;
+  last_seen_at: string;
+  sample_message: string | null;
+  sample_execution_url: string | null;
+}
+
+function ErrorListSection({
+  errorRows,
+  errorRowsError,
+  filters,
+}: {
+  errorRows: ErrorRow[];
+  errorRowsError: string | null;
+  filters: { preset: string; from: string; to: string };
+}) {
+  const [selected, setSelected] = useState<ErrorRow | null>(null);
+  const [view, setView] = useState<"grouped" | "raw">("grouped");
+
+  // Aggregate by workflow + node + type. Mirrors the system-errors grouped
+  // view's intent (one row per recurring failure shape) but bounded to this
+  // org's rows in the active window — no fingerprint needed since rows are
+  // already org-scoped.
+  const groups: ErrorGroup[] = useMemo(() => {
+    const map = new Map<string, ErrorGroup>();
+    // errorRows arrive desc by created_at → first row encountered for a key
+    // is the most-recent occurrence (use it as the sample).
+    for (const r of errorRows) {
+      const type = r.error_type ?? "unknown";
+      const key = `${r.workflow_name ?? ""}|${r.failed_node ?? ""}|${type}`;
+      let g = map.get(key);
+      if (!g) {
+        g = {
+          key,
+          workflow_name: r.workflow_name,
+          failed_node: r.failed_node,
+          error_type: type,
+          occurrences: 0,
+          first_seen_at: r.created_at,
+          last_seen_at: r.created_at,
+          sample_message: r.error_message,
+          sample_execution_url: r.execution_url,
+        };
+        map.set(key, g);
+      }
+      g.occurrences += 1;
+      if (r.created_at < g.first_seen_at) g.first_seen_at = r.created_at;
+      if (r.created_at > g.last_seen_at) g.last_seen_at = r.created_at;
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      a.last_seen_at < b.last_seen_at ? 1 : -1,
+    );
+  }, [errorRows]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" /> Errors in range
+            </CardTitle>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+              {filters.preset === "live"
+                ? "Today (live)"
+                : `${filters.from} → ${filters.to} UTC`}
+              {" · "}
+              {errorRows.length} {errorRows.length === 1 ? "error" : "errors"}
+              {view === "grouped" && groups.length > 0 && (
+                <> · {groups.length} unique</>
+              )}
+              {errorRows.length === 500 && " (capped)"}
+            </p>
+          </div>
+          <div className="inline-flex rounded-md border border-border p-0.5">
+            <button
+              onClick={() => setView("grouped")}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono uppercase rounded ${
+                view === "grouped"
+                  ? "bg-foreground/[0.06] text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Layers className="h-3 w-3" /> Grouped
+            </button>
+            <button
+              onClick={() => setView("raw")}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono uppercase rounded ${
+                view === "raw"
+                  ? "bg-foreground/[0.06] text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <List className="h-3 w-3" /> Raw
+            </button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {errorRowsError && (
+          <div className="py-4 px-6 text-sm text-red-500">
+            Failed to load errors: {errorRowsError}
+          </div>
+        )}
+        {!errorRowsError && errorRows.length === 0 && (
+          <div className="py-10 text-center text-sm text-muted-foreground">
+            No errors in this range.
+          </div>
+        )}
+        {!errorRowsError && errorRows.length > 0 && view === "raw" && (
+          <Table className="min-w-[820px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>When</TableHead>
+                <TableHead>Workflow</TableHead>
+                <TableHead>Node</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Message</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {errorRows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell
+                    className="text-xs text-muted-foreground whitespace-nowrap"
+                    title={new Date(r.created_at).toLocaleString()}
+                  >
+                    {formatTimeAgo(r.created_at)}
+                  </TableCell>
+                  <TableCell className="text-xs font-medium">
+                    {r.workflow_name || (
+                      <span className="italic text-muted-foreground">
+                        unknown
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {r.failed_node || (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="secondary"
+                      className={`text-[10px] font-mono uppercase ${typeBadgeClass(r.error_type || "unknown")}`}
+                    >
+                      {r.error_type || "unknown"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs max-w-[360px]">
+                    <span className="line-clamp-2 text-red-600 dark:text-red-400 font-mono">
+                      {r.error_message || "(no message)"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setSelected(r)}
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                      >
+                        <Eye className="h-3 w-3" /> View
+                      </button>
+                      {r.execution_url && (
+                        <a
+                          href={r.execution_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <ExternalLink className="h-3 w-3" /> n8n
+                        </a>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+        {!errorRowsError && errorRows.length > 0 && view === "grouped" && (
+          <GroupedErrorsView groups={groups} />
+        )}
+      </CardContent>
+
+      <Dialog
+        open={!!selected}
+        onOpenChange={(open) => !open && setSelected(null)}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display uppercase tracking-tight">
+              Error Detail
+            </DialogTitle>
+          </DialogHeader>
+          {selected && (
+            <div className="space-y-3 text-sm">
+              <DetailRow label="Workflow" value={selected.workflow_name} />
+              <DetailRow label="Failed Node" value={selected.failed_node} />
+              <DetailRow label="Type" value={selected.error_type} />
+              <DetailRow label="Mode" value={selected.execution_mode} />
+              <DetailRow
+                label="Execution ID"
+                value={selected.execution_id}
+                mono
+              />
+              <DetailRow
+                label="When"
+                value={new Date(selected.created_at).toLocaleString()}
+              />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                  Error Message
+                </p>
+                <pre className="text-xs font-mono bg-muted/50 p-3 rounded overflow-x-auto whitespace-pre-wrap break-words text-red-600 dark:text-red-400">
+                  {selected.error_message || "(no message)"}
+                </pre>
+              </div>
+              {selected.execution_url && (
+                <a
+                  href={selected.execution_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" /> Open execution in n8n
+                </a>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+function GroupedErrorsView({ groups }: { groups: ErrorGroup[] }) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (key: string) =>
+    setExpanded((s) => {
+      const n = new Set(s);
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
+      return n;
+    });
+
+  return (
+    <Table className="min-w-[820px]">
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-8"></TableHead>
+          <TableHead className="w-20 text-center">Count</TableHead>
+          <TableHead>Workflow / Node / Type</TableHead>
+          <TableHead>First seen</TableHead>
+          <TableHead>Last seen</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {groups.map((g) => {
+          const open = expanded.has(g.key);
+          return (
+            <Fragment key={g.key}>
+              <TableRow
+                className="cursor-pointer hover:bg-muted/40"
+                onClick={() => toggle(g.key)}
+              >
+                <TableCell className="text-muted-foreground">
+                  {open ? (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                </TableCell>
+                <TableCell className="text-center">
+                  <span className="font-mono text-sm font-semibold">
+                    {g.occurrences}×
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium">
+                      {g.workflow_name || (
+                        <span className="italic text-muted-foreground">
+                          unknown
+                        </span>
+                      )}
+                      {g.failed_node && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          / {g.failed_node}
+                        </span>
+                      )}
+                    </span>
+                    <div>
+                      <Badge
+                        variant="secondary"
+                        className={`text-[10px] font-mono uppercase ${typeBadgeClass(g.error_type)}`}
+                      >
+                        {g.error_type}
+                      </Badge>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                  {formatTimeAgo(g.first_seen_at)}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                  {formatTimeAgo(g.last_seen_at)}
+                </TableCell>
+              </TableRow>
+              {open && (
+                <TableRow className="bg-muted/20 hover:bg-muted/20">
+                  <TableCell></TableCell>
+                  <TableCell colSpan={4} className="py-3">
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <span className="font-mono text-muted-foreground uppercase tracking-wide">
+                          Sample message:
+                        </span>
+                        <pre className="mt-1 bg-background border border-border rounded p-2 overflow-x-auto whitespace-pre-wrap break-words font-mono text-red-600 dark:text-red-400">
+                          {g.sample_message || "(no message)"}
+                        </pre>
+                      </div>
+                      {g.sample_execution_url && (
+                        <a
+                          href={g.sample_execution_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                        >
+                          <ExternalLink className="h-3 w-3" /> Open latest
+                          execution in n8n
+                        </a>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </Fragment>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+}
+
+function typeBadgeClass(t: string) {
+  switch (t) {
+    case "oom":
+    case "timeout":
+      return "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300";
+    case "http_5xx":
+    case "network":
+      return "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300";
+    case "http_4xx":
+    case "rate_limit":
+      return "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300";
+    case "script_error":
+      return "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
+function DetailRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string | null;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-4">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide w-32 shrink-0 pt-0.5">
+        {label}
+      </p>
+      <p className={`text-sm flex-1 ${mono ? "font-mono" : ""}`}>
+        {value || <span className="text-muted-foreground italic">—</span>}
+      </p>
     </div>
   );
 }
