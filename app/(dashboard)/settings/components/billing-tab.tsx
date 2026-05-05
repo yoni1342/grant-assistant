@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Check, Clock, ExternalLink, Loader2 } from "lucide-react"
-import { PLANS, TRIAL_DAYS } from "@/lib/stripe/config"
-import type { PlanId } from "@/lib/stripe/config"
+import { PLANS, TRIAL_DAYS, BILLING_CYCLES, getCyclePrice } from "@/lib/stripe/config"
+import type { PlanId, BillingCycleId } from "@/lib/stripe/config"
 
 interface BillingTabProps {
   orgId: string
@@ -30,6 +30,7 @@ export function BillingTab({
 }: BillingTabProps) {
   const [loading, setLoading] = useState<string | null>(null)
   const [grantUsage, setGrantUsage] = useState<{ used: number; limit: number | null } | null>(null)
+  const [billingCycle, setBillingCycle] = useState<BillingCycleId>("monthly")
 
   useEffect(() => {
     async function fetchUsage() {
@@ -69,7 +70,7 @@ export function BillingTab({
       const res = await fetch("/api/stripe/checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId, plan, email }),
+        body: JSON.stringify({ orgId, plan, email, billingCycle }),
         signal: controller.signal,
       })
       clearTimeout(timeout)
@@ -386,9 +387,49 @@ export function BillingTab({
           <CardDescription>Choose the plan that fits your needs</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Billing-cycle picker — drives prices below + the cycle sent to checkout */}
+          <div className="mb-5 flex flex-col gap-2">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Billing cycle
+            </span>
+            <div className="inline-flex w-fit rounded-md border border-muted p-0.5">
+              {(Object.keys(BILLING_CYCLES) as BillingCycleId[]).map((id) => {
+                const c = BILLING_CYCLES[id]
+                const active = billingCycle === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setBillingCycle(id)}
+                    className={`relative inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {c.label}
+                    {c.discountPct > 0 && (
+                      <span
+                        className={`text-[10px] font-semibold rounded px-1.5 py-0.5 ${
+                          active
+                            ? "bg-primary-foreground/15 text-primary-foreground"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                        }`}
+                      >
+                        -{c.discountPct}%
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(Object.entries(PLANS) as [PlanId, typeof PLANS[PlanId]][]).filter(([planId]) => planId !== "agency").map(([planId, plan]) => {
               const isCurrent = planId === currentPlan
+              const isPaid = plan.basePriceMonthly > 0
+              const cyclePrice = isPaid ? getCyclePrice(planId, billingCycle) : null
               return (
                 <div
                   key={planId}
@@ -397,16 +438,32 @@ export function BillingTab({
                   }`}
                 >
                   <p className="font-semibold text-lg">{plan.name}</p>
-                  <p className="text-2xl font-bold mt-1">
-                    {plan.price === 0 ? "Free" : `$${plan.price}`}
-                    {plan.price > 0 && (
-                      <span className="text-sm font-normal text-muted-foreground">/mo</span>
-                    )}
-                  </p>
-                  {plan.price > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {TRIAL_DAYS}-day free trial
-                    </p>
+                  {isPaid && cyclePrice ? (
+                    <>
+                      <p className="text-2xl font-bold mt-1">
+                        ${cyclePrice.perMonth}
+                        <span className="text-sm font-normal text-muted-foreground">/mo</span>
+                      </p>
+                      {cyclePrice.months > 1 ? (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          ${cyclePrice.total.toFixed(2)} billed every {cyclePrice.months} months
+                          {cyclePrice.discountPct > 0 && (
+                            <span className="ml-1 text-green-600 dark:text-green-400 font-medium">
+                              ({cyclePrice.discountPct}% off)
+                            </span>
+                          )}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          ${cyclePrice.total.toFixed(2)} billed monthly
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {TRIAL_DAYS}-day free trial
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-2xl font-bold mt-1">Free</p>
                   )}
                   <ul className="mt-3 space-y-1.5 flex-1">
                     {plan.features.map((feature) => (

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PLANS } from "@/lib/stripe/config";
+import { PLANS, BILLING_CYCLES, getCyclePrice } from "@/lib/stripe/config";
 import { CreditCard, Check } from "lucide-react";
 
 export default async function AgencyBillingPage() {
@@ -115,6 +115,42 @@ export default async function AgencyBillingPage() {
           <div className="flex items-baseline gap-1">
             <span className="text-3xl font-bold">${plan.price}</span>
             <span className="text-muted-foreground">/month</span>
+          </div>
+
+          {/* Billing cycle options — the actual cycle in Stripe is managed via the portal */}
+          <div className="rounded-md border border-muted bg-muted/40 p-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+              Billing cycle options
+            </p>
+            <ul className="space-y-1 text-sm">
+              {(Object.keys(BILLING_CYCLES) as Array<keyof typeof BILLING_CYCLES>).map((id) => {
+                const c = BILLING_CYCLES[id]
+                const cp = getCyclePrice("agency", id)
+                return (
+                  <li key={id} className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">
+                      {c.label}
+                      {c.discountPct > 0 && (
+                        <span className="ml-2 text-[11px] font-semibold text-green-700 dark:text-green-400">
+                          save {c.discountPct}%
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-medium">
+                      ${cp.perMonth}/mo
+                      {c.months > 1 && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          (${cp.total.toFixed(0)} every {c.months} mo)
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="text-xs text-muted-foreground mt-2">
+              Switch cycles any time from the Stripe billing portal.
+            </p>
           </div>
 
           {isTrialing && trialEndsAt && (
