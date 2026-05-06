@@ -1255,7 +1255,7 @@ export function Slide7() {
               marginBottom: 6,
             }}
           >
-            fundory.io
+            fundory.ai
           </span>
           <span
             className="font-display font-black uppercase"
