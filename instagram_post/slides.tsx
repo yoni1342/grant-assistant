@@ -256,19 +256,68 @@ function BrandLockup({
   );
 }
 
+/* Powered by brownmine.ai — small attribution lockup */
+function PoweredBy({
+  inverse = false,
+  scale = 1,
+}: {
+  inverse?: boolean;
+  scale?: number;
+}) {
+  const muted = inverse ? "#9a9a90" : "#888";
+  return (
+    <div className="flex items-center" style={{ gap: 8 * scale }}>
+      <span
+        className="font-mono uppercase"
+        style={{
+          color: muted,
+          fontSize: 9 * scale,
+          letterSpacing: "0.28em",
+        }}
+      >
+        Powered by
+      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brownmine-logo.svg"
+        alt="brownmine.ai"
+        style={{
+          height: 18 * scale,
+          width: "auto",
+          display: "block",
+          filter: inverse ? "none" : "invert(1)",
+        }}
+      />
+    </div>
+  );
+}
+
 function SlideFrame({
   children,
   bg = "#F5F5F0",
   borderColor = "#0A0A0A",
+  hasBottomTicker = false,
+  suppressPoweredBy = false,
 }: {
   children: React.ReactNode;
   bg?: string;
   borderColor?: string;
+  hasBottomTicker?: boolean;
+  suppressPoweredBy?: boolean;
 }) {
+  const isDarkBg = bg === "#0A0A0A" || bg === "#000000" || bg === "#1a1a18";
   return (
     <div style={{ ...SLIDE, background: bg }}>
       {children}
       <Grain />
+      {!suppressPoweredBy && (
+        <div
+          className="absolute"
+          style={{ bottom: hasBottomTicker ? 50 : 18, right: 28 }}
+        >
+          <PoweredBy inverse={isDarkBg} />
+        </div>
+      )}
       <div
         className="absolute bottom-0 left-0 right-0"
         style={{ height: 2, background: borderColor }}
@@ -337,7 +386,7 @@ function DimensionScale({
    ════════════════════════════════════════════════════════════ */
 export function Slide1() {
   return (
-    <SlideFrame>
+    <SlideFrame suppressPoweredBy>
       <CropMarks />
       <Ticker text="Fundory · Grant Intelligence · Now in early access · Issue 001" position="top" />
 
@@ -408,7 +457,7 @@ export function Slide1() {
       {/* Bottom row */}
       <div
         className="absolute flex items-end justify-between"
-        style={{ left: 70, right: 70, bottom: 88 }}
+        style={{ left: 70, right: 70, bottom: 140 }}
       >
         <div className="max-w-[480px]">
           <div className="flex items-center gap-3" style={{ marginBottom: 16 }}>
@@ -446,6 +495,28 @@ export function Slide1() {
             Swipe
             <ArrowUpRight size={14} strokeWidth={1.6} className="rotate-45" />
           </div>
+        </div>
+      </div>
+
+      {/* Prominent Powered-by attribution band (cover only) */}
+      <div
+        className="absolute flex items-center justify-between"
+        style={{ left: 70, right: 70, bottom: 44 }}
+      >
+        <div style={{ flex: 1, height: 1, background: "#0A0A0A", opacity: 0.25, marginRight: 24 }} />
+        <div className="flex items-center" style={{ gap: 16 }}>
+          <span
+            className="font-mono uppercase"
+            style={{ fontSize: 13, letterSpacing: "0.34em", color: "#0A0A0A" }}
+          >
+            Powered by
+          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brownmine-logo.svg"
+            alt="brownmine.ai"
+            style={{ height: 36, width: "auto", display: "block", filter: "invert(1)" }}
+          />
         </div>
       </div>
     </SlideFrame>
@@ -1093,7 +1164,7 @@ export function Slide6() {
    ════════════════════════════════════════════════════════════ */
 export function Slide7() {
   return (
-    <SlideFrame bg="#0A0A0A" borderColor="#F5F5F0">
+    <SlideFrame bg="#0A0A0A" borderColor="#F5F5F0" hasBottomTicker>
       <CropMarks color="#F5F5F0" />
       <Ticker
         text="Now in early access · Founder priced · 50 spots · Apply now"

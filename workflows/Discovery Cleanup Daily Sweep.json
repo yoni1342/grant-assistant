@@ -1,0 +1,61 @@
+{
+  "name": "Discovery Cleanup Daily Sweep",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 14 * * *"
+            }
+          ]
+        }
+      },
+      "id": "b8e4b6a4-0001-4000-8000-000000000001",
+      "name": "Daily Trigger 14:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "notes": "Runs once per day at 14:00 UTC (10:00 EDT). Slot chosen to avoid 00:00 UTC central fetch and 06:00 UTC per-org fetch; cleanup is lightweight relative to those, so no worker contention."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Discovery Cleanup Daily Sweep\n// ------------------------------------------------------------\n// Identical sweep logic to the manual 'Discovery Cleanup Replay'\n// workflow, but fires automatically every day at 14:00 UTC.\n//\n// Recovers grants that got stuck in stage='discovery' because of\n// an n8n container restart, screener timeout, or any transient\n// failure between the 'add to pipeline' step and the screener.\n//\n// For each stuck grant:\n//   1. If deadline already passed -> PATCH stage='closed' (and log\n//      'grant_auto_closed_expired' in activity_log).\n//   2. Otherwise -> POST it to the Screening Throttle Queue, which\n//      paces calls into the Grant Eligibility Screener so we don't\n//      flood the worker pool.\n//\n// DRY_RUN is FALSE here (this is the production scheduled sweep);\n// flip to true if you ever need to inspect the counts without\n// mutating.\n// ============================================================\n\nconst DRY_RUN        = false;\nconst BATCH_SIZE     = 100;\nconst BATCH_DELAY_MS = 2000;\nconst PAGE_SIZE      = 1000;\n\nconst SUPABASE_URL = 'https://fgudhlcktsstwpxwtwzz.supabase.co/rest/v1';\nconst SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndWRobGNrdHNzdHdweHd0d3p6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDk2NjA5NSwiZXhwIjoyMDg2NTQyMDk1fQ.lDXOCM7CStNfF0G-ZENg5x1dyQ0ytXHGtJ8DjQNd03I';\nconst THROTTLE_URL = 'https://n8n.thebrownmine.com/webhook/screen-queue';\n\nconst helpers = this.helpers;\nconst supaHeaders = {\n  'apikey':        SUPABASE_KEY,\n  'Authorization': 'Bearer ' + SUPABASE_KEY,\n  'Content-Type':  'application/json',\n};\n\nfunction parseDeadline(v) {\n  if (v === null || v === undefined) return null;\n  const s = String(v).trim();\n  if (!s) return null;\n  const d = new Date(s);\n  if (isNaN(d.getTime())) return null;\n  return d;\n}\n\nfunction isExpired(deadline) {\n  const d = parseDeadline(deadline);\n  if (!d) return false;\n  const today = new Date();\n  today.setHours(0, 0, 0, 0);\n  return d.getTime() < today.getTime();\n}\n\nasync function fetchAllDiscovery() {\n  const all = [];\n  let offset = 0;\n  const selectCols = 'id,org_id,title,funder_name,description,amount,deadline,source,source_url,source_id,created_at';\n  while (true) {\n    const rows = await helpers.httpRequest({\n      method:  'GET',\n      url:     SUPABASE_URL + '/grants?stage=eq.discovery&select=' + selectCols + '&order=created_at.asc',\n      headers: Object.assign({}, supaHeaders, {\n        'Range-Unit': 'items',\n        'Range':      offset + '-' + (offset + PAGE_SIZE - 1),\n      }),\n      json: true,\n    });\n    if (!Array.isArray(rows) || rows.length === 0) break;\n    all.push.apply(all, rows);\n    if (rows.length < PAGE_SIZE) break;\n    offset += PAGE_SIZE;\n  }\n  return all;\n}\n\nasync function closeExpired(grant) {\n  if (DRY_RUN) return { ok: true };\n  try {\n    await helpers.httpRequest({\n      method:  'PATCH',\n      url:     SUPABASE_URL + '/grants?id=eq.' + encodeURIComponent(grant.id),\n      headers: supaHeaders,\n      body:    JSON.stringify({ stage: 'closed' }),\n    });\n    await helpers.httpRequest({\n      method:  'POST',\n      url:     SUPABASE_URL + '/activity_log',\n      headers: supaHeaders,\n      body:    JSON.stringify({\n        org_id:   grant.org_id,\n        grant_id: grant.id,\n        action:   'grant_auto_closed_expired',\n        details: {\n          grant_name: grant.title,\n          funder:     grant.funder_name,\n          deadline:   grant.deadline,\n          workflow:   'discovery_cleanup_daily_sweep',\n          reason:     'Deadline passed while stuck in discovery stage',\n        },\n      }),\n    });\n    return { ok: true };\n  } catch (e) {\n    return { ok: false, message: String(e.message || e).slice(0, 400) };\n  }\n}\n\nfunction toScreenPayload(g) {\n  return {\n    url:     g.source_url || '',\n    grantid: g.id,\n    orgId:   g.org_id || '',\n    grantData: {\n      title:       g.title || '',\n      agency:      g.funder_name || '',\n      awardRange:  g.amount ? String(g.amount) : 'Not specified',\n      deadline:    g.deadline || '',\n      description: g.description || '',\n      source:      g.source || '',\n      org_id:      g.org_id || '',\n    },\n  };\n}\n\nasync function sendBatchToThrottle(batch) {\n  if (DRY_RUN) return { ok: true, count: batch.length };\n  try {\n    await helpers.httpRequest({\n      method:  'POST',\n      url:     THROTTLE_URL,\n      headers: { 'Content-Type': 'application/json' },\n      body:    JSON.stringify({ grants: batch.map(toScreenPayload) }),\n      timeout: 30000,\n    });\n    return { ok: true, count: batch.length };\n  } catch (e) {\n    return { ok: false, count: batch.length, message: String(e.message || e).slice(0, 400) };\n  }\n}\n\nconst grants = await fetchAllDiscovery();\n\nconst expired = [];\nconst replayable = [];\nfor (let i = 0; i < grants.length; i++) {\n  const g = grants[i];\n  if (isExpired(g.deadline)) expired.push(g);\n  else replayable.push(g);\n}\n\nlet closedOk = 0;\nlet closedFailed = 0;\nconst closeErrors = [];\nfor (let i = 0; i < expired.length; i++) {\n  const r = await closeExpired(expired[i]);\n  if (r.ok) closedOk++;\n  else { closedFailed++; closeErrors.push({ id: expired[i].id, message: r.message }); }\n}\n\nlet replayedOk = 0;\nlet replayedFailed = 0;\nconst replayErrors = [];\nconst batches = [];\nfor (let i = 0; i < replayable.length; i += BATCH_SIZE) {\n  batches.push(replayable.slice(i, i + BATCH_SIZE));\n}\nfor (let i = 0; i < batches.length; i++) {\n  const r = await sendBatchToThrottle(batches[i]);\n  if (r.ok) replayedOk += r.count;\n  else { replayedFailed += r.count; replayErrors.push({ batch_index: i, message: r.message }); }\n  if (i < batches.length - 1) {\n    await new Promise(function (res) { setTimeout(res, BATCH_DELAY_MS); });\n  }\n}\n\nreturn [{\n  json: {\n    ran_at:                       new Date().toISOString(),\n    dry_run:                      DRY_RUN,\n    total_discovery:              grants.length,\n    expired_closed:               closedOk,\n    expired_close_failed:         closedFailed,\n    replayable_sent_to_throttle:  replayedOk,\n    replayable_failed:            replayedFailed,\n    batches_sent:                 batches.length,\n    batch_size:                   BATCH_SIZE,\n    errors: {\n      closing:   closeErrors.slice(0, 20),\n      replaying: replayErrors.slice(0, 20),\n    },\n  },\n}];\n"
+      },
+      "id": "b8e4b6a4-0002-4000-8000-000000000002",
+      "name": "Sweep Discovery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Daily Trigger 14:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Sweep Discovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "instanceId": "discovery-cleanup-daily-sweep"
+  },
+  "tags": []
+}

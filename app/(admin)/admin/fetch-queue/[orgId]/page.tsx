@@ -1,6 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { OrgFetchHistoryClient, type DayRow } from "./org-history-client";
+import { FUNDORY_WORKFLOWS } from "@/lib/n8n/fundory-workflows";
+import {
+  OrgFetchHistoryClient,
+  type DayRow,
+  type ErrorRow,
+  type GrantRow,
+} from "./org-history-client";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +84,75 @@ export default async function OrgFetchHistoryPage({
     .select("id", { count: "exact", head: true })
     .eq("org_id", orgId);
 
+  // Individual error rows for this org in the same date window. Bound to
+  // FUNDORY_WORKFLOWS so unrelated n8n projects on the same host never leak in.
+  const sinceIso = `${range.from}T00:00:00.000Z`;
+  const untilIso = `${range.to}T23:59:59.999Z`;
+  const { data: errorRowsData, error: errorRowsErr } = await admin
+    .from("n8n_workflow_errors")
+    .select(
+      "id, workflow_name, failed_node, error_type, error_message, execution_id, execution_mode, execution_url, created_at",
+    )
+    .eq("org_id", orgId)
+    .in("workflow_name", FUNDORY_WORKFLOWS as unknown as string[])
+    .gte("created_at", sinceIso)
+    .lte("created_at", untilIso)
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  // Grants picked up by this org INSIDE the active date range. We scope by
+  // created_at (= when the row was inserted into grants by the Process Chunk
+  // workflow) to match the charts and error list. Capped at 500.
+  const { data: grantRowsData, error: grantRowsErr } = await admin
+    .from("grants_full")
+    .select(
+      "id, title, funder_name, stage, screening_score, screening_result, screening_notes, source, source_url, deadline, amount, description, concerns, recommendations, metadata, created_at, updated_at",
+    )
+    .eq("org_id", orgId)
+    .gte("created_at", sinceIso)
+    .lte("created_at", untilIso)
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  const grantRows: GrantRow[] = (grantRowsData ?? []).map((g) => ({
+    id: g.id as string,
+    title: (g.title as string | null) ?? "(untitled)",
+    funder_name: (g.funder_name as string | null) ?? null,
+    stage: (g.stage as GrantRow["stage"]) ?? "discovery",
+    screening_score: g.screening_score == null ? null : Number(g.screening_score),
+    screening_label:
+      typeof g.screening_result === "object" &&
+      g.screening_result !== null &&
+      "score" in (g.screening_result as Record<string, unknown>)
+        ? ((g.screening_result as Record<string, unknown>).score as string | null) ?? null
+        : null,
+    screening_notes: (g.screening_notes as string | null) ?? null,
+    source: (g.source as string | null) ?? null,
+    source_url: (g.source_url as string | null) ?? null,
+    deadline: (g.deadline as string | null) ?? null,
+    amount: (g.amount as string | null) ?? null,
+    description: (g.description as string | null) ?? null,
+    concerns: Array.isArray(g.concerns) ? (g.concerns as string[]) : [],
+    recommendations: Array.isArray(g.recommendations)
+      ? (g.recommendations as unknown[])
+      : [],
+    metadata: (g.metadata as Record<string, unknown> | null) ?? null,
+    created_at: (g.created_at as string | null) ?? null,
+    updated_at: (g.updated_at as string | null) ?? null,
+  }));
+
+  const errorRows: ErrorRow[] = (errorRowsData ?? []).map((r) => ({
+    id: r.id as string,
+    workflow_name: (r.workflow_name as string | null) ?? null,
+    failed_node: (r.failed_node as string | null) ?? null,
+    error_type: (r.error_type as string | null) ?? null,
+    error_message: (r.error_message as string | null) ?? null,
+    execution_id: (r.execution_id as string | null) ?? null,
+    execution_mode: (r.execution_mode as string | null) ?? null,
+    execution_url: (r.execution_url as string | null) ?? null,
+    created_at: r.created_at as string,
+  }));
+
   const days: DayRow[] = (historyData ?? []).map((h) => ({
     day: h.day as string,
     grants_added: Number(h.grants_added ?? 0),
@@ -133,6 +208,10 @@ export default async function OrgFetchHistoryPage({
         days={days}
         lifetimeGrants={lifetimeGrants ?? 0}
         historyError={historyErr?.message ?? null}
+        errorRows={errorRows}
+        errorRowsError={errorRowsErr?.message ?? null}
+        grantRows={grantRows}
+        grantRowsError={grantRowsErr?.message ?? null}
         filters={{ preset, from: range.from, to: range.to }}
       />
     </div>
