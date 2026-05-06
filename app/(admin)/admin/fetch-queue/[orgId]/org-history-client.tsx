@@ -85,6 +85,35 @@ export interface ErrorRow {
   created_at: string;
 }
 
+export interface GrantRow {
+  id: string;
+  title: string;
+  funder_name: string | null;
+  stage:
+    | "discovery"
+    | "screening"
+    | "pending_approval"
+    | "drafting"
+    | "submission"
+    | "awarded"
+    | "reporting"
+    | "closed"
+    | "archived";
+  screening_score: number | null;
+  screening_label: string | null;
+  screening_notes: string | null;
+  source: string | null;
+  source_url: string | null;
+  deadline: string | null;
+  amount: string | null;
+  description: string | null;
+  concerns: string[];
+  recommendations: unknown[];
+  metadata: Record<string, unknown> | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 interface QueueRow {
   queue_position: number;
   hours_until_next_fetch: number;
@@ -118,6 +147,8 @@ export function OrgFetchHistoryClient({
   historyError,
   errorRows,
   errorRowsError,
+  grantRows,
+  grantRowsError,
   filters,
 }: {
   orgId: string;
@@ -128,6 +159,8 @@ export function OrgFetchHistoryClient({
   historyError: string | null;
   errorRows: ErrorRow[];
   errorRowsError: string | null;
+  grantRows: GrantRow[];
+  grantRowsError: string | null;
   filters: { preset: string; from: string; to: string };
 }) {
   const totalGrants = days.reduce((a, b) => a + b.grants_added, 0);
@@ -470,6 +503,12 @@ export function OrgFetchHistoryClient({
       <ErrorListSection
         errorRows={errorRows}
         errorRowsError={errorRowsError}
+        filters={filters}
+      />
+
+      <GrantsListSection
+        grants={grantRows}
+        grantsError={grantRowsError}
         filters={filters}
       />
     </div>
@@ -824,6 +863,373 @@ function GroupedErrorsView({ groups }: { groups: ErrorGroup[] }) {
         })}
       </TableBody>
     </Table>
+  );
+}
+
+function GrantsListSection({
+  grants,
+  grantsError,
+  filters,
+}: {
+  grants: GrantRow[];
+  grantsError: string | null;
+  filters: { preset: string; from: string; to: string };
+}) {
+  const [selected, setSelected] = useState<GrantRow | null>(null);
+  const [stageFilter, setStageFilter] = useState<string>("all");
+
+  // Distinct stage values present in this org's grants — keeps the filter
+  // pill bar tight (we only show stages that actually exist for this org).
+  const presentStages = useMemo(() => {
+    const set = new Set<string>();
+    for (const g of grants) set.add(g.stage);
+    return Array.from(set).sort();
+  }, [grants]);
+
+  const filtered = useMemo(() => {
+    if (stageFilter === "all") return grants;
+    return grants.filter((g) => g.stage === stageFilter);
+  }, [grants, stageFilter]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="h-4 w-4" /> Grants picked up
+            </CardTitle>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+              {filters.preset === "live"
+                ? "Today (live)"
+                : `${filters.from} → ${filters.to} UTC`}
+              {" · "}
+              {grants.length} {grants.length === 1 ? "grant" : "grants"}
+              {grants.length === 500 && " (capped)"}
+              {stageFilter !== "all" && ` · filtered: ${filtered.length}`}
+            </p>
+          </div>
+          {presentStages.length > 1 && (
+            <div className="inline-flex flex-wrap rounded-md border border-border p-0.5">
+              <button
+                onClick={() => setStageFilter("all")}
+                className={`px-2.5 py-1 text-xs font-mono uppercase rounded ${
+                  stageFilter === "all"
+                    ? "bg-foreground/[0.06] text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                all
+              </button>
+              {presentStages.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStageFilter(s)}
+                  className={`px-2.5 py-1 text-xs font-mono uppercase rounded ${
+                    stageFilter === s
+                      ? "bg-foreground/[0.06] text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {s.replace(/_/g, " ")}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {grantsError && (
+          <div className="py-4 px-6 text-sm text-red-500">
+            Failed to load grants: {grantsError}
+          </div>
+        )}
+        {!grantsError && filtered.length === 0 && (
+          <div className="py-10 text-center text-sm text-muted-foreground">
+            {stageFilter === "all"
+              ? "No grants picked up in this range."
+              : `No grants in stage "${stageFilter.replace(/_/g, " ")}" in this range.`}
+          </div>
+        )}
+        {!grantsError && filtered.length > 0 && (
+          <Table className="min-w-[820px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead className="w-32">Stage</TableHead>
+                <TableHead className="w-32">Score</TableHead>
+                <TableHead className="w-32">Source</TableHead>
+                <TableHead className="w-28">Picked up</TableHead>
+                <TableHead className="w-16 text-right">Detail</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((g) => (
+                <TableRow
+                  key={g.id}
+                  className="cursor-pointer hover:bg-muted/40"
+                  onClick={() => setSelected(g)}
+                >
+                  <TableCell className="text-xs max-w-[420px]">
+                    <div className="font-medium line-clamp-1">{g.title}</div>
+                    {g.funder_name && (
+                      <div className="mt-0.5 text-[11px] text-muted-foreground line-clamp-1">
+                        {g.funder_name}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <StageBadge stage={g.stage} />
+                  </TableCell>
+                  <TableCell>
+                    <ScoreBadge
+                      label={g.screening_label}
+                      score={g.screening_score}
+                    />
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {g.source ? (
+                      <span className="font-mono text-muted-foreground">
+                        {g.source}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell
+                    className="text-xs text-muted-foreground whitespace-nowrap"
+                    title={
+                      g.created_at
+                        ? new Date(g.created_at).toLocaleString()
+                        : undefined
+                    }
+                  >
+                    {g.created_at ? formatTimeAgo(g.created_at) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelected(g);
+                      }}
+                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                    >
+                      <Eye className="h-3 w-3" /> View
+                    </button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+
+      <Dialog
+        open={!!selected}
+        onOpenChange={(open) => !open && setSelected(null)}
+      >
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display uppercase tracking-tight pr-8">
+              {selected?.title || "Grant detail"}
+            </DialogTitle>
+          </DialogHeader>
+          {selected && <GrantDetailBody grant={selected} />}
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+function GrantDetailBody({ grant }: { grant: GrantRow }) {
+  const fitScore =
+    grant.metadata && typeof grant.metadata.fit_score === "number"
+      ? (grant.metadata.fit_score as number)
+      : null;
+  const sanityPass =
+    grant.metadata && typeof grant.metadata.sanity_pass === "boolean"
+      ? (grant.metadata.sanity_pass as boolean)
+      : null;
+  const sanityReason =
+    grant.metadata && typeof grant.metadata.sanity_reason === "string"
+      ? (grant.metadata.sanity_reason as string)
+      : null;
+  const fitScoreReason =
+    grant.metadata && typeof grant.metadata.location_filter_reason === "string"
+      ? (grant.metadata.location_filter_reason as string)
+      : null;
+
+  return (
+    <div className="space-y-4 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <StageBadge stage={grant.stage} />
+        <ScoreBadge label={grant.screening_label} score={grant.screening_score} />
+        {grant.source && (
+          <Badge variant="outline" className="text-[10px] font-mono uppercase">
+            {grant.source}
+          </Badge>
+        )}
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <DetailRow label="Funder" value={grant.funder_name} />
+        <DetailRow label="Amount" value={grant.amount} />
+        <DetailRow label="Deadline" value={grant.deadline} />
+        <DetailRow
+          label="Updated"
+          value={
+            grant.updated_at
+              ? new Date(grant.updated_at).toLocaleString()
+              : null
+          }
+        />
+        <DetailRow
+          label="Created"
+          value={
+            grant.created_at
+              ? new Date(grant.created_at).toLocaleString()
+              : null
+          }
+        />
+        <DetailRow label="Grant ID" value={grant.id} mono />
+      </div>
+
+      {grant.source_url && (
+        <a
+          href={grant.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+        >
+          <ExternalLink className="h-3 w-3" /> Open source page
+        </a>
+      )}
+
+      {grant.description && (
+        <div>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+            Description
+          </p>
+          <pre className="text-xs font-mono bg-muted/50 p-3 rounded overflow-x-auto whitespace-pre-wrap break-words max-h-72 overflow-y-auto">
+            {grant.description}
+          </pre>
+        </div>
+      )}
+
+      {grant.screening_notes && (
+        <div>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+            Screening notes
+          </p>
+          <p className="text-sm whitespace-pre-wrap">{grant.screening_notes}</p>
+        </div>
+      )}
+
+      {grant.concerns.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+            Concerns ({grant.concerns.length})
+          </p>
+          <ul className="space-y-1 list-disc pl-5 text-sm">
+            {grant.concerns.map((c, i) => (
+              <li key={i}>{c}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {grant.recommendations.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+            Recommendations ({grant.recommendations.length})
+          </p>
+          <ul className="space-y-1 list-disc pl-5 text-sm">
+            {grant.recommendations.map((r, i) => (
+              <li key={i}>
+                {typeof r === "string" ? r : JSON.stringify(r)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(fitScore !== null || sanityPass !== null || fitScoreReason) && (
+        <div className="rounded-md border border-dashed border-border p-3 space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Discovery filter audit
+          </p>
+          {fitScore !== null && (
+            <DetailRow label="Fit score" value={String(fitScore)} mono />
+          )}
+          {fitScoreReason && (
+            <DetailRow label="Filter reason" value={fitScoreReason} />
+          )}
+          {sanityPass !== null && (
+            <DetailRow
+              label="Sanity pass"
+              value={sanityPass ? "yes" : "no"}
+              mono
+            />
+          )}
+          {sanityReason && <DetailRow label="Sanity reason" value={sanityReason} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StageBadge({ stage }: { stage: GrantRow["stage"] }) {
+  const cls: Record<GrantRow["stage"], string> = {
+    discovery: "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300",
+    screening: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+    pending_approval:
+      "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+    drafting:
+      "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
+    submission:
+      "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+    awarded:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+    reporting: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300",
+    closed: "bg-muted text-muted-foreground",
+    archived: "bg-muted text-muted-foreground",
+  };
+  return (
+    <Badge
+      variant="secondary"
+      className={`text-[10px] font-mono uppercase ${cls[stage] ?? ""}`}
+    >
+      {stage.replace(/_/g, " ")}
+    </Badge>
+  );
+}
+
+function ScoreBadge({
+  label,
+  score,
+}: {
+  label: string | null;
+  score: number | null;
+}) {
+  if (!label && score == null) {
+    return <span className="text-muted-foreground text-xs">—</span>;
+  }
+  const norm = (label || "").toUpperCase();
+  const cls =
+    norm === "GREEN"
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+      : norm === "YELLOW"
+        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300"
+        : norm === "RED"
+          ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+          : norm === "INSUFFICIENT_DATA"
+            ? "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300"
+            : "bg-muted text-muted-foreground";
+  return (
+    <Badge variant="secondary" className={`text-[10px] font-mono uppercase ${cls}`}>
+      {norm || "?"}
+      {score != null && <span className="ml-1 opacity-70">{score}</span>}
+    </Badge>
   );
 }
 
