@@ -18,22 +18,62 @@ import {
   Clock,
   LifeBuoy,
   Menu,
+  ShieldCheck,
+  Sparkles,
   X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-const navItems = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/admin/organizations", label: "Organizations", icon: Building2 },
-  { href: "/admin/agencies", label: "Agencies", icon: Briefcase },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/source-analytics", label: "Source Analytics", icon: BarChart3 },
-  { href: "/admin/org-pickup", label: "Org Pickup", icon: Hash },
-  { href: "/admin/fetch-queue", label: "Fetch Queue", icon: Clock },
-  { href: "/admin/system-errors", label: "System Errors", icon: AlertTriangle },
-  { href: "/admin/support-requests", label: "Support", icon: LifeBuoy },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+// Sidebar grouped by purpose so admins can scan by intent (e.g. "I want to
+// audit grants" → Quality Control). Order inside groups goes from broadest
+// to most specific.
+const navGroups: Array<{
+  label: string;
+  items: Array<{
+    href: string;
+    label: string;
+    icon: typeof LayoutDashboard;
+    exact?: boolean;
+  }>;
+}> = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
+    ],
+  },
+  {
+    label: "Tenants",
+    items: [
+      { href: "/admin/organizations", label: "Organizations", icon: Building2 },
+      { href: "/admin/agencies", label: "Agencies", icon: Briefcase },
+      { href: "/admin/users", label: "Users", icon: Users },
+    ],
+  },
+  {
+    label: "Quality Control",
+    items: [
+      { href: "/admin/grant-quality", label: "Grant Quality", icon: ShieldCheck },
+      { href: "/admin/proposal-quality", label: "Proposal Quality", icon: Sparkles },
+    ],
+  },
+  {
+    label: "Pipeline Ops",
+    items: [
+      { href: "/admin/source-analytics", label: "Source Analytics", icon: BarChart3 },
+      { href: "/admin/org-pickup", label: "Org Pickup", icon: Hash },
+      { href: "/admin/fetch-queue", label: "Fetch Queue", icon: Clock },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/admin/system-errors", label: "System Errors", icon: AlertTriangle },
+      { href: "/admin/support-requests", label: "Support", icon: LifeBuoy },
+      { href: "/admin/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 /** Fundory convergence mark — 3 descending bars */
@@ -53,8 +93,12 @@ export function AdminSidebar({ user }: { user: User }) {
   // When the admin clicks an org from inside an agency detail page, the org
   // detail URL carries ?from=agency. Treat that case as "still browsing
   // agencies" so the sidebar highlight stays on Agencies instead of jumping
-  // to Organizations.
+  // to Organizations. Same idea for ?from=proposal-quality — the proposal
+  // detail page lives under /admin/organizations/[id]/proposals/... but we
+  // want the highlight to stay on Proposal Quality.
   const fromAgency = searchParams?.get("from") === "agency";
+  const fromProposalQuality = searchParams?.get("from") === "proposal-quality";
+  const fromGrantQuality = searchParams?.get("from") === "grant-quality";
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const initials =
@@ -118,40 +162,63 @@ export function AdminSidebar({ user }: { user: User }) {
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto">
-        {navItems.map((item) => {
-          let isActive: boolean;
-          if (fromAgency) {
-            // Override: viewing an org via ?from=agency is conceptually still
-            // the Agencies section, so only the Agencies tile should light up.
-            isActive = item.href === "/admin/agencies";
-          } else {
-            isActive = item.exact
-              ? pathname === item.href
-              : pathname === item.href ||
-                pathname.startsWith(item.href + "/");
-          }
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2.5 md:py-2 text-sm transition-colors",
-                isActive
-                  ? "bg-foreground/[0.06] font-medium text-foreground"
-                  : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
-              )}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {!collapsed && (
-                <span className="font-mono text-xs tracking-wide uppercase">
-                  {item.label}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+      {/* Navigation — grouped by purpose */}
+      <nav className="flex-1 space-y-3 p-2 overflow-y-auto">
+        {navGroups.map((group, groupIdx) => (
+          <div key={group.label} className="space-y-0.5">
+            {!collapsed ? (
+              // Skip the label for the single-item Overview group — it'd be
+              // redundant. For everything else, show a small section heading.
+              group.items.length > 1 || group.label !== "Overview" ? (
+                <div className="px-3 pt-1 pb-1">
+                  <span className="font-mono text-[9px] tracking-[0.18em] text-muted-foreground/70 uppercase">
+                    {group.label}
+                  </span>
+                </div>
+              ) : null
+            ) : (
+              // In collapsed mode, render a thin divider between groups
+              // (skip the very first group's divider).
+              groupIdx > 0 && (
+                <div className="mx-3 my-2 h-px bg-border" aria-hidden />
+              )
+            )}
+            {group.items.map((item) => {
+              let isActive: boolean;
+              if (fromAgency) {
+                isActive = item.href === "/admin/agencies";
+              } else if (fromProposalQuality) {
+                isActive = item.href === "/admin/proposal-quality";
+              } else if (fromGrantQuality) {
+                isActive = item.href === "/admin/grant-quality";
+              } else {
+                isActive = item.exact
+                  ? pathname === item.href
+                  : pathname === item.href ||
+                    pathname.startsWith(item.href + "/");
+              }
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2.5 md:py-2 text-sm transition-colors",
+                    isActive
+                      ? "bg-foreground/[0.06] font-medium text-foreground"
+                      : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  {!collapsed && (
+                    <span className="font-mono text-xs tracking-wide uppercase">
+                      {item.label}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* User section */}
