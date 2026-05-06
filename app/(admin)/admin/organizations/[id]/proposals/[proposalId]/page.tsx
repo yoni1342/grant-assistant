@@ -4,10 +4,14 @@ import { AdminProposalDetailClient } from "./admin-proposal-detail-client";
 
 export default async function AdminProposalPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string; proposalId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id: orgId, proposalId } = await params;
+  const sp = await searchParams;
+  const from = sp.from === "proposal-quality" ? "proposal-quality" : null;
   const adminDb = createAdminClient();
 
   const { data: proposal, error } = await adminDb
@@ -60,6 +64,7 @@ export default async function AdminProposalPage({
       grant={proposal.grant}
       orgId={orgId}
       orgName={org?.name || "Organization"}
+      from={from}
     />
   );
 }

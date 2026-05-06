@@ -1671,10 +1671,22 @@ export function OrgDetailClient({
   // on the global Organizations list.
   const fromAgency = searchParams.get("from") === "agency";
   const fromAgencyId = searchParams.get("agencyId");
+  const fromProposalQuality = searchParams.get("from") === "proposal-quality";
+  const fromGrantQuality = searchParams.get("from") === "grant-quality";
   const backHref = fromAgency && fromAgencyId
     ? `/admin/agencies/${fromAgencyId}`
-    : "/admin/organizations";
-  const backLabel = fromAgency ? "Back to Agency" : "Back to Organizations";
+    : fromProposalQuality
+      ? "/admin/proposal-quality"
+      : fromGrantQuality
+        ? "/admin/grant-quality"
+        : "/admin/organizations";
+  const backLabel = fromAgency
+    ? "Back to Agency"
+    : fromProposalQuality
+      ? "Back to Proposal Quality"
+      : fromGrantQuality
+        ? "Back to Grant Quality"
+        : "Back to Organizations";
   const [viewAsOrgLoading, setViewAsOrgLoading] = useState(false);
 
   async function handleViewAsOrg() {

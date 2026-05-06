@@ -24,6 +24,7 @@ interface Props {
   grant: any;
   orgId: string;
   orgName: string;
+  from: "proposal-quality" | null;
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -33,7 +34,14 @@ export function AdminProposalDetailClient({
   grant,
   orgId,
   orgName,
+  from,
 }: Props) {
+  const backHref =
+    from === "proposal-quality"
+      ? "/admin/proposal-quality"
+      : `/admin/organizations/${orgId}`;
+  const backLabel =
+    from === "proposal-quality" ? "Back to Proposal Quality" : `Back to ${orgName}`;
   const sectionsRef = useRef<ProposalSectionsHandle>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportType, setExportType] = useState<"pdf" | "docx" | null>(null);
@@ -87,10 +95,10 @@ export function AdminProposalDetailClient({
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-6">
-        <Link href={`/admin/organizations/${orgId}`}>
+        <Link href={backHref}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to {orgName}
+            {backLabel}
           </Button>
         </Link>
       </div>
