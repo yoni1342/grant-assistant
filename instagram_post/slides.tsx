@@ -528,7 +528,7 @@ export function Slide1() {
    ════════════════════════════════════════════════════════════ */
 export function Slide2() {
   const problems = [
-    { n: "01", t: "Fragmented", body: "Five sources. Five interfaces. Hours lost to copy-paste reconciliation." },
+    { n: "01", t: "Fragmented", body: "Multiple sources. Multiple interfaces. Hours lost to copy-paste reconciliation." },
     { n: "02", t: "Guesswork", body: "You read the RFP, assume you qualify. Three weeks later you find out you never were." },
     { n: "03", t: "Generic", body: "Templates built for anyone win for no one. Funders read hundreds." },
     { n: "04", t: "Invisible", body: "Pipeline in spreadsheets, deadlines in inboxes. A $500K grant fails at management." },
@@ -734,7 +734,7 @@ export function Slide3() {
       >
         {[
           { v: "15+", l: "Data Sources Unified", sub: "Federal, state, philanthropic — deduplicated" },
-          { v: "85%", l: "Avg. Eligibility Score", sub: "AI screening on 6 dimensions" },
+          { v: "85%", l: "Target Grant Matching and Alignment Score", sub: "AI screening on 6 dimensions" },
           { v: "Millions", l: "Pipeline Managed", sub: "End-to-end from discovery to award" },
         ].map((s, i) => (
           <div
@@ -756,7 +756,7 @@ export function Slide3() {
             <div className="flex flex-col items-end text-right">
               <span
                 className="font-mono uppercase"
-                style={{ fontSize: 10, letterSpacing: "0.22em", color: "#0A0A0A" }}
+                style={{ fontSize: 10, letterSpacing: "0.22em", color: "#0A0A0A", maxWidth: 200, lineHeight: 1.35 }}
               >
                 {s.l}
               </span>
@@ -785,7 +785,7 @@ function MiniDiscoveryCard() {
   const results = [
     { title: "Community Health Worker Initiative", funder: "CDC NCIPC", amount: "$450,000", source: "Grants.gov", score: "92%" },
     { title: "Rural Youth Substance Prevention", funder: "SAMHSA", amount: "$250,000", source: "Grants.gov", score: "87%" },
-    { title: "Family Resilience & Peer Support", funder: "Gates Foundation", amount: "$180,000", source: "ProPublica", score: "84%" },
+    { title: "Family Resilience & Peer Support", funder: "CDC NCIPC", amount: "$180,000", source: "Grants.gov", score: "84%" },
   ];
   return (
     <div className="rounded-[10px] bg-white overflow-hidden" style={{ border: "1px solid #e2e2e2", boxShadow: "0 24px 60px -28px rgba(10,10,10,0.35)" }}>
@@ -832,12 +832,12 @@ function MiniDiscoveryCard() {
 
 function MiniScreeningCard() {
   const dims = [
-    { label: "Mission", value: 18, color: "#22c55e" },
-    { label: "Population", value: 16, color: "#22c55e" },
-    { label: "Program", value: 17, color: "#22c55e" },
-    { label: "Geography", value: 14, color: "#eab308" },
-    { label: "Capacity", value: 12, color: "#eab308" },
-    { label: "Track Record", value: 16, color: "#22c55e" },
+    { label: "Mission", value: 19, color: "#22c55e" },
+    { label: "Population", value: 17, color: "#22c55e" },
+    { label: "Program", value: 18, color: "#22c55e" },
+    { label: "Geography", value: 15, color: "#eab308" },
+    { label: "Capacity", value: 15, color: "#eab308" },
+    { label: "Track Record", value: 18, color: "#22c55e" },
   ];
   return (
     <div className="rounded-[10px] bg-white overflow-hidden" style={{ border: "1px solid #e2e2e2", boxShadow: "0 24px 60px -28px rgba(10,10,10,0.35)" }}>
@@ -1100,8 +1100,8 @@ export function Slide4() {
           <span style={{ color: ACCENT }}>One</span> search.
         </>
       }
-      sub="Cross-reference Grants.gov, ProPublica, USAspending, CFDA and PND simultaneously. Structured, deduplicated, ranked — no manual reconciliation."
-      pills={["Grants.gov", "ProPublica", "USAspending", "CFDA", "PND"]}
+      sub="Cross-reference Grants.gov, ProPublica, USAspending, SAM.gov, PND and 10 more — simultaneously. Structured, deduplicated, ranked. No manual reconciliation."
+      pills={["Grants.gov", "ProPublica", "USAspending", "SAM.gov", "PND", "+ 10 more"]}
       card={<MiniDiscoveryCard />}
     />
   );
@@ -1127,7 +1127,7 @@ export function Slide5() {
         </>
       }
       sub="AI-powered eligibility scoring calibrated to your organization's profile. An 80%+ composite means submit. Anything below means walk."
-      pills={["6-dimension", "Org-calibrated", "Concerns flagged", "Strong fit"]}
+      pills={["6-dimension", "Org-calibrated", "Concerns flagged", "Strong Fit"]}
       card={<MiniScreeningCard />}
     />
   );
