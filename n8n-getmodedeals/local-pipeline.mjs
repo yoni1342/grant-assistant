@@ -158,12 +158,12 @@ if (selected.length < MIN_COUNT) {
   process.exit(2);
 }
 
-// ---------- Hero slideshow GIF ----------
-// Downloads top-4 product images and composites an animated GIF with a price
-// caption per frame. For production (n8n) this needs to be built + hosted
-// separately; the email HTML expects ./hero-slideshow.gif relative to itself.
-const GIF_OUT = process.env.GIF_OUT || './hero-slideshow.gif';
-const GIF_FRAMES = selected.length; // every selected deal becomes a slide
+// ---------- Hero slide (static PNG) ----------
+// Downloads the top deal's image and composites a single 580x320 slide with
+// merchant tag at top + product image + indigo price strip at bottom. Static
+// PNG so it works in every email client (no Outlook GIF quirks) and can be
+// hosted as a single image without daily-rebuild infra.
+const HERO_OUT = process.env.HERO_OUT || './hero-slide.png';
 const FRAMES_DIR = '/tmp/gmd-frames';
 await fs.mkdir(FRAMES_DIR, { recursive: true });
 
@@ -185,46 +185,28 @@ const downloadImage = (urlStr, dest) =>
 
 const sh = (s) => String(s).replace(/(["\\$`])/g, '\\$1');
 
-console.log(`[gif] building ${GIF_FRAMES}-frame slideshow…`);
-const framePaths = [];
-for (let i = 0; i < GIF_FRAMES; i++) {
-  const p = selected[i];
-  const raw = `${FRAMES_DIR}/raw-${i}`;
-  const out = `${FRAMES_DIR}/frame-${i}.png`;
-  try {
-    await downloadImage(p.image, raw);
-    const caption = p.discountPct
-      ? `${p.priceLabel}  ·  ${p.discountPct}% OFF`
-      : (p.priceLabel || '');
-    // 580x320 frame: top white area for product (260px), bottom indigo strip
-    // for price (60px). Product fixed at 180x180 with breathing room.
-    const cmd = [
-      'convert',
-      `-size 580x320 xc:'#FFFFFF'`,
-      // Bottom indigo strip
-      `-fill '#1E1B4B' -draw "rectangle 0,260 580,320"`,
-      // Product image (scaled, centered in upper 260px area)
-      `\\( "${raw}" -resize 180x180 \\) -gravity north -geometry +0+50 -composite`,
-      // Merchant tag (red, top of frame)
-      `-fill '#DC2626' -gravity north -font DejaVu-Sans-Bold -pointsize 11 -annotate +0+22 "${sh((p.merchant || '').toUpperCase())}"`,
-      // Price caption (white on indigo strip)
-      `-fill '#FFFFFF' -gravity south -font DejaVu-Sans-Bold -pointsize 22 -annotate +0+22 "${sh(caption)}"`,
-      `"${out}"`,
-    ].join(' ');
-    execSync(cmd, { stdio: 'pipe' });
-    framePaths.push(out);
-  } catch (e) {
-    console.warn(`[gif] frame ${i} failed: ${e.message} — skipping`);
-  }
-}
-
-if (framePaths.length >= 2) {
-  // -delay is in centiseconds; 200 = 2.0s per frame
-  const gifCmd = `convert -delay 200 -loop 0 ${framePaths.map((f) => `"${f}"`).join(' ')} -layers OptimizePlus "${GIF_OUT}"`;
-  execSync(gifCmd, { stdio: 'pipe' });
-  console.log(`[gif] wrote ${path.resolve(GIF_OUT)} (${framePaths.length} frames)`);
-} else {
-  console.warn('[gif] not enough frames built; hero will fall back to a static image');
+const top = selected[0];
+const rawTop = `${FRAMES_DIR}/raw-hero`;
+console.log(`[hero] building static slide for top deal: ${top.title.slice(0, 60)}`);
+try {
+  await downloadImage(top.image, rawTop);
+  const caption = top.discountPct
+    ? `${top.priceLabel}  ·  ${top.discountPct}% OFF`
+    : (top.priceLabel || '');
+  // 580x320 slide: white top area for product, indigo strip at bottom for price.
+  const cmd = [
+    'convert',
+    `-size 580x320 xc:'#FFFFFF'`,
+    `-fill '#1E1B4B' -draw "rectangle 0,260 580,320"`,
+    `\\( "${rawTop}" -resize 180x180 \\) -gravity north -geometry +0+50 -composite`,
+    `-fill '#DC2626' -gravity north -font DejaVu-Sans-Bold -pointsize 11 -annotate +0+22 "${sh((top.merchant || '').toUpperCase())}"`,
+    `-fill '#FFFFFF' -gravity south -font DejaVu-Sans-Bold -pointsize 22 -annotate +0+22 "${sh(caption)}"`,
+    `"${HERO_OUT}"`,
+  ].join(' ');
+  execSync(cmd, { stdio: 'pipe' });
+  console.log(`[hero] wrote ${path.resolve(HERO_OUT)}`);
+} catch (e) {
+  console.error(`[hero] failed: ${e.message}`);
 }
 
 // ---------- Render ----------
@@ -322,7 +304,7 @@ const heroKicker = '#A5B4FC';
 const heroCta = '#FFFFFF';
 const heroCtaText = '#1E1B4B';
 
-const heroGifPath = path.basename(GIF_OUT);
+const heroSlidePath = path.basename(HERO_OUT);
 
 const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="color-scheme" content="light"><title>${escapeHtml(subject)}</title></head>
@@ -360,7 +342,7 @@ const html = `<!DOCTYPE html>
               <tr>
                 <td align="center">
                   <a href="https://getmodedeals.com" style="text-decoration:none;display:inline-block;line-height:0;">
-                    <img src="${heroGifPath}" alt="Today's deals slideshow" width="540" style="max-width:100%;height:auto;display:block;border:0;border-radius:8px;background-color:#FFFFFF;" />
+                    <img src="${heroSlidePath}" alt="Today's top deal" width="540" style="max-width:100%;height:auto;display:block;border:0;border-radius:8px;background-color:#FFFFFF;" />
                   </a>
                 </td>
               </tr>
