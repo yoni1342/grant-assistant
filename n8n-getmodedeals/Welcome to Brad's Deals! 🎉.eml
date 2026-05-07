@@ -1,0 +1,1482 @@
+Delivered-To: abenezertileye2003@gmail.com
+Received: by 2002:a17:907:6091:b0:bc5:171b:8dee with SMTP id ht17csp1116497ejc;
+        Thu, 7 May 2026 01:43:49 -0700 (PDT)
+X-Received: by 2002:a0c:e08a:0:b0:8ac:aa89:6bbc with SMTP id 6a1803df08f44-8bc4259256emr95229306d6.16.1778143429112;
+        Thu, 07 May 2026 01:43:49 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1778143429; cv=none;
+        d=google.com; s=arc-20240605;
+        b=auHfofJ6Tofi6jSvM7Hv5FZucbPRJ4NsURrgwOaCsOPARNFTVNUsZQlKYeFLsS3QMf
+         fFvfQ/XImkdCQne8DZToKUXritA/4hk3C1J/xgQbrnLwQqV1Xl8HpNrFqV0Z8WoUHeof
+         xcoKmW6Dm6f/fbEwxuIBSpFHiJRFQ1XiBUVBQ6wutmDoGiWwNsWxU5VllKnWCbg/tQ58
+         XUkRzQDKXgd3qr4Pc8rIWr+vY+zp9j31IHF9x5T4qALCVTCKqEeR1dsvBBHBtmZNlRmd
+         2QoONh/55TnnFia5jXbjGQB5nuhO9m35a2GYYob8A9ORs7tXU4GnuoeK+sehSwjlGHwe
+         /14g==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:list-unsubscribe-post:list-unsubscribe:reply-to:subject
+         :message-id:mime-version:from:date:content-transfer-encoding
+         :dkim-signature:dkim-signature;
+        bh=2R2RLfH+SR8hGexf2mhLakuYkakBrQkaSjMA7sb0s7c=;
+        fh=PH6FviWkoyH9yNkX4ZfSgRqo+zC+wDBmoHp20gRwtbA=;
+        b=BP37xJNClN4f3pXrJpusggQXAUjfCLcV/Rg9826vBafGskvXh5D+dzt4oTvJD4cRBC
+         OJ2KON7o3O3acgzodmk1PLhD/dESyu/gZRCoWWdA19pY7tInFumilKBIcIfWOV0/G4W1
+         NKZHH2c6xRKFiIphyYhO2NZkrpWAUX5amHXy7XadsWCWQy95TeoamE8Qt1fAL9qQ9M9A
+         NLsAexr+WMk9UmtgdU2Ne9iziEH+BId30NOYPFoHwtYL2b+87B1qMbQ/G3AagElLlRiN
+         YercpDcEy62f7ia4/MaTC7ka1wE/sIO6O8mDJgyzx1mcWcWdyC4wXqHriz8ccE43NgSI
+         7BbQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@bradsdeals.com header.s=s1 header.b="Jq1/MCgl";
+       dkim=pass header.i=@sendgrid.info header.s=smtpapi header.b="xHvkK/o9";
+       spf=pass (google.com: domain of bounces+5595449-8d2a-abenezertileye2003=gmail.com@emails.bradsdeals.com designates 168.245.26.167 as permitted sender) smtp.mailfrom="bounces+5595449-8d2a-abenezertileye2003=gmail.com@emails.bradsdeals.com";
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=bradsdeals.com
+Return-Path: <bounces+5595449-8d2a-abenezertileye2003=gmail.com@emails.bradsdeals.com>
+Received: from o555.emails.bradsdeals.com (o555.emails.bradsdeals.com. [168.245.26.167])
+        by mx.google.com with ESMTPS id 6a1803df08f44-8b53d358ef9si254732476d6.533.2026.05.07.01.43.48
+        for <abenezertileye2003@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Thu, 07 May 2026 01:43:49 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounces+5595449-8d2a-abenezertileye2003=gmail.com@emails.bradsdeals.com designates 168.245.26.167 as permitted sender) client-ip=168.245.26.167;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@bradsdeals.com header.s=s1 header.b="Jq1/MCgl";
+       dkim=pass header.i=@sendgrid.info header.s=smtpapi header.b="xHvkK/o9";
+       spf=pass (google.com: domain of bounces+5595449-8d2a-abenezertileye2003=gmail.com@emails.bradsdeals.com designates 168.245.26.167 as permitted sender) smtp.mailfrom="bounces+5595449-8d2a-abenezertileye2003=gmail.com@emails.bradsdeals.com";
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=bradsdeals.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=bradsdeals.com;
+	h=content-transfer-encoding:content-type:date:from:mime-version:subject:
+	reply-to:list-unsubscribe:list-unsubscribe-post:to:cc:content-type:date:
+	feedback-id:from:subject:to;
+	s=s1; t=1778143428;
+	bh=2R2RLfH+SR8hGexf2mhLakuYkakBrQkaSjMA7sb0s7c=;
+	b=Jq1/MCgl7dZ7e/grp8fiQ5rqnRTVPRctIwz9qINWcI9hF/zUJIHZyQaX0+l5HxPPLVVo
+	WZ8DNXKK4qYHQx00IiFJSQHpCP/glaQQEEYWTaNBIGnbYQfAHZdNuzA8iVabN8Ild8oNj/
+	cSj3IZdEfFoyYw8J+KDYVfljej8w30os//fKv3Y/qmeRNAyaDWPznfRaRgiVUrMRrPltEM
+	/50Vfut+EqfVJoa5N8Gi0FuJsUV1rL/Kj32rGGfpU6/9ZwxIOUNyLeT/UxqnImbRPtpBEA
+	hn5hB4FLV1lTG52oNX3cxEcmExd9MbwRs7vgpNZBd0NoxWCXU0Q9++jxZLERav6g==
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sendgrid.info;
+	h=content-transfer-encoding:content-type:date:from:mime-version:subject:
+	reply-to:list-unsubscribe:list-unsubscribe-post:to:cc:content-type:date:
+	feedback-id:from:subject:to;
+	s=smtpapi; t=1778143428;
+	bh=2R2RLfH+SR8hGexf2mhLakuYkakBrQkaSjMA7sb0s7c=;
+	b=xHvkK/o9RmnlSQPG8zfwQZdrQveQNLzMpaUgA/VwBwNzzQD/m7mknwbnsSR2kzu+Iom4
+	+d+AD4Oav/OiJq+ZzMu1ShwL0BkmaiSf1SHYl1e/xPjO27wGFoLyvGr3Sa8jkkZIJIpbWZ
+	TxH8bFGrVXebbwXjGVRXIfMMGBEpd7I6A=
+Received: by recvd-75b5f7f7fc-ktx52 with SMTP id recvd-75b5f7f7fc-ktx52-1-69FC50C4-8
+	2026-05-07 08:43:48.213419907 +0000 UTC m=+731054.672098154
+Received: from NTU5NTQ0OQ (unknown)
+	by geopod-ismtpd-62 (SG) with HTTP
+	id RM-bPXwjRU6kVDt6pCWtfw
+	Thu, 07 May 2026 08:43:48.186 +0000 (UTC)
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset=utf-8
+Date: Thu, 07 May 2026 08:43:48 +0000 (UTC)
+From: Brad's Deals <shop@bradsdeals.com>
+Mime-Version: 1.0
+Message-ID: <RM-bPXwjRU6kVDt6pCWtfw@geopod-ismtpd-62>
+Subject: Welcome to Brad's Deals! =?UTF-8?B?8J+OiQ==?=
+Reply-To: support@bradsdeals.com
+List-Unsubscribe: 
+ =?us-ascii?Q?=3Chttps=3A=2F=2Fusers=2Ebradsdeals=2Ecom=2Fapi=2Fv4=2Femails=2Fab279ff565564d6a32?=
+ =?us-ascii?Q?dfbfc9f1cf57c5=2Funsubscribe=3E?=
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+X-SG-EID: 
+ =?us-ascii?Q?u001=2ET2bKwKYwAvrEbBxxAF3+SFArfDc4VRkDxm5WppMzc7l8TdK3GljWAnnz7?=
+ =?us-ascii?Q?KOo=2FKiI2cuwluW4=2FCroCrEGE9U4DdYg9GNRHsjg?=
+ =?us-ascii?Q?TrD6tMWL+a4WCceAwD9rsyZyfzeNKSt0tt+L2hc?=
+ =?us-ascii?Q?CJR3eQiWJZhI+Rx51y2AFNRdRz+00ZgIbjtMxhn?=
+ =?us-ascii?Q?bFgK=2Ff2wbQFVNFy0LUiadBlXhlffhVQEPtzuLEj?=
+ =?us-ascii?Q?Yd6QETZHQCLzwpc08iMjDqcFVn+bLUWT=2FjJ0EPl?= =?us-ascii?Q?iWSh?=
+X-SG-ID: 
+ =?us-ascii?Q?u001=2ESdBcvi+Evd=2FbQef8eZF3BpTL9BgbK5wfSJMJGMsmprDrjDW6011yC6XOo?=
+ =?us-ascii?Q?3uya5MXCK83YSbYIkNDk3qIlR0qGi4jcpqYdpAL?=
+ =?us-ascii?Q?IhIE3nror5A2Hiwlcs=2FE5DOluDSV6NaQ=2Fr=2FGrEw?=
+ =?us-ascii?Q?d=2Fczc7YL3vwvftEPMqH=2FWk7BgVEv19IevFBf2Hd?=
+ =?us-ascii?Q?PWwed7jhPTjnQFth33bCHceI9Lru84If+2CAT2g?=
+ =?us-ascii?Q?0BylvG34vMrBnQb3Lec7EnluVM4bdvL=2FV07vNxz?=
+ =?us-ascii?Q?Dr1JgLmR0KJCylJ8VIhelJaztY7X4KBBQFOiDaz?=
+ =?us-ascii?Q?ngSdpWYJsLNbW5S0sSm9sZUD9JM4kzsHBUfb45m?=
+ =?us-ascii?Q?2qh0aEJoM=2FGnutnYXr6Nl+xLVDRs4dHfiFiDmro?=
+ =?us-ascii?Q?HdvD+vaDAF6ScukJ=2FmQnwfZ8n8p8TX5jKLYmzSg?=
+ =?us-ascii?Q?x0=2FXII+TtAUEHMW8a9Xtwqt8vb0JQ0xDeUcxUes?=
+ =?us-ascii?Q?PmmngFEuHR1Ao9+7X2qWcmuTQAoUR4LM3BIEUgc?=
+ =?us-ascii?Q?tAaYUdVwvT8rQ8TkbD5A8BP26fbiq9tQyuKjjz9?=
+ =?us-ascii?Q?iSRv=2FsGV2mxZlHOoywYN=2FwLYVKCW6kEz1auSXHm?=
+ =?us-ascii?Q?fNjThqTccqCS?=
+To: abenezertileye2003@gmail.com
+X-Entity-ID: u001.5nDX582R9EmR+HpVgjnZgg==
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional //EN" "http://www=
+.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns=3D"http://www.w3.org/1999/xhtml" style=3D"color-scheme: light; =
+supported-color-schemes: light;">
+  <head>
+    <meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3DUTF-8=
+">
+    <style>.ReadMsgBody {
+width: 100%;
+}
+.ExternalClass {
+width: 100%;
+}
+.ExternalClass {
+line-height: 100%;
+}
+@media only screen and (max-width: 480px) {
+  .m-shell {
+    font-size: 18px !important; width: 100% !important;
+  }
+  .m-padding-left-35 {
+    padding-left: 35px !important;
+  }
+  .m-padding-right-35 {
+    padding-right: 35px !important;
+  }
+  .fluid-img img {
+    width: 100% !important; max-width: 100% !important; height: auto !impor=
+tant;
+  }
+  .column {
+    float: left !important; width: 100% !important; display: block !importa=
+nt;
+  }
+  .deal_x1 {
+    padding-bottom: 70px !important;
+  }
+}
+</style>
+  </head>
+  <body><img src=3D"https://links.bradsdeals.com/ss/o/u001.SHZ_kV12b0l8od-T=
+gv3gmw/4qf/YqHE1qwcTBKEtk2dbTBKgA/ho.gif" alt=3D"" width=3D"1" height=3D"1"=
+ border=3D"0" style=3D"height:1px !important;width:1px !important;border-wi=
+dth:0 !important;margin-top:0 !important;margin-bottom:0 !important;margin-=
+right:0 !important;margin-left:0 !important;padding-top:0 !important;paddin=
+g-bottom:0 !important;padding-right:0 !important;padding-left:0 !important;=
+"/>
+<div style=3D"display:none !important;visibility:hidden;mso-hide:all;font-s=
+ize:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:=
+0;overflow:hidden;">You're in! Now you can start saving on all the brands y=
+ou know and love.</div>
+<p style=3D"margin: 0 0 .75em; padding: 0;"><img border=3D"0" width=3D"1" h=
+eight=3D"1" src=3D"https://aa.agkn.com/adscores/s.pixel?sid=3D9112329048&am=
+p;em=3D1ee4fafcf547c9c90b8952593efbd4ecf7ca4442"></p>
+<!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPer=
+Inch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+<meta http-equiv=3D"Content-type" content=3D"text/html; charset=3Dutf-8">
+<meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D1,=
+ maximum-scale=3D1">
+<meta http-equiv=3D"X-UA-Compatible" content=3D"IE=3Dedge">
+<meta name=3D"format-detection" content=3D"date=3Dno">
+<meta name=3D"format-detection" content=3D"address=3Dno">
+<meta name=3D"format-detection" content=3D"telephone=3Dno">
+<meta name=3D"x-apple-disable-message-reformatting">
+<meta name=3D"color-scheme" content=3D"light">
+<meta name=3D"supported-color-schemes" content=3D"light">
+
+
+<!--[if gte mso 9]><style type=3D"text/css" media=3D"all">sup { font-size: =
+100% !important; }</style><![endif]-->
+
+
+
+
+
+
+
+<table width=3D"100%" border=3D"0" cellspacing=3D"0" cellpadding=3D"0" styl=
+e=3D"width: 100%; margin: 0; padding: 0;" bgcolor=3D"#fff">
+  <tr>
+    <td style=3D"width: 100%; margin: 0; padding: 0;" align=3D"center" vali=
+gn=3D"top">
+<div style=3D"display: none; max-height: 0px; overflow: hidden;">
+        =CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=
+=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C=
+&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=
+=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nb=
+sp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=
+=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=
+=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=
+=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=
+=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C=
+&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=
+=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nb=
+sp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=
+=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=
+=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=
+=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=
+=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C=
+&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=
+=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nb=
+sp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=
+=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=
+=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=
+=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=
+=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C=
+&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=
+=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nb=
+sp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=
+=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=
+=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=
+=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=
+=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C=
+&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=
+=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nb=
+sp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=
+=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=
+=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=
+=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=
+=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C=
+&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=
+=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nb=
+sp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=
+=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=
+=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=
+=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=
+=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C=
+&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=
+=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nb=
+sp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=
+=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=
+=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=
+=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=
+=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C=
+&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;=CD=8F=
+=E2=80=8C&nbsp;=CD=8F=E2=80=8C&nbsp;
+      </div>
+
+
+      <table class=3D"m-shell" border=3D"0" cellspacing=3D"0" cellpadding=
+=3D"0" width=3D"650" style=3D"font-family: Arial,sans-serif; font-size: 15p=
+x; line-height: 1.4; width: 650px; min-width: 440px;" bgcolor=3D"#fff">
+        <tr>
+          <td>
+<table width=3D"100%" border=3D"0" cellspacing=3D"0" cellpadding=3D"0">
+              <tr><td>
+                <table align=3D"center" border=3D"0" cellpadding=3D"0" cell=
+spacing=3D"0" role=3D"presentation" style=3D"width: 100%;" bgcolor=3D"#fff"=
+><tr><td style=3D"padding: 20px 0;" align=3D"center"><a href=3D"https://lin=
+ks.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FpLIND=
+3GPd73CoNql1EW-pXiQdvGVfH5VsE2Y48t72FCLgnhWXQXgh_yn1ydEjHWj5-voVsHMonqCpQsO=
+2Azbm0ykNko71LuShS2HopYQ65rWvy-YPxNmMIOy20yi7zkgkuu7DXWQCoWYaXHWYmW1a0W9yC9=
+o2V8wXuMgP3-SjAbvr43j3YhaBol8u3sGJDjmUPoKL5bRrnSJ60PPGszp0Bt1zShvj_om4LBBl6=
+hyY2lbcJ0JIZFBDR5sMXzEzsed1A36VPcFmJQl3MJm1pPe6VDhi-rRsT-iaRq8S22hww-9bkwAL=
+bWTKPJ8ClpcGVonEcP2Qlr7exSv2cf0x2utqnQNHhE5NpcOBi7aXThVSN70vy8XzGLn2mbZ_Fn0=
+njCeo/4qf/YqHE1qwcTBKEtk2dbTBKgA/h0/h001.iJYPSGBUBiW-6Fk6VrPDlyTHGUYEzfcghQ=
+Pej4TG1e0" style=3D"color: #076CA1;"><img src=3D"https://braze-images.com/a=
+ppboy/communication/assets/image_assets/images/66aa54d5d7b02c005c088e71/ori=
+ginal.png?1722438869" width=3D"125" height=3D"52" alt=3D"Shop Brad's Deals"=
+ style=3D"display: block; margin: 0 auto;"></a></td></tr></table>
+              </td></tr>
+              <tr>
+                <td bgcolor=3D"#0E3651" style=3D"height: 1px; padding: 0;">
+<table cellpadding=3D"0" cellspacing=3D"0" border=3D"0" style=3D"font-size:=
+ 0; line-height: 0;"><tr>
+<td style=3D"font-size: 0; line-height: 0;"><img src=3D"https://snl.bradsde=
+als.com/imp?s=3D124976400&amp;m=3Dab279ff565564d6a32dfbfc9f1cf57c5&amp;p=3D=
+202605070843&amp;lctg=3D{LCEE}&amp;stpe=3Dpixel" width=3D"1" height=3D"1" b=
+order=3D"0" alt=3D"" style=3D"display: block;"></td>
+<td style=3D"font-size: 0; line-height: 0;"><img src=3D"https://snl.bradsde=
+als.com/imp?s=3D124976401&amp;m=3Dab279ff565564d6a32dfbfc9f1cf57c5&amp;p=3D=
+202605070843&amp;lctg=3D{LCEE}&amp;stpe=3Dpixel" width=3D"1" height=3D"1" b=
+order=3D"0" alt=3D"" style=3D"display: block;"></td>
+<td style=3D"font-size: 0; line-height: 0;"><img src=3D"https://snl.bradsde=
+als.com/imp?s=3D124976402&amp;m=3Dab279ff565564d6a32dfbfc9f1cf57c5&amp;p=3D=
+202605070843&amp;lctg=3D{LCEE}&amp;stpe=3Dpixel" width=3D"1" height=3D"1" b=
+order=3D"0" alt=3D"" style=3D"display: block;"></td>
+<td style=3D"font-size: 0; line-height: 0;"><img src=3D"https://snl.bradsde=
+als.com/imp?s=3D124976403&amp;m=3Dab279ff565564d6a32dfbfc9f1cf57c5&amp;p=3D=
+202605070843&amp;lctg=3D{LCEE}&amp;stpe=3Dpixel" width=3D"1" height=3D"1" b=
+order=3D"0" alt=3D"" style=3D"display: block;"></td>
+<td style=3D"font-size: 0; line-height: 0;"><img src=3D"https://snl.bradsde=
+als.com/imp?s=3D124976404&amp;m=3Dab279ff565564d6a32dfbfc9f1cf57c5&amp;p=3D=
+202605070843&amp;lctg=3D{LCEE}&amp;stpe=3Dpixel" width=3D"1" height=3D"1" b=
+order=3D"0" alt=3D"" style=3D"display: block;"></td>
+</tr></table>
+</td>
+              </tr>
+            </table>
+<table width=3D"100%" border=3D"0" cellspacing=3D"0" cellpadding=3D"0" bgco=
+lor=3D"#ffffff" style=3D"color: #525252;">
+<tr><td>
+<a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV1rl3Y-c2j1=
+ZAjrpda4TZ45bhB0FpLIND3GPd73CoNql1EW-pXiQdvGVfH5VsE2Y48t72FCLgnhWXQXgh_yn1y=
+dEjHWj5-voVsHMonqCpQsO2Azbm0ykNko71LuShS2HopYQ65rWvy-YPxNmMIOy20yi7zkgkuu7D=
+XWQCoWYaXHWYmW1a0W9yC9o2V8wXuMgP3-SjAbvr43j3YhaBol8u3sGJDjmUPoKL5bRrnSJ60PP=
+Gszp0Bt1zShvj_om4LBBl6hyY2lbcJ0JIZFBDR5sMXzEzsed1A36VPcFmJQl3MJm1pPe6VDhi-r=
+RsT-iaRq8S22hww-9bkwALbWTKPJ8ClpcGVonEcP2Qlr7exSv2cf0x2utqnQNHhE5NpcOBi7aXT=
+hVSN70vy8XzGLn2mbZ_Fn0njCeo/4qf/YqHE1qwcTBKEtk2dbTBKgA/h1/h001.YAD3CnLTJAN0=
+L2B-iTqNFeiNlZzOgYTxQuaPJ0CoU6M" style=3D"display: block; color: #076CA1;" =
+target=3D"_blank"><img src=3D"https://braze-images.com/appboy/communication=
+/assets/image_assets/images/67ed8817acdcfe006445314e/original.gif?174362011=
+9" style=3D"width: 100%; max-width: 650px; display: block;" width=3D"650" a=
+lt=3D"Welcome to Brad"></a>
+</td></tr>
+
+<tr><td style=3D"padding: 35px 35px 20px;" align=3D"center" bgcolor=3D"#fff=
+fff">  <h1 style=3D"color: #209CFF; font-family: 'Trebuchet MS', Arial, san=
+s-serif; font-size: 30px; line-height: 1.2; font-weight: 600; margin: 0; pa=
+dding: 0;" align=3D"center"> Get Deals Picked Just for You =F0=9F=8E=AF </h=
+1>
+<p style=3D"color: #0e3651; font-family: 'Trebuchet MS', Arial, sans-serif;=
+ font-size: 18px; margin: 10px 0 .75em; padding: 0;">  Tell us what you lov=
+e, and we=E2=80=99ll handle the rest! Set your preferences to get personali=
+zed deals from your favorite stores and categories. </p>
+</td></tr>
+<tr><td>
+<a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV1rl3Y-c2j1=
+ZAjrpda4TZ45bhB0FqKuSBLxTM0pJy8Sk7eAtBZoQ8UtFLM4L3Yb6OjrmJKQrj3QAsuvznecjGc=
+Kpx4XZV3ewq5nUTKAUWhpM6t3GJo-ii0tb_Npf09ncpbPBkc4REJusWMlHck4_LjKzFidf7U2Q8=
+of3JTh0D3YQMNSrb0EJXP1m4ZMRf0o0XffDtXMs0rqja1Y1DzLymrmzRh-x2PnD2uG3i1ZmK8DM=
+Xk_meM1-2RDVWv1bB4KOlntbredSiou6yl1MmMfYG5cSpUfLrJq91cSPe6bjyGjNyl-ibfpwxeM=
+q5YmXaqNiJU8KikTvITJiWPBZLO-uwUMRhHiFY4Sqo5K_F5J_3GeQNsg4ATJtMfqCxPlP_bhpqI=
+1aopg_xEzpyC8bhgtJJMuXVmo4uQ-gtaGt16MqVs_xdWrRzc/4qf/YqHE1qwcTBKEtk2dbTBKgA=
+/h2/h001.aW1F7vi3KphoBEyjwZ7LaRDKduev5YjZBnOkId2JHAs" style=3D"display: blo=
+ck; color: #076CA1;" target=3D"_blank"><img src=3D"https://braze-images.com=
+/appboy/communication/assets/image_assets/images/68f25bc89abf8400633b35cd/o=
+riginal.jpg?1760713672" style=3D"width: 100%; max-width: 650px; display: bl=
+ock;" width=3D"650" alt=3D"Welcome to Brad"></a>
+</td></tr>
+<tr><td style=3D"padding: 15px 0 35px;" align=3D"center"><table border=3D"0=
+" cellspacing=3D"0" cellpadding=3D"0" style=3D"min-width: 220px; padding: 0=
+;"><tr><td style=3D"border-radius: 100px; font-size: 20px; line-height: 1.2=
+; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center" bgcolor=
+=3D"#ED5E4F"><a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrf=
+ebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FqKuSBLxTM0pJy8Sk7eAtBZoQ8UtFLM4L3Yb6OjrmJKQrj=
+3QAsuvznecjGcKpx4XZV3ewq5nUTKAUWhpM6t3GJo-ii0tb_Npf09ncpbPBkc4REJusWMlHck4_=
+LjKzFidf7U2Q8of3JTh0D3YQMNSrb0EJXP1m4ZMRf0o0XffDtXMs0rqja1Y1DzLymrmzRh-x2Pn=
+D2uG3i1ZmK8DMXk_meM1-2RDVWv1bB4KOlntbredSiou6yl1MmMfYG5cSpUfLrJq91cSPe6bjyG=
+jNyl-ibfpwxeMq5YmXaqNiJU8KikTvITJiWPBZLO-uwUMRhHiFY4Sqo5K_F5J_3GeQNsg4ATJtM=
+fqCxPlP_bhpqI1aopg_xEzpyC8bhgtJJMuXVmo4uQ-gtaGt16MqVs_xdWrRzc/4qf/YqHE1qwcT=
+BKEtk2dbTBKgA/h3/h001.dGqB5rLp_GT18VrqG-pdM-ZnRA9GrQLkBC4-SGRYTiE" target=
+=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffffe;=
+ padding: 10px 30px;">Pick Your Favorites </a></td></tr></table></td></tr>
+<tr><td>
+<table border=3D"0" cellspacing=3D"0" cellpadding=3D"0" width=3D"100%" styl=
+e=3D"width: 100%;"><tr><td style=3D"font-size: 120%; font-weight: 600; colo=
+r: #fffffe; padding: 12px 35px;" align=3D"center" bgcolor=3D"#0E3651">Top D=
+eals Picked For You</td></tr></table>
+</td></tr>
+<tr><td style=3D"padding: 35px 25px 0;">
+    <table border=3D"0" cellspacing=3D"0" cellpadding=3D"0" width=3D"100%">
+<tr class=3D"row1">
+<td class=3D"col1">
+       =20
+       =20
+          </td>
+<td class=3D"deal_x1" style=3D"padding: 0 10px 35px;">
+  <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"100%">
+    <tr>
+      <td class=3D"column" valign=3D"top" width=3D"180" style=3D"">
+        <div class=3D"fluid-img" style=3D"border: 1px solid #e1e1e1;">
+          <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV=
+1rl3Y-c2j1ZAjrpda4TZ45bhB0FrHZ48Dz_I2aHtx8myHhMPNaJ6-MoLZzhbtyVI4wThYGNR-_N=
+gxuvVL5im68qCSHNkmYaj_qCv4UrjgPkRgjC9b_YwiNUaub2ETpBNxmZvYZUAsHmMoNd8Z73Q-8=
+-DiupBAEXj9W7kjK11dShVrqG56qIOKTlDERInu9HrnafXRuHAyoi6tWnBKC76kmurKA-UPrDYF=
+Bbt9x9yargJsD7D4g9TUtJV-M23YkaDez7lrYULV5_VyKG8aWzRpJyhAggsMYZfP-Zh9-8uq2ZQ=
+wHUvlxAdFOOf_ydZza0eqthoZRV9fhu2SCogQQ3LfBih6YRjwIRN0b1V6NiAIOO5I0Ytp222NlI=
+McIt-aEelysj3HPtNr5KExO9QMb-bWZK1ZpArMg-TaVlc57YRMiTLV_wi3/4qf/YqHE1qwcTBKE=
+tk2dbTBKgA/h4/h001.sIVsIF4lBn60PEBwYA9OC8TojsD9PlisdKmjFV2ryrw" style=3D"di=
+splay: block; color: #076CA1;" target=3D"_blank">
+           =20
+
+
+
+ =20
+ =20
+
+
+    <img src=3D"https://cs.ss-ops.net/blt9a06d3c56ab11b77/6994bb0099907d000=
+8ff930e/ed5dd213f9288a5b590e4a5eb2141ecd4f15873a.png?p=3Dem600" style=3D"" =
+width=3D"178" height=3D"178" class=3D"widthFull heightAuto" border=3D"0" al=
+t=3D"">
+
+   =20
+   =20
+
+
+          </a>
+        </div>
+      </td>
+      <td class=3D"column" width=3D"20" style=3D"padding-bottom: 15px;"></t=
+d>
+      <td class=3D"column" valign=3D"middle" style=3D"">
+        <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"10=
+0%">
+         =20
+         =20
+            <tr>
+              <td style=3D"font-size: 22px; line-height: 1.2; font-weight: =
+600; padding-bottom: 15px;">
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FrHZ48Dz_I2aHtx8myHhMPNaJ6-MoLZzhbtyVI4wThY=
+GNR-_NgxuvVL5im68qCSHNkmYaj_qCv4UrjgPkRgjC9b_YwiNUaub2ETpBNxmZvYZUAsHmMoNd8=
+Z73Q-8-DiupBAEXj9W7kjK11dShVrqG56qIOKTlDERInu9HrnafXRuHAyoi6tWnBKC76kmurKA-=
+UPrDYFBbt9x9yargJsD7D4g9TUtJV-M23YkaDez7lrYULV5_VyKG8aWzRpJyhAggsMYZfP-Zh9-=
+8uq2ZQwHUvlxAdFOOf_ydZza0eqthoZRV9fhu2SCogQQ3LfBih6YRjwIRN0b1V6NiAIOO5I0Ytp=
+222NlIMcIt-aEelysj3HPtNr5KExO9QMb-bWZK1ZpArMg-TaVlc57YRMiTLV_wi3/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h5/h001.lmxZ4VNxe_4aHhja8yl9Ilw8y9tf6gECM7if33q4k9s" style=
+=3D"text-decoration: none; color: #0E3651;">
+                  13' Double-Sided Outdoor Umbrella $74
+                </a>
+              </td>
+            </tr>
+         =20
+         =20
+            <tr>
+              <td bgcolor=3D"#076CA1" style=3D"border-radius: 100px; line-h=
+eight: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center"=
+>
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FrHZ48Dz_I2aHtx8myHhMPNaJ6-MoLZzhbtyVI4wThY=
+GNR-_NgxuvVL5im68qCSHNkmYaj_qCv4UrjgPkRgjC9b_YwiNUaub2ETpBNxmZvYZUAsHmMoNd8=
+Z73Q-8-DiupBAEXj9W7kjK11dShVrqG56qIOKTlDERInu9HrnafXRuHAyoi6tWnBKC76kmurKA-=
+UPrDYFBbt9x9yargJsD7D4g9TUtJV-M23YkaDez7lrYULV5_VyKG8aWzRpJyhAggsMYZfP-Zh9-=
+8uq2ZQwHUvlxAdFOOf_ydZza0eqthoZRV9fhu2SCogQQ3LfBih6YRjwIRN0b1V6NiAIOO5I0Ytp=
+222NlIMcIt-aEelysj3HPtNr5KExO9QMb-bWZK1ZpArMg-TaVlc57YRMiTLV_wi3/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h6/h001.z5ndL7VTAne9tBno-aXwxeZpbHYr9gumjdQJWJHAfqo" targe=
+t=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffffe=
+; padding: 10px 30px;">View Deal</a>
+              </td>
+            </tr>
+         =20
+        </table>
+      </td>
+    </tr>
+  </table>
+</td>
+       =20
+      </tr>
+<tr class=3D"row2">
+<td class=3D"col1">
+       =20
+       =20
+          </td>
+<td class=3D"deal_x1" style=3D"padding: 0 10px 35px;">
+  <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"100%">
+    <tr>
+      <td class=3D"column" valign=3D"top" width=3D"180" style=3D"">
+        <div class=3D"fluid-img" style=3D"border: 1px solid #e1e1e1;">
+          <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV=
+1rl3Y-c2j1ZAjrpda4TZ45bhB0FrmEhPSZLq_AuYJfPoGaOhDF60KMEcHRyFY3oqA8MJxV6qe2-=
+I-tCV2-RgFlfbmSGz73_LV-1e0E8LC7tzoTLwL3Q9tALcc4IPeSho-e-U8OpWBDNOGBeG5hFv0N=
+zu6TXmYv_DKDcO3fP9bU-7K_j_lo0dQQV24KIrOZnqoC3wN7Spwrm8QvZ60GXGQ2b7h5uluqgZk=
+lmyqgHuQqAjU9MAhq5MYuADu3LoY7hD6Lavo4OWi1hQIt-OYmGlnjsqXM2IVdWX2U5-Aem4Hx7S=
+gIcMWSxQt_o_9lPHabWdMulWfvCjEf6gU48w-ZkPn4DgzIIn-G7Npj3Fy1Fom9cvQ6UZQ7Ttjlt=
+5UglVbAWI5lmIFM_wc4Q_O9PIFQ4SWHGgqdi70E6fo_wtbTTi1CQ-ON1nc/4qf/YqHE1qwcTBKE=
+tk2dbTBKgA/h7/h001.Qe9-F6JmhHvQ26n7zj2be3EHFjf6ufwoy1gfpTk6Gm8" style=3D"di=
+splay: block; color: #076CA1;" target=3D"_blank">
+           =20
+
+
+
+ =20
+ =20
+
+ =20
+ =20
+
+
+    <img src=3D"https://cs.ss-ops.net/blt7a433374abf58918/693ae26f8bec2f3f3=
+ad6aaad/linens-and-hutch-bed-sheets-twin_(1).png?p=3Dem600" style=3D"" widt=
+h=3D"178" height=3D"178" class=3D"widthFull heightAuto" border=3D"0" alt=3D=
+"">
+
+   =20
+   =20
+
+
+          </a>
+        </div>
+      </td>
+      <td class=3D"column" width=3D"20" style=3D"padding-bottom: 15px;"></t=
+d>
+      <td class=3D"column" valign=3D"middle" style=3D"">
+        <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"10=
+0%">
+         =20
+         =20
+            <tr>
+              <td style=3D"font-size: 22px; line-height: 1.2; font-weight: =
+600; padding-bottom: 15px;">
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FrmEhPSZLq_AuYJfPoGaOhDF60KMEcHRyFY3oqA8MJx=
+V6qe2-I-tCV2-RgFlfbmSGz73_LV-1e0E8LC7tzoTLwL3Q9tALcc4IPeSho-e-U8OpWBDNOGBeG=
+5hFv0Nzu6TXmYv_DKDcO3fP9bU-7K_j_lo0dQQV24KIrOZnqoC3wN7Spwrm8QvZ60GXGQ2b7h5u=
+luqgZklmyqgHuQqAjU9MAhq5MYuADu3LoY7hD6Lavo4OWi1hQIt-OYmGlnjsqXM2IVdWX2U5-Ae=
+m4Hx7SgIcMWSxQt_o_9lPHabWdMulWfvCjEf6gU48w-ZkPn4DgzIIn-G7Npj3Fy1Fom9cvQ6UZQ=
+7Ttjlt5UglVbAWI5lmIFM_wc4Q_O9PIFQ4SWHGgqdi70E6fo_wtbTTi1CQ-ON1nc/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h8/h001.HxEiYOxXVSezAxDkodBJHqUbQtt6Xgmf78dUQDmoHp4" style=
+=3D"text-decoration: none; color: #0E3651;">
+                  72% Off Bamboo &amp; Linen-Bamboo Sheet Sets
+                </a>
+              </td>
+            </tr>
+         =20
+         =20
+            <tr>
+              <td bgcolor=3D"#076CA1" style=3D"border-radius: 100px; line-h=
+eight: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center"=
+>
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FrmEhPSZLq_AuYJfPoGaOhDF60KMEcHRyFY3oqA8MJx=
+V6qe2-I-tCV2-RgFlfbmSGz73_LV-1e0E8LC7tzoTLwL3Q9tALcc4IPeSho-e-U8OpWBDNOGBeG=
+5hFv0Nzu6TXmYv_DKDcO3fP9bU-7K_j_lo0dQQV24KIrOZnqoC3wN7Spwrm8QvZ60GXGQ2b7h5u=
+luqgZklmyqgHuQqAjU9MAhq5MYuADu3LoY7hD6Lavo4OWi1hQIt-OYmGlnjsqXM2IVdWX2U5-Ae=
+m4Hx7SgIcMWSxQt_o_9lPHabWdMulWfvCjEf6gU48w-ZkPn4DgzIIn-G7Npj3Fy1Fom9cvQ6UZQ=
+7Ttjlt5UglVbAWI5lmIFM_wc4Q_O9PIFQ4SWHGgqdi70E6fo_wtbTTi1CQ-ON1nc/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h9/h001.5B4Q3gdGjXSllTyoGRCgXWjLF8VfQ3gBaMzlAbeXpPg" targe=
+t=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffffe=
+; padding: 10px 30px;">View Deal</a>
+              </td>
+            </tr>
+         =20
+        </table>
+      </td>
+    </tr>
+  </table>
+</td>
+       =20
+      </tr>
+<tr class=3D"row3">
+<td class=3D"col1">
+       =20
+       =20
+          </td>
+<td class=3D"deal_x1" style=3D"padding: 0 10px 35px;">
+  <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"100%">
+    <tr>
+      <td class=3D"column" valign=3D"top" width=3D"180" style=3D"">
+        <div class=3D"fluid-img" style=3D"border: 1px solid #e1e1e1;">
+          <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV=
+1rl3Y-c2j1ZAjrpda4TZ45bhB0FpF-9pj2TTyQD5lIFhgX_4GID_6vW11tfwU51be8bOANcqXoq=
+H61r7IuPH9YDlcYLLGrMBV8OruriCzxP_rdhiRytZjOjFqrEYMkyZxJRz2agqdVeIL4bDocqEYG=
+O9OjH92QTgYjheJ1Lk8Y3Yojb7_-SYhlxIiSipx6OBfqz0OZYoalObPYX2V8V0VgcoJrrQ93QLg=
+FohanOahRumAEgk2KCfqIgObbKV3YRZEeA7O7Oqq-knTjJU6YO2LmP2IXgwAXi9BDAYC1NKJ5-7=
+9PQodZZJk9xtvFJGoYVOpxBBjIa1dHGpm533NqKgy2bidt6vHXy8mBhtCIfTwhVUu9-8_BvrnRG=
+EgXIvIxdoGE-xk7YsZcfk-DivzrU-zxRXISs7mx1QHYtbf6r1okKrDhvO3/4qf/YqHE1qwcTBKE=
+tk2dbTBKgA/h10/h001.hiVTZWOj7wXqTDvogRf6hJHcvdYr9kcrcxgXZw1MvtQ" style=3D"d=
+isplay: block; color: #076CA1;" target=3D"_blank">
+           =20
+
+
+
+ =20
+ =20
+
+
+    <img src=3D"https://cs.ss-ops.net/blt64627f364577b67d/69ef77ff64d81ec14=
+ccedf92/1b93ed9169f0d40f2bfbd8918743300e2c9434d1.png?p=3Dem600" style=3D"" =
+width=3D"178" height=3D"178" class=3D"widthFull heightAuto" border=3D"0" al=
+t=3D"">
+
+   =20
+   =20
+
+
+          </a>
+        </div>
+      </td>
+      <td class=3D"column" width=3D"20" style=3D"padding-bottom: 15px;"></t=
+d>
+      <td class=3D"column" valign=3D"middle" style=3D"">
+        <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"10=
+0%">
+         =20
+         =20
+            <tr>
+              <td style=3D"font-size: 22px; line-height: 1.2; font-weight: =
+600; padding-bottom: 15px;">
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FpF-9pj2TTyQD5lIFhgX_4GID_6vW11tfwU51be8bOA=
+NcqXoqH61r7IuPH9YDlcYLLGrMBV8OruriCzxP_rdhiRytZjOjFqrEYMkyZxJRz2agqdVeIL4bD=
+ocqEYGO9OjH92QTgYjheJ1Lk8Y3Yojb7_-SYhlxIiSipx6OBfqz0OZYoalObPYX2V8V0VgcoJrr=
+Q93QLgFohanOahRumAEgk2KCfqIgObbKV3YRZEeA7O7Oqq-knTjJU6YO2LmP2IXgwAXi9BDAYC1=
+NKJ5-79PQodZZJk9xtvFJGoYVOpxBBjIa1dHGpm533NqKgy2bidt6vHXy8mBhtCIfTwhVUu9-8_=
+BvrnRGEgXIvIxdoGE-xk7YsZcfk-DivzrU-zxRXISs7mx1QHYtbf6r1okKrDhvO3/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h11/h001.Otu4qz_x0MAjEPSbs9zfIkwl6DLAXWH0N_HdAEjuhC4" styl=
+e=3D"text-decoration: none; color: #0E3651;">
+                  Levi's Relaxed Trucker Jacket $28
+                </a>
+              </td>
+            </tr>
+         =20
+         =20
+            <tr>
+              <td bgcolor=3D"#076CA1" style=3D"border-radius: 100px; line-h=
+eight: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center"=
+>
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FpF-9pj2TTyQD5lIFhgX_4GID_6vW11tfwU51be8bOA=
+NcqXoqH61r7IuPH9YDlcYLLGrMBV8OruriCzxP_rdhiRytZjOjFqrEYMkyZxJRz2agqdVeIL4bD=
+ocqEYGO9OjH92QTgYjheJ1Lk8Y3Yojb7_-SYhlxIiSipx6OBfqz0OZYoalObPYX2V8V0VgcoJrr=
+Q93QLgFohanOahRumAEgk2KCfqIgObbKV3YRZEeA7O7Oqq-knTjJU6YO2LmP2IXgwAXi9BDAYC1=
+NKJ5-79PQodZZJk9xtvFJGoYVOpxBBjIa1dHGpm533NqKgy2bidt6vHXy8mBhtCIfTwhVUu9-8_=
+BvrnRGEgXIvIxdoGE-xk7YsZcfk-DivzrU-zxRXISs7mx1QHYtbf6r1okKrDhvO3/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h12/h001.Ey3YJFxv8-_IO60Rw2v9zrUr2Xv9rJUtHM9MRDxmKYA" targ=
+et=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffff=
+e; padding: 10px 30px;">View Deal</a>
+              </td>
+            </tr>
+         =20
+        </table>
+      </td>
+    </tr>
+  </table>
+</td>
+       =20
+      </tr>
+</table>
+  </td></tr>
+<tr><td>
+<a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV1rl3Y-c2j1=
+ZAjrpda4TZ45bhB0FpY_6wu7BGtDukxmJhOj-4_vJVCpyPEen_rbaqoaexOUED7B1zrhr7FXP6Y=
+WxCTLpwzkznNYsTbAQomNNrPhT6x0RauC4E_N_QxHptCsRJ_3KfPp5W8SSLfXU_JIrP21x_D9Ul=
+ufS4qSAt_Kk_TZCWFTNzKoU5H9x8LQ7Y8bks8SK_AUHeHPmcuyEsW3ZEkEsnC_IYJNXtE68HAjQ=
+nF1Ti_YNMaYr2aYJdvfChia6r8trvW7zw12aCBQx9E5gOn4uzutBHQPhis3XSBiQFDio4Y2hGtx=
+QbOXLO661p61jXlE1Sv32_1JHpzQKQMpPicbMZC90ONYJzyq2BeQpbOY-R9i7BNrJKrb3fkNBGo=
+AutSnvuallANbh2B6ChFDr6gXDBfQgK5kYa8NDs7gIC015Mw/4qf/YqHE1qwcTBKEtk2dbTBKgA=
+/h13/h001.SCP2KrDaHkJ3ugWAc95PZ_5UznPe5HhJc-9bZmZotQc" style=3D"display: bl=
+ock; color: #076CA1;" target=3D"_blank"><img src=3D"https://braze-images.co=
+m/appboy/communication/assets/image_assets/images/67ed8cff988d9a0064ea4f76/=
+original.jpg?1743621375" style=3D"width: 100%; max-width: 650px; display: b=
+lock;" width=3D"650" alt=3D"Why You"></a>
+</td></tr>
+<tr><td style=3D"padding: 35px 25px 0;">
+    <table border=3D"0" cellspacing=3D"0" cellpadding=3D"0" width=3D"100%">
+<tr class=3D"row1">
+<td class=3D"col1">
+       =20
+       =20
+          </td>
+<td class=3D"deal_x1" style=3D"padding: 0 10px 35px;">
+  <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"100%">
+    <tr>
+      <td class=3D"column" valign=3D"top" width=3D"180" style=3D"">
+        <div class=3D"fluid-img" style=3D"border: 1px solid #e1e1e1;">
+          <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV=
+1rl3Y-c2j1ZAjrpda4TZ45bhB0FqtyZhOUOTa3uWlmHY1275sL4BBpHUOixBAF8lxUJ5T-XyQla=
+Ks_2aJAW2i19SNoxx2iPHDEnN7WLXwPI9vwwaztk7xV1sWqigHRV_a6pD7iBmmcLhND1zf_i1hO=
+ZfftwBihaPtTBYYvKZ0Fr3JC8qekNEFH3si6jNJ-UYJzDzf-SnHHliSQMjX9frKU1_GxaN-HfzJ=
+5TbRyuMaFmT4s9P5XZ06wQwLSZRfI7-eKXMfXyTVu9oLdAnq8q0nq0lXDIzmnD_Tk5_MrAWd_4p=
+K8b-VR63Tssu4ikyeAONJH9dfDFG2cA9j49XehJPazk-ZnlGJ6URlLJFLOTBZsFs3rhZSdmdgZU=
+Ox0CXh12jTrfrgMpjX2ASn_-uE-RCZJWwSk5BCLmf9_MP7pJhWfket9jap/4qf/YqHE1qwcTBKE=
+tk2dbTBKgA/h14/h001.FrW2N4aPi5qpXve0_hc8CrhbyE4OKeDW5lhNIeG4l8Q" style=3D"d=
+isplay: block; color: #076CA1;" target=3D"_blank">
+           =20
+
+
+
+ =20
+ =20
+
+ =20
+ =20
+
+
+    <img src=3D"https://cs.ss-ops.net/blt80f46a4d3a8531e7/69fbad98ffa0434d6=
+aa94fcc/3265b92b35661fdea78fdbbfa909c8e243fb509b.png?p=3Dem600" style=3D"" =
+width=3D"178" height=3D"178" class=3D"widthFull heightAuto" border=3D"0" al=
+t=3D"">
+
+   =20
+   =20
+
+
+          </a>
+        </div>
+      </td>
+      <td class=3D"column" width=3D"20" style=3D"padding-bottom: 15px;"></t=
+d>
+      <td class=3D"column" valign=3D"middle" style=3D"">
+        <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"10=
+0%">
+         =20
+         =20
+            <tr>
+              <td style=3D"font-size: 22px; line-height: 1.2; font-weight: =
+600; padding-bottom: 15px;">
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FqtyZhOUOTa3uWlmHY1275sL4BBpHUOixBAF8lxUJ5T=
+-XyQlaKs_2aJAW2i19SNoxx2iPHDEnN7WLXwPI9vwwaztk7xV1sWqigHRV_a6pD7iBmmcLhND1z=
+f_i1hOZfftwBihaPtTBYYvKZ0Fr3JC8qekNEFH3si6jNJ-UYJzDzf-SnHHliSQMjX9frKU1_Gxa=
+N-HfzJ5TbRyuMaFmT4s9P5XZ06wQwLSZRfI7-eKXMfXyTVu9oLdAnq8q0nq0lXDIzmnD_Tk5_Mr=
+AWd_4pK8b-VR63Tssu4ikyeAONJH9dfDFG2cA9j49XehJPazk-ZnlGJ6URlLJFLOTBZsFs3rhZS=
+dmdgZUOx0CXh12jTrfrgMpjX2ASn_-uE-RCZJWwSk5BCLmf9_MP7pJhWfket9jap/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h15/h001.De9fw7jExcxxH_Skcgq4IqAbrTYCzheQayYRPWN4OgU" styl=
+e=3D"text-decoration: none; color: #0E3651;">
+                  Disney Big One Beach Towels $11 at Kohl's
+                </a>
+              </td>
+            </tr>
+         =20
+         =20
+            <tr>
+              <td bgcolor=3D"#076CA1" style=3D"border-radius: 100px; line-h=
+eight: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center"=
+>
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FqtyZhOUOTa3uWlmHY1275sL4BBpHUOixBAF8lxUJ5T=
+-XyQlaKs_2aJAW2i19SNoxx2iPHDEnN7WLXwPI9vwwaztk7xV1sWqigHRV_a6pD7iBmmcLhND1z=
+f_i1hOZfftwBihaPtTBYYvKZ0Fr3JC8qekNEFH3si6jNJ-UYJzDzf-SnHHliSQMjX9frKU1_Gxa=
+N-HfzJ5TbRyuMaFmT4s9P5XZ06wQwLSZRfI7-eKXMfXyTVu9oLdAnq8q0nq0lXDIzmnD_Tk5_Mr=
+AWd_4pK8b-VR63Tssu4ikyeAONJH9dfDFG2cA9j49XehJPazk-ZnlGJ6URlLJFLOTBZsFs3rhZS=
+dmdgZUOx0CXh12jTrfrgMpjX2ASn_-uE-RCZJWwSk5BCLmf9_MP7pJhWfket9jap/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h16/h001.Fc9mx6ZSrLua71GQ8dqnW-oQiNCKGNtqc2jA4MULDYM" targ=
+et=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffff=
+e; padding: 10px 30px;">View Deal</a>
+              </td>
+            </tr>
+         =20
+        </table>
+      </td>
+    </tr>
+  </table>
+</td>
+       =20
+      </tr>
+<tr class=3D"row2">
+<td class=3D"col1">
+       =20
+       =20
+          </td>
+<td class=3D"deal_x1" style=3D"padding: 0 10px 35px;">
+  <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"100%">
+    <tr>
+      <td class=3D"column" valign=3D"top" width=3D"180" style=3D"">
+        <div class=3D"fluid-img" style=3D"border: 1px solid #e1e1e1;">
+          <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV=
+1rl3Y-c2j1ZAjrpda4TZ45bhB0FoBaCaWA-70D7oVvh2Yyd0N6d2Bx3L__tbEar-Jb6eoqhnw7r=
+uWVV5pcelZB9XSIfqgmLm-JaY0uP6vDyGfbDGQEmjy_MwEHW0GKc_-2EOITO4guMMN8Q46W3KAk=
+ALQ3eu1b4aeu3Qf1kgGVIGCjjqImEYNq1zvCrMJuh2DxPEL8yCpx1K26iR3n4wa-BaUpaFatxAg=
+VJtqM3egJzjruipSru0PshXKceOdw5wmdFueL6SQJu22UjX5keldnFrqHFMJkhx2QeWj2mmZ5KK=
+ANbAq2GsM4I_pezPXFLPfPcmQsN3VCEZV4nY-B5fZz0LiX324cXlbCiggK3iynK4FKV8gjll6KK=
+hx6b75A1sQaLD9X9Fp4lZzpD_NkU5MqxUHotAqknWpM1snHk_TtJHF6ZTg/4qf/YqHE1qwcTBKE=
+tk2dbTBKgA/h17/h001.retaMUGDAHVp4jUFADgs_tgN82r-oeuHPirJvlb-jDY" style=3D"d=
+isplay: block; color: #076CA1;" target=3D"_blank">
+           =20
+
+
+
+ =20
+ =20
+
+
+    <img src=3D"https://cs.ss-ops.net/bltd71e69c160b0f977/69ee0ff7a55d67296=
+426c93e/a02b5044e6ce72c26da49762559d1df24219ef2f.png?p=3Dem600" style=3D"" =
+width=3D"178" height=3D"178" class=3D"widthFull heightAuto" border=3D"0" al=
+t=3D"">
+
+   =20
+   =20
+
+
+          </a>
+        </div>
+      </td>
+      <td class=3D"column" width=3D"20" style=3D"padding-bottom: 15px;"></t=
+d>
+      <td class=3D"column" valign=3D"middle" style=3D"">
+        <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"10=
+0%">
+         =20
+         =20
+            <tr>
+              <td style=3D"font-size: 22px; line-height: 1.2; font-weight: =
+600; padding-bottom: 15px;">
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FoBaCaWA-70D7oVvh2Yyd0N6d2Bx3L__tbEar-Jb6eo=
+qhnw7ruWVV5pcelZB9XSIfqgmLm-JaY0uP6vDyGfbDGQEmjy_MwEHW0GKc_-2EOITO4guMMN8Q4=
+6W3KAkALQ3eu1b4aeu3Qf1kgGVIGCjjqImEYNq1zvCrMJuh2DxPEL8yCpx1K26iR3n4wa-BaUpa=
+FatxAgVJtqM3egJzjruipSru0PshXKceOdw5wmdFueL6SQJu22UjX5keldnFrqHFMJkhx2QeWj2=
+mmZ5KKANbAq2GsM4I_pezPXFLPfPcmQsN3VCEZV4nY-B5fZz0LiX324cXlbCiggK3iynK4FKV8g=
+jll6KKhx6b75A1sQaLD9X9Fp4lZzpD_NkU5MqxUHotAqknWpM1snHk_TtJHF6ZTg/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h18/h001.Ro6rSrRZ3xv0ty8T0yNg9DxkoG5TeSzRFnnnq6jnKUA" styl=
+e=3D"text-decoration: none; color: #0E3651;">
+                  Vans Skate Sneakers $20
+                </a>
+              </td>
+            </tr>
+         =20
+         =20
+            <tr>
+              <td bgcolor=3D"#076CA1" style=3D"border-radius: 100px; line-h=
+eight: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center"=
+>
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FoBaCaWA-70D7oVvh2Yyd0N6d2Bx3L__tbEar-Jb6eo=
+qhnw7ruWVV5pcelZB9XSIfqgmLm-JaY0uP6vDyGfbDGQEmjy_MwEHW0GKc_-2EOITO4guMMN8Q4=
+6W3KAkALQ3eu1b4aeu3Qf1kgGVIGCjjqImEYNq1zvCrMJuh2DxPEL8yCpx1K26iR3n4wa-BaUpa=
+FatxAgVJtqM3egJzjruipSru0PshXKceOdw5wmdFueL6SQJu22UjX5keldnFrqHFMJkhx2QeWj2=
+mmZ5KKANbAq2GsM4I_pezPXFLPfPcmQsN3VCEZV4nY-B5fZz0LiX324cXlbCiggK3iynK4FKV8g=
+jll6KKhx6b75A1sQaLD9X9Fp4lZzpD_NkU5MqxUHotAqknWpM1snHk_TtJHF6ZTg/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h19/h001.SaRcRIfRczOhEg8XhqDjs1UYpO6zYsCrrn1zfoYw8Uw" targ=
+et=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffff=
+e; padding: 10px 30px;">View Deal</a>
+              </td>
+            </tr>
+         =20
+        </table>
+      </td>
+    </tr>
+  </table>
+</td>
+       =20
+      </tr>
+<tr class=3D"row3">
+<td class=3D"col1">
+       =20
+       =20
+          </td>
+<td class=3D"deal_x1" style=3D"padding: 0 10px 35px;">
+  <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"100%">
+    <tr>
+      <td class=3D"column" valign=3D"top" width=3D"180" style=3D"">
+        <div class=3D"fluid-img" style=3D"border: 1px solid #e1e1e1;">
+          <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV=
+1rl3Y-c2j1ZAjrpda4TZ45bhB0FqBevHmH5X6gJpsUPcT9UQy9NzMh-acfV6jEf_JRduXyiyxWf=
+ClxMj3vEB888O7fVWY_WIZ3fSbdLJ_1D9bR2yk_jijRaWiMk05ED3-_Spmo6Xsc1PNY6jzI90Bz=
+98HG3mCGfRQy5LI6ihNETNLPF0bbRu-11RUpVdPC0VkEp945ynETjDKr0XZ5jryaVK4smgqFw7_=
+vIt87UVRhFRpgPhN1iNfPkXukp_lwh-ko9ICB9Jx55LETikPopK41_525Vr9a0Hy6dEm59JMTcN=
+1pcA6ofZ5yK3vXq7d2E-HZsdLcXgKuh-NwAN8JyPGloR8QmogGqEPbJT8KcHayqykQDBrDEFprm=
+XwJzejq0UJH0kEM0qnETykyHHrNm47LADM9uwWTNdLmJG55R_wzsScSgO7/4qf/YqHE1qwcTBKE=
+tk2dbTBKgA/h20/h001.qac7VOJceJQra3zlj1PpeG-TpplRl5SQvAGxJ5T9aPg" style=3D"d=
+isplay: block; color: #076CA1;" target=3D"_blank">
+           =20
+
+
+
+ =20
+ =20
+
+ =20
+ =20
+
+
+    <img src=3D"https://cs.ss-ops.net/bltfd5cb07a46850fcb/69f4a59f4920260bb=
+2b60b8a/8434333690808c009181f0c9c436619d75cbec21.png?p=3Dem600" style=3D"" =
+width=3D"178" height=3D"178" class=3D"widthFull heightAuto" border=3D"0" al=
+t=3D"">
+
+   =20
+   =20
+
+
+          </a>
+        </div>
+      </td>
+      <td class=3D"column" width=3D"20" style=3D"padding-bottom: 15px;"></t=
+d>
+      <td class=3D"column" valign=3D"middle" style=3D"">
+        <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"10=
+0%">
+         =20
+         =20
+            <tr>
+              <td style=3D"font-size: 22px; line-height: 1.2; font-weight: =
+600; padding-bottom: 15px;">
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FqBevHmH5X6gJpsUPcT9UQy9NzMh-acfV6jEf_JRduX=
+yiyxWfClxMj3vEB888O7fVWY_WIZ3fSbdLJ_1D9bR2yk_jijRaWiMk05ED3-_Spmo6Xsc1PNY6j=
+zI90Bz98HG3mCGfRQy5LI6ihNETNLPF0bbRu-11RUpVdPC0VkEp945ynETjDKr0XZ5jryaVK4sm=
+gqFw7_vIt87UVRhFRpgPhN1iNfPkXukp_lwh-ko9ICB9Jx55LETikPopK41_525Vr9a0Hy6dEm5=
+9JMTcN1pcA6ofZ5yK3vXq7d2E-HZsdLcXgKuh-NwAN8JyPGloR8QmogGqEPbJT8KcHayqykQDBr=
+DEFprmXwJzejq0UJH0kEM0qnETykyHHrNm47LADM9uwWTNdLmJG55R_wzsScSgO7/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h21/h001.UHyfsCg2quxRI0-j4gTswZ4rRyo0WNZzWJyN9uR8txQ" styl=
+e=3D"text-decoration: none; color: #0E3651;">
+                  Up to 75% + 20% Off Kate Spade
+                </a>
+              </td>
+            </tr>
+         =20
+         =20
+            <tr>
+              <td bgcolor=3D"#076CA1" style=3D"border-radius: 100px; line-h=
+eight: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center"=
+>
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FqBevHmH5X6gJpsUPcT9UQy9NzMh-acfV6jEf_JRduX=
+yiyxWfClxMj3vEB888O7fVWY_WIZ3fSbdLJ_1D9bR2yk_jijRaWiMk05ED3-_Spmo6Xsc1PNY6j=
+zI90Bz98HG3mCGfRQy5LI6ihNETNLPF0bbRu-11RUpVdPC0VkEp945ynETjDKr0XZ5jryaVK4sm=
+gqFw7_vIt87UVRhFRpgPhN1iNfPkXukp_lwh-ko9ICB9Jx55LETikPopK41_525Vr9a0Hy6dEm5=
+9JMTcN1pcA6ofZ5yK3vXq7d2E-HZsdLcXgKuh-NwAN8JyPGloR8QmogGqEPbJT8KcHayqykQDBr=
+DEFprmXwJzejq0UJH0kEM0qnETykyHHrNm47LADM9uwWTNdLmJG55R_wzsScSgO7/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h22/h001.hKe3yhbQh6pLmCTvaWvXNkazxoyD7H4sZSscPpBk4Yo" targ=
+et=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffff=
+e; padding: 10px 30px;">View Deal</a>
+              </td>
+            </tr>
+         =20
+        </table>
+      </td>
+    </tr>
+  </table>
+</td>
+       =20
+      </tr>
+<tr class=3D"row4">
+<td class=3D"col1">
+       =20
+       =20
+          </td>
+<td class=3D"deal_x1" style=3D"padding: 0 10px 35px;">
+  <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"100%">
+    <tr>
+      <td class=3D"column" valign=3D"top" width=3D"180" style=3D"">
+        <div class=3D"fluid-img" style=3D"border: 1px solid #e1e1e1;">
+          <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV=
+1rl3Y-c2j1ZAjrpda4TZ45bhB0FoD67meJTe3AatC_uQekb53SZTzWChEgVqr44-YklcoTKTKNJ=
+YDMggnZ12LH-igqxTSf8NnG24LONnQcSeQI7wnYk0a4MEOhPlXd4D9kLhvw1Dm0he3A1P8nquaZ=
+PgSGYGRTXUW359vp2cmXC3t6Un4P7Wm2AKFPxVGWwa8-1yZuQEl2Yow5f6LsPBCBzgy3NioqdaV=
+P2CYtP2W2P0uOagC_22albhUlREh1CNPGI_6E6gkoJ8qLWc6uFiq_iLiVFC3dkr5F89LsyzQT0L=
+8dKyhsdo0bVZHZ3Djywx0K-YYCmFiUUmk7NHi6_8l3thnU6MvgUqvi4CT8BzqByRBh11pOJFOyV=
+c55AzCW5ekrwnCEhTveeA9G3tfuVQD3SPD4NCy1DLKlhUUFxFn-bHJf9i5/4qf/YqHE1qwcTBKE=
+tk2dbTBKgA/h23/h001.2xs0d5xYF5myj4WtU4kyQuOFEe6tI4esuPKXZgBOCE4" style=3D"d=
+isplay: block; color: #076CA1;" target=3D"_blank">
+           =20
+
+
+
+ =20
+ =20
+
+ =20
+ =20
+
+
+    <img src=3D"https://cs.ss-ops.net/blt750549702985224c/69fa135bd4b7f3f88=
+0cbd6f1/9af2e60d77ce8747360fc2f1f23bbecc0a4009e5.jpg?p=3Dem600" style=3D"" =
+width=3D"178" height=3D"178" class=3D"widthFull heightAuto" border=3D"0" al=
+t=3D"">
+
+   =20
+   =20
+
+
+          </a>
+        </div>
+      </td>
+      <td class=3D"column" width=3D"20" style=3D"padding-bottom: 15px;"></t=
+d>
+      <td class=3D"column" valign=3D"middle" style=3D"">
+        <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"10=
+0%">
+         =20
+         =20
+            <tr>
+              <td style=3D"font-size: 22px; line-height: 1.2; font-weight: =
+600; padding-bottom: 15px;">
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FoD67meJTe3AatC_uQekb53SZTzWChEgVqr44-Yklco=
+TKTKNJYDMggnZ12LH-igqxTSf8NnG24LONnQcSeQI7wnYk0a4MEOhPlXd4D9kLhvw1Dm0he3A1P=
+8nquaZPgSGYGRTXUW359vp2cmXC3t6Un4P7Wm2AKFPxVGWwa8-1yZuQEl2Yow5f6LsPBCBzgy3N=
+ioqdaVP2CYtP2W2P0uOagC_22albhUlREh1CNPGI_6E6gkoJ8qLWc6uFiq_iLiVFC3dkr5F89Ls=
+yzQT0L8dKyhsdo0bVZHZ3Djywx0K-YYCmFiUUmk7NHi6_8l3thnU6MvgUqvi4CT8BzqByRBh11p=
+OJFOyVc55AzCW5ekrwnCEhTveeA9G3tfuVQD3SPD4NCy1DLKlhUUFxFn-bHJf9i5/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h24/h001.UPGrJiKjAzME-F8QMPcxP0z3XA9XjfRVcVMiVcDbfw4" styl=
+e=3D"text-decoration: none; color: #0E3651;">
+                  Birkenstock Sandals from $54
+                </a>
+              </td>
+            </tr>
+         =20
+         =20
+            <tr>
+              <td bgcolor=3D"#076CA1" style=3D"border-radius: 100px; line-h=
+eight: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center"=
+>
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FoD67meJTe3AatC_uQekb53SZTzWChEgVqr44-Yklco=
+TKTKNJYDMggnZ12LH-igqxTSf8NnG24LONnQcSeQI7wnYk0a4MEOhPlXd4D9kLhvw1Dm0he3A1P=
+8nquaZPgSGYGRTXUW359vp2cmXC3t6Un4P7Wm2AKFPxVGWwa8-1yZuQEl2Yow5f6LsPBCBzgy3N=
+ioqdaVP2CYtP2W2P0uOagC_22albhUlREh1CNPGI_6E6gkoJ8qLWc6uFiq_iLiVFC3dkr5F89Ls=
+yzQT0L8dKyhsdo0bVZHZ3Djywx0K-YYCmFiUUmk7NHi6_8l3thnU6MvgUqvi4CT8BzqByRBh11p=
+OJFOyVc55AzCW5ekrwnCEhTveeA9G3tfuVQD3SPD4NCy1DLKlhUUFxFn-bHJf9i5/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h25/h001.WHvHdprkhFjBgAZ8XIXIzCX_GBX1u66w2oIiKwAsxEo" targ=
+et=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffff=
+e; padding: 10px 30px;">View Deal</a>
+              </td>
+            </tr>
+         =20
+        </table>
+      </td>
+    </tr>
+  </table>
+</td>
+       =20
+      </tr>
+<tr class=3D"row5">
+<td class=3D"col1">
+       =20
+       =20
+          </td>
+<td class=3D"deal_x1" style=3D"padding: 0 10px 35px;">
+  <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"100%">
+    <tr>
+      <td class=3D"column" valign=3D"top" width=3D"180" style=3D"">
+        <div class=3D"fluid-img" style=3D"border: 1px solid #e1e1e1;">
+          <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV=
+1rl3Y-c2j1ZAjrpda4TZ45bhB0Fpl9UJzcsNwPathCtxbc-PV4zNeD5R6UPbGlVV_eyG7Kp7ZVn=
+PsmDCWQh5EzFbII23m41_dZZy735Hlg7FwZbntPvzySMYHEbK9ER7_4EW45_gs9qXd0SJEx4SQO=
+GShbGdFCTi2L3lnOdvLzd83oQD3E05LGuk7Jg9e4YFamljAODpqki5179yuZ0KCpKBGiwcbnhrk=
+srpHzm0qqU5sdZnm0SOEuDfWHM7YaBuPF_DHvJixm1E5Uy_sSLnGUBP-203jeUV0Wy5ZX1HbT70=
+ySo7If-YqzaDCRjc-GZ0px66q5d-GNmQengG6RZMOVzXB8ZlJBCnEFs9pC8l1WQWZYNXzpyWmWE=
+MQr_70c59dKhYskObjm5SnxAEQKL2fFr6_afKyp7BaF3Psc93_cbngZtDp/4qf/YqHE1qwcTBKE=
+tk2dbTBKgA/h26/h001.W4fohKr9vxc4OUUsWFfXapWBBvW7jjML-8XAqTYSweE" style=3D"d=
+isplay: block; color: #076CA1;" target=3D"_blank">
+           =20
+
+
+
+ =20
+ =20
+
+ =20
+ =20
+
+
+    <img src=3D"https://cs.ss-ops.net/blta497cc682e6331d2/69f2784ffb3652409=
+0a0d915/52cd5aefa35b8c12f3c61157575d20593fb5d1e8.png?p=3Dem600" style=3D"" =
+width=3D"178" height=3D"178" class=3D"widthFull heightAuto" border=3D"0" al=
+t=3D"">
+
+   =20
+   =20
+
+
+          </a>
+        </div>
+      </td>
+      <td class=3D"column" width=3D"20" style=3D"padding-bottom: 15px;"></t=
+d>
+      <td class=3D"column" valign=3D"middle" style=3D"">
+        <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"10=
+0%">
+         =20
+         =20
+            <tr>
+              <td style=3D"font-size: 22px; line-height: 1.2; font-weight: =
+600; padding-bottom: 15px;">
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0Fpl9UJzcsNwPathCtxbc-PV4zNeD5R6UPbGlVV_eyG7=
+Kp7ZVnPsmDCWQh5EzFbII23m41_dZZy735Hlg7FwZbntPvzySMYHEbK9ER7_4EW45_gs9qXd0SJ=
+Ex4SQOGShbGdFCTi2L3lnOdvLzd83oQD3E05LGuk7Jg9e4YFamljAODpqki5179yuZ0KCpKBGiw=
+cbnhrksrpHzm0qqU5sdZnm0SOEuDfWHM7YaBuPF_DHvJixm1E5Uy_sSLnGUBP-203jeUV0Wy5ZX=
+1HbT70ySo7If-YqzaDCRjc-GZ0px66q5d-GNmQengG6RZMOVzXB8ZlJBCnEFs9pC8l1WQWZYNXz=
+pyWmWEMQr_70c59dKhYskObjm5SnxAEQKL2fFr6_afKyp7BaF3Psc93_cbngZtDp/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h27/h001.9HbLtlM6LudVegxis0UDdXZKkX2O7BMWacezXCPWcL0" styl=
+e=3D"text-decoration: none; color: #0E3651;">
+                  Up to 50% Off Top Brand Hair Care
+                </a>
+              </td>
+            </tr>
+         =20
+         =20
+            <tr>
+              <td bgcolor=3D"#076CA1" style=3D"border-radius: 100px; line-h=
+eight: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center"=
+>
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0Fpl9UJzcsNwPathCtxbc-PV4zNeD5R6UPbGlVV_eyG7=
+Kp7ZVnPsmDCWQh5EzFbII23m41_dZZy735Hlg7FwZbntPvzySMYHEbK9ER7_4EW45_gs9qXd0SJ=
+Ex4SQOGShbGdFCTi2L3lnOdvLzd83oQD3E05LGuk7Jg9e4YFamljAODpqki5179yuZ0KCpKBGiw=
+cbnhrksrpHzm0qqU5sdZnm0SOEuDfWHM7YaBuPF_DHvJixm1E5Uy_sSLnGUBP-203jeUV0Wy5ZX=
+1HbT70ySo7If-YqzaDCRjc-GZ0px66q5d-GNmQengG6RZMOVzXB8ZlJBCnEFs9pC8l1WQWZYNXz=
+pyWmWEMQr_70c59dKhYskObjm5SnxAEQKL2fFr6_afKyp7BaF3Psc93_cbngZtDp/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h28/h001.JOrHmwJTohERGNOdEHvJDT7bcQSA6oFEGQUkUG-Yb4Y" targ=
+et=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffff=
+e; padding: 10px 30px;">View Deal</a>
+              </td>
+            </tr>
+         =20
+        </table>
+      </td>
+    </tr>
+  </table>
+</td>
+       =20
+      </tr>
+<tr class=3D"row6">
+<td class=3D"col1">
+       =20
+       =20
+          </td>
+<td class=3D"deal_x1" style=3D"padding: 0 10px 35px;">
+  <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"100%">
+    <tr>
+      <td class=3D"column" valign=3D"top" width=3D"180" style=3D"">
+        <div class=3D"fluid-img" style=3D"border: 1px solid #e1e1e1;">
+          <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV=
+1rl3Y-c2j1ZAjrpda4TZ45bhB0Frci1qkzQ7P2lNlrYKHeQxKoaR3Ei_v_OUREzMEmIuuULnS32=
+L-Jy08rQLuNaKp5b_2ZXQ-c3TaChMxJfsOqFUbJiCjP86CsGFdbZ8e8SCK_UY-QymfOglCt0RdN=
+Qlqd7yxH6l3LMsOcJdW4YPHQfuk_9185hqtyozSHV34DyZJzxGg6Ns9jGyQLupSJd1OFBteQH5g=
+hV4muBRFVvdEhUdvFeELE_ARK-V5MtNVIur1fMyE2_cLHvixkKuE-adreUuUTsOcFD1u5-gByvh=
+Gp5W1hP4EPhiudUUTcpToy2EZxjlOS-4WR1kSPNVkq8Yfo7IlWleNlVu_D-B6u8uu-ne4hCAcdn=
+uecJwH-Yn9FrBpn9OFGGQePTqFdG-FTgSzJN3U1yXajRU4i4equimzH9MK/4qf/YqHE1qwcTBKE=
+tk2dbTBKgA/h29/h001.lPg-JlqprRNLJ4oDIRDeN2TrPQm3nkoZePfJ7SX-XMQ" style=3D"d=
+isplay: block; color: #076CA1;" target=3D"_blank">
+           =20
+
+
+
+ =20
+ =20
+
+
+    <img src=3D"https://cs.ss-ops.net/bltf37637bcddc61bd0/69fba68453cdc3699=
+8e720c2/3a76719a696c1df1519acccee9a575ea81971ae5.png?p=3Dem600" style=3D"" =
+width=3D"178" height=3D"178" class=3D"widthFull heightAuto" border=3D"0" al=
+t=3D"">
+
+   =20
+   =20
+
+
+          </a>
+        </div>
+      </td>
+      <td class=3D"column" width=3D"20" style=3D"padding-bottom: 15px;"></t=
+d>
+      <td class=3D"column" valign=3D"middle" style=3D"">
+        <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"10=
+0%">
+         =20
+         =20
+            <tr>
+              <td style=3D"font-size: 22px; line-height: 1.2; font-weight: =
+600; padding-bottom: 15px;">
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0Frci1qkzQ7P2lNlrYKHeQxKoaR3Ei_v_OUREzMEmIuu=
+ULnS32L-Jy08rQLuNaKp5b_2ZXQ-c3TaChMxJfsOqFUbJiCjP86CsGFdbZ8e8SCK_UY-QymfOgl=
+Ct0RdNQlqd7yxH6l3LMsOcJdW4YPHQfuk_9185hqtyozSHV34DyZJzxGg6Ns9jGyQLupSJd1OFB=
+teQH5ghV4muBRFVvdEhUdvFeELE_ARK-V5MtNVIur1fMyE2_cLHvixkKuE-adreUuUTsOcFD1u5=
+-gByvhGp5W1hP4EPhiudUUTcpToy2EZxjlOS-4WR1kSPNVkq8Yfo7IlWleNlVu_D-B6u8uu-ne4=
+hCAcdnuecJwH-Yn9FrBpn9OFGGQePTqFdG-FTgSzJN3U1yXajRU4i4equimzH9MK/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h30/h001.oEcGB-WQADIYci1il7MKgtMC1a_j-B9mPfDqsAwuYUs" styl=
+e=3D"text-decoration: none; color: #0E3651;">
+                  Dooney Leather Crossbody $80 Shipped
+                </a>
+              </td>
+            </tr>
+         =20
+         =20
+            <tr>
+              <td bgcolor=3D"#076CA1" style=3D"border-radius: 100px; line-h=
+eight: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center"=
+>
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0Frci1qkzQ7P2lNlrYKHeQxKoaR3Ei_v_OUREzMEmIuu=
+ULnS32L-Jy08rQLuNaKp5b_2ZXQ-c3TaChMxJfsOqFUbJiCjP86CsGFdbZ8e8SCK_UY-QymfOgl=
+Ct0RdNQlqd7yxH6l3LMsOcJdW4YPHQfuk_9185hqtyozSHV34DyZJzxGg6Ns9jGyQLupSJd1OFB=
+teQH5ghV4muBRFVvdEhUdvFeELE_ARK-V5MtNVIur1fMyE2_cLHvixkKuE-adreUuUTsOcFD1u5=
+-gByvhGp5W1hP4EPhiudUUTcpToy2EZxjlOS-4WR1kSPNVkq8Yfo7IlWleNlVu_D-B6u8uu-ne4=
+hCAcdnuecJwH-Yn9FrBpn9OFGGQePTqFdG-FTgSzJN3U1yXajRU4i4equimzH9MK/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h31/h001.cPDlHW5gfMlb8GT5AbWrOBeEy3C78TgVJy1gaeINH2w" targ=
+et=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffff=
+e; padding: 10px 30px;">View Deal</a>
+              </td>
+            </tr>
+         =20
+        </table>
+      </td>
+    </tr>
+  </table>
+</td>
+       =20
+      </tr>
+<tr class=3D"row7">
+<td class=3D"col1">
+       =20
+       =20
+          </td>
+<td class=3D"deal_x1" style=3D"padding: 0 10px 35px;">
+  <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"100%">
+    <tr>
+      <td class=3D"column" valign=3D"top" width=3D"180" style=3D"">
+        <div class=3D"fluid-img" style=3D"border: 1px solid #e1e1e1;">
+          <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV=
+1rl3Y-c2j1ZAjrpda4TZ45bhB0FpWk2Xsgu9KsO9Up8PsmnoUrLzmCoZPMfRSp8w-5nHOdwLI2b=
+auK7an4NXImLm78B1XXFPalqlIoJWH1X6-ro2c0m3vz3axxaDm3GuUqjmG7wrb5uAYOgcIj4GY3=
+OnxHynJkRkHGJciFYAGMPrVk1DHhvygaZR9RszYfppA4hmalIGXxLVqKvxPkAubijq84QKffDDE=
+0KukLCusgv7fPozw-TbNeP1ZjcBq87sf8erKB8uIMu1zqnelqvZL462RnL4lwkF305oPtwsAuQh=
+g0IqWz59ZsNHlngX7iF2L16cfagpyWLk03ApcxjZaV7KGgMrEV8DnJqgl5gIKYSOlUTGpjvmb30=
+szIpQQOCk9l72TwNWyPhxy_uUwSr_a3rilatT7sb7lCkwfhat9HHPX-EHx/4qf/YqHE1qwcTBKE=
+tk2dbTBKgA/h32/h001.m2WdAuf7wx3pq_Cwe8QMGvBvb1X1Aws76uQjpNsx6gM" style=3D"d=
+isplay: block; color: #076CA1;" target=3D"_blank">
+           =20
+
+
+
+ =20
+ =20
+
+
+    <img src=3D"https://cs.ss-ops.net/blt1010e54b1c848e26/69b07c9a9dfba3000=
+82cc844/4b9191f4184baeb3637d5bc0094b1b49ef1c50b1.jpg?p=3Dem600" style=3D"" =
+width=3D"178" height=3D"178" class=3D"widthFull heightAuto" border=3D"0" al=
+t=3D"">
+
+   =20
+   =20
+
+
+          </a>
+        </div>
+      </td>
+      <td class=3D"column" width=3D"20" style=3D"padding-bottom: 15px;"></t=
+d>
+      <td class=3D"column" valign=3D"middle" style=3D"">
+        <table cellspacing=3D"0" cellpadding=3D"0" border=3D"0" width=3D"10=
+0%">
+         =20
+         =20
+            <tr>
+              <td style=3D"font-size: 22px; line-height: 1.2; font-weight: =
+600; padding-bottom: 15px;">
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FpWk2Xsgu9KsO9Up8PsmnoUrLzmCoZPMfRSp8w-5nHO=
+dwLI2bauK7an4NXImLm78B1XXFPalqlIoJWH1X6-ro2c0m3vz3axxaDm3GuUqjmG7wrb5uAYOgc=
+Ij4GY3OnxHynJkRkHGJciFYAGMPrVk1DHhvygaZR9RszYfppA4hmalIGXxLVqKvxPkAubijq84Q=
+KffDDE0KukLCusgv7fPozw-TbNeP1ZjcBq87sf8erKB8uIMu1zqnelqvZL462RnL4lwkF305oPt=
+wsAuQhg0IqWz59ZsNHlngX7iF2L16cfagpyWLk03ApcxjZaV7KGgMrEV8DnJqgl5gIKYSOlUTGp=
+jvmb30szIpQQOCk9l72TwNWyPhxy_uUwSr_a3rilatT7sb7lCkwfhat9HHPX-EHx/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h33/h001.Zsy_WjYxOi7UvrsBh4KBrdgeiTp_X02lHjzmp5DdRBM" styl=
+e=3D"text-decoration: none; color: #0E3651;">
+                  Women's 32 Degrees Cloud Sneakers $20
+                </a>
+              </td>
+            </tr>
+         =20
+         =20
+            <tr>
+              <td bgcolor=3D"#076CA1" style=3D"border-radius: 100px; line-h=
+eight: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=3D"center"=
+>
+                <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUj=
+XrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FpWk2Xsgu9KsO9Up8PsmnoUrLzmCoZPMfRSp8w-5nHO=
+dwLI2bauK7an4NXImLm78B1XXFPalqlIoJWH1X6-ro2c0m3vz3axxaDm3GuUqjmG7wrb5uAYOgc=
+Ij4GY3OnxHynJkRkHGJciFYAGMPrVk1DHhvygaZR9RszYfppA4hmalIGXxLVqKvxPkAubijq84Q=
+KffDDE0KukLCusgv7fPozw-TbNeP1ZjcBq87sf8erKB8uIMu1zqnelqvZL462RnL4lwkF305oPt=
+wsAuQhg0IqWz59ZsNHlngX7iF2L16cfagpyWLk03ApcxjZaV7KGgMrEV8DnJqgl5gIKYSOlUTGp=
+jvmb30szIpQQOCk9l72TwNWyPhxy_uUwSr_a3rilatT7sb7lCkwfhat9HHPX-EHx/4qf/YqHE1q=
+wcTBKEtk2dbTBKgA/h34/h001.rwNVsJBKbNt3m3eVEa3lZOzYaLOj_LwoX8m4oBRmq2s" targ=
+et=3D"_blank" style=3D"display: block; text-decoration: none; color: #fffff=
+e; padding: 10px 30px;">View Deal</a>
+              </td>
+            </tr>
+         =20
+        </table>
+      </td>
+    </tr>
+  </table>
+</td>
+       =20
+      </tr>
+</table>
+  </td></tr>
+<tr><td style=3D"padding: 0 0 35px;" align=3D"center">
+  <table border=3D"0" cellspacing=3D"0" cellpadding=3D"0" style=3D"min-widt=
+h: 220px; padding: 0;"><tr><td style=3D"border-radius: 100px; font-size: 20=
+px; line-height: 1.2; font-weight: 600; mso-padding-alt: 10px 30px;" align=
+=3D"center" bgcolor=3D"#ED5E4F">
+    <a href=3D"https://links.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV1rl3Y-=
+c2j1ZAjrpda4TZ45bhB0FpLIND3GPd73CoNql1EW-pXiQdvGVfH5VsE2Y48t72FCLgnhWXQXgh_=
+yn1ydEjHWj5-voVsHMonqCpQsO2Azbm0ykNko71LuShS2HopYQ65rWvy-YPxNmMIOy20yi7zkgk=
+uu7DXWQCoWYaXHWYmW1a0W9yC9o2V8wXuMgP3-SjAbvr43j3YhaBol8u3sGJDjmUPoKL5bRrnSJ=
+60PPGszp0Bt1zShvj_om4LBBl6hyY2lbcJ0JIZFBDR5sMXzEzsed1A36VPcFmJQl3MJm1pPe6VD=
+hi-rRsT-iaRq8S22hww-9bkwALbWTKPJ8ClpcGVonEcP2Qlr7exSv2cf0x2utqnQNHhE5NpcOBi=
+7aXThVSN70vy8XzGLn2mbZ_Fn0njCeo/4qf/YqHE1qwcTBKEtk2dbTBKgA/h35/h001.sN_zvMG=
+7Lc8yG-FgpmlZAv5b0kaksR-HWXVL2Fq0v5E" target=3D"_blank" style=3D"display: b=
+lock; text-decoration: none; color: #fffffe; padding: 10px 30px;">View More=
+ Deals</a>
+  </td></tr></table>
+</td></tr>
+</table>
+<table border=3D"0" cellspacing=3D"0" cellpadding=3D"0" width=3D"100%">
+              <tr><td style=3D"font-size: 13px; color: #716c6c; padding: 35=
+px;" align=3D"center">
+<table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" style=3D"margin: 0 =
+0 20px;"><tr>
+                  <td style=3D"padding-right: 10px;"><a href=3D"https://lin=
+ks.bradsdeals.com/ss/c/u001.xhnAI1UIaucM1jqPJAwpq1t3wgJKxtKHv9X-0Il-wyRJnle=
+eFlIPHzkzlX33kgNkhtKx99qZvTkOOTfzkRs5YWzXEqfLsHNrhHI9oimSgAgR8c1kO2lauGD2jM=
+x6n6yScMPJbHbdRR1VtUitQkabXhYTqa5gXsZUChhOqhAOoEjlaQyUeQTX4JCf07Nez5OF0dcVm=
+-OD1wASpbM1uN1i0mT99g0zPT7mkFSwXCiNGxwm3iBr0OTdEeS_E49NxYgxeOcpMwdTLjKwMU_w=
+N0Ic2AROwt7VC0W8NM-0Bkwrub4gceE3PtAw2XS8zHCEucb5hWBD4x4Jsims8uF-jdeugi0XDoK=
+AMevvktfQcoTtnjRNcigVtQVYnfv8vrQB4LkeB4OmXK3rvWpTSWuX3xhNa-ra7Y7mi8BbaBNJHw=
+jHn2uJS_VBa-u2ZHqy0AOogNB7jf0ZAjrhCQFu-To0kFIWkeKX2VnU9_zNRC2FakR7ckw/4qf/Y=
+qHE1qwcTBKEtk2dbTBKgA/h36/h001.29DGcL1OiYMnz7QHehylL2JLRx2yuqhjsBMj5PuFlX4"=
+ target=3D"_blank" style=3D"color: #076CA1;"><img alt=3D"Download on the Ap=
+ple Store" src=3D"https://appboy-images.com/appboy/communication/assets/ima=
+ge_assets/images/5cd0803371612407aa7b24db/original.png?1557168179" style=3D=
+"width: 150px;" width=3D"150"></a></td>
+                  <td><a href=3D"https://links.bradsdeals.com/ss/c/u001.xhn=
+AI1UIaucM1jqPJAwpqyohrzaCwhKlC5cBRJ1l_g9WPiOAGqo4_TxGTidzvVYtMyCJZpvJjrPbWV=
+8mLFcS49SFhLECOZE3QiO2FJXQv_wpO9kxyjb-WloVYlrAva_t_0teupsS5BsyeI7ojUQxo-1IN=
+nO62V-k8OcnlvP8gfRHTltO7a2jMIsiRVe66397-_GrS-o18QSNjZMgbpEVdn2eNPYk2UrvFG5H=
+vVleJa_whTIsSHZger36wN2DUMTqN7iDoG5Jw883HdV2bUC0Hl3zLCXRbwVUd7em7afB_YeQ26i=
+x9R_6q944IAQMywpVMur7qojochTPBw1XKE2J1Xcb1tvN79M3lkcSaH4okh-dql4GwG_0TGz1pZ=
+JUQpmeDHur4KjxkGibeMq6FIlXmdjvkzAP_kfqmS_YciiyGDKHAhxJu8D-v7c1_S79fUuUrRkhn=
+CNsg4Hf42xjpHx6xsG4yfToEZk6xqdhzlRbEy8/4qf/YqHE1qwcTBKEtk2dbTBKgA/h37/h001.=
+f-PuJ2SnTpQFtivcX0_63yYFkjtzDrxX6g3DbspqlrM" target=3D"_blank" style=3D"col=
+or: #076CA1;"><img alt=3D"Get It On Google Play" src=3D"https://appboy-imag=
+es.com/appboy/communication/assets/image_assets/images/5cd0803414a516658a68=
+df24/original.png?1557168180" style=3D"width: 150px;" width=3D"150"></a></t=
+d>
+                </tr></table>
+<table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" style=3D"margin: 0 =
+0 35px;"><tr>
+                  <td style=3D"padding-right: 10px;"><a href=3D"https://lin=
+ks.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV1rl3Y-bVAiNPoLxVZw5NiWj2iaBrLBrz=
+-NS1HXYn7G6ukmjwu3foZc5ioNSFLw8S2SAHIFzIjiuJ7StsbptfbZYOOb8krAAwtjfO2CV7B7L=
+jms8GJjekV0e1mrvwP1V-whTshyXdeBIsGvVC4RZa1gB7YlrzisOTS-urvjlmJg7YprXL4IlHhB=
+XRljz4f74wMxsi8aCG24l0l-aqTkdXV6D6tx5OGnyGg8mbQGRp6rBIHAXtBT4GXqar4VU5YMaJB=
+djTLxMdFsLJyXZzcUbnM4qoVSq0FD8ur09Glxg717GUMw0_IRkn-rNATkhTM6dLF6bj5jW1MS6t=
+Q3pfjxjcJl7SgZ_4rLP8jwbEf--_WKx5gK6Jjgw8EAnJwY9EfOv1yiD0IfU6zLz4Lzn2y8xyuae=
+9yvDM/4qf/YqHE1qwcTBKEtk2dbTBKgA/h38/h001.A0RUvRT_Gsf72UQZEXtfxJomXX8O9_xge=
+8C04gMdkDs" target=3D"_blank" style=3D"color: #076CA1;"><img alt=3D"Faceboo=
+k" src=3D"https://braze-images.com/appboy/communication/assets/image_assets=
+/images/628d4696f3dc7076e177496f/original.png?1653425814" style=3D"width: 3=
+0px;" width=3D"30"></a></td>
+                  <td style=3D"padding-right: 10px;"><a href=3D"https://lin=
+ks.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV1rl3Y-UdUe27oNwUyRhBkXycfHUz2oDr=
+gj82IKR3D6twrAhK3ucTs6MK_2VVYPxW1nwBgGJ5T50q4Rj3dqNECgm3wDZiK91KxqsGdwXz7Ps=
+GnvIdMC5TnW0H557OANZ07d10Rhf56sbMfwP9vNDc5oSFEveLf6zUMbJ_GfrbLEE7WCwRSnUusy=
+Q5x3ChBElY6OT8WMgoYyFDyhRCtsrg7ySUYn7iEDuqqwlSeGnuVyAKF8v0RrBdZ69twPDMPKQp5=
+h9MdhuwMa5drfUuqmYFIA2AHjISxdErI7snYmSwlHjqIr2sBu971vjCNIPwqOyCLqaoRuxPMP_-=
+8_i3NX2AYsWrZjAk2mHjoDKv7mvY2ZdspqKg2M1X9qOk4vOaU7RIqrCpSxCyDmR0D48Pebl8Ujs=
+Rd-Y4/4qf/YqHE1qwcTBKEtk2dbTBKgA/h39/h001.xZQF-A4smXB93-C3_F2NuXzCMkA6gzylZ=
+1fELO5Z0Eg" target=3D"_blank" style=3D"color: #076CA1;"><img alt=3D"Instagr=
+am" src=3D"https://braze-images.com/appboy/communication/assets/image_asset=
+s/images/628d4696e222f237b136e95f/original.png?1653425814" style=3D"width: =
+30px;" width=3D"30"></a></td>
+                  <td style=3D"padding-right: 10px;"><a href=3D"https://lin=
+ks.bradsdeals.com/ss/c/u001.NeHU3JcUjXrfebV1rl3Y-Tr47VWhHq1YQTXZrk8FjRmFCv4=
+xAxxHeSieC29t963a_5_-M0aXpkyxttxm90uBGdpYlzwXNbGtusBv2POcqVr-6mLveqmf1C2RoO=
+qLGYp-wZ5E-r_p_2qAXTN2smUhulmdmj1Zz6josrwKLuuzRPZ0oGDPb6WYLnfQ_wYwIW6w-mb1b=
+hSDUsmpKQwF1w18o--vyChW_zakx64HSt4QWJ90laN0VUXSjuEf0dd9PyhSESXX5pCiBafqKIg3=
+e5x5UERWHy04bthnHZ9bTNMJ8OYmW-kygvwtk_9PerFhh8QP_Lj2ED2iLBBzSjL8EmpWrDXm0go=
+oQsmKWCbFZy_n6PDYqoIx3L56Q_OBqwHcgrwtof6HAtLevZ1T9RI2vAcdpfuNee7eLrmza5xvnK=
+Y0_cM/4qf/YqHE1qwcTBKEtk2dbTBKgA/h40/h001.tHkFqdFRFUCIg_tDAGFiIqIkeoDCz4QTp=
+MwVbrO4aLc" target=3D"_blank" style=3D"color: #076CA1;"><img alt=3D"TikTok"=
+ src=3D"https://braze-images.com/appboy/communication/assets/image_assets/i=
+mages/628d4695287a38548c95c15c/original.png?1653425813" style=3D"width: 30p=
+x;" width=3D"30"></a></td>
+                  <td style=3D"padding-right: 10px;"><a href=3D"https://lin=
+ks.bradsdeals.com/ss/c/u001.ANJ6gDfEZ_5LXpIrVEwNDVgnF_otl-q4vnZETs4dKPMokVY=
+Uw1Ajj2v0cOR4EVsWzyNVS17ff9pRMZOhwSqPJ6JfCfIdP-V5vdn4jUmklyv62AN2G8HZnltYQ-=
+qCrnEjRw6vKYfpy94YugfBuFd7GQkJvWqauGWypeagpxNaFm9MgBAzCmoYg2NR8Dn0SgOsxIKOj=
+MhVcdmKUlHhZZFRz9xkW_G7IxUpKGC4oMUg09oKQPC8vfHy3q_2NGCRv4tJZsAOy1WN3GJz4L85=
+0GH9aMR50_S_204vYlyBojQ0TVRndTI9wYsk1_wGxic2sHzEEyihDI77sXVTTU4NtvfI98U5w4z=
+71ggAc9-1apiNvr9PNYjde6KnsqNAMHTHa6L-EeOeBUogfrgWM-5Z65MIXFF0xLJee5Kbjm7v0o=
+0EvN0/4qf/YqHE1qwcTBKEtk2dbTBKgA/h41/h001.7u3OT4vfPjqtguSEhSlmEYPEhbHL6AItW=
+aLujzW0SI8" target=3D"_blank" style=3D"color: #076CA1;"><img alt=3D"Twitter=
+" src=3D"https://braze-images.com/appboy/communication/assets/image_assets/=
+images/628d4696c9a1351d17f381af/original.png?1653425814" style=3D"width: 30=
+px;" width=3D"30"></a></td>
+                  <td><a href=3D"https://links.bradsdeals.com/ss/c/u001.NeH=
+U3JcUjXrfebV1rl3Y-RFriFn5qcjvIYR2j4O-My3eRhQARamyKeK5bMmjZ8KADhtqs0pbR8uQgg=
+-0xanWG8zkmOLkPfD2ZwRaBgHuUbbY21Be-lH2jCLx8Wz-UVJl5V3qmOIPqZZlY7_Lcj6k0WwqS=
+vPskWpy6q7G8cnVS82KlQigGfA7g2rtJWMaDdo3Swzn-zAb7I1RNHLzIE22kWsjWbfjXLRSAGS5=
+9foIqT35cAC2ErjIYw99_ekjy7MH_8u7Kk0_um4m3isvq6BHy3DO_-sctvS4foHFdJKt4w_R_3Y=
+e7X9trn_RWIhyjlaKJoA6biQrumsGDMxFtKK0k4abb5Vc0IQkknuuizWYbbE6FCIEebg1jx6ysR=
+uxQ3XMLc7pjBC6Zlcer9Y5aI0w9UOVgqoa_feKqRXouOz4sVw/4qf/YqHE1qwcTBKEtk2dbTBKg=
+A/h42/h001.zOQFxOF1BF2v1pcCBWKwdfwVVoAr1tgbFVPehmjApus" target=3D"_blank" s=
+tyle=3D"color: #076CA1;"><img alt=3D"YouTube" src=3D"https://braze-images.c=
+om/appboy/communication/assets/image_assets/images/628d4695aed03c5f7c089d99=
+/original.png?1653425813" style=3D"width: 30px;" width=3D"30"></a></td>
+                </tr></table>
+<div style=3D"display: none; max-height: 0px; overflow: hidden;">https://01=
+.emailinboundprocessing.com/enc_user/unsubscribe?d=3D%241%24KOJ%2FWZGnq6pll=
+XTBeWoAeA%3D%3D%24h91x6NLfmcsoOOJvtsh580dvgV%2Btg5QXRtGkRvNSJYJeYmZiBiiKOK3=
+gI52j%0Ae3TRm4HlgUIGN9hOOouu9Etw8SCVobykW02FRe8Veb%2FZJ19QRx%2BoS3tnbxhX%0A=
+I9aJGWPjZpneejtu3p7cYytZ838WIf48AZzB%2F7RRn%2FLYtkLjbD2fl%2Ff5twIE%0A9eqKzR=
+1beL3tOot5621%2FfLggK14D8hUAwkJEwa1ck%2BbqhdlsanxYPvO4hVPg%0AzRZnMjlMZVkhI8=
+msv7V5v072PVBcDwW1qz8UhxZULlRk49%2FAxUbHez1n45JN%0Ac9ywm6a4uqyx3uZom1dyAWoz=
+%2Bxjq%2FbASEzX1AexMHpilEHAYhSY7PePuc8wk%0AstRrj%2BC1enlkkEdzcuyd6w%2FX&amp=
+;1=3D1</div>
+<p style=3D"margin: 0 0 .75em; padding: 0;"><a href=3D"https://links.bradsd=
+eals.com/ss/c/u001.NeHU3JcUjXrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FrAgPD3qm8ZsodB=
+KK6nO_kXBWrUY9EMHBBE9CuSA5Ano87uRy1PFISdeVGBzXLIBaglZ5SRHFm2W5UbmrQLhKFcM0p=
+IUxt02a-TnIJDuUtET-zoBO_soogDURWKy4bdI7CXCq-U8oOhiExsiWtUvRpp_3Z333HRtd2Rro=
+OAKbn1f3Nd1TGVQVED1ftjXvQgVyN-shAYI3Zbtn_Gnr2EtvPivdWOsfrhQkxHA9qUS5smQ5_eA=
+R5dSm3Zl4tKnS_8therMcSluxnAZAVE8jnADYv7YisA9-snJP8uzzqVBMfmypPkmaLC__zpqdqG=
+X2gODb7qr9O67aZTjF2j8PVg4D8JZlVJk5n-4Qb3Jtrj1yY747duEBzw4I_44hUoEn9nIxtVloP=
+5BMFa1fP46KPDI0iu4VXo_VM-d2DbVk-uaIfOeDxEGI-jZUfEhLsIGwLstjDAzrFgESTT-aPfy7=
+lLHqMHX2xWGDbrm4soxJORFTcKROFeCS-OGbQHxd9RBdILkTsDGqha703HgWh9fqAaY6DtcEIg1=
+2zXkXm2wyjJPMPsE_YhpT3VAmA8ugJtPFGtFHrSTooxXoCgiiIBztyIbOLM7_s84TAxNciW40HV=
+ROQsJMdtrTWdfbRvjV41VdiaFOJrJhD-EDMMC72qA3YGXgrR1V_Fe4guGjSu-cShNZdgeFpWHuf=
+9OsDRyCrDhslKRlkKs792ZHgG6to7FXnwxPba0XBCK9ovBai4RMFWJ_A2skcDotnftpXGbZdHjB=
+exUAlL-Nh5M-slEwugxjVrZ_DWWvmMTtPZuSchbrwiDbwi7l_CXd1xlDqzxl-ekr5bOYBiwxu7s=
+dJ27760XPbjqjWe0M1UCIBMj6lIV5kV-8kL5dWjbGi9RUWwWbWr7elbbWICaI-Vn-fJTocPRena=
+2ItxWOqNRI5_y78swDBlHVeFxvAzlaOlDnlcM7hLSrr3sJ3ymE7SP1I1-cU_dsWwVMilMjgIdQi=
+TcvdrLtutQPCoyqrFPEWHvQIWpTfalp6eznMvSPgA_snikBDrDmoKhYFJPaQ8P4wEW2oPBkLmTA=
+XjSfcDPeHA3qCB1esv9Xw8T8tlj6oBNfWntyvUcCALizRkgsVG2BlZsZw_NWFLg7JcmXhmIfIUe=
+N5EFeY6q_5TV1mM0fV9QcmG90brqSNoDhQDkt9ZavXb-4dgS37_tZFcA02NWMLRdHZfX66UuFLZ=
+yhzRvd4-3QNEC7Yrk60-Tb1U5UuaBAonShqdowwCwUCcNg/4qf/YqHE1qwcTBKEtk2dbTBKgA/h=
+43/h001.zR0aMyigCuW5gl_W_J1412BV4r5fzG7rgatsp9liRik" style=3D"color: #716c6=
+c;">Unsubscribe</a></p>
+<table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" style=3D"margin: 15=
+px 0;"><tr>
+                  <td><a href=3D"https://links.bradsdeals.com/ss/c/u001.NeH=
+U3JcUjXrfebV1rl3Y-c2j1ZAjrpda4TZ45bhB0FpLIND3GPd73CoNql1EW-pXiQdvGVfH5VsE2Y=
+48t72FCLgnhWXQXgh_yn1ydEjHWj5-voVsHMonqCpQsO2Azbm0ykNko71LuShS2HopYQ65rWvy-=
+YPxNmMIOy20yi7zkgkuu7DXWQCoWYaXHWYmW1a0W9yC9o2V8wXuMgP3-SjAbvr43j3YhaBol8u3=
+sGJDjmUPoKL5bRrnSJ60PPGszp0Bt1zShvj_om4LBBl6hyY2lbcJ0JIZFBDR5sMXzEzsed1A36V=
+PcFmJQl3MJm1pPe6VDhi-rRsT-iaRq8S22hww-9bkwALbWTKPJ8ClpcGVonEcP2Qlr7exSv2cf0=
+x2utqnQNHhE5NpcOBi7aXThVSN70vy8XzGLn2mbZ_Fn0njCeo/4qf/YqHE1qwcTBKEtk2dbTBKg=
+A/h44/h001.-85w14RaNkdRFPqTpz8e_xCUozE3ui6arn7Q9SqlJa8" target=3D"_blank" s=
+tyle=3D"color: #076CA1;"><img src=3D"https://braze-images.com/appboy/commun=
+ication/assets/image_assets/images/628d48184643ea5c91671d94/original.png?16=
+53426200" style=3D"width: 180px;" width=3D"180" alt=3D"Shop Brad's Deals"><=
+/a></td>
+                </tr></table>
+<p style=3D"margin: 0 0 .75em; padding: 0;">6115 Estate Smith Bay Suite 315=
+, St. Thomas, VI 00802<br>=C2=A92026 Brad's Deals, LLC. All rights reserved=
+.</p>
+
+              </td></tr>
+            </table>
+</td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+</table>
+
+
+
+
+<img border=3D"0" width=3D"1" height=3D"1" src=3D"https://p.alcmpn.com/em/1=
+77/115/1269.gif?email_sha_lc=3D1ee4fafcf547c9c90b8952593efbd4ecf7ca4442&amp=
+;email_sha_uc=3D78eb79fe44c2b34371be273e22adaa951476acf8&amp;email_md5_lc=
+=3Dab279ff565564d6a32dfbfc9f1cf57c5">
+<img border=3D"0" width=3D"1" height=3D"1" src=3D"https://p.alcmpn.com/em/1=
+77/111/1270.gif?email_sha_lc=3D1ee4fafcf547c9c90b8952593efbd4ecf7ca4442">
+<img border=3D"0" width=3D"1" height=3D"1" src=3D"https://p.alcmpn.com/em/1=
+77/110/1271.gif?email_md5_lc=3Dab279ff565564d6a32dfbfc9f1cf57c5">
+<img border=3D"0" width=3D"1" height=3D"1" src=3D"https://p.alcmpn.com/em/1=
+77/112/1272.gif?email_sha_lc=3D1ee4fafcf547c9c90b8952593efbd4ecf7ca4442">
+<img border=3D"0" width=3D"1" height=3D"1" src=3D"https://p.alcmpn.com/em/1=
+77/113/1273.gif?email_md5_lc=3Dab279ff565564d6a32dfbfc9f1cf57c5">
+<img border=3D"0" width=3D"1" height=3D"1" src=3D"https://p.alcmpn.com/em/1=
+77/114/1274.gif?email_md5_lc=3Dab279ff565564d6a32dfbfc9f1cf57c5&amp;email_s=
+ha_lc=3D1ee4fafcf547c9c90b8952593efbd4ecf7ca4442">
+<img border=3D"0" width=3D"1" height=3D"1" src=3D"https://p.alcmpn.com/em/1=
+77/116/1275.gif?email_sha_lc=3D1ee4fafcf547c9c90b8952593efbd4ecf7ca4442&amp=
+;email_sha_uc=3D78eb79fe44c2b34371be273e22adaa951476acf8&amp;email_md5_lc=
+=3Dab279ff565564d6a32dfbfc9f1cf57c5">
+<img border=3D"0" width=3D"1" height=3D"1" src=3D"https://p.alcmpn.com/em/1=
+77/117/1276.gif?email_sha_lc=3D1ee4fafcf547c9c90b8952593efbd4ecf7ca4442&amp=
+;email_sha_uc=3D78eb79fe44c2b34371be273e22adaa951476acf8&amp;email_md5_lc=
+=3Dab279ff565564d6a32dfbfc9f1cf57c5">
+<img border=3D"0" width=3D"1" height=3D"1" src=3D"https://p.alcmpn.com/em/1=
+77/118/3856.gif?email_sha_lc=3D1ee4fafcf547c9c90b8952593efbd4ecf7ca4442&amp=
+;email_sha_uc=3D78eb79fe44c2b34371be273e22adaa951476acf8&amp;email_md5_lc=
+=3Dab279ff565564d6a32dfbfc9f1cf57c5">
+<img border=3D"0" width=3D"1" height=3D"1" src=3D"https://p.alcmpn.com/em/1=
+77/119/1278.gif?email_sha_lc=3D1ee4fafcf547c9c90b8952593efbd4ecf7ca4442&amp=
+;email_sha_uc=3D78eb79fe44c2b34371be273e22adaa951476acf8&amp;email_md5_lc=
+=3Dab279ff565564d6a32dfbfc9f1cf57c5">
+
+</body>
+</html>
