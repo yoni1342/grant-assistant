@@ -37,45 +37,67 @@ const escapeHtml = (s) => String(s || '')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
 
+const truncateTitle = (s, max = 68) => {
+  if (!s) return '';
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${cut.slice(0, lastSpace > 30 ? lastSpace : max).trimEnd()}…`;
+};
+
 const cell = (p) => {
   if (!p) return '<td width="50%" style="padding:8px;"></td>';
   const url = escapeHtml(p.url);
-  const title = escapeHtml(p.title);
+  const title = escapeHtml(truncateTitle(p.title));
   const image = escapeHtml(p.image);
   const merchant = p.merchant ? escapeHtml(p.merchant) : null;
   const priceLabel = p.priceLabel ? escapeHtml(p.priceLabel) : null;
   const wasPriceLabel = p.wasPriceLabel ? escapeHtml(p.wasPriceLabel) : null;
   const discountPct = p.discountPct;
 
-  const wasLine = wasPriceLabel
-    ? `<span style="font-size:12px;color:${C.hint};text-decoration:line-through;display:block;line-height:1;margin-bottom:3px;">${wasPriceLabel}</span>`
-    : '';
-  const priceLine = priceLabel
-    ? `<span style="font-size:20px;font-weight:800;color:${C.ink};line-height:1;">${priceLabel}</span>${discountPct ? `<span style="font-size:11px;font-weight:700;color:${C.red};margin-left:8px;letter-spacing:0.3px;">-${discountPct}%</span>` : ''}`
-    : '';
-  const priceBlock = priceLabel ? `${wasLine}${priceLine}` : '';
   const merchantTag = merchant
-    ? `<span style="font-size:10px;font-weight:700;color:${C.red};letter-spacing:0.8px;text-transform:uppercase;">${merchant}</span>`
+    ? `<span style="font-size:10px;font-weight:700;color:${C.red};letter-spacing:1px;text-transform:uppercase;">${merchant}</span>`
+    : '<span style="font-size:10px;color:transparent;">.</span>';
+
+  const saleRibbon = discountPct
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="left" style="margin:10px 0 0 10px;"><tr><td style="background-color:${C.red};color:#FFFFFF;font-size:11px;font-weight:800;padding:4px 10px;border-radius:99px;letter-spacing:0.5px;">SALE</td></tr></table>`
     : '';
+
+  const wasLine = wasPriceLabel
+    ? `<span style="font-size:12px;color:${C.hint};text-decoration:line-through;line-height:1;">${wasPriceLabel}</span>`
+    : '<span style="font-size:12px;color:transparent;">.</span>';
+  const priceLine = priceLabel
+    ? `<span style="font-size:22px;font-weight:800;color:${C.ink};line-height:1;">${priceLabel}</span>${discountPct ? `<span style="display:inline-block;background-color:${C.red};color:#FFFFFF;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;margin-left:8px;letter-spacing:0.4px;vertical-align:2px;">-${discountPct}%</span>` : ''}`
+    : `<span style="font-size:22px;color:${C.muted};font-weight:600;">See deal</span>`;
 
   return `
   <td width="50%" valign="top" style="padding:6px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" height="100%" style="height:100%;background-color:${C.cardBg};border:1px solid ${C.border};border-radius:8px;overflow:hidden;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.cardBg};border:1px solid ${C.border};border-radius:10px;overflow:hidden;">
       <tr>
-        <td align="center" valign="middle" height="180" style="height:180px;background-color:${C.imgBg};">
-          <a href="${url}" style="text-decoration:none;display:block;line-height:0;">
-            <img src="${image}" alt="" width="180" style="max-width:90%;max-height:160px;height:auto;display:inline-block;border:0;" />
-          </a>
+        <td valign="top" height="180" style="height:180px;background-color:${C.imgBg};position:relative;padding:0;">
+          ${saleRibbon}
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td align="center" valign="middle" height="180" style="height:180px;">
+              <a href="${url}" style="text-decoration:none;display:block;line-height:0;">
+                <img src="${image}" alt="" width="180" style="max-width:90%;max-height:160px;height:auto;display:inline-block;border:0;" />
+              </a>
+            </td>
+          </tr></table>
         </td>
       </tr>
-      <tr><td style="padding:14px 14px 4px 14px;line-height:1;">${merchantTag}</td></tr>
+      <tr><td height="28" style="height:28px;padding:14px 14px 0 14px;line-height:1;">${merchantTag}</td></tr>
       <tr>
-        <td valign="top" style="padding:6px 14px 6px 14px;font-size:13px;line-height:1.35;color:${C.ink};min-height:36px;">
+        <td valign="top" height="38" style="height:38px;padding:6px 14px 0 14px;font-size:13px;line-height:1.35;color:${C.ink};overflow:hidden;">
           <a href="${url}" style="color:${C.ink};text-decoration:none;font-weight:500;display:block;">${title}</a>
         </td>
       </tr>
-      <tr><td height="100%" style="height:100%;line-height:1;font-size:0;">&nbsp;</td></tr>
-      <tr><td style="padding:6px 14px 16px 14px;">${priceBlock}</td></tr>
+      <tr><td height="16" style="height:16px;padding:8px 14px 0 14px;line-height:1;">${wasLine}</td></tr>
+      <tr><td height="30" style="height:30px;padding:4px 14px 0 14px;line-height:1;">${priceLine}</td></tr>
+      <tr>
+        <td style="padding:14px 14px 14px 14px;">
+          <a href="${url}" style="display:block;background-color:${C.red};color:#FFFFFF;text-align:center;text-decoration:none;padding:11px 12px;border-radius:6px;font-weight:700;font-size:13px;letter-spacing:0.3px;">Shop Deal &rarr;</a>
+        </td>
+      </tr>
     </table>
   </td>`;
 };
@@ -109,34 +131,34 @@ const html = `<!DOCTYPE html>
         </td>
       </tr>
       <tr>
-        <td style="background-color:${heroBg};padding:32px 24px 28px 24px;">
+        <td style="background-color:${heroBg};background-image:linear-gradient(135deg,#1E1B4B 0%,#312E81 50%,#4F46E5 100%);padding:36px 24px 32px 24px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-              <td align="center" style="padding-bottom:18px;">
-                <span style="font-size:11px;color:${heroKicker};letter-spacing:1.6px;text-transform:uppercase;font-weight:700;">${escapeHtml(datePretty.toUpperCase())}</span>
-                <h1 style="margin:8px 0 6px 0;font-size:30px;font-weight:800;color:${heroText};letter-spacing:-0.6px;line-height:1.1;">Today's Top Deals</h1>
-                <p style="margin:0;font-size:14px;color:${heroSub};line-height:1.5;">${products.length} hand-picked finds, fresh from across the web</p>
+              <td align="center" style="padding-bottom:22px;">
+                <span style="display:inline-block;background-color:rgba(255,255,255,0.12);color:${heroKicker};font-size:10px;letter-spacing:1.8px;text-transform:uppercase;font-weight:700;padding:5px 12px;border-radius:99px;">🔥 ${escapeHtml(datePretty.toUpperCase())}</span>
+                <h1 style="margin:14px 0 8px 0;font-size:34px;font-weight:900;color:${heroText};letter-spacing:-0.7px;line-height:1.05;">Today's Top Deals</h1>
+                <p style="margin:0;font-size:14px;color:${heroSub};line-height:1.5;">${products.length} hand-picked finds &middot; up to <strong style="color:#FFFFFF;">${Math.max(...products.map(p => p.discountPct || 0))}% off</strong></p>
               </td>
             </tr>
             <tr>
               <td align="center">
                 <a href="https://getmodedeals.com" style="text-decoration:none;display:inline-block;line-height:0;">
-                  <img src="${HERO_SLIDE_URL}" alt="Today's top deal" width="540" style="max-width:100%;height:auto;display:block;border:0;border-radius:8px;background-color:#FFFFFF;" />
+                  <img src="${HERO_SLIDE_URL}" alt="Today's top deal" width="540" style="max-width:100%;height:auto;display:block;border:0;border-radius:10px;background-color:#FFFFFF;" />
                 </a>
               </td>
             </tr>
             <tr>
-              <td align="center" style="padding-top:20px;">
-                <a href="https://getmodedeals.com" style="display:inline-block;background-color:${heroCta};color:${heroCtaText};padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:700;font-size:14px;letter-spacing:0.2px;">Browse all deals &rarr;</a>
+              <td align="center" style="padding-top:22px;">
+                <a href="https://getmodedeals.com" style="display:inline-block;background-color:${heroCta};color:${heroCtaText};padding:13px 30px;text-decoration:none;border-radius:6px;font-weight:800;font-size:14px;letter-spacing:0.3px;">Browse all deals &rarr;</a>
               </td>
             </tr>
           </table>
         </td>
       </tr>
       <tr>
-        <td style="padding:28px 16px 8px 16px;background-color:${C.pageBg};">
-          <h2 style="margin:0;font-size:18px;font-weight:800;color:${C.ink};letter-spacing:-0.2px;text-transform:uppercase;">Hand-picked deals</h2>
-          <p style="margin:4px 0 0 0;font-size:12px;color:${C.muted};letter-spacing:0.3px;">Ranked by today's biggest discounts</p>
+        <td style="padding:32px 16px 4px 16px;background-color:${C.pageBg};">
+          <span style="display:inline-block;background-color:${C.red};color:#FFFFFF;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:5px 11px;border-radius:99px;">★ Hand-picked</span>
+          <h2 style="margin:10px 0 0 0;font-size:22px;font-weight:900;color:${C.ink};letter-spacing:-0.4px;">${products.length} deals · ranked by biggest savings</h2>
         </td>
       </tr>
       <tr>
