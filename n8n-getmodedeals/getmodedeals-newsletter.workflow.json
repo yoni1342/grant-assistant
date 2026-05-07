@@ -16,7 +16,10 @@
       "name": "Daily 8am ET",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "notes": "Cron 0 13 * * * UTC = 08:00 America/New_York during EDT (Mar-Nov). For year-round 8am ET, change to your n8n instance timezone or use 0 12 * * * during EST."
     },
     {
@@ -25,11 +28,26 @@
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "per_page", "value": "30" },
-            { "name": "status", "value": "publish" },
-            { "name": "_embed", "value": "true" },
-            { "name": "orderby", "value": "date" },
-            { "name": "order", "value": "desc" }
+            {
+              "name": "per_page",
+              "value": "30"
+            },
+            {
+              "name": "status",
+              "value": "publish"
+            },
+            {
+              "name": "_embed",
+              "value": "true"
+            },
+            {
+              "name": "orderby",
+              "value": "date"
+            },
+            {
+              "name": "order",
+              "value": "desc"
+            }
           ]
         },
         "options": {
@@ -46,19 +64,25 @@
       "name": "Fetch Products",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "// Normalize one WP product into a clean shape and parse price from prose content.\nconst item = $input.item.json;\n\nconst stripHtml = (s) => (s || '')\n  .replace(/<[^>]+>/g, '')\n  .replace(/&nbsp;/g, ' ')\n  .replace(/&amp;/g, '&')\n  .replace(/&hellip;/g, '...')\n  .replace(/&#8211;/g, '-')\n  .replace(/&#8217;/g, \"'\")\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst content = stripHtml(item.content && item.content.rendered);\nconst excerpt = stripHtml(item.excerpt && item.excerpt.rendered);\n\n// Final price patterns observed on getmodedeals:\n//   \"...sale for $4.98 – 35% off when you 'clip' the coupon ... = $2.99\"\n//   \"...has X for $9.99\"\nconst eqMatch = content.match(/=\\s*\\$([0-9,]+(?:\\.\\d{2})?)/);\nconst forMatch = content.match(/for\\s+\\$([0-9,]+(?:\\.\\d{2})?)/i);\nconst finalPrice = eqMatch ? eqMatch[1] : (forMatch ? forMatch[1] : null);\n\n// First $-price in the string is usually the \"was\" price when there's also an \"= $X\" final price.\nconst firstDollar = content.match(/\\$([0-9,]+(?:\\.\\d{2})?)/);\nconst wasPrice = (firstDollar && finalPrice && firstDollar[1] !== finalPrice) ? firstDollar[1] : null;\n\nconst featured = item._embedded && item._embedded['wp:featuredmedia'] && item._embedded['wp:featuredmedia'][0];\nconst image = featured && featured.source_url ? featured.source_url : null;\n\nconst blurb = excerpt.length > 140 ? excerpt.slice(0, 137) + '...' : excerpt;\n\nreturn {\n  json: {\n    id: item.id,\n    title: stripHtml(item.title && item.title.rendered),\n    url: item.link,\n    image,\n    price: finalPrice ? `$${finalPrice}` : null,\n    wasPrice: wasPrice ? `$${wasPrice}` : null,\n    blurb,\n    date: item.date\n  }\n};\n"
+        "jsCode": "// Normalize one WP product. Parses final/was price, discount %, and merchant from prose.\nconst item = $input.item.json;\n\nconst stripHtml = (s) => String(s || '')\n  .replace(/<[^>]+>/g, '')\n  .replace(/&nbsp;/g, ' ')\n  .replace(/&amp;/g, '&')\n  .replace(/&hellip;/g, '...')\n  .replace(/&#8211;/g, '-')\n  .replace(/&#8217;/g, \"'\")\n  .replace(/&#8216;/g, \"'\")\n  .replace(/&#8220;/g, '\"')\n  .replace(/&#8221;/g, '\"')\n  .replace(/&#8243;/g, '\"')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst title = stripHtml(item.title && item.title.rendered);\nconst content = stripHtml(item.content && item.content.rendered);\nconst excerpt = stripHtml(item.excerpt && item.excerpt.rendered);\nconst searchSpace = `${content} ${title}`;\n\nconst eqMatch = searchSpace.match(/=\\s*\\$([0-9,]+(?:\\.\\d{2})?)/);\nconst forMatch = searchSpace.match(/for\\s+\\$([0-9,]+(?:\\.\\d{2})?)/i);\nconst titleDollar = title.match(/\\$([0-9,]+(?:\\.\\d{2})?)/);\nconst finalPriceStr = (eqMatch && eqMatch[1]) || (forMatch && forMatch[1]) || (titleDollar && titleDollar[1]) || null;\nconst finalPrice = finalPriceStr ? parseFloat(finalPriceStr.replace(/,/g, '')) : null;\n\nconst firstDollar = content.match(/\\$([0-9,]+(?:\\.\\d{2})?)/);\nconst wasPriceStr = (firstDollar && finalPriceStr && firstDollar[1] !== finalPriceStr) ? firstDollar[1] : null;\nconst wasPrice = wasPriceStr ? parseFloat(wasPriceStr.replace(/,/g, '')) : null;\n\nconst pctMatch = content.match(/(\\d{1,2})\\s*%\\s*off/i);\nlet discountPct = pctMatch ? parseInt(pctMatch[1], 10) : null;\nif (discountPct == null && wasPrice && finalPrice && wasPrice > finalPrice) {\n  discountPct = Math.round(((wasPrice - finalPrice) / wasPrice) * 100);\n}\n\nconst viaMatch = content.match(/^([A-Za-z0-9 .&'-]{2,40})\\s+Via\\s+Amazon/);\nconst merchant = (viaMatch && viaMatch[1].trim()) || (/\\bAmazon\\b/i.test(content) ? 'Amazon' : null);\n\nconst featured = item._embedded && item._embedded['wp:featuredmedia'] && item._embedded['wp:featuredmedia'][0];\nconst image = featured && featured.source_url ? featured.source_url : null;\n\nconst blurb = excerpt.length > 140 ? excerpt.slice(0, 137) + '...' : excerpt;\nconst category = (item.product_cat && item.product_cat[0]) != null ? item.product_cat[0] : null;\n\nreturn {\n  json: {\n    id: item.id,\n    title,\n    url: item.link,\n    image,\n    finalPrice,\n    wasPrice,\n    discountPct,\n    priceLabel: finalPrice != null ? `$${finalPrice.toFixed(2)}` : null,\n    wasPriceLabel: wasPrice != null ? `$${wasPrice.toFixed(2)}` : null,\n    merchant,\n    blurb,\n    category,\n    date: item.date\n  }\n};\n"
       },
       "id": "node-normalize",
       "name": "Normalize",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -98,29 +122,40 @@
       "name": "Has Image + Title",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2,
-      "position": [900, 300]
-    },
-    {
-      "parameters": {
-        "maxItems": 8
-      },
-      "id": "node-limit",
-      "name": "Top 8",
-      "type": "n8n-nodes-base.limit",
-      "typeVersion": 1,
-      "position": [1120, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
         "language": "javaScript",
-        "jsCode": "// Aggregate all incoming products into one email payload.\nconst products = $input.all().map(i => i.json);\n\nconst escapeHtml = (s) => String(s || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;')\n  .replace(/'/g, '&#39;');\n\nconst cell = (p) => {\n  if (!p) {\n    return '<td width=\"50%\" style=\"padding:8px;\"></td>';\n  }\n  const title = escapeHtml(p.title);\n  const url = escapeHtml(p.url);\n  const image = escapeHtml(p.image);\n  const priceBlock = p.price\n    ? `<tr><td style=\"padding:0 14px 8px 14px;font-size:18px;color:#d62828;font-weight:bold;\">${escapeHtml(p.price)}${p.wasPrice ? ` <span style=\"font-size:13px;color:#888;text-decoration:line-through;font-weight:normal;\">${escapeHtml(p.wasPrice)}</span>` : ''}</td></tr>`\n    : '';\n  return `\n  <td width=\"50%\" valign=\"top\" style=\"padding:8px;\">\n    <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#fafafa;border:1px solid #e5e5e5;border-radius:4px;\">\n      <tr>\n        <td align=\"center\" style=\"padding:12px;\">\n          <a href=\"${url}\" style=\"text-decoration:none;\">\n            <img src=\"${image}\" alt=\"\" width=\"220\" style=\"max-width:100%;height:auto;display:block;border:0;\" />\n          </a>\n        </td>\n      </tr>\n      <tr>\n        <td style=\"padding:0 14px 8px 14px;font-size:14px;line-height:1.4;color:#1a1a1a;\">\n          <a href=\"${url}\" style=\"color:#1a1a1a;text-decoration:none;font-weight:bold;\">${title}</a>\n        </td>\n      </tr>\n      ${priceBlock}\n      <tr>\n        <td align=\"center\" style=\"padding:6px 14px 14px 14px;\">\n          <a href=\"${url}\" style=\"display:inline-block;background-color:#1a1a1a;color:#ffffff;padding:8px 18px;text-decoration:none;border-radius:3px;font-size:13px;font-weight:bold;\">Shop Now</a>\n        </td>\n      </tr>\n    </table>\n  </td>`;\n};\n\nconst rows = [];\nfor (let i = 0; i < products.length; i += 2) {\n  rows.push([products[i], products[i + 1]]);\n}\nconst productRows = rows.map(pair => `<tr>${cell(pair[0])}${cell(pair[1])}</tr>`).join('\\n');\n\nconst datePretty = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });\nconst subject = `Today's Top Deals — ${datePretty}`;\nconst intro = `Here are today's hand-picked deals from across the web. We've got ${products.length} fresh finds for you.`;\n\nconst template = `<!DOCTYPE html>\n<html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\"><title>__SUBJECT__</title></head>\n<body style=\"margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;color:#333;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#f4f4f4;\"><tr><td align=\"center\" style=\"padding:20px 10px;\">\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#ffffff;border-radius:4px;overflow:hidden;\">\n<tr><td align=\"center\" style=\"background-color:#1a1a1a;padding:20px;\"><a href=\"https://getmodedeals.com\" style=\"text-decoration:none;color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:1px;\">GETMODEDEALS</a><div style=\"color:#cccccc;font-size:12px;margin-top:4px;\">__DATE__</div></td></tr>\n<tr><td style=\"padding:24px 24px 8px 24px;\"><h1 style=\"margin:0 0 12px 0;font-size:22px;color:#1a1a1a;\">Today's Top Deals</h1><p style=\"margin:0;font-size:15px;line-height:1.5;color:#444;\">__INTRO__</p></td></tr>\n<tr><td style=\"padding:16px 12px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">__ROWS__</table></td></tr>\n<tr><td align=\"center\" style=\"padding:16px 24px 24px 24px;\"><a href=\"https://getmodedeals.com\" style=\"display:inline-block;background-color:#d62828;color:#ffffff;padding:12px 28px;text-decoration:none;border-radius:4px;font-weight:bold;font-size:14px;\">See All Deals</a></td></tr>\n<tr><td style=\"background-color:#f4f4f4;padding:20px 24px;font-size:12px;color:#888;line-height:1.5;text-align:center;\">You're receiving this because you subscribed at GetModeDeals.com.<br><a href=\"{{unsubscribe_url}}\" style=\"color:#888;\">Unsubscribe</a> &nbsp;|&nbsp; <a href=\"https://getmodedeals.com\" style=\"color:#888;\">Visit site</a><br><span style=\"color:#aaa;\">GetModeDeals &middot; Affiliate links may earn us a commission.</span></td></tr>\n</table></td></tr></table></body></html>`;\n\nconst html = template\n  .replace('__SUBJECT__', escapeHtml(subject))\n  .replace('__DATE__', escapeHtml(datePretty))\n  .replace('__INTRO__', escapeHtml(intro))\n  .replace('__ROWS__', productRows);\n\nreturn [{\n  json: {\n    subject,\n    html,\n    productCount: products.length,\n    products\n  }\n}];\n"
+        "jsCode": "// Paste this into the \"Top 8\" node — but FIRST change its type from\n// \"Limit\" to \"Code\". Easiest way: delete the Limit node, drop in a new\n// Code node in its place, name it \"Rank & Select Top 8\", paste this in.\n// Mode: Run Once for All Items · Language: JavaScript\n\nconst TARGET_COUNT = 8;\nconst MIN_COUNT = 4;\n\nconst products = $input.all().map(i => i.json);\n\n// Dedupe by URL\nconst seen = new Set();\nconst deduped = [];\nfor (const p of products) {\n  if (!p.url || seen.has(p.url)) continue;\n  seen.add(p.url);\n  deduped.push(p);\n}\n\n// Score: discount-weighted, with recency tiebreaker bonus\nconst score = (p) => {\n  let s = 0;\n  if (p.discountPct != null) s += 50 + p.discountPct * 0.5;\n  else if (p.finalPrice != null) s += 30;\n  else s += 10;\n  const ageHours = (Date.now() - new Date(p.date).getTime()) / 36e5;\n  if (ageHours < 24) s += 10;\n  return s;\n};\n\nconst ranked = deduped\n  .map((p) => ({ ...p, _score: score(p) }))\n  .sort((a, b) => b._score - a._score || new Date(b.date) - new Date(a.date));\n\n// Category diversity: cap per-category at ceil(N/2), but only when 3+ distinct cats present\nconst distinctCats = new Set(ranked.map((p) => p.category != null ? p.category : 'none'));\nconst enforceDiversity = distinctCats.size >= 3;\nconst perCatCap = Math.ceil(TARGET_COUNT / 2);\nconst perCat = new Map();\nconst selected = [];\n\nfor (const p of ranked) {\n  const cat = p.category != null ? p.category : 'none';\n  const used = perCat.get(cat) || 0;\n  if (enforceDiversity && used >= perCatCap) continue;\n  selected.push(p);\n  perCat.set(cat, used + 1);\n  if (selected.length >= TARGET_COUNT) break;\n}\n\n// QA gate: throw if minimum not met (Error Trigger workflow catches this)\nif (selected.length < MIN_COUNT) {\n  throw new Error(`QA gate failed: only ${selected.length} valid deals after selection, minimum ${MIN_COUNT}`);\n}\n\nreturn selected.map(p => ({ json: p }));\n"
+      },
+      "id": "node-rank-select",
+      "name": "Rank & Select Top 8",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Paste this into the \"Render Email\" Code node.\n// Mode: Run Once for All Items · Language: JavaScript\n\nconst products = $input.all().map(i => i.json);\n\nconst C = {\n  promo: '#4F46E5',\n  ink: '#0F172A',\n  body: '#374151',\n  muted: '#6B7280',\n  hint: '#9CA3AF',\n  red: '#DC2626',\n  border: '#E5E7EB',\n  pageBg: '#F9FAFB',\n  cardBg: '#FFFFFF',\n  imgBg: '#F3F4F6',\n};\n\nconst escapeHtml = (s) => String(s || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;')\n  .replace(/'/g, '&#39;');\n\nconst cell = (p) => {\n  if (!p) return '<td width=\"50%\" style=\"padding:8px;\"></td>';\n  const url = escapeHtml(p.url);\n  const title = escapeHtml(p.title);\n  const image = escapeHtml(p.image);\n  const merchant = p.merchant ? escapeHtml(p.merchant) : null;\n  const priceLabel = p.priceLabel ? escapeHtml(p.priceLabel) : null;\n  const wasPriceLabel = p.wasPriceLabel ? escapeHtml(p.wasPriceLabel) : null;\n  const discountPct = p.discountPct;\n\n  const wasLine = wasPriceLabel\n    ? `<span style=\"font-size:12px;color:${C.hint};text-decoration:line-through;display:block;line-height:1;margin-bottom:3px;\">${wasPriceLabel}</span>`\n    : '';\n  const priceLine = priceLabel\n    ? `<span style=\"font-size:20px;font-weight:800;color:${C.ink};line-height:1;\">${priceLabel}</span>${discountPct ? `<span style=\"font-size:11px;font-weight:700;color:${C.red};margin-left:8px;letter-spacing:0.3px;\">-${discountPct}%</span>` : ''}`\n    : '';\n  const priceBlock = priceLabel ? `${wasLine}${priceLine}` : '';\n  const merchantTag = merchant\n    ? `<span style=\"font-size:10px;font-weight:700;color:${C.red};letter-spacing:0.8px;text-transform:uppercase;\">${merchant}</span>`\n    : '';\n\n  return `\n  <td width=\"50%\" valign=\"top\" style=\"padding:6px;\">\n    <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" height=\"100%\" style=\"height:100%;background-color:${C.cardBg};border:1px solid ${C.border};border-radius:8px;overflow:hidden;\">\n      <tr>\n        <td align=\"center\" valign=\"middle\" height=\"180\" style=\"height:180px;background-color:${C.imgBg};\">\n          <a href=\"${url}\" style=\"text-decoration:none;display:block;line-height:0;\">\n            <img src=\"${image}\" alt=\"\" width=\"180\" style=\"max-width:90%;max-height:160px;height:auto;display:inline-block;border:0;\" />\n          </a>\n        </td>\n      </tr>\n      <tr><td style=\"padding:14px 14px 4px 14px;line-height:1;\">${merchantTag}</td></tr>\n      <tr>\n        <td valign=\"top\" style=\"padding:6px 14px 6px 14px;font-size:13px;line-height:1.35;color:${C.ink};min-height:36px;\">\n          <a href=\"${url}\" style=\"color:${C.ink};text-decoration:none;font-weight:500;display:block;\">${title}</a>\n        </td>\n      </tr>\n      <tr><td height=\"100%\" style=\"height:100%;line-height:1;font-size:0;\">&nbsp;</td></tr>\n      <tr><td style=\"padding:6px 14px 16px 14px;\">${priceBlock}</td></tr>\n    </table>\n  </td>`;\n};\n\nconst rows = [];\nfor (let i = 0; i < products.length; i += 2) rows.push([products[i], products[i + 1]]);\nconst productRows = rows\n  .map((pair) => `<tr>${cell(pair[0])}${cell(pair[1])}</tr>`)\n  .join('\\n<tr><td colspan=\"2\" style=\"height:6px;line-height:6px;font-size:0;\">&nbsp;</td></tr>\\n');\n\nconst datePretty = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });\nconst subject = `Today's Top Deals — ${datePretty}`;\n\nconst html = `<!DOCTYPE html>\n<html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\"><meta name=\"color-scheme\" content=\"light\"><title>${escapeHtml(subject)}</title></head>\n<body style=\"margin:0;padding:0;background-color:${C.pageBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${C.ink};-webkit-font-smoothing:antialiased;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:${C.pageBg};\">\n  <tr><td align=\"center\" style=\"padding:0;\">\n    <table role=\"presentation\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"max-width:640px;width:100%;background-color:${C.pageBg};\">\n      <tr>\n        <td align=\"center\" style=\"background-color:${C.promo};padding:11px 20px;font-size:12px;color:#FFFFFF;line-height:1.4;\">\n          Earn while you browse — every deal you redeem stacks Mode Points. Cash out anytime.\n        </td>\n      </tr>\n      <tr>\n        <td style=\"background-color:${C.cardBg};padding:18px 22px;border-bottom:1px solid ${C.border};\">\n          <a href=\"https://getmodedeals.com\" style=\"text-decoration:none;color:${C.ink};\">\n            <span style=\"font-size:22px;font-weight:800;letter-spacing:-0.3px;\">ModeDeals</span>\n          </a>\n          <span style=\"font-size:10px;color:${C.muted};margin-left:8px;letter-spacing:0.4px;\">POWERED BY MODE MOBILE</span>\n        </td>\n      </tr>\n      <tr>\n        <td style=\"padding:24px 16px 8px 16px;background-color:${C.pageBg};\">\n          <h2 style=\"margin:0;font-size:20px;font-weight:800;color:${C.ink};letter-spacing:-0.2px;\">Today's Top Deals</h2>\n          <p style=\"margin:6px 0 0 0;font-size:13px;color:${C.muted};line-height:1.5;\">${escapeHtml(datePretty)} &middot; ${products.length} hand-picked finds</p>\n        </td>\n      </tr>\n      <tr>\n        <td style=\"padding:14px 10px 18px 10px;background-color:${C.pageBg};\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">${productRows}</table>\n        </td>\n      </tr>\n      <tr>\n        <td align=\"center\" style=\"padding:6px 16px 28px 16px;background-color:${C.pageBg};\">\n          <a href=\"https://getmodedeals.com\" style=\"font-size:13px;color:${C.ink};text-decoration:none;font-weight:600;border-bottom:1px solid ${C.ink};padding-bottom:1px;\">See all deals &rarr;</a>\n        </td>\n      </tr>\n      <tr>\n        <td style=\"background-color:${C.cardBg};padding:24px 22px;border-top:1px solid ${C.border};text-align:center;font-size:11px;color:${C.muted};line-height:1.6;\">\n          <div style=\"font-size:14px;font-weight:800;color:${C.ink};margin-bottom:6px;\">ModeDeals</div>\n          <div style=\"margin-bottom:10px;\">Smart deal discovery, powered by Mode Mobile.</div>\n          <div>You're receiving this because you subscribed at <a href=\"https://getmodedeals.com\" style=\"color:${C.muted};text-decoration:underline;\">GetModeDeals.com</a>.</div>\n          <div style=\"margin-top:6px;\">\n            <a href=\"{{unsubscribe_url}}\" style=\"color:${C.muted};text-decoration:underline;\">Unsubscribe</a>\n            &nbsp;&middot;&nbsp;\n            <a href=\"https://getmodedeals.com\" style=\"color:${C.muted};text-decoration:underline;\">Visit site</a>\n          </div>\n          <div style=\"margin-top:10px;color:${C.hint};\">&copy; ${new Date().getFullYear()} Mode Mobile. Affiliate links may earn us a commission.</div>\n        </td>\n      </tr>\n    </table>\n  </td></tr>\n</table>\n</body></html>`;\n\nreturn [{ json: { subject, html, productCount: products.length, products } }];\n"
       },
       "id": "node-render",
       "name": "Render Email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     },
     {
       "parameters": {
@@ -129,7 +164,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
@@ -147,7 +185,10 @@
       "name": "Send via SendGrid",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1560, 300],
+      "position": [
+        1560,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_WITH_SENDGRID_CRED_ID",
@@ -159,22 +200,70 @@
   ],
   "connections": {
     "Daily 8am ET": {
-      "main": [[{ "node": "Fetch Products", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Fetch Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Fetch Products": {
-      "main": [[{ "node": "Normalize", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Normalize": {
-      "main": [[{ "node": "Has Image + Title", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Has Image + Title",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Has Image + Title": {
-      "main": [[{ "node": "Top 8", "type": "main", "index": 0 }]]
-    },
-    "Top 8": {
-      "main": [[{ "node": "Render Email", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Rank & Select Top 8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Render Email": {
-      "main": [[{ "node": "Send via SendGrid", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Send via SendGrid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank & Select Top 8": {
+      "main": [
+        [
+          {
+            "node": "Render Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -182,5 +271,12 @@
   },
   "active": false,
   "pinData": {},
-  "tags": [{ "name": "getmodedeals" }, { "name": "newsletter" }]
+  "tags": [
+    {
+      "name": "getmodedeals"
+    },
+    {
+      "name": "newsletter"
+    }
+  ]
 }

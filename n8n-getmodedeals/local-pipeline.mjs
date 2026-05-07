@@ -164,38 +164,65 @@ const escapeHtml = (s) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+// Brand tokens — matched to getmodedeals.com
+const C = {
+  promo: '#4F46E5',     // top indigo bar
+  ink: '#0F172A',       // primary text
+  body: '#374151',      // body text
+  muted: '#6B7280',     // secondary text
+  hint: '#9CA3AF',      // strikethrough / fine print
+  red: '#DC2626',       // SALE / merchant accent
+  border: '#E5E7EB',
+  pageBg: '#F9FAFB',
+  cardBg: '#FFFFFF',
+  imgBg: '#F3F4F6',
+};
+
 const cell = (p) => {
   if (!p) return '<td width="50%" style="padding:8px;"></td>';
   const url = escapeHtml(p.url);
   const title = escapeHtml(p.title);
   const image = escapeHtml(p.image);
-  const merchantLine = p.merchant
-    ? `<tr><td style="padding:0 14px 4px 14px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#888;">${escapeHtml(p.merchant)}</td></tr>`
+  const merchant = p.merchant ? escapeHtml(p.merchant) : null;
+  const priceLabel = p.priceLabel ? escapeHtml(p.priceLabel) : null;
+  const wasPriceLabel = p.wasPriceLabel ? escapeHtml(p.wasPriceLabel) : null;
+  const discountPct = p.discountPct;
+
+  // Was-price ABOVE current price (matches site). Strike-through gray.
+  const wasLine = wasPriceLabel
+    ? `<span style="font-size:12px;color:${C.hint};text-decoration:line-through;display:block;line-height:1;margin-bottom:3px;">${wasPriceLabel}</span>`
     : '';
-  const priceBlock = p.priceLabel
-    ? `<tr><td style="padding:0 14px 8px 14px;font-size:18px;color:#d62828;font-weight:bold;">${escapeHtml(p.priceLabel)}${p.wasPriceLabel ? ` <span style="font-size:13px;color:#888;text-decoration:line-through;font-weight:normal;">${escapeHtml(p.wasPriceLabel)}</span>` : ''}${p.discountPct ? ` <span style="font-size:12px;color:#2a7a2a;font-weight:bold;">${p.discountPct}% OFF</span>` : ''}</td></tr>`
+  const priceLine = priceLabel
+    ? `<span style="font-size:20px;font-weight:800;color:${C.ink};line-height:1;">${priceLabel}</span>${discountPct ? `<span style="font-size:11px;font-weight:700;color:${C.red};margin-left:8px;letter-spacing:0.3px;">-${discountPct}%</span>` : ''}`
     : '';
+  const priceBlock = priceLabel ? `${wasLine}${priceLine}` : '';
+  const merchantTag = merchant
+    ? `<span style="font-size:10px;font-weight:700;color:${C.red};letter-spacing:0.8px;text-transform:uppercase;">${merchant}</span>`
+    : '';
+
   return `
-  <td width="50%" valign="top" style="padding:8px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fafafa;border:1px solid #e5e5e5;border-radius:4px;">
+  <td width="50%" valign="top" style="padding:6px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" height="100%" style="height:100%;background-color:${C.cardBg};border:1px solid ${C.border};border-radius:8px;overflow:hidden;">
       <tr>
-        <td align="center" style="padding:12px;">
-          <a href="${url}" style="text-decoration:none;">
-            <img src="${image}" alt="" width="220" style="max-width:100%;height:auto;display:block;border:0;" />
+        <td align="center" valign="middle" height="180" style="height:180px;background-color:${C.imgBg};">
+          <a href="${url}" style="text-decoration:none;display:block;line-height:0;">
+            <img src="${image}" alt="" width="180" style="max-width:90%;max-height:160px;height:auto;display:inline-block;border:0;" />
           </a>
         </td>
       </tr>
-      ${merchantLine}
       <tr>
-        <td style="padding:0 14px 8px 14px;font-size:14px;line-height:1.4;color:#1a1a1a;">
-          <a href="${url}" style="color:#1a1a1a;text-decoration:none;font-weight:bold;">${title}</a>
+        <td style="padding:14px 14px 4px 14px;line-height:1;">${merchantTag}</td>
+      </tr>
+      <tr>
+        <td valign="top" style="padding:6px 14px 6px 14px;font-size:13px;line-height:1.35;color:${C.ink};min-height:36px;">
+          <a href="${url}" style="color:${C.ink};text-decoration:none;font-weight:500;display:block;">${title}</a>
         </td>
       </tr>
-      ${priceBlock}
       <tr>
-        <td align="center" style="padding:6px 14px 14px 14px;">
-          <a href="${url}" style="display:inline-block;background-color:#1a1a1a;color:#ffffff;padding:8px 18px;text-decoration:none;border-radius:3px;font-size:13px;font-weight:bold;">Shop Now</a>
-        </td>
+        <td height="100%" style="height:100%;line-height:1;font-size:0;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 14px 16px 14px;">${priceBlock}</td>
       </tr>
     </table>
   </td>`;
@@ -203,7 +230,9 @@ const cell = (p) => {
 
 const rows = [];
 for (let i = 0; i < selected.length; i += 2) rows.push([selected[i], selected[i + 1]]);
-const productRows = rows.map((pair) => `<tr>${cell(pair[0])}${cell(pair[1])}</tr>`).join('\n');
+const productRows = rows
+  .map((pair) => `<tr>${cell(pair[0])}${cell(pair[1])}</tr>`)
+  .join('\n<tr><td colspan="2" style="height:6px;line-height:6px;font-size:0;">&nbsp;</td></tr>\n');
 
 const datePretty = new Date().toLocaleDateString('en-US', {
   weekday: 'long',
@@ -212,19 +241,67 @@ const datePretty = new Date().toLocaleDateString('en-US', {
   year: 'numeric',
 });
 const subject = `Today's Top Deals — ${datePretty}`;
-const intro = `Here are today's hand-picked deals from across the web. We've got ${selected.length} fresh finds for you.`;
 
 const html = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${escapeHtml(subject)}</title></head>
-<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;color:#333;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4;"><tr><td align="center" style="padding:20px 10px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border-radius:4px;overflow:hidden;">
-<tr><td align="center" style="background-color:#1a1a1a;padding:20px;"><a href="https://getmodedeals.com" style="text-decoration:none;color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:1px;">GETMODEDEALS</a><div style="color:#cccccc;font-size:12px;margin-top:4px;">${escapeHtml(datePretty)}</div></td></tr>
-<tr><td style="padding:24px 24px 8px 24px;"><h1 style="margin:0 0 12px 0;font-size:22px;color:#1a1a1a;">Today's Top Deals</h1><p style="margin:0;font-size:15px;line-height:1.5;color:#444;">${escapeHtml(intro)}</p></td></tr>
-<tr><td style="padding:16px 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${productRows}</table></td></tr>
-<tr><td align="center" style="padding:16px 24px 24px 24px;"><a href="https://getmodedeals.com" style="display:inline-block;background-color:#d62828;color:#ffffff;padding:12px 28px;text-decoration:none;border-radius:4px;font-weight:bold;font-size:14px;">See All Deals</a></td></tr>
-<tr><td style="background-color:#f4f4f4;padding:20px 24px;font-size:12px;color:#888;line-height:1.5;text-align:center;">You're receiving this because you subscribed at GetModeDeals.com.<br><a href="{{unsubscribe_url}}" style="color:#888;">Unsubscribe</a> &nbsp;|&nbsp; <a href="https://getmodedeals.com" style="color:#888;">Visit site</a><br><span style="color:#aaa;">GetModeDeals &middot; Affiliate links may earn us a commission.</span></td></tr>
-</table></td></tr></table></body></html>`;
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="color-scheme" content="light"><title>${escapeHtml(subject)}</title></head>
+<body style="margin:0;padding:0;background-color:${C.pageBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${C.ink};-webkit-font-smoothing:antialiased;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.pageBg};">
+  <tr>
+    <td align="center" style="padding:0;">
+      <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;width:100%;background-color:${C.pageBg};">
+        <!-- Promo bar -->
+        <tr>
+          <td align="center" style="background-color:${C.promo};padding:11px 20px;font-size:12px;color:#FFFFFF;line-height:1.4;">
+            Earn while you browse — every deal you redeem stacks Mode Points. Cash out anytime.
+          </td>
+        </tr>
+        <!-- Brand header -->
+        <tr>
+          <td style="background-color:${C.cardBg};padding:18px 22px;border-bottom:1px solid ${C.border};">
+            <a href="https://getmodedeals.com" style="text-decoration:none;color:${C.ink};">
+              <span style="font-size:22px;font-weight:800;letter-spacing:-0.3px;">ModeDeals</span>
+            </a>
+            <span style="font-size:10px;color:${C.muted};margin-left:8px;letter-spacing:0.4px;">POWERED BY MODE MOBILE</span>
+          </td>
+        </tr>
+        <!-- Section title -->
+        <tr>
+          <td style="padding:24px 16px 8px 16px;background-color:${C.pageBg};">
+            <h2 style="margin:0;font-size:20px;font-weight:800;color:${C.ink};letter-spacing:-0.2px;">Today's Top Deals</h2>
+            <p style="margin:6px 0 0 0;font-size:13px;color:${C.muted};line-height:1.5;">${escapeHtml(datePretty)} &middot; ${selected.length} hand-picked finds</p>
+          </td>
+        </tr>
+        <!-- Product grid -->
+        <tr>
+          <td style="padding:14px 10px 18px 10px;background-color:${C.pageBg};">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${productRows}</table>
+          </td>
+        </tr>
+        <!-- See all link -->
+        <tr>
+          <td align="center" style="padding:6px 16px 28px 16px;background-color:${C.pageBg};">
+            <a href="https://getmodedeals.com" style="font-size:13px;color:${C.ink};text-decoration:none;font-weight:600;border-bottom:1px solid ${C.ink};padding-bottom:1px;">See all deals &rarr;</a>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="background-color:${C.cardBg};padding:24px 22px;border-top:1px solid ${C.border};text-align:center;font-size:11px;color:${C.muted};line-height:1.6;">
+            <div style="font-size:14px;font-weight:800;color:${C.ink};margin-bottom:6px;">ModeDeals</div>
+            <div style="margin-bottom:10px;">Smart deal discovery, powered by Mode Mobile.</div>
+            <div>You're receiving this because you subscribed at <a href="https://getmodedeals.com" style="color:${C.muted};text-decoration:underline;">GetModeDeals.com</a>.</div>
+            <div style="margin-top:6px;">
+              <a href="{{unsubscribe_url}}" style="color:${C.muted};text-decoration:underline;">Unsubscribe</a>
+              &nbsp;&middot;&nbsp;
+              <a href="https://getmodedeals.com" style="color:${C.muted};text-decoration:underline;">Visit site</a>
+            </div>
+            <div style="margin-top:10px;color:${C.hint};">&copy; ${new Date().getFullYear()} Mode Mobile. Affiliate links may earn us a commission.</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body></html>`;
 
 await fs.writeFile(OUT, html, 'utf8');
 const abs = path.resolve(OUT);
