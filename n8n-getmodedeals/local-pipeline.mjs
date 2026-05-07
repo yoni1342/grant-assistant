@@ -9,7 +9,10 @@
 //   FETCH=50 node local-pipeline.mjs    # override how many to fetch from WP
 
 import fs from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
+import https from 'node:https';
 
 const FETCH_COUNT = Number(process.env.FETCH || 30);
 const TARGET_COUNT = Number(process.env.COUNT || 8);
@@ -155,6 +158,74 @@ if (selected.length < MIN_COUNT) {
   process.exit(2);
 }
 
+// ---------- Hero slideshow GIF ----------
+// Downloads top-4 product images and composites an animated GIF with a price
+// caption per frame. For production (n8n) this needs to be built + hosted
+// separately; the email HTML expects ./hero-slideshow.gif relative to itself.
+const GIF_OUT = process.env.GIF_OUT || './hero-slideshow.gif';
+const GIF_FRAMES = Math.min(4, selected.length);
+const FRAMES_DIR = '/tmp/gmd-frames';
+await fs.mkdir(FRAMES_DIR, { recursive: true });
+
+const downloadImage = (urlStr, dest) =>
+  new Promise((resolve, reject) => {
+    const file = createWriteStream(dest);
+    https
+      .get(urlStr, { timeout: 15000 }, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`HTTP ${response.statusCode} for ${urlStr}`));
+          return;
+        }
+        response.pipe(file);
+        file.on('finish', () => file.close(() => resolve(dest)));
+        file.on('error', reject);
+      })
+      .on('error', reject);
+  });
+
+const sh = (s) => String(s).replace(/(["\\$`])/g, '\\$1');
+
+console.log(`[gif] building ${GIF_FRAMES}-frame slideshow…`);
+const framePaths = [];
+for (let i = 0; i < GIF_FRAMES; i++) {
+  const p = selected[i];
+  const raw = `${FRAMES_DIR}/raw-${i}`;
+  const out = `${FRAMES_DIR}/frame-${i}.png`;
+  try {
+    await downloadImage(p.image, raw);
+    const caption = p.discountPct
+      ? `${p.priceLabel}  ·  ${p.discountPct}% OFF`
+      : (p.priceLabel || '');
+    // 580x320 frame: top white area for product (260px), bottom indigo strip
+    // for price (60px). Product fixed at 180x180 with breathing room.
+    const cmd = [
+      'convert',
+      `-size 580x320 xc:'#FFFFFF'`,
+      // Bottom indigo strip
+      `-fill '#1E1B4B' -draw "rectangle 0,260 580,320"`,
+      // Product image (scaled, centered in upper 260px area)
+      `\\( "${raw}" -resize 180x180 \\) -gravity north -geometry +0+50 -composite`,
+      // Merchant tag (red, top of frame)
+      `-fill '#DC2626' -gravity north -font DejaVu-Sans-Bold -pointsize 11 -annotate +0+22 "${sh((p.merchant || '').toUpperCase())}"`,
+      // Price caption (white on indigo strip)
+      `-fill '#FFFFFF' -gravity south -font DejaVu-Sans-Bold -pointsize 22 -annotate +0+22 "${sh(caption)}"`,
+      `"${out}"`,
+    ].join(' ');
+    execSync(cmd, { stdio: 'pipe' });
+    framePaths.push(out);
+  } catch (e) {
+    console.warn(`[gif] frame ${i} failed: ${e.message} — skipping`);
+  }
+}
+
+if (framePaths.length >= 2) {
+  const gifCmd = `convert -delay 220 -loop 0 ${framePaths.map((f) => `"${f}"`).join(' ')} -layers OptimizePlus "${GIF_OUT}"`;
+  execSync(gifCmd, { stdio: 'pipe' });
+  console.log(`[gif] wrote ${path.resolve(GIF_OUT)} (${framePaths.length} frames)`);
+} else {
+  console.warn('[gif] not enough frames built; hero will fall back to a static image');
+}
+
 // ---------- Render ----------
 const escapeHtml = (s) =>
   String(s || '')
@@ -242,6 +313,16 @@ const datePretty = new Date().toLocaleDateString('en-US', {
 });
 const subject = `Today's Top Deals — ${datePretty}`;
 
+// Deeper indigo for the hero (richer than the promo bar)
+const heroBg = '#1E1B4B';
+const heroText = '#FFFFFF';
+const heroSub = '#C7D2FE';
+const heroKicker = '#A5B4FC';
+const heroCta = '#FFFFFF';
+const heroCtaText = '#1E1B4B';
+
+const heroGifPath = path.basename(GIF_OUT);
+
 const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="color-scheme" content="light"><title>${escapeHtml(subject)}</title></head>
 <body style="margin:0;padding:0;background-color:${C.pageBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${C.ink};-webkit-font-smoothing:antialiased;">
@@ -264,11 +345,37 @@ const html = `<!DOCTYPE html>
             <span style="font-size:10px;color:${C.muted};margin-left:8px;letter-spacing:0.4px;">POWERED BY MODE MOBILE</span>
           </td>
         </tr>
-        <!-- Section title -->
+        <!-- HERO BLOCK -->
         <tr>
-          <td style="padding:24px 16px 8px 16px;background-color:${C.pageBg};">
-            <h2 style="margin:0;font-size:20px;font-weight:800;color:${C.ink};letter-spacing:-0.2px;">Today's Top Deals</h2>
-            <p style="margin:6px 0 0 0;font-size:13px;color:${C.muted};line-height:1.5;">${escapeHtml(datePretty)} &middot; ${selected.length} hand-picked finds</p>
+          <td style="background-color:${heroBg};padding:32px 24px 28px 24px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" style="padding-bottom:18px;">
+                  <span style="font-size:11px;color:${heroKicker};letter-spacing:1.6px;text-transform:uppercase;font-weight:700;">${escapeHtml(datePretty.toUpperCase())}</span>
+                  <h1 style="margin:8px 0 6px 0;font-size:30px;font-weight:800;color:${heroText};letter-spacing:-0.6px;line-height:1.1;">Today's Top Deals</h1>
+                  <p style="margin:0;font-size:14px;color:${heroSub};line-height:1.5;">${selected.length} hand-picked finds, fresh from across the web</p>
+                </td>
+              </tr>
+              <tr>
+                <td align="center">
+                  <a href="https://getmodedeals.com" style="text-decoration:none;display:inline-block;line-height:0;">
+                    <img src="${heroGifPath}" alt="Today's deals slideshow" width="540" style="max-width:100%;height:auto;display:block;border:0;border-radius:8px;background-color:#FFFFFF;" />
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding-top:20px;">
+                  <a href="https://getmodedeals.com" style="display:inline-block;background-color:${heroCta};color:${heroCtaText};padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:700;font-size:14px;letter-spacing:0.2px;">Browse all deals &rarr;</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- Section divider -->
+        <tr>
+          <td style="padding:28px 16px 8px 16px;background-color:${C.pageBg};">
+            <h2 style="margin:0;font-size:18px;font-weight:800;color:${C.ink};letter-spacing:-0.2px;text-transform:uppercase;">Hand-picked deals</h2>
+            <p style="margin:4px 0 0 0;font-size:12px;color:${C.muted};letter-spacing:0.3px;">Ranked by today's biggest discounts</p>
           </td>
         </tr>
         <!-- Product grid -->
@@ -287,14 +394,18 @@ const html = `<!DOCTYPE html>
         <tr>
           <td style="background-color:${C.cardBg};padding:24px 22px;border-top:1px solid ${C.border};text-align:center;font-size:11px;color:${C.muted};line-height:1.6;">
             <div style="font-size:14px;font-weight:800;color:${C.ink};margin-bottom:6px;">ModeDeals</div>
-            <div style="margin-bottom:10px;">Smart deal discovery, powered by Mode Mobile.</div>
-            <div>You're receiving this because you subscribed at <a href="https://getmodedeals.com" style="color:${C.muted};text-decoration:underline;">GetModeDeals.com</a>.</div>
-            <div style="margin-top:6px;">
+            <div style="margin-bottom:14px;color:${C.body};font-size:12px;">Smart deal discovery, powered by Mode Mobile.</div>
+            <div style="font-size:11px;color:${C.muted};line-height:1.6;max-width:420px;margin:0 auto 12px;">
+              You're getting this because you subscribed at GetModeDeals.com. We send one email per day with the freshest deals across the web — no fluff, no spam. <a href="{{unsubscribe_url}}" style="color:${C.muted};text-decoration:underline;">Unsubscribe anytime</a>.
+            </div>
+            <div style="font-size:11px;color:${C.muted};">
+              <a href="https://getmodedeals.com" style="color:${C.muted};text-decoration:underline;">Visit site</a>
+              &nbsp;&middot;&nbsp;
               <a href="{{unsubscribe_url}}" style="color:${C.muted};text-decoration:underline;">Unsubscribe</a>
               &nbsp;&middot;&nbsp;
-              <a href="https://getmodedeals.com" style="color:${C.muted};text-decoration:underline;">Visit site</a>
+              <a href="https://getmodedeals.com/privacy" style="color:${C.muted};text-decoration:underline;">Privacy</a>
             </div>
-            <div style="margin-top:10px;color:${C.hint};">&copy; ${new Date().getFullYear()} Mode Mobile. Affiliate links may earn us a commission.</div>
+            <div style="margin-top:12px;color:${C.hint};">&copy; ${new Date().getFullYear()} Mode Mobile. Affiliate links may earn us a commission.</div>
           </td>
         </tr>
       </table>
