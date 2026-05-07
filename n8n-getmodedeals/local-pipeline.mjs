@@ -163,7 +163,7 @@ if (selected.length < MIN_COUNT) {
 // caption per frame. For production (n8n) this needs to be built + hosted
 // separately; the email HTML expects ./hero-slideshow.gif relative to itself.
 const GIF_OUT = process.env.GIF_OUT || './hero-slideshow.gif';
-const GIF_FRAMES = Math.min(4, selected.length);
+const GIF_FRAMES = selected.length; // every selected deal becomes a slide
 const FRAMES_DIR = '/tmp/gmd-frames';
 await fs.mkdir(FRAMES_DIR, { recursive: true });
 
@@ -219,7 +219,8 @@ for (let i = 0; i < GIF_FRAMES; i++) {
 }
 
 if (framePaths.length >= 2) {
-  const gifCmd = `convert -delay 220 -loop 0 ${framePaths.map((f) => `"${f}"`).join(' ')} -layers OptimizePlus "${GIF_OUT}"`;
+  // -delay is in centiseconds; 200 = 2.0s per frame
+  const gifCmd = `convert -delay 200 -loop 0 ${framePaths.map((f) => `"${f}"`).join(' ')} -layers OptimizePlus "${GIF_OUT}"`;
   execSync(gifCmd, { stdio: 'pipe' });
   console.log(`[gif] wrote ${path.resolve(GIF_OUT)} (${framePaths.length} frames)`);
 } else {
