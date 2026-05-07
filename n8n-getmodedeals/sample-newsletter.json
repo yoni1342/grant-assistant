@@ -1,0 +1,92 @@
+{
+  "generatedAt": "2026-05-07T09:22:24.972Z",
+  "subject": "Today's Top Deals — Thursday, May 7, 2026",
+  "counts": {
+    "fetched": 30,
+    "valid": 30,
+    "deduped": 30,
+    "selected": 8
+  },
+  "selected": [
+    {
+      "id": 277986,
+      "title": "WoloyHeatie Cordless Knee Massager w/ 5 Massaging Modes & Heating Levels",
+      "url": "https://getmodedeals.com/deals/woloyheatie-cordless-knee-massager-w-5-massaging-modes-heating-levels/",
+      "merchant": "Amazon",
+      "priceLabel": "$13.99",
+      "wasPriceLabel": "$27.99",
+      "discountPct": 50,
+      "score": 85
+    },
+    {
+      "id": 277979,
+      "title": "VIBELITE Extendable Telescoping Magnetic Pickup Tool w/ LED Flashlight",
+      "url": "https://getmodedeals.com/deals/vibelite-extendable-telescoping-magnetic-pickup-tool-w-led-flashlight/",
+      "merchant": "Amazon",
+      "priceLabel": "$10.49",
+      "wasPriceLabel": "$20.99",
+      "discountPct": 50,
+      "score": 85
+    },
+    {
+      "id": 278000,
+      "title": "60-Count Nature Made Extra Strength Vitamin B12 3000mcg Gummies",
+      "url": "https://getmodedeals.com/deals/60-count-nature-made-extra-strength-vitamin-b12-3000mcg-gummies/",
+      "merchant": "Amazon",
+      "priceLabel": "$3.84",
+      "wasPriceLabel": "$6.99",
+      "discountPct": 40,
+      "score": 80
+    },
+    {
+      "id": 277994,
+      "title": "Wontolf Battery Powered Cordless Electric Fuel Transfer Pump w/ Auto-Stop Sensor",
+      "url": "https://getmodedeals.com/deals/wontolf-battery-powered-cordless-electric-fuel-transfer-pump-w-auto-stop-sensor/",
+      "merchant": "Amazon",
+      "priceLabel": "$35.99",
+      "wasPriceLabel": "$59.95",
+      "discountPct": 40,
+      "score": 80
+    },
+    {
+      "id": 277983,
+      "title": "14-Oz Garden of Life Organic Extra Virgin Coconut Oil (Unrefined)",
+      "url": "https://getmodedeals.com/deals/14-oz-garden-of-life-organic-extra-virgin-coconut-oil-unrefined/",
+      "merchant": "Amazon",
+      "priceLabel": "$4.95",
+      "wasPriceLabel": "$8.24",
+      "discountPct": 40,
+      "score": 80
+    },
+    {
+      "id": 277957,
+      "title": "2-Pack 80L Lifewit Collapsible Laundry Baskets w/ Handles (Black)",
+      "url": "https://getmodedeals.com/deals/2-pack-80l-lifewit-collapsible-laundry-baskets-w-handles-black/",
+      "merchant": "Amazon",
+      "priceLabel": "$8.49",
+      "wasPriceLabel": "$13.99",
+      "discountPct": 39,
+      "score": 79.5
+    },
+    {
+      "id": 278016,
+      "title": "16-Ounce Blue Buffalo Health Bars Crunchy Dog Biscuits (Bacon, Egg & Cheese)",
+      "url": "https://getmodedeals.com/deals/16-ounce-blue-buffalo-health-bars-crunchy-dog-biscuits-bacon-egg-cheese/",
+      "merchant": "Amazon",
+      "priceLabel": "$2.99",
+      "wasPriceLabel": "$4.98",
+      "discountPct": 35,
+      "score": 77.5
+    },
+    {
+      "id": 278002,
+      "title": "Baseus Picogo 10,000mAh Qi2.2 25W MagSafe Portable Power Bank",
+      "url": "https://getmodedeals.com/deals/baseus-picogo-10000mah-qi2-2-25w-magsafe-portable-power-bank/",
+      "merchant": "Amazon",
+      "priceLabel": "$39.29",
+      "wasPriceLabel": "$59.98",
+      "discountPct": 34,
+      "score": 77
+    }
+  ]
+}

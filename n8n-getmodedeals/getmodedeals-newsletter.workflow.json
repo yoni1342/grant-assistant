@@ -1,0 +1,186 @@
+{
+  "name": "GetModeDeals Daily Newsletter",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 13 * * *"
+            }
+          ]
+        }
+      },
+      "id": "node-schedule",
+      "name": "Daily 8am ET",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notes": "Cron 0 13 * * * UTC = 08:00 America/New_York during EDT (Mar-Nov). For year-round 8am ET, change to your n8n instance timezone or use 0 12 * * * during EST."
+    },
+    {
+      "parameters": {
+        "url": "https://getmodedeals.com/wp-json/wp/v2/product",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "per_page", "value": "30" },
+            { "name": "status", "value": "publish" },
+            { "name": "_embed", "value": "true" },
+            { "name": "orderby", "value": "date" },
+            { "name": "order", "value": "desc" }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "node-http-fetch",
+      "name": "Fetch Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Normalize one WP product into a clean shape and parse price from prose content.\nconst item = $input.item.json;\n\nconst stripHtml = (s) => (s || '')\n  .replace(/<[^>]+>/g, '')\n  .replace(/&nbsp;/g, ' ')\n  .replace(/&amp;/g, '&')\n  .replace(/&hellip;/g, '...')\n  .replace(/&#8211;/g, '-')\n  .replace(/&#8217;/g, \"'\")\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst content = stripHtml(item.content && item.content.rendered);\nconst excerpt = stripHtml(item.excerpt && item.excerpt.rendered);\n\n// Final price patterns observed on getmodedeals:\n//   \"...sale for $4.98 – 35% off when you 'clip' the coupon ... = $2.99\"\n//   \"...has X for $9.99\"\nconst eqMatch = content.match(/=\\s*\\$([0-9,]+(?:\\.\\d{2})?)/);\nconst forMatch = content.match(/for\\s+\\$([0-9,]+(?:\\.\\d{2})?)/i);\nconst finalPrice = eqMatch ? eqMatch[1] : (forMatch ? forMatch[1] : null);\n\n// First $-price in the string is usually the \"was\" price when there's also an \"= $X\" final price.\nconst firstDollar = content.match(/\\$([0-9,]+(?:\\.\\d{2})?)/);\nconst wasPrice = (firstDollar && finalPrice && firstDollar[1] !== finalPrice) ? firstDollar[1] : null;\n\nconst featured = item._embedded && item._embedded['wp:featuredmedia'] && item._embedded['wp:featuredmedia'][0];\nconst image = featured && featured.source_url ? featured.source_url : null;\n\nconst blurb = excerpt.length > 140 ? excerpt.slice(0, 137) + '...' : excerpt;\n\nreturn {\n  json: {\n    id: item.id,\n    title: stripHtml(item.title && item.title.rendered),\n    url: item.link,\n    image,\n    price: finalPrice ? `$${finalPrice}` : null,\n    wasPrice: wasPrice ? `$${wasPrice}` : null,\n    blurb,\n    date: item.date\n  }\n};\n"
+      },
+      "id": "node-normalize",
+      "name": "Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-image",
+              "leftValue": "={{ $json.image }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-title",
+              "leftValue": "={{ $json.title }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-filter",
+      "name": "Has Image + Title",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "maxItems": 8
+      },
+      "id": "node-limit",
+      "name": "Top 8",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Aggregate all incoming products into one email payload.\nconst products = $input.all().map(i => i.json);\n\nconst escapeHtml = (s) => String(s || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;')\n  .replace(/'/g, '&#39;');\n\nconst cell = (p) => {\n  if (!p) {\n    return '<td width=\"50%\" style=\"padding:8px;\"></td>';\n  }\n  const title = escapeHtml(p.title);\n  const url = escapeHtml(p.url);\n  const image = escapeHtml(p.image);\n  const priceBlock = p.price\n    ? `<tr><td style=\"padding:0 14px 8px 14px;font-size:18px;color:#d62828;font-weight:bold;\">${escapeHtml(p.price)}${p.wasPrice ? ` <span style=\"font-size:13px;color:#888;text-decoration:line-through;font-weight:normal;\">${escapeHtml(p.wasPrice)}</span>` : ''}</td></tr>`\n    : '';\n  return `\n  <td width=\"50%\" valign=\"top\" style=\"padding:8px;\">\n    <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#fafafa;border:1px solid #e5e5e5;border-radius:4px;\">\n      <tr>\n        <td align=\"center\" style=\"padding:12px;\">\n          <a href=\"${url}\" style=\"text-decoration:none;\">\n            <img src=\"${image}\" alt=\"\" width=\"220\" style=\"max-width:100%;height:auto;display:block;border:0;\" />\n          </a>\n        </td>\n      </tr>\n      <tr>\n        <td style=\"padding:0 14px 8px 14px;font-size:14px;line-height:1.4;color:#1a1a1a;\">\n          <a href=\"${url}\" style=\"color:#1a1a1a;text-decoration:none;font-weight:bold;\">${title}</a>\n        </td>\n      </tr>\n      ${priceBlock}\n      <tr>\n        <td align=\"center\" style=\"padding:6px 14px 14px 14px;\">\n          <a href=\"${url}\" style=\"display:inline-block;background-color:#1a1a1a;color:#ffffff;padding:8px 18px;text-decoration:none;border-radius:3px;font-size:13px;font-weight:bold;\">Shop Now</a>\n        </td>\n      </tr>\n    </table>\n  </td>`;\n};\n\nconst rows = [];\nfor (let i = 0; i < products.length; i += 2) {\n  rows.push([products[i], products[i + 1]]);\n}\nconst productRows = rows.map(pair => `<tr>${cell(pair[0])}${cell(pair[1])}</tr>`).join('\\n');\n\nconst datePretty = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });\nconst subject = `Today's Top Deals — ${datePretty}`;\nconst intro = `Here are today's hand-picked deals from across the web. We've got ${products.length} fresh finds for you.`;\n\nconst template = `<!DOCTYPE html>\n<html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\"><title>__SUBJECT__</title></head>\n<body style=\"margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;color:#333;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#f4f4f4;\"><tr><td align=\"center\" style=\"padding:20px 10px;\">\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#ffffff;border-radius:4px;overflow:hidden;\">\n<tr><td align=\"center\" style=\"background-color:#1a1a1a;padding:20px;\"><a href=\"https://getmodedeals.com\" style=\"text-decoration:none;color:#ffffff;font-size:24px;font-weight:bold;letter-spacing:1px;\">GETMODEDEALS</a><div style=\"color:#cccccc;font-size:12px;margin-top:4px;\">__DATE__</div></td></tr>\n<tr><td style=\"padding:24px 24px 8px 24px;\"><h1 style=\"margin:0 0 12px 0;font-size:22px;color:#1a1a1a;\">Today's Top Deals</h1><p style=\"margin:0;font-size:15px;line-height:1.5;color:#444;\">__INTRO__</p></td></tr>\n<tr><td style=\"padding:16px 12px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">__ROWS__</table></td></tr>\n<tr><td align=\"center\" style=\"padding:16px 24px 24px 24px;\"><a href=\"https://getmodedeals.com\" style=\"display:inline-block;background-color:#d62828;color:#ffffff;padding:12px 28px;text-decoration:none;border-radius:4px;font-weight:bold;font-size:14px;\">See All Deals</a></td></tr>\n<tr><td style=\"background-color:#f4f4f4;padding:20px 24px;font-size:12px;color:#888;line-height:1.5;text-align:center;\">You're receiving this because you subscribed at GetModeDeals.com.<br><a href=\"{{unsubscribe_url}}\" style=\"color:#888;\">Unsubscribe</a> &nbsp;|&nbsp; <a href=\"https://getmodedeals.com\" style=\"color:#888;\">Visit site</a><br><span style=\"color:#aaa;\">GetModeDeals &middot; Affiliate links may earn us a commission.</span></td></tr>\n</table></td></tr></table></body></html>`;\n\nconst html = template\n  .replace('__SUBJECT__', escapeHtml(subject))\n  .replace('__DATE__', escapeHtml(datePretty))\n  .replace('__INTRO__', escapeHtml(intro))\n  .replace('__ROWS__', productRows);\n\nreturn [{\n  json: {\n    subject,\n    html,\n    productCount: products.length,\n    products\n  }\n}];\n"
+      },
+      "id": "node-render",
+      "name": "Render Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.sendgrid.com/v3/mail/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"personalizations\": [\n    { \"to\": [{ \"email\": \"{{$env.NEWSLETTER_TEST_TO || 'you@example.com'}}\" }] }\n  ],\n  \"from\": { \"email\": \"{{$env.NEWSLETTER_FROM || 'newsletter@getmodedeals.com'}}\", \"name\": \"GetModeDeals\" },\n  \"reply_to\": { \"email\": \"{{$env.NEWSLETTER_REPLY_TO || 'hello@getmodedeals.com'}}\" },\n  \"subject\": {{ JSON.stringify($json.subject) }},\n  \"content\": [\n    { \"type\": \"text/html\", \"value\": {{ JSON.stringify($json.html) }} }\n  ]\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": false
+            }
+          }
+        }
+      },
+      "id": "node-send",
+      "name": "Send via SendGrid",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_SENDGRID_CRED_ID",
+          "name": "SendGrid Bearer"
+        }
+      },
+      "notes": "Create an HTTP Header Auth credential called 'SendGrid Bearer' with Name=Authorization Value=Bearer YOUR_SENDGRID_API_KEY. Then re-pick it in the credentials dropdown after import."
+    }
+  ],
+  "connections": {
+    "Daily 8am ET": {
+      "main": [[{ "node": "Fetch Products", "type": "main", "index": 0 }]]
+    },
+    "Fetch Products": {
+      "main": [[{ "node": "Normalize", "type": "main", "index": 0 }]]
+    },
+    "Normalize": {
+      "main": [[{ "node": "Has Image + Title", "type": "main", "index": 0 }]]
+    },
+    "Has Image + Title": {
+      "main": [[{ "node": "Top 8", "type": "main", "index": 0 }]]
+    },
+    "Top 8": {
+      "main": [[{ "node": "Render Email", "type": "main", "index": 0 }]]
+    },
+    "Render Email": {
+      "main": [[{ "node": "Send via SendGrid", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {},
+  "tags": [{ "name": "getmodedeals" }, { "name": "newsletter" }]
+}
