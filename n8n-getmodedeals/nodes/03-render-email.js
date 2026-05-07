@@ -1,5 +1,12 @@
 // Paste this into the "Render Email" Code node.
 // Mode: Run Once for All Items · Language: JavaScript
+//
+// IMPORTANT: HERO_SLIDE_URL below must be a publicly-reachable image URL.
+// The default points at the static hero-slide.png in the GitHub branch.
+// To make it refresh daily with new deals, replace with a CDN URL whose
+// content is rebuilt by your daily image-build job.
+
+const HERO_SLIDE_URL = 'https://raw.githubusercontent.com/yoni1342/grant-assistant/getmodedeals-newsletter/n8n-getmodedeals/hero-slide.png';
 
 const products = $input.all().map(i => i.json);
 
@@ -15,6 +22,13 @@ const C = {
   cardBg: '#FFFFFF',
   imgBg: '#F3F4F6',
 };
+
+const heroBg = '#1E1B4B';
+const heroText = '#FFFFFF';
+const heroSub = '#C7D2FE';
+const heroKicker = '#A5B4FC';
+const heroCta = '#FFFFFF';
+const heroCtaText = '#1E1B4B';
 
 const escapeHtml = (s) => String(s || '')
   .replace(/&/g, '&amp;')
@@ -95,9 +109,34 @@ const html = `<!DOCTYPE html>
         </td>
       </tr>
       <tr>
-        <td style="padding:24px 16px 8px 16px;background-color:${C.pageBg};">
-          <h2 style="margin:0;font-size:20px;font-weight:800;color:${C.ink};letter-spacing:-0.2px;">Today's Top Deals</h2>
-          <p style="margin:6px 0 0 0;font-size:13px;color:${C.muted};line-height:1.5;">${escapeHtml(datePretty)} &middot; ${products.length} hand-picked finds</p>
+        <td style="background-color:${heroBg};padding:32px 24px 28px 24px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td align="center" style="padding-bottom:18px;">
+                <span style="font-size:11px;color:${heroKicker};letter-spacing:1.6px;text-transform:uppercase;font-weight:700;">${escapeHtml(datePretty.toUpperCase())}</span>
+                <h1 style="margin:8px 0 6px 0;font-size:30px;font-weight:800;color:${heroText};letter-spacing:-0.6px;line-height:1.1;">Today's Top Deals</h1>
+                <p style="margin:0;font-size:14px;color:${heroSub};line-height:1.5;">${products.length} hand-picked finds, fresh from across the web</p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center">
+                <a href="https://getmodedeals.com" style="text-decoration:none;display:inline-block;line-height:0;">
+                  <img src="${HERO_SLIDE_URL}" alt="Today's top deal" width="540" style="max-width:100%;height:auto;display:block;border:0;border-radius:8px;background-color:#FFFFFF;" />
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding-top:20px;">
+                <a href="https://getmodedeals.com" style="display:inline-block;background-color:${heroCta};color:${heroCtaText};padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:700;font-size:14px;letter-spacing:0.2px;">Browse all deals &rarr;</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:28px 16px 8px 16px;background-color:${C.pageBg};">
+          <h2 style="margin:0;font-size:18px;font-weight:800;color:${C.ink};letter-spacing:-0.2px;text-transform:uppercase;">Hand-picked deals</h2>
+          <p style="margin:4px 0 0 0;font-size:12px;color:${C.muted};letter-spacing:0.3px;">Ranked by today's biggest discounts</p>
         </td>
       </tr>
       <tr>
@@ -113,14 +152,18 @@ const html = `<!DOCTYPE html>
       <tr>
         <td style="background-color:${C.cardBg};padding:24px 22px;border-top:1px solid ${C.border};text-align:center;font-size:11px;color:${C.muted};line-height:1.6;">
           <div style="font-size:14px;font-weight:800;color:${C.ink};margin-bottom:6px;">ModeDeals</div>
-          <div style="margin-bottom:10px;">Smart deal discovery, powered by Mode Mobile.</div>
-          <div>You're receiving this because you subscribed at <a href="https://getmodedeals.com" style="color:${C.muted};text-decoration:underline;">GetModeDeals.com</a>.</div>
-          <div style="margin-top:6px;">
+          <div style="margin-bottom:14px;color:${C.body};font-size:12px;">Smart deal discovery, powered by Mode Mobile.</div>
+          <div style="font-size:11px;color:${C.muted};line-height:1.6;max-width:420px;margin:0 auto 12px;">
+            You're getting this because you subscribed at GetModeDeals.com. We send one email per day with the freshest deals across the web — no fluff, no spam. <a href="{{unsubscribe_url}}" style="color:${C.muted};text-decoration:underline;">Unsubscribe anytime</a>.
+          </div>
+          <div style="font-size:11px;color:${C.muted};">
+            <a href="https://getmodedeals.com" style="color:${C.muted};text-decoration:underline;">Visit site</a>
+            &nbsp;&middot;&nbsp;
             <a href="{{unsubscribe_url}}" style="color:${C.muted};text-decoration:underline;">Unsubscribe</a>
             &nbsp;&middot;&nbsp;
-            <a href="https://getmodedeals.com" style="color:${C.muted};text-decoration:underline;">Visit site</a>
+            <a href="https://getmodedeals.com/privacy" style="color:${C.muted};text-decoration:underline;">Privacy</a>
           </div>
-          <div style="margin-top:10px;color:${C.hint};">&copy; ${new Date().getFullYear()} Mode Mobile. Affiliate links may earn us a commission.</div>
+          <div style="margin-top:12px;color:${C.hint};">&copy; ${new Date().getFullYear()} Mode Mobile. Affiliate links may earn us a commission.</div>
         </td>
       </tr>
     </table>
