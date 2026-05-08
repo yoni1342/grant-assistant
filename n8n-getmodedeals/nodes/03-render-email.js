@@ -86,24 +86,26 @@ const rest = products.slice(1);
 
 const heroWindow = feature ? `
 <!--
-  Email-safe hero window: a centred outer table holds two rows.
-  Row 1 — the "Look what we found" pill, right-aligned, pulled down with
-          margin-bottom:-14px so it overlaps the top edge of row 2.
-  Row 2 — a yellow-shadow cell (12px right + 12px down padding) wrapping
-          a nested white card with a 3px accent-coloured border. This
-          reproduces the sticker-shadow offset using only nested tables
-          and works in every email client (no box-shadow / position needed).
+  Hero window — two-pages-stacked sticker effect.
+  Row 1: the dark monospace pill, right-aligned, with position:relative;top:22px
+         so it visually drops onto the card top edge AND a transform:rotate(${labelTilt}deg)
+         tilt for the hand-stuck-on feel. Modern clients respect both;
+         Outlook desktop ignores them and the pill sits above the card flat.
+  Row 2: the "back page" — an outer cell with accent background and 6px top/left
+         + 18px right/bottom padding. The 18-vs-6 asymmetry pushes the yellow
+         predominantly down and to the right of the white card, while still
+         showing a hairline of yellow on top and left so it reads as a
+         separate sheet of paper behind the white one rather than as a
+         border thickness.
 -->
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:18px auto 26px auto;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:22px auto 30px auto;">
   <tr>
-    <td align="right" style="padding:0 18px 0 0;">
-      <div style="display:inline-block;margin-bottom:-14px;">
-        <span style="display:inline-block;background-color:${C.ink};color:#FFFFFF;font-family:${MONO};font-size:11px;font-weight:700;letter-spacing:1.4px;padding:8px 16px;border-radius:999px;line-height:1.4;white-space:nowrap;">Look what we found</span>
-      </div>
+    <td align="right" style="padding:0 24px 0 0;line-height:0;font-size:0;mso-line-height-rule:exactly;">
+      <span style="display:inline-block;background-color:${C.ink};color:#FFFFFF;font-family:${MONO};font-size:11px;font-weight:700;letter-spacing:1.4px;padding:8px 16px;border-radius:999px;line-height:1.4;white-space:nowrap;position:relative;top:22px;-webkit-transform:rotate(${labelTilt}deg);transform:rotate(${labelTilt}deg);">Look what we found</span>
     </td>
   </tr>
   <tr>
-    <td style="background-color:${accent.bg};padding:0 12px 12px 0;line-height:0;font-size:0;mso-line-height-rule:exactly;">
+    <td style="background-color:${accent.bg};padding:6px 18px 18px 6px;line-height:0;font-size:0;mso-line-height-rule:exactly;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="left" style="background-color:#FFFFFF;border:3px solid ${accent.bg};">
         <tr>
           <td style="padding:15px;line-height:0;">
