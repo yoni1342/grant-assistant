@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "GET",
-        "path": "feature-gif/:id",
+        "path": ":id",
         "responseMode": "responseNode",
         "options": {}
       },
@@ -16,7 +16,7 @@
         260,
         300
       ],
-      "webhookId": "gmd-feature-gif",
+      "webhookId": "feature-gif",
       "notes": "GET https://n8n.tebita.com/webhook/feature-gif/<hash>. Path param :id is exposed as $json.params.id on the downstream node."
     },
     {
