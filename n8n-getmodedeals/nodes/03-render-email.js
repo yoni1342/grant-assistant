@@ -1,34 +1,54 @@
 // Paste this into the "Render Email" Code node.
 // Mode: Run Once for All Items · Language: JavaScript
 //
-// IMPORTANT: HERO_SLIDE_URL below must be a publicly-reachable image URL.
-// The default points at the static hero-slide.png in the GitHub branch.
-// To make it refresh daily with new deals, replace with a CDN URL whose
-// content is rebuilt by your daily image-build job.
+// Editorial single-column layout, recolored + retyped to match
+// getmodedeals.com — brand purple #463ACB CTAs, navy #003366 accents,
+// sale red #EF4444 callouts, slate ink #0F1729 text, Plus Jakarta Sans
+// headlines + Inter body via Google Fonts.
+//
+// The "GetModeDeals: Build Feature GIF" sub-workflow runs upstream and
+// stamps each item with a `featureGifUrl` field. Falls back to a static
+// committed asset for safety if the sub-workflow was skipped.
 
-const HERO_SLIDE_URL = 'https://raw.githubusercontent.com/yoni1342/grant-assistant/getmodedeals-newsletter/n8n-getmodedeals/hero-slide.png';
+const FEATURE_GIF_FALLBACK = 'https://raw.githubusercontent.com/yoni1342/grant-assistant/getmodedeals-newsletter/public/feature.gif';
 
 const products = $input.all().map(i => i.json);
+const FEATURE_GIF_URL = products[0]?.featureGifUrl || FEATURE_GIF_FALLBACK;
 
 const C = {
-  promo: '#4F46E5',
-  ink: '#0F172A',
-  body: '#374151',
+  ink: '#0F1729',
+  body: '#2C2D33',
   muted: '#6B7280',
   hint: '#9CA3AF',
-  red: '#DC2626',
-  border: '#E5E7EB',
-  pageBg: '#F9FAFB',
-  cardBg: '#FFFFFF',
-  imgBg: '#F3F4F6',
+  rule: '#E5E7EB',
+  bg: '#FFFFFF',
+  paper: '#FBFBFB',
+  page: '#EBECEF',
+  accent: '#463ACB',
+  navy: '#003366',
+  red: '#EF4444',
 };
 
-const heroBg = '#1E1B4B';
-const heroText = '#FFFFFF';
-const heroSub = '#C7D2FE';
-const heroKicker = '#A5B4FC';
-const heroCta = '#FFFFFF';
-const heroCtaText = '#1E1B4B';
+// Neon-pastel pop palette — rotates per issue so each email has a different
+// border + sticker-shadow color. Day-of-year drives the index so it's stable
+// within a day but cycles automatically.
+const NEON_PALETTE = [
+  { bg: '#C6F432', ink: '#0F1729' }, // cyber lime
+  { bg: '#FF6FA3', ink: '#FFFFFF' }, // hot pink
+  { bg: '#3A8DFF', ink: '#FFFFFF' }, // electric blue
+  { bg: '#FFD93D', ink: '#0F1729' }, // sunshine yellow
+  { bg: '#B197FC', ink: '#0F1729' }, // lavender
+];
+const _yearStart = new Date(new Date().getFullYear(), 0, 0);
+const dayOfYear = Math.floor((Date.now() - _yearStart.getTime()) / 86400000);
+const accent = NEON_PALETTE[dayOfYear % NEON_PALETTE.length];
+const tiltDeg = dayOfYear % 2 === 0 ? -2 : 2;
+const labelTilt = dayOfYear % 2 === 0 ? 4 : -4;
+const issueNum = String(dayOfYear).padStart(3, '0');
+const MONO = "'JetBrains Mono','SF Mono',Menlo,Consolas,'Courier New',monospace";
+
+const HEAD = "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+const SANS = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 const escapeHtml = (s) => String(s || '')
   .replace(/&/g, '&amp;')
@@ -37,7 +57,7 @@ const escapeHtml = (s) => String(s || '')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
 
-const truncateTitle = (s, max = 68) => {
+const truncate = (s, max) => {
   if (!s) return '';
   if (s.length <= max) return s;
   const cut = s.slice(0, max);
@@ -45,151 +65,191 @@ const truncateTitle = (s, max = 68) => {
   return `${cut.slice(0, lastSpace > 30 ? lastSpace : max).trimEnd()}…`;
 };
 
-const cell = (p) => {
-  if (!p) return '<td width="50%" style="padding:8px;"></td>';
-  const url = escapeHtml(p.url);
-  const title = escapeHtml(truncateTitle(p.title));
-  const image = escapeHtml(p.image);
-  const merchant = p.merchant ? escapeHtml(p.merchant) : null;
-  const priceLabel = p.priceLabel ? escapeHtml(p.priceLabel) : null;
-  const wasPriceLabel = p.wasPriceLabel ? escapeHtml(p.wasPriceLabel) : null;
-  const discountPct = p.discountPct;
+const datePretty = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+const dateCaps = datePretty.toUpperCase();
+const subject = `Today's Biggest Price Drops — ${datePretty}`;
+const maxDiscount = Math.max(0, ...products.map(p => p.discountPct || 0));
 
-  const merchantTag = merchant
-    ? `<span style="font-size:10px;font-weight:700;color:${C.red};letter-spacing:1px;text-transform:uppercase;">${merchant}</span>`
-    : '<span style="font-size:10px;color:transparent;">.</span>';
-
-  const saleRibbon = discountPct
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="left" style="margin:10px 0 0 10px;"><tr><td style="background-color:${C.red};color:#FFFFFF;font-size:11px;font-weight:800;padding:4px 10px;border-radius:99px;letter-spacing:0.5px;">SALE</td></tr></table>`
-    : '';
-
-  const wasLine = wasPriceLabel
-    ? `<span style="font-size:12px;color:${C.hint};text-decoration:line-through;line-height:1;">${wasPriceLabel}</span>`
-    : '<span style="font-size:12px;color:transparent;">.</span>';
-  const priceLine = priceLabel
-    ? `<span style="font-size:22px;font-weight:800;color:${C.ink};line-height:1;">${priceLabel}</span>${discountPct ? `<span style="display:inline-block;background-color:${C.red};color:#FFFFFF;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;margin-left:8px;letter-spacing:0.4px;vertical-align:2px;">-${discountPct}%</span>` : ''}`
-    : `<span style="font-size:22px;color:${C.muted};font-weight:600;">See deal</span>`;
-
-  return `
-  <td width="50%" valign="top" style="padding:6px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.cardBg};border:1px solid ${C.border};border-radius:10px;overflow:hidden;">
-      <tr>
-        <td valign="top" height="180" style="height:180px;background-color:${C.imgBg};position:relative;padding:0;">
-          ${saleRibbon}
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-            <td align="center" valign="middle" height="180" style="height:180px;">
-              <a href="${url}" style="text-decoration:none;display:block;line-height:0;">
-                <img src="${image}" alt="" width="180" style="max-width:90%;max-height:160px;height:auto;display:inline-block;border:0;" />
-              </a>
-            </td>
-          </tr></table>
-        </td>
-      </tr>
-      <tr><td height="28" style="height:28px;padding:14px 14px 0 14px;line-height:1;">${merchantTag}</td></tr>
-      <tr>
-        <td valign="top" height="38" style="height:38px;padding:6px 14px 0 14px;font-size:13px;line-height:1.35;color:${C.ink};overflow:hidden;">
-          <a href="${url}" style="color:${C.ink};text-decoration:none;font-weight:500;display:block;">${title}</a>
-        </td>
-      </tr>
-      <tr><td height="16" style="height:16px;padding:8px 14px 0 14px;line-height:1;">${wasLine}</td></tr>
-      <tr><td height="30" style="height:30px;padding:4px 14px 0 14px;line-height:1;">${priceLine}</td></tr>
-      <tr>
-        <td style="padding:14px 14px 14px 14px;">
-          <a href="${url}" style="display:block;background-color:${C.red};color:#FFFFFF;text-align:center;text-decoration:none;padding:11px 12px;border-radius:6px;font-weight:700;font-size:13px;letter-spacing:0.3px;">Shop Deal &rarr;</a>
-        </td>
-      </tr>
-    </table>
-  </td>`;
+const priceBlock = (p, large = false) => {
+  const priceFs = large ? '34px' : '22px';
+  const wasFs = large ? '14px' : '12px';
+  const badgeFs = large ? '15px' : '12px';
+  const parts = [];
+  if (p.priceLabel) parts.push(`<span style="font-family:${HEAD};font-size:${priceFs};color:${C.red};font-weight:800;letter-spacing:-0.8px;">${escapeHtml(p.priceLabel)}</span>`);
+  if (p.wasPriceLabel) parts.push(`<span style="font-family:${SANS};font-size:${wasFs};color:${C.muted};text-decoration:line-through;margin-left:12px;letter-spacing:0.2px;font-weight:600;">${escapeHtml(p.wasPriceLabel)}</span>`);
+  if (p.discountPct) parts.push(`<span style="display:inline-block;background-color:${C.red};color:#FFFFFF;font-family:${HEAD};font-size:${badgeFs};font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-left:10px;padding:5px 10px;vertical-align:3px;">-${p.discountPct}%</span>`);
+  return parts.join('');
 };
 
-const rows = [];
-for (let i = 0; i < products.length; i += 2) rows.push([products[i], products[i + 1]]);
-const productRows = rows
-  .map((pair) => `<tr>${cell(pair[0])}${cell(pair[1])}</tr>`)
-  .join('\n<tr><td colspan="2" style="height:6px;line-height:6px;font-size:0;">&nbsp;</td></tr>\n');
+const feature = products[0];
+const rest = products.slice(1);
 
-const datePretty = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-const subject = `Today's Top Deals — ${datePretty}`;
+const heroWindow = feature ? `
+<div style="padding:24px 8px 30px 8px;text-align:center;font-size:0;line-height:0;mso-line-height-rule:exactly;">
+  <!--[if mso]><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td style="background-color:#FFFFFF;border:3px solid ${accent.bg};padding:15px;"><![endif]-->
+  <div style="display:inline-block;position:relative;background-color:#FFFFFF;border:3px solid ${accent.bg};box-shadow:12px 12px 0 0 ${accent.bg};padding:15px;-webkit-transform:rotate(${tiltDeg}deg);transform:rotate(${tiltDeg}deg);">
+    <a href="${escapeHtml(feature.url)}" style="display:block;line-height:0;text-decoration:none;">
+      <img src="${escapeHtml(FEATURE_GIF_URL)}" alt="" width="450" style="width:450px;max-width:100%;height:auto;display:block;border:0;background-color:${C.paper};" />
+    </a>
+    <div style="position:absolute;top:-16px;right:-16px;background-color:${C.ink};color:#FFFFFF;font-family:${MONO};font-size:11px;font-weight:700;letter-spacing:1.4px;padding:8px 16px;border-radius:999px;-webkit-transform:rotate(${labelTilt}deg);transform:rotate(${labelTilt}deg);white-space:nowrap;line-height:1.4;">Look what we found</div>
+  </div>
+  <!--[if mso]></td></tr></table><![endif]-->
+</div>` : '';
 
-const html = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="color-scheme" content="light"><title>${escapeHtml(subject)}</title></head>
-<body style="margin:0;padding:0;background-color:${C.pageBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${C.ink};-webkit-font-smoothing:antialiased;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.pageBg};">
-  <tr><td align="center" style="padding:0;">
-    <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;width:100%;background-color:${C.pageBg};">
+const heroDetails = feature ? `
+<tr>
+  <td style="padding:36px 36px 0 36px;">
+    <span style="display:inline-block;background-color:${C.red};color:#FFFFFF;font-family:${HEAD};font-size:13px;letter-spacing:1.4px;text-transform:uppercase;font-weight:800;padding:5px 12px;">★ Deal of the day</span>${feature.merchant ? `<span style="font-family:${SANS};font-size:11px;color:${C.muted};letter-spacing:1.6px;text-transform:uppercase;margin-left:14px;font-weight:700;">${escapeHtml(feature.merchant)}</span>` : ''}
+  </td>
+</tr>
+<tr>
+  <td style="padding:14px 36px 0 36px;">
+    <a href="${escapeHtml(feature.url)}" style="text-decoration:none;color:${C.ink};">
+      <h2 style="margin:0;font-family:${HEAD};font-size:28px;line-height:1.25;color:${C.ink};font-weight:800;letter-spacing:-0.6px;">${escapeHtml(truncate(feature.title, 110))}</h2>
+    </a>
+  </td>
+</tr>
+<tr>
+  <td style="padding:20px 36px 36px 36px;">
+    ${priceBlock(feature, true)}
+  </td>
+</tr>` : '';
+
+const card = (p) => p ? `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td style="padding-bottom:14px;">
+      <a href="${escapeHtml(p.url)}" style="display:block;text-decoration:none;line-height:0;">
+        <img src="${escapeHtml(p.image)}" alt="" width="244" style="width:100%;max-width:244px;height:auto;display:block;border:0;background-color:${C.paper};border-radius:6px;" />
+      </a>
+    </td>
+  </tr>
+  ${p.merchant ? `<tr><td style="padding-bottom:8px;"><div style="font-family:${SANS};font-size:10px;color:${C.hint};letter-spacing:1.8px;text-transform:uppercase;font-weight:700;">${escapeHtml(p.merchant)}</div></td></tr>` : ''}
+  <tr>
+    <td style="padding-bottom:10px;">
+      <a href="${escapeHtml(p.url)}" style="text-decoration:none;color:${C.ink};">
+        <div style="font-family:${HEAD};font-size:15px;line-height:1.35;color:${C.ink};font-weight:700;letter-spacing:-0.2px;">${escapeHtml(truncate(p.title, 70))}</div>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td>${priceBlock(p, false)}</td>
+  </tr>
+</table>` : '';
+
+const pairs = [];
+for (let i = 0; i < rest.length; i += 2) pairs.push([rest[i], rest[i + 1] || null]);
+
+const restList = pairs.map((pair) => `
+<tr>
+  <td style="padding:32px 36px 0 36px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td align="center" style="background-color:${C.promo};padding:11px 20px;font-size:12px;color:#FFFFFF;line-height:1.4;">
-          Earn while you browse — every deal you redeem stacks Mode Points. Cash out anytime.
-        </td>
-      </tr>
-      <tr>
-        <td style="background-color:${C.cardBg};padding:18px 22px;border-bottom:1px solid ${C.border};">
-          <a href="https://getmodedeals.com" style="text-decoration:none;color:${C.ink};">
-            <span style="font-size:22px;font-weight:800;letter-spacing:-0.3px;">ModeDeals</span>
-          </a>
-          <span style="font-size:10px;color:${C.muted};margin-left:8px;letter-spacing:0.4px;">POWERED BY MODE MOBILE</span>
-        </td>
-      </tr>
-      <tr>
-        <td style="background-color:${heroBg};background-image:linear-gradient(135deg,#1E1B4B 0%,#312E81 50%,#4F46E5 100%);padding:36px 24px 32px 24px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr>
-              <td align="center" style="padding-bottom:22px;">
-                <span style="display:inline-block;background-color:rgba(255,255,255,0.12);color:${heroKicker};font-size:10px;letter-spacing:1.8px;text-transform:uppercase;font-weight:700;padding:5px 12px;border-radius:99px;">🔥 ${escapeHtml(datePretty.toUpperCase())}</span>
-                <h1 style="margin:14px 0 8px 0;font-size:34px;font-weight:900;color:${heroText};letter-spacing:-0.7px;line-height:1.05;">Today's Top Deals</h1>
-                <p style="margin:0;font-size:14px;color:${heroSub};line-height:1.5;">${products.length} hand-picked finds &middot; up to <strong style="color:#FFFFFF;">${Math.max(...products.map(p => p.discountPct || 0))}% off</strong></p>
-              </td>
-            </tr>
-            <tr>
-              <td align="center">
-                <a href="https://getmodedeals.com" style="text-decoration:none;display:inline-block;line-height:0;">
-                  <img src="${HERO_SLIDE_URL}" alt="Today's top deal" width="540" style="max-width:100%;height:auto;display:block;border:0;border-radius:10px;background-color:#FFFFFF;" />
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <td align="center" style="padding-top:22px;">
-                <a href="https://getmodedeals.com" style="display:inline-block;background-color:${heroCta};color:${heroCtaText};padding:13px 30px;text-decoration:none;border-radius:6px;font-weight:800;font-size:14px;letter-spacing:0.3px;">Browse all deals &rarr;</a>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:32px 16px 4px 16px;background-color:${C.pageBg};">
-          <span style="display:inline-block;background-color:${C.red};color:#FFFFFF;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:5px 11px;border-radius:99px;">★ Hand-picked</span>
-          <h2 style="margin:10px 0 0 0;font-size:22px;font-weight:900;color:${C.ink};letter-spacing:-0.4px;">${products.length} deals · ranked by biggest savings</h2>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:14px 10px 18px 10px;background-color:${C.pageBg};">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${productRows}</table>
-        </td>
-      </tr>
-      <tr>
-        <td align="center" style="padding:6px 16px 28px 16px;background-color:${C.pageBg};">
-          <a href="https://getmodedeals.com" style="font-size:13px;color:${C.ink};text-decoration:none;font-weight:600;border-bottom:1px solid ${C.ink};padding-bottom:1px;">See all deals &rarr;</a>
-        </td>
-      </tr>
-      <tr>
-        <td style="background-color:${C.cardBg};padding:24px 22px;border-top:1px solid ${C.border};text-align:center;font-size:11px;color:${C.muted};line-height:1.6;">
-          <div style="font-size:14px;font-weight:800;color:${C.ink};margin-bottom:6px;">ModeDeals</div>
-          <div style="margin-bottom:14px;color:${C.body};font-size:12px;">Smart deal discovery, powered by Mode Mobile.</div>
-          <div style="font-size:11px;color:${C.muted};line-height:1.6;max-width:420px;margin:0 auto 12px;">
-            You're getting this because you subscribed at GetModeDeals.com. We send one email per day with the freshest deals across the web — no fluff, no spam. <a href="{{unsubscribe_url}}" style="color:${C.muted};text-decoration:underline;">Unsubscribe anytime</a>.
-          </div>
-          <div style="font-size:11px;color:${C.muted};">
-            <a href="https://getmodedeals.com" style="color:${C.muted};text-decoration:underline;">Visit site</a>
-            &nbsp;&middot;&nbsp;
-            <a href="{{unsubscribe_url}}" style="color:${C.muted};text-decoration:underline;">Unsubscribe</a>
-            &nbsp;&middot;&nbsp;
-            <a href="https://getmodedeals.com/privacy" style="color:${C.muted};text-decoration:underline;">Privacy</a>
-          </div>
-          <div style="margin-top:12px;color:${C.hint};">&copy; ${new Date().getFullYear()} Mode Mobile. Affiliate links may earn us a commission.</div>
-        </td>
+        <td valign="top" width="244" style="width:244px;padding-right:20px;">${card(pair[0])}</td>
+        <td valign="top" width="244" style="width:244px;padding-left:20px;">${card(pair[1])}</td>
       </tr>
     </table>
-  </td></tr>
+  </td>
+</tr>`).join('\n');
+
+const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="color-scheme" content="light"><title>${escapeHtml(subject)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background-color:${C.page};font-family:${SANS};color:${C.ink};-webkit-font-smoothing:antialiased;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.page};">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+
+      <!-- ===== CARD 1: HEADER + GIF ===== -->
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:${C.bg};border-radius:10px;overflow:hidden;">
+        <tr>
+          <td align="center" style="padding:36px 36px 0 36px;">
+            <div style="font-family:${SANS};font-size:11px;color:${C.navy};letter-spacing:2.8px;text-transform:uppercase;font-weight:700;">${escapeHtml(dateCaps)}</div>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:18px 36px 0 36px;">
+            <a href="https://getmodedeals.com" style="text-decoration:none;color:${C.ink};">
+              <div style="font-family:${HEAD};font-size:42px;font-weight:800;letter-spacing:-1.6px;color:${C.ink};line-height:1;">Mode Deals<span style="color:${C.accent};">.</span></div>
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:16px 36px 0 36px;">
+            <div style="font-family:${HEAD};font-size:20px;color:${C.ink};line-height:1.25;font-weight:800;letter-spacing:-0.3px;text-transform:uppercase;">Today's biggest price drops!</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:22px 36px 0 36px;">
+            <div style="background-color:${C.red};color:#FFFFFF;font-family:${HEAD};font-size:15px;font-weight:800;letter-spacing:1.2px;text-align:center;padding:14px 16px;text-transform:uppercase;line-height:1.3;">
+              ${products.length} deals · up to ${maxDiscount}% off · grab them fast!
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 32px 12px 32px;">
+            ${heroWindow}
+          </td>
+        </tr>
+      </table>
+
+      <!-- spacer -->
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;"><tr><td height="20" style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr></table>
+
+      <!-- ===== CARD 2: HERO DETAILS ===== -->
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:${C.bg};border-radius:10px;overflow:hidden;">
+        ${heroDetails}
+      </table>
+
+      <!-- spacer -->
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;"><tr><td height="20" style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr></table>
+
+      <!-- ===== CARD 3: REST GRID ===== -->
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:${C.bg};border-radius:10px;overflow:hidden;">
+        <tr>
+          <td style="padding:36px 36px 0 36px;">
+            <div style="background-color:${C.red};height:4px;width:48px;font-size:0;line-height:0;">&nbsp;</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 36px 0 36px;">
+            <div style="font-family:${HEAD};font-size:22px;color:${C.ink};font-weight:800;letter-spacing:-0.4px;text-transform:uppercase;line-height:1.2;">More deals — don't miss!</div>
+          </td>
+        </tr>
+        ${restList}
+        <tr>
+          <td align="center" style="padding:40px 36px 40px 36px;">
+            <a href="https://getmodedeals.com" style="display:inline-block;font-family:${HEAD};font-size:15px;color:#FFFFFF;letter-spacing:1.4px;line-height:20px;text-transform:uppercase;font-weight:800;text-decoration:none;background-color:${C.accent};padding:14px 36px 15px 36px;border-radius:4px;">Shop all deals now →</a>
+          </td>
+        </tr>
+      </table>
+
+      <!-- ===== FOOTER (no card, sits on gray bg) ===== -->
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+        <tr>
+          <td align="center" style="padding:32px 36px 8px 36px;">
+            <div style="font-family:${HEAD};font-size:18px;font-weight:800;color:${C.ink};margin-bottom:6px;letter-spacing:-0.5px;">Mode Deals<span style="color:${C.accent};">.</span></div>
+            <div style="font-family:${SANS};font-size:10px;color:${C.muted};letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;font-weight:700;">Daily deals · powered by Mode Mobile</div>
+            <div style="font-family:${SANS};font-size:11px;color:${C.muted};line-height:1.7;max-width:380px;margin:0 auto 14px;">
+              You're receiving this because you subscribed at getmodedeals.com. One email per day, no fluff.
+            </div>
+            <div style="font-family:${SANS};font-size:11px;color:${C.muted};letter-spacing:0.5px;">
+              <a href="{{unsubscribe_url}}" style="color:${C.muted};text-decoration:underline;">Unsubscribe</a>
+              <span style="margin:0 8px;color:${C.hint};">·</span>
+              <a href="https://getmodedeals.com/privacy" style="color:${C.muted};text-decoration:underline;">Privacy</a>
+              <span style="margin:0 8px;color:${C.hint};">·</span>
+              <a href="https://getmodedeals.com" style="color:${C.muted};text-decoration:underline;">View on web</a>
+            </div>
+            <div style="font-family:${SANS};font-size:10px;color:${C.hint};margin-top:14px;">© ${new Date().getFullYear()} Mode Mobile · Affiliate links may earn us a commission.</div>
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
 </table>
 </body></html>`;
 

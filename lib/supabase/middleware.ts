@@ -48,7 +48,7 @@ function clearCachedProfile(response: NextResponse) {
 }
 
 // Paths that should bypass auth/profile routing entirely (public preview pages).
-const PUBLIC_BYPASS_PREFIXES = ["/instagram-post"];
+const PUBLIC_BYPASS_PREFIXES = ["/instagram-post", "/sample-email-template"];
 
 export async function updateSession(request: NextRequest) {
   if (PUBLIC_BYPASS_PREFIXES.some((p) => request.nextUrl.pathname.startsWith(p))) {
