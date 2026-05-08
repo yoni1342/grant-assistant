@@ -63,13 +63,13 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
     'convert',
     `-size ${W}x${H} xc:'${PAPER}'`,
     `-fill '${PURPLE}' -draw "roundrectangle 184,30 344,62 6,6"`,
-    `-fill white -font Nimbus-Sans-Bold -pointsize 11 -gravity north -annotate +0+38 "${im(dealLabel)}"`,
+    `-fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity north -annotate +0+38 "${im(dealLabel)}"`,
     productComp,
   ];
 
   if (origPrice) {
     parts.push(
-      `-fill '${MUTED}' -stroke none -font Nimbus-Sans-Regular -pointsize 18 -gravity north -annotate +0+460 "${im(origPrice)}"`,
+      `-fill '${MUTED}' -stroke none -font DejaVu-Sans -pointsize 18 -gravity north -annotate +0+460 "${im(origPrice)}"`,
     );
   }
 
@@ -83,13 +83,13 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
   if (subIdx >= 3) {
     if (newPrice) {
       parts.push(
-        `-fill '${INK}' -font Nimbus-Sans-Bold -pointsize 42 -gravity north -annotate +0+498 "${im(newPrice)}"`,
+        `-fill '${INK}' -font DejaVu-Sans-Bold -pointsize 42 -gravity north -annotate +0+498 "${im(newPrice)}"`,
       );
     }
     if (discountText) {
       parts.push(
         `-fill '${RED}' -draw "roundrectangle 213,560 315,590 5,5"`,
-        `-fill white -font Nimbus-Sans-Bold -pointsize 13 -gravity north -annotate +0+566 "${im(discountText)}"`,
+        `-fill white -font DejaVu-Sans-Bold -pointsize 13 -gravity north -annotate +0+566 "${im(discountText)}"`,
       );
     }
   }

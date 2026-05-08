@@ -87,7 +87,7 @@ const rest = products.slice(1);
 const heroWindow = feature ? `
 <div style="padding:24px 8px 30px 8px;text-align:center;font-size:0;line-height:0;mso-line-height-rule:exactly;">
   <!--[if mso]><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td style="background-color:#FFFFFF;border:3px solid ${accent.bg};padding:15px;"><![endif]-->
-  <div style="display:inline-block;position:relative;background-color:#FFFFFF;border:3px solid ${accent.bg};box-shadow:12px 12px 0 0 ${accent.bg};padding:15px;-webkit-transform:rotate(${tiltDeg}deg);transform:rotate(${tiltDeg}deg);">
+  <div style="display:inline-block;position:relative;background-color:#FFFFFF;border:3px solid ${accent.bg};box-shadow:12px 12px 0 0 ${accent.bg};padding:15px;">
     <a href="${escapeHtml(feature.url)}" style="display:block;line-height:0;text-decoration:none;">
       <img src="${escapeHtml(FEATURE_GIF_URL)}" alt="" width="450" style="width:450px;max-width:100%;height:auto;display:block;border:0;background-color:${C.paper};" />
     </a>
