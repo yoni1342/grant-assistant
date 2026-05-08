@@ -39,15 +39,14 @@ const RED = '#EF4444';
 const sh = (s) => String(s).replace(/(["\\$`])/g, '\\$1');
 const im = (s) => sh(s).replace(/%/g, '%%');
 
-async function downloadImage(urlStr, dest) {
-  const res = await fetch(urlStr, {
-    headers: { 'User-Agent': 'GetModeDeals-GIF-Builder/1.0' },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${urlStr}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  fs.writeFileSync(dest, buf);
+function downloadImage(urlStr, dest) {
+  // Use wget via execSync — reliable inside n8n's JsTaskRunner sandbox where
+  // global fetch can fail silently on outbound HTTPS for some hosts.
+  // -q quiet · --tries=1 fail fast · --timeout=15s · -O writes to dest path.
+  // JSON.stringify gives us shell-safe quoting around the URL.
+  execSync(`wget -q -O ${JSON.stringify(dest)} --tries=1 --timeout=15 -U 'GetModeDeals-GIF-Builder/1.0' ${JSON.stringify(urlStr)}`, { stdio: 'pipe' });
+  const stat = fs.statSync(dest);
+  if (stat.size === 0) throw new Error(`empty file written for ${urlStr}`);
   return dest;
 }
 
@@ -63,13 +62,13 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
     'convert',
     `-size ${W}x${H} xc:'${PAPER}'`,
     `-fill '${PURPLE}' -draw "roundrectangle 184,30 344,62 6,6"`,
-    `-fill white -font Nimbus-Sans-Bold -pointsize 11 -gravity north -annotate +0+38 "${im(dealLabel)}"`,
+    `-fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity north -annotate +0+38 "${im(dealLabel)}"`,
     productComp,
   ];
 
   if (origPrice) {
     parts.push(
-      `-fill '${MUTED}' -stroke none -font Nimbus-Sans-Regular -pointsize 18 -gravity north -annotate +0+460 "${im(origPrice)}"`,
+      `-fill '${MUTED}' -stroke none -font DejaVu-Sans -pointsize 18 -gravity north -annotate +0+460 "${im(origPrice)}"`,
     );
   }
 
@@ -83,13 +82,13 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
   if (subIdx >= 3) {
     if (newPrice) {
       parts.push(
-        `-fill '${INK}' -font Nimbus-Sans-Bold -pointsize 42 -gravity north -annotate +0+498 "${im(newPrice)}"`,
+        `-fill '${INK}' -font DejaVu-Sans-Bold -pointsize 42 -gravity north -annotate +0+498 "${im(newPrice)}"`,
       );
     }
     if (discountText) {
       parts.push(
         `-fill '${RED}' -draw "roundrectangle 213,560 315,590 5,5"`,
-        `-fill white -font Nimbus-Sans-Bold -pointsize 13 -gravity north -annotate +0+566 "${im(discountText)}"`,
+        `-fill white -font DejaVu-Sans-Bold -pointsize 13 -gravity north -annotate +0+566 "${im(discountText)}"`,
       );
     }
   }
@@ -126,13 +125,14 @@ const dir = `/tmp/gmd-frames-${Date.now()}-${Math.random().toString(36).slice(2,
 fs.mkdirSync(dir, { recursive: true });
 
 const dealRaws = [];
+const downloadErrors = [];
 for (let i = 0; i < products.length; i++) {
   const raw = `${dir}/raw-${i}`;
   try {
-    await downloadImage(products[i].image, raw);
+    downloadImage(products[i].image, raw);
     dealRaws.push(raw);
   } catch (e) {
-    console.warn(`[build-gif] deal ${i + 1} download failed: ${e.message}`);
+    downloadErrors.push(`#${i + 1} (${products[i].image}): ${e.message}`);
     dealRaws.push(null);
   }
 }
@@ -161,7 +161,7 @@ for (let dealIdx = 0; dealIdx < products.length; dealIdx++) {
 }
 
 if (framePaths.length === 0) {
-  throw new Error('Build GIF: no frames generated (all image downloads failed)');
+  throw new Error(`Build GIF: no frames generated. Download errors:\n${downloadErrors.join('\n')}`);
 }
 
 const gifParts = ['convert'];
