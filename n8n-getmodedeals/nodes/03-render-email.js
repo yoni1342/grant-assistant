@@ -168,73 +168,91 @@ const html = `<!DOCTYPE html>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.page};">
   <tr>
     <td align="center" style="padding:32px 16px;">
-
-      <!-- ===== CARD 1: HEADER + GIF ===== -->
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:${C.bg};border-radius:10px;overflow:hidden;">
-        <tr>
-          <td align="center" style="padding:36px 36px 0 36px;">
-            <div style="font-family:${SANS};font-size:11px;color:${C.navy};letter-spacing:2.8px;text-transform:uppercase;font-weight:700;">${escapeHtml(dateCaps)}</div>
-          </td>
-        </tr>
-        <tr>
-          <td align="center" style="padding:18px 36px 0 36px;">
-            <a href="https://getmodedeals.com" style="text-decoration:none;color:${C.ink};">
-              <div style="font-family:${HEAD};font-size:42px;font-weight:800;letter-spacing:-1.6px;color:${C.ink};line-height:1;">Mode Deals<span style="color:${C.accent};">.</span></div>
-            </a>
-          </td>
-        </tr>
-        <tr>
-          <td align="center" style="padding:16px 36px 0 36px;">
-            <div style="font-family:${HEAD};font-size:20px;color:${C.ink};line-height:1.25;font-weight:800;letter-spacing:-0.3px;text-transform:uppercase;">Today's biggest price drops!</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:22px 36px 0 36px;">
-            <div style="background-color:${C.red};color:#FFFFFF;font-family:${HEAD};font-size:15px;font-weight:800;letter-spacing:1.2px;text-align:center;padding:14px 16px;text-transform:uppercase;line-height:1.3;">
-              ${products.length} deals · up to ${maxDiscount}% off · grab them fast!
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:0 32px 12px 32px;">
-            ${heroWindow}
-          </td>
-        </tr>
-      </table>
-
-      <!-- spacer -->
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;"><tr><td height="20" style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr></table>
-
-      <!-- ===== CARD 2: HERO DETAILS ===== -->
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:${C.bg};border-radius:10px;overflow:hidden;">
-        ${heroDetails}
-      </table>
-
-      <!-- spacer -->
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;"><tr><td height="20" style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr></table>
-
-      <!-- ===== CARD 3: REST GRID ===== -->
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:${C.bg};border-radius:10px;overflow:hidden;">
-        <tr>
-          <td style="padding:36px 36px 0 36px;">
-            <div style="background-color:${C.red};height:4px;width:48px;font-size:0;line-height:0;">&nbsp;</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:14px 36px 0 36px;">
-            <div style="font-family:${HEAD};font-size:22px;color:${C.ink};font-weight:800;letter-spacing:-0.4px;text-transform:uppercase;line-height:1.2;">More deals — don't miss!</div>
-          </td>
-        </tr>
-        ${restList}
-        <tr>
-          <td align="center" style="padding:40px 36px 40px 36px;">
-            <a href="https://getmodedeals.com" style="display:inline-block;font-family:${HEAD};font-size:15px;color:#FFFFFF;letter-spacing:1.4px;line-height:20px;text-transform:uppercase;font-weight:800;text-decoration:none;background-color:${C.accent};padding:14px 36px 15px 36px;border-radius:4px;">Shop all deals now →</a>
-          </td>
-        </tr>
-      </table>
-
-      <!-- ===== FOOTER (no card, sits on gray bg) ===== -->
+      <!--
+        Single 600-wide outer table containing every section as a row.
+        Putting the cards as siblings inside the centred <td> made Gmail
+        treat each card as a discrete trimmable block (the "..." +
+        click-to-expand behaviour). One outer table reads as one email.
+      -->
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+
+        <!-- Card 1: header + GIF -->
+        <tr>
+          <td style="background-color:${C.bg};border-radius:10px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" style="padding:36px 36px 0 36px;">
+                  <div style="font-family:${SANS};font-size:11px;color:${C.navy};letter-spacing:2.8px;text-transform:uppercase;font-weight:700;">${escapeHtml(dateCaps)}</div>
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding:18px 36px 0 36px;">
+                  <a href="https://getmodedeals.com" style="text-decoration:none;color:${C.ink};">
+                    <div style="font-family:${HEAD};font-size:42px;font-weight:800;letter-spacing:-1.6px;color:${C.ink};line-height:1;">Mode Deals<span style="color:${C.accent};">.</span></div>
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding:16px 36px 0 36px;">
+                  <div style="font-family:${HEAD};font-size:20px;color:${C.ink};line-height:1.25;font-weight:800;letter-spacing:-0.3px;text-transform:uppercase;">Today's biggest price drops!</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:22px 36px 0 36px;">
+                  <div style="background-color:${C.red};color:#FFFFFF;font-family:${HEAD};font-size:15px;font-weight:800;letter-spacing:1.2px;text-align:center;padding:14px 16px;text-transform:uppercase;line-height:1.3;">
+                    ${products.length} deals · up to ${maxDiscount}% off · grab them fast!
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:0 32px 12px 32px;">
+                  ${heroWindow}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- spacer -->
+        <tr><td height="20" style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr>
+
+        <!-- Card 2: hero details -->
+        <tr>
+          <td style="background-color:${C.bg};border-radius:10px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              ${heroDetails}
+            </table>
+          </td>
+        </tr>
+
+        <!-- spacer -->
+        <tr><td height="20" style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr>
+
+        <!-- Card 3: rest of the deals grid -->
+        <tr>
+          <td style="background-color:${C.bg};border-radius:10px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding:36px 36px 0 36px;">
+                  <div style="background-color:${C.red};height:4px;width:48px;font-size:0;line-height:0;">&nbsp;</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:14px 36px 0 36px;">
+                  <div style="font-family:${HEAD};font-size:22px;color:${C.ink};font-weight:800;letter-spacing:-0.4px;text-transform:uppercase;line-height:1.2;">More deals — don't miss!</div>
+                </td>
+              </tr>
+              ${restList}
+              <tr>
+                <td align="center" style="padding:40px 36px 40px 36px;">
+                  <a href="https://getmodedeals.com" style="display:inline-block;font-family:${HEAD};font-size:15px;color:#FFFFFF;letter-spacing:1.4px;line-height:20px;text-transform:uppercase;font-weight:800;text-decoration:none;background-color:${C.accent};padding:14px 36px 15px 36px;border-radius:4px;">Shop all deals now →</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer (no card chrome, sits on gray bg) -->
         <tr>
           <td align="center" style="padding:32px 36px 8px 36px;">
             <div style="font-family:${HEAD};font-size:18px;font-weight:800;color:${C.ink};margin-bottom:6px;letter-spacing:-0.5px;">Mode Deals<span style="color:${C.accent};">.</span></div>
@@ -252,8 +270,8 @@ const html = `<!DOCTYPE html>
             <div style="font-family:${SANS};font-size:10px;color:${C.hint};margin-top:14px;">© ${new Date().getFullYear()} Mode Mobile · Affiliate links may earn us a commission.</div>
           </td>
         </tr>
-      </table>
 
+      </table>
     </td>
   </tr>
 </table>
