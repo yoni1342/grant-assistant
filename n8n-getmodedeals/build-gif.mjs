@@ -16,9 +16,9 @@ import { pipeline } from 'node:stream/promises';
 import { createWriteStream } from 'node:fs';
 
 const W = 540;
-const H = 614;
-const CARD_X = 0, CARD_Y = 0, CARD_W = 526, CARD_H = 600;
-const Y_OFF = 0;
+const H = 644;
+const CARD_X = 6, CARD_Y = 28, CARD_W = 520, CARD_H = 602;
+const Y_OFF = 28;
 const PAGE = '#FFD93D';
 const PAPER = '#FFFFFF';
 const INK = '#0F1729';
@@ -51,7 +51,7 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
 
   const purpleChipSub = `\\( -size 160x32 xc:none -fill '${PURPLE}' -draw "roundrectangle 0,0 159,31 6,6" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im(dealLabel)}" \\) -gravity northwest -geometry +184+${30 + Y_OFF} -composite`;
 
-  const pillSub = `\\( -size 200x32 xc:none -fill '${INK}' -draw "roundrectangle 0,0 199,31 16,16" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im('Look what we found')}" -background none -rotate 3 \\) -gravity northeast -geometry +4+10 -composite`;
+  const pillSub = `\\( -size 200x32 xc:none -fill '${INK}' -draw "roundrectangle 0,0 199,31 16,16" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im('Look what we found')}" -background none -rotate 3 \\) -gravity northeast -geometry +4+6 -composite`;
 
   const parts = [
     'convert',
