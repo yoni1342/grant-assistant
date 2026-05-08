@@ -29,14 +29,12 @@ const crypto = require('crypto');
 const WEBHOOK_BASE = 'https://n8n.tebita.com/webhook/feature-gif';
 const CACHE_DIR = '/tmp/gmd-gifs';
 
-// Canvas dimensions — outer = yellow page; inner white card is offset
-// down + left so 14px of yellow page peeks through on right + bottom,
-// reproducing the "two stacked sheets of paper" sticker look from the
-// HTML preview. Pill sits at top-right, partially overlapping card top
-// edge with a slight rotation.
-const W = 540, H = 642;
-const CARD_X = 0, CARD_Y = 28, CARD_W = 526, CARD_H = 600; // top-left corner of white card
-const Y_OFF = CARD_Y; // shift product/price/etc. down by the pill space
+// Yellow "back page" sticker shadow — visible only on the RIGHT and
+// BOTTOM of the white card, matching the HTML preview. The white card
+// hugs the top-left of the canvas (no yellow on top or left).
+const W = 540, H = 614;
+const CARD_X = 0, CARD_Y = 0, CARD_W = 526, CARD_H = 600;
+const Y_OFF = 0;
 
 const PAGE = '#FFD93D';
 const PAPER = '#FFFFFF';
@@ -73,9 +71,11 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
   // canvas at the chip's top-left coordinate.
   const purpleChipSub = `\\( -size 160x32 xc:none -fill '${PURPLE}' -draw "roundrectangle 0,0 159,31 6,6" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im(dealLabel)}" \\) -gravity northwest -geometry +184+${30 + Y_OFF} -composite`;
 
-  // Tilted "Look what we found" pill, generated as a transparent sub-image
-  // then rotated and composited onto the top-right of the canvas.
-  const pillSub = `\\( -size 200x32 xc:none -fill '${INK}' -draw "roundrectangle 0,0 199,31 16,16" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im('Look what we found')}" -background none -rotate -4 \\) -gravity northeast -geometry +6+8 -composite`;
+  // "Look what we found" pill: transparent sub-image, +3deg clockwise tilt
+  // (left edge sits slightly higher than right edge — matches the HTML
+  // preview), composited at the top-right corner so a few px of pill
+  // overhang into the yellow shadow strip on the right.
+  const pillSub = `\\( -size 200x32 xc:none -fill '${INK}' -draw "roundrectangle 0,0 199,31 16,16" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im('Look what we found')}" -background none -rotate 3 \\) -gravity northeast -geometry +4+10 -composite`;
 
   const parts = [
     'convert',
@@ -128,8 +128,8 @@ if (products.length === 0) {
   throw new Error('Build GIF: no input items');
 }
 
-// v3: chip text geometrically centred via sub-image gravity:center
-const fingerprint = 'v3;' + products
+// v4: card hugs top-left, pill tilt +3deg CW, no yellow on top
+const fingerprint = 'v4;' + products
   .map((p) => `${p.id || ''}|${p.image || ''}|${p.priceLabel || ''}|${p.wasPriceLabel || ''}|${p.discountPct || 0}`)
   .join(';');
 const hash = crypto.createHash('md5').update(fingerprint).digest('hex').slice(0, 12);
