@@ -49,14 +49,15 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
 
   const productComp = `\\( "${rawPath}" -resize 360x360 -background '${PAPER}' -gravity center -extent 360x360 \\) -gravity north -geometry +0+${85 + Y_OFF} -composite`;
 
+  const purpleChipSub = `\\( -size 160x32 xc:none -fill '${PURPLE}' -draw "roundrectangle 0,0 159,31 6,6" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im(dealLabel)}" \\) -gravity northwest -geometry +184+${30 + Y_OFF} -composite`;
+
   const pillSub = `\\( -size 200x32 xc:none -fill '${INK}' -draw "roundrectangle 0,0 199,31 16,16" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im('Look what we found')}" -background none -rotate -4 \\) -gravity northeast -geometry +6+8 -composite`;
 
   const parts = [
     'convert',
     `-size ${W}x${H} xc:'${PAGE}'`,
     `-fill '${PAPER}' -draw "rectangle ${CARD_X},${CARD_Y} ${CARD_X + CARD_W},${CARD_Y + CARD_H}"`,
-    `-fill '${PURPLE}' -draw "roundrectangle 184,${30 + Y_OFF} 344,${62 + Y_OFF} 6,6"`,
-    `-fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity north -annotate +0+${38 + Y_OFF} "${im(dealLabel)}"`,
+    purpleChipSub,
     productComp,
   ];
 
@@ -80,10 +81,8 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
       );
     }
     if (discountText) {
-      parts.push(
-        `-fill '${RED}' -draw "roundrectangle 213,${560 + Y_OFF} 315,${590 + Y_OFF} 5,5"`,
-        `-fill white -font DejaVu-Sans-Bold -pointsize 13 -gravity north -annotate +0+${566 + Y_OFF} "${im(discountText)}"`,
-      );
+      const redChipSub = `\\( -size 102x30 xc:none -fill '${RED}' -draw "roundrectangle 0,0 101,29 5,5" -fill white -font DejaVu-Sans-Bold -pointsize 13 -gravity center -annotate +0+0 "${im(discountText)}" \\) -gravity northwest -geometry +213+${560 + Y_OFF} -composite`;
+      parts.push(redChipSub);
     }
   }
 

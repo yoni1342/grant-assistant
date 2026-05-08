@@ -65,24 +65,23 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
   const newPrice = deal.priceLabel || '';
   const discountText = deal.discountPct ? `${deal.discountPct}% OFF` : '';
 
-  // Place product image centred horizontally inside the white card, offset
-  // down by Y_OFF so it lands inside the card not on top of the pill.
   const productComp = `\\( "${rawPath}" -resize 360x360 -background '${PAPER}' -gravity center -extent 360x360 \\) -gravity north -geometry +0+${85 + Y_OFF} -composite`;
 
+  // Each chip is rendered as its own transparent sub-image (exact chip size)
+  // so we can use `gravity center` to centre the text geometrically inside
+  // the chip, regardless of font metrics. Then composite onto the main
+  // canvas at the chip's top-left coordinate.
+  const purpleChipSub = `\\( -size 160x32 xc:none -fill '${PURPLE}' -draw "roundrectangle 0,0 159,31 6,6" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im(dealLabel)}" \\) -gravity northwest -geometry +184+${30 + Y_OFF} -composite`;
+
   // Tilted "Look what we found" pill, generated as a transparent sub-image
-  // then rotated and composited onto the top-right of the canvas. The pill
-  // overlaps the white card's top edge so part sits on yellow, part on white.
+  // then rotated and composited onto the top-right of the canvas.
   const pillSub = `\\( -size 200x32 xc:none -fill '${INK}' -draw "roundrectangle 0,0 199,31 16,16" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im('Look what we found')}" -background none -rotate -4 \\) -gravity northeast -geometry +6+8 -composite`;
 
   const parts = [
     'convert',
-    // Yellow page (whole canvas)
     `-size ${W}x${H} xc:'${PAGE}'`,
-    // White card sits offset down + left so yellow shows on right + bottom
     `-fill '${PAPER}' -draw "rectangle ${CARD_X},${CARD_Y} ${CARD_X + CARD_W},${CARD_Y + CARD_H}"`,
-    // Purple "DEAL N OF M" chip — moved down by Y_OFF
-    `-fill '${PURPLE}' -draw "roundrectangle 184,${30 + Y_OFF} 344,${62 + Y_OFF} 6,6"`,
-    `-fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity north -annotate +0+${38 + Y_OFF} "${im(dealLabel)}"`,
+    purpleChipSub,
     productComp,
   ];
 
@@ -106,14 +105,14 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
       );
     }
     if (discountText) {
-      parts.push(
-        `-fill '${RED}' -draw "roundrectangle 213,${560 + Y_OFF} 315,${590 + Y_OFF} 5,5"`,
-        `-fill white -font DejaVu-Sans-Bold -pointsize 13 -gravity north -annotate +0+${566 + Y_OFF} "${im(discountText)}"`,
-      );
+      // Same sub-image trick for the red discount chip — exact-size
+      // transparent canvas + gravity center for perfect text centering.
+      const redChipSub = `\\( -size 102x30 xc:none -fill '${RED}' -draw "roundrectangle 0,0 101,29 5,5" -fill white -font DejaVu-Sans-Bold -pointsize 13 -gravity center -annotate +0+0 "${im(discountText)}" \\) -gravity northwest -geometry +213+${560 + Y_OFF} -composite`;
+      parts.push(redChipSub);
     }
   }
 
-  // Pill goes LAST so it sits on top of everything else
+  // Pill goes LAST so it sits on top of everything else.
   parts.push(pillSub);
 
   parts.push(`"${outPath}"`);
@@ -129,8 +128,8 @@ if (products.length === 0) {
   throw new Error('Build GIF: no input items');
 }
 
-// v2: yellow-page + tilted-pill baked into GIF (May 2026 redesign)
-const fingerprint = 'v2;' + products
+// v3: chip text geometrically centred via sub-image gravity:center
+const fingerprint = 'v3;' + products
   .map((p) => `${p.id || ''}|${p.image || ''}|${p.priceLabel || ''}|${p.wasPriceLabel || ''}|${p.discountPct || 0}`)
   .join(';');
 const hash = crypto.createHash('md5').update(fingerprint).digest('hex').slice(0, 12);
