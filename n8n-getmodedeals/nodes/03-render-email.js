@@ -85,16 +85,37 @@ const feature = products[0];
 const rest = products.slice(1);
 
 const heroWindow = feature ? `
-<div style="padding:24px 8px 30px 8px;text-align:center;font-size:0;line-height:0;mso-line-height-rule:exactly;">
-  <!--[if mso]><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td style="background-color:#FFFFFF;border:3px solid ${accent.bg};padding:15px;"><![endif]-->
-  <div style="display:inline-block;position:relative;background-color:#FFFFFF;border:3px solid ${accent.bg};box-shadow:12px 12px 0 0 ${accent.bg};padding:15px;">
-    <a href="${escapeHtml(feature.url)}" style="display:block;line-height:0;text-decoration:none;">
-      <img src="${escapeHtml(FEATURE_GIF_URL)}" alt="" width="450" style="width:450px;max-width:100%;height:auto;display:block;border:0;background-color:${C.paper};" />
-    </a>
-    <div style="position:absolute;top:-16px;right:-16px;background-color:${C.ink};color:#FFFFFF;font-family:${MONO};font-size:11px;font-weight:700;letter-spacing:1.4px;padding:8px 16px;border-radius:999px;-webkit-transform:rotate(${labelTilt}deg);transform:rotate(${labelTilt}deg);white-space:nowrap;line-height:1.4;">Look what we found</div>
-  </div>
-  <!--[if mso]></td></tr></table><![endif]-->
-</div>` : '';
+<!--
+  Email-safe hero window: a centred outer table holds two rows.
+  Row 1 — the "Look what we found" pill, right-aligned, pulled down with
+          margin-bottom:-14px so it overlaps the top edge of row 2.
+  Row 2 — a yellow-shadow cell (12px right + 12px down padding) wrapping
+          a nested white card with a 3px accent-coloured border. This
+          reproduces the sticker-shadow offset using only nested tables
+          and works in every email client (no box-shadow / position needed).
+-->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:18px auto 26px auto;">
+  <tr>
+    <td align="right" style="padding:0 18px 0 0;">
+      <div style="display:inline-block;margin-bottom:-14px;">
+        <span style="display:inline-block;background-color:${C.ink};color:#FFFFFF;font-family:${MONO};font-size:11px;font-weight:700;letter-spacing:1.4px;padding:8px 16px;border-radius:999px;line-height:1.4;white-space:nowrap;">Look what we found</span>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td style="background-color:${accent.bg};padding:0 12px 12px 0;line-height:0;font-size:0;mso-line-height-rule:exactly;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="left" style="background-color:#FFFFFF;border:3px solid ${accent.bg};">
+        <tr>
+          <td style="padding:15px;line-height:0;">
+            <a href="${escapeHtml(feature.url)}" style="display:block;line-height:0;text-decoration:none;">
+              <img src="${escapeHtml(FEATURE_GIF_URL)}" alt="" width="450" style="width:450px;max-width:100%;height:auto;display:block;border:0;background-color:${C.paper};" />
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>` : '';
 
 const heroDetails = feature ? `
 <tr>
