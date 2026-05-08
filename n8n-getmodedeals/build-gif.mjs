@@ -15,8 +15,11 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createWriteStream } from 'node:fs';
 
-const W = 528;
-const H = 600;
+const W = 540;
+const H = 642;
+const CARD_X = 0, CARD_Y = 28, CARD_W = 526, CARD_H = 600;
+const Y_OFF = CARD_Y;
+const PAGE = '#FFD93D';
 const PAPER = '#FFFFFF';
 const INK = '#0F1729';
 const MUTED = '#6B7280';
@@ -44,25 +47,28 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
   const newPrice = deal.priceLabel || '';
   const discountText = deal.discountPct ? `${deal.discountPct}% OFF` : '';
 
-  const productComp = `\\( "${rawPath}" -resize 360x360 -background '${PAPER}' -gravity center -extent 360x360 \\) -gravity north -geometry +0+85 -composite`;
+  const productComp = `\\( "${rawPath}" -resize 360x360 -background '${PAPER}' -gravity center -extent 360x360 \\) -gravity north -geometry +0+${85 + Y_OFF} -composite`;
+
+  const pillSub = `\\( -size 200x32 xc:none -fill '${INK}' -draw "roundrectangle 0,0 199,31 16,16" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im('Look what we found')}" -background none -rotate -4 \\) -gravity northeast -geometry +6+8 -composite`;
 
   const parts = [
     'convert',
-    `-size ${W}x${H} xc:'${PAPER}'`,
-    `-fill '${PURPLE}' -draw "roundrectangle 184,30 344,62 6,6"`,
-    `-fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity north -annotate +0+38 "${im(dealLabel)}"`,
+    `-size ${W}x${H} xc:'${PAGE}'`,
+    `-fill '${PAPER}' -draw "rectangle ${CARD_X},${CARD_Y} ${CARD_X + CARD_W},${CARD_Y + CARD_H}"`,
+    `-fill '${PURPLE}' -draw "roundrectangle 184,${30 + Y_OFF} 344,${62 + Y_OFF} 6,6"`,
+    `-fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity north -annotate +0+${38 + Y_OFF} "${im(dealLabel)}"`,
     productComp,
   ];
 
   if (origPrice) {
     parts.push(
-      `-fill '${MUTED}' -stroke none -font DejaVu-Sans -pointsize 18 -gravity north -annotate +0+460 "${im(origPrice)}"`,
+      `-fill '${MUTED}' -stroke none -font DejaVu-Sans -pointsize 18 -gravity north -annotate +0+${460 + Y_OFF} "${im(origPrice)}"`,
     );
   }
 
   if (subIdx >= 2 && origPrice) {
     parts.push(
-      `-fill none -stroke '${RED}' -strokewidth 5 -draw "stroke-linecap round line 218,490 310,448"`,
+      `-fill none -stroke '${RED}' -strokewidth 5 -draw "stroke-linecap round line 218,${490 + Y_OFF} 310,${448 + Y_OFF}"`,
       `-stroke none`,
     );
   }
@@ -70,16 +76,18 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
   if (subIdx >= 3) {
     if (newPrice) {
       parts.push(
-        `-fill '${INK}' -font DejaVu-Sans-Bold -pointsize 42 -gravity north -annotate +0+498 "${im(newPrice)}"`,
+        `-fill '${INK}' -font DejaVu-Sans-Bold -pointsize 42 -gravity north -annotate +0+${498 + Y_OFF} "${im(newPrice)}"`,
       );
     }
     if (discountText) {
       parts.push(
-        `-fill '${RED}' -draw "roundrectangle 213,560 315,590 5,5"`,
-        `-fill white -font DejaVu-Sans-Bold -pointsize 13 -gravity north -annotate +0+566 "${im(discountText)}"`,
+        `-fill '${RED}' -draw "roundrectangle 213,${560 + Y_OFF} 315,${590 + Y_OFF} 5,5"`,
+        `-fill white -font DejaVu-Sans-Bold -pointsize 13 -gravity north -annotate +0+${566 + Y_OFF} "${im(discountText)}"`,
       );
     }
   }
+
+  parts.push(pillSub);
 
   parts.push(`"${outPath}"`);
   execSync(parts.join(' '), { stdio: 'pipe' });

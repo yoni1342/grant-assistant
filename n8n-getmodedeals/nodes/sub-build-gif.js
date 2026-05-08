@@ -29,7 +29,16 @@ const crypto = require('crypto');
 const WEBHOOK_BASE = 'https://n8n.tebita.com/webhook/feature-gif';
 const CACHE_DIR = '/tmp/gmd-gifs';
 
-const W = 528, H = 600;
+// Canvas dimensions — outer = yellow page; inner white card is offset
+// down + left so 14px of yellow page peeks through on right + bottom,
+// reproducing the "two stacked sheets of paper" sticker look from the
+// HTML preview. Pill sits at top-right, partially overlapping card top
+// edge with a slight rotation.
+const W = 540, H = 642;
+const CARD_X = 0, CARD_Y = 28, CARD_W = 526, CARD_H = 600; // top-left corner of white card
+const Y_OFF = CARD_Y; // shift product/price/etc. down by the pill space
+
+const PAGE = '#FFD93D';
 const PAPER = '#FFFFFF';
 const INK = '#0F1729';
 const MUTED = '#6B7280';
@@ -56,25 +65,36 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
   const newPrice = deal.priceLabel || '';
   const discountText = deal.discountPct ? `${deal.discountPct}% OFF` : '';
 
-  const productComp = `\\( "${rawPath}" -resize 360x360 -background '${PAPER}' -gravity center -extent 360x360 \\) -gravity north -geometry +0+85 -composite`;
+  // Place product image centred horizontally inside the white card, offset
+  // down by Y_OFF so it lands inside the card not on top of the pill.
+  const productComp = `\\( "${rawPath}" -resize 360x360 -background '${PAPER}' -gravity center -extent 360x360 \\) -gravity north -geometry +0+${85 + Y_OFF} -composite`;
+
+  // Tilted "Look what we found" pill, generated as a transparent sub-image
+  // then rotated and composited onto the top-right of the canvas. The pill
+  // overlaps the white card's top edge so part sits on yellow, part on white.
+  const pillSub = `\\( -size 200x32 xc:none -fill '${INK}' -draw "roundrectangle 0,0 199,31 16,16" -fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity center -annotate +0+0 "${im('Look what we found')}" -background none -rotate -4 \\) -gravity northeast -geometry +6+8 -composite`;
 
   const parts = [
     'convert',
-    `-size ${W}x${H} xc:'${PAPER}'`,
-    `-fill '${PURPLE}' -draw "roundrectangle 184,30 344,62 6,6"`,
-    `-fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity north -annotate +0+38 "${im(dealLabel)}"`,
+    // Yellow page (whole canvas)
+    `-size ${W}x${H} xc:'${PAGE}'`,
+    // White card sits offset down + left so yellow shows on right + bottom
+    `-fill '${PAPER}' -draw "rectangle ${CARD_X},${CARD_Y} ${CARD_X + CARD_W},${CARD_Y + CARD_H}"`,
+    // Purple "DEAL N OF M" chip — moved down by Y_OFF
+    `-fill '${PURPLE}' -draw "roundrectangle 184,${30 + Y_OFF} 344,${62 + Y_OFF} 6,6"`,
+    `-fill white -font DejaVu-Sans-Bold -pointsize 11 -gravity north -annotate +0+${38 + Y_OFF} "${im(dealLabel)}"`,
     productComp,
   ];
 
   if (origPrice) {
     parts.push(
-      `-fill '${MUTED}' -stroke none -font DejaVu-Sans -pointsize 18 -gravity north -annotate +0+460 "${im(origPrice)}"`,
+      `-fill '${MUTED}' -stroke none -font DejaVu-Sans -pointsize 18 -gravity north -annotate +0+${460 + Y_OFF} "${im(origPrice)}"`,
     );
   }
 
   if (subIdx >= 2 && origPrice) {
     parts.push(
-      `-fill none -stroke '${RED}' -strokewidth 5 -draw "stroke-linecap round line 218,490 310,448"`,
+      `-fill none -stroke '${RED}' -strokewidth 5 -draw "stroke-linecap round line 218,${490 + Y_OFF} 310,${448 + Y_OFF}"`,
       `-stroke none`,
     );
   }
@@ -82,16 +102,19 @@ function buildOneFrame({ deal, dealNum, totalDeals, rawPath, subIdx, outPath }) 
   if (subIdx >= 3) {
     if (newPrice) {
       parts.push(
-        `-fill '${INK}' -font DejaVu-Sans-Bold -pointsize 42 -gravity north -annotate +0+498 "${im(newPrice)}"`,
+        `-fill '${INK}' -font DejaVu-Sans-Bold -pointsize 42 -gravity north -annotate +0+${498 + Y_OFF} "${im(newPrice)}"`,
       );
     }
     if (discountText) {
       parts.push(
-        `-fill '${RED}' -draw "roundrectangle 213,560 315,590 5,5"`,
-        `-fill white -font DejaVu-Sans-Bold -pointsize 13 -gravity north -annotate +0+566 "${im(discountText)}"`,
+        `-fill '${RED}' -draw "roundrectangle 213,${560 + Y_OFF} 315,${590 + Y_OFF} 5,5"`,
+        `-fill white -font DejaVu-Sans-Bold -pointsize 13 -gravity north -annotate +0+${566 + Y_OFF} "${im(discountText)}"`,
       );
     }
   }
+
+  // Pill goes LAST so it sits on top of everything else
+  parts.push(pillSub);
 
   parts.push(`"${outPath}"`);
   execSync(parts.join(' '), { stdio: 'pipe' });
@@ -106,7 +129,8 @@ if (products.length === 0) {
   throw new Error('Build GIF: no input items');
 }
 
-const fingerprint = products
+// v2: yellow-page + tilted-pill baked into GIF (May 2026 redesign)
+const fingerprint = 'v2;' + products
   .map((p) => `${p.id || ''}|${p.image || ''}|${p.priceLabel || ''}|${p.wasPriceLabel || ''}|${p.discountPct || 0}`)
   .join(';');
 const hash = crypto.createHash('md5').update(fingerprint).digest('hex').slice(0, 12);
