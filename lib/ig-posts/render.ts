@@ -49,9 +49,9 @@ export async function renderSlides(postId: string): Promise<Buffer[]> {
         });
     });
 
-    if (rects.length !== 7) {
+    if (rects.length === 0) {
       throw new Error(
-        `Expected 7 slide containers, found ${rects.length} at ${baseUrl}/instagram-post`
+        `No slide containers found at ${baseUrl}/instagram-post — page may not have rendered`,
       );
     }
 

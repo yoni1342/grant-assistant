@@ -1,10 +1,14 @@
-import { FundoryCarousel, type DailyContent } from "../../instagram_post/slides";
+import {
+  FundoryCarousel,
+  type DailyContent,
+  type SlideId,
+} from "../../instagram_post/slides";
 import { createAdminClient } from "@/lib/supabase/server";
 
 // Standalone preview + renderer surface for the launch carousel.
-//   /instagram-post               → all 7 slides scaled to fit screen, static copy
+//   /instagram-post               → default 7-slide plan, static copy
 //   /instagram-post?full=1        → 1080×1080 each (renderer/screenshot use)
-//   /instagram-post?postId=<uuid> → load that day's generated copy from ig_posts
+//   /instagram-post?postId=<uuid> → load that day's plan + copy from ig_posts
 export default async function Page({
   searchParams,
 }: {
@@ -15,12 +19,13 @@ export default async function Page({
   const scale = full ? 1 : params.scale ? Number(params.scale) : 0.5;
 
   let daily: DailyContent | undefined;
+  let slidePlan: SlideId[] | undefined;
   if (params.postId) {
     const supabase = createAdminClient();
     const { data } = await supabase
       .from("ig_posts")
       .select(
-        "slide1_eyebrow, slide1_headline_top, slide1_headline_mid, slide1_headline_bot, slide1_subheadline, slide1_briefing, slide7_eyebrow, slide7_headline_top, slide7_headline_mid, slide7_headline_accent, slide7_headline_bot"
+        "slide_plan, slide1_eyebrow, slide1_headline_top, slide1_headline_mid, slide1_headline_bot, slide1_subheadline, slide1_briefing, slide7_eyebrow, slide7_headline_top, slide7_headline_mid, slide7_headline_accent, slide7_headline_bot",
       )
       .eq("id", params.postId)
       .maybeSingle();
@@ -43,7 +48,10 @@ export default async function Page({
         },
       };
     }
+    if (Array.isArray(data?.slide_plan) && data.slide_plan.length > 0) {
+      slidePlan = data.slide_plan as SlideId[];
+    }
   }
 
-  return <FundoryCarousel scale={scale} daily={daily} />;
+  return <FundoryCarousel scale={scale} daily={daily} slidePlan={slidePlan} />;
 }

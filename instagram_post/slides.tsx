@@ -422,7 +422,15 @@ function DimensionScale({
 /* ════════════════════════════════════════════════════════════
    SLIDE 1 — COVER
    ════════════════════════════════════════════════════════════ */
-export function Slide1({ daily = DEFAULT_DAILY }: { daily?: DailyContent } = {}) {
+export function Slide1({
+  daily = DEFAULT_DAILY,
+  solo = false,
+  totalSlides = 7,
+}: {
+  daily?: DailyContent;
+  solo?: boolean; // single-page post — no swipe indicator, inline handle
+  totalSlides?: number;
+} = {}) {
   const s = daily.slide1;
   // Render the subheadline so any word can be the accent (orange). The first
   // word becomes the accent unless the string is wrapped in {{ }} markers like
@@ -530,26 +538,45 @@ export function Slide1({ daily = DEFAULT_DAILY }: { daily?: DailyContent } = {})
           </p>
         </div>
         <div className="flex flex-col items-end gap-3">
-          <span
-            className="font-mono uppercase"
-            style={{ fontSize: 10, letterSpacing: "0.3em", color: "#888" }}
-          >
-            01 / 07
-          </span>
-          <div
-            className="flex items-center gap-3 font-mono uppercase"
-            style={{
-              fontSize: 12,
-              letterSpacing: "0.24em",
-              color: "#0A0A0A",
-              border: "1.5px solid #0A0A0A",
-              padding: "10px 16px",
-              borderRadius: 999,
-            }}
-          >
-            Swipe
-            <ArrowUpRight size={14} strokeWidth={1.6} className="rotate-45" />
-          </div>
+          {!solo && (
+            <span
+              className="font-mono uppercase"
+              style={{ fontSize: 10, letterSpacing: "0.3em", color: "#888" }}
+            >
+              01 / {String(totalSlides).padStart(2, "0")}
+            </span>
+          )}
+          {solo ? (
+            <div className="flex flex-col items-end" style={{ gap: 6 }}>
+              <span
+                className="font-mono uppercase"
+                style={{ fontSize: 10, letterSpacing: "0.3em", color: "#888" }}
+              >
+                fundory.ai
+              </span>
+              <span
+                className="font-display font-black uppercase text-[#0A0A0A]"
+                style={{ fontSize: 28, letterSpacing: "0.02em", lineHeight: 1 }}
+              >
+                @fundoryai
+              </span>
+            </div>
+          ) : (
+            <div
+              className="flex items-center gap-3 font-mono uppercase"
+              style={{
+                fontSize: 12,
+                letterSpacing: "0.24em",
+                color: "#0A0A0A",
+                border: "1.5px solid #0A0A0A",
+                padding: "10px 16px",
+                borderRadius: 999,
+              }}
+            >
+              Swipe
+              <ArrowUpRight size={14} strokeWidth={1.6} className="rotate-45" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -1341,32 +1368,66 @@ export function Slide7({ daily = DEFAULT_DAILY }: { daily?: DailyContent } = {})
 /* ════════════════════════════════════════════════════════════
    CAROUSEL — preview wrapper
    ════════════════════════════════════════════════════════════ */
+export type SlideId =
+  | "solo"
+  | "cover"
+  | "reality"
+  | "stats"
+  | "aggregate"
+  | "validate"
+  | "compose"
+  | "cta";
+
+const DEFAULT_PLAN: SlideId[] = [
+  "cover",
+  "reality",
+  "stats",
+  "aggregate",
+  "validate",
+  "compose",
+  "cta",
+];
+
 export function FundoryCarousel({
   scale = 0.5,
   daily = DEFAULT_DAILY,
+  slidePlan = DEFAULT_PLAN,
 }: {
   scale?: number;
   daily?: DailyContent;
+  slidePlan?: SlideId[];
 }) {
-  // Only Slide1 + Slide7 need the daily prop. The middle five are brand pillars.
-  const slides: Array<React.ReactNode> = [
-    <Slide1 key="1" daily={daily} />,
-    <Slide2 key="2" />,
-    <Slide3 key="3" />,
-    <Slide4 key="4" />,
-    <Slide5 key="5" />,
-    <Slide6 key="6" />,
-    <Slide7 key="7" daily={daily} />,
-  ];
+  const total = slidePlan.length;
+  // Only Slide1 + Slide7 read from daily; the rest are brand-pillar constants.
+  const renderSlide = (id: SlideId): React.ReactNode => {
+    switch (id) {
+      case "solo":
+        return <Slide1 daily={daily} solo />;
+      case "cover":
+        return <Slide1 daily={daily} totalSlides={total} />;
+      case "reality":
+        return <Slide2 />;
+      case "stats":
+        return <Slide3 />;
+      case "aggregate":
+        return <Slide4 />;
+      case "validate":
+        return <Slide5 />;
+      case "compose":
+        return <Slide6 />;
+      case "cta":
+        return <Slide7 daily={daily} />;
+    }
+  };
   return (
     <div className="flex flex-col items-center gap-10 bg-neutral-200 py-12">
-      {slides.map((slide, i) => (
-        <div key={i} className="flex flex-col items-center gap-3">
+      {slidePlan.map((id, i) => (
+        <div key={`${id}-${i}`} className="flex flex-col items-center gap-3">
           <span
             className="font-mono uppercase"
             style={{ fontSize: 10, letterSpacing: "0.3em", color: "#666" }}
           >
-            Slide {String(i + 1).padStart(2, "0")} — 1080 × 1080
+            Slide {String(i + 1).padStart(2, "0")} · {id} — 1080 × 1080
           </span>
           <div
             style={{
@@ -1376,7 +1437,7 @@ export function FundoryCarousel({
             }}
           >
             <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
-              {slide}
+              {renderSlide(id)}
             </div>
           </div>
         </div>
