@@ -23,9 +23,22 @@ export default async function AdminLayout({
 
   if (!profile?.is_platform_admin) redirect("/");
 
+  // Latest IG post timestamp — passed to the sidebar so it can show an
+  // "unseen" dot on the IG Posts link by comparing against localStorage.
+  const { data: latestIgPost } = await supabase
+    .from("ig_posts")
+    .select("created_at")
+    .eq("status", "ready")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-background">
-      <AdminSidebar user={user} />
+      <AdminSidebar
+        user={user}
+        latestIgPostAt={latestIgPost?.created_at ?? null}
+      />
       <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">{children}</main>
     </div>
   );

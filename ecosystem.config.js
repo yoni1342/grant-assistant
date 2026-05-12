@@ -3,11 +3,11 @@ module.exports = {
     {
       name: "grant-assistant",
       script: "node_modules/.bin/next",
-      args: "dev",
+      args: "dev -H 0.0.0.0 -p 3002",
       cwd: "/root/grant-assistant",
       env: {
         NODE_ENV: "development",
-        PORT: 3000,
+        PORT: 3002,
       },
     },
     {

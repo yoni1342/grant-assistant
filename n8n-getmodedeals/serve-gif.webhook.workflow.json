@@ -1,0 +1,101 @@
+{
+  "name": "GetModeDeals: Serve Feature GIF",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": ":id",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "feature-gif",
+      "notes": "GET https://n8n.tebita.com/webhook/feature-gif/<hash>. Path param :id is exposed as $json.params.id on the downstream node."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "/* eslint-disable @typescript-eslint/no-require-imports */\n// Paste this into the \"Read GIF\" Code node of the\n// \"GetModeDeals: Serve Feature GIF\" webhook workflow.\n// Mode: Run Once for All Items · Language: JavaScript\n//\n// What it does\n// ------------\n// 1. Pulls the cache id off the incoming Webhook item.\n//    The webhook is configured with path `feature-gif/:id`, so n8n\n//    surfaces the value as `$json.params.id`.\n// 2. Validates the id against a strict hex regex (path-traversal guard).\n// 3. Reads /tmp/gmd-gifs/<id>.gif from disk and stages it as a binary\n//    item, which the downstream \"Respond\" node will return as the body\n//    of the HTTP response.\n//\n// Host requirements\n// -----------------\n// - n8n env: NODE_FUNCTION_ALLOW_BUILTIN=fs\n// - The build-gif sub-workflow shares the same /tmp filesystem (same\n//   container/process), so the file written there is readable here.\n\nconst fs = require('fs');\n\nconst CACHE_DIR = '/tmp/gmd-gifs';\n\nconst first = $input.first().json;\nconst id = (first.params && first.params.id) || first.id || '';\n\nif (!/^[a-f0-9]{8,16}$/.test(id)) {\n  throw new Error(`Invalid GIF id: ${JSON.stringify(id)}`);\n}\n\nconst filePath = `${CACHE_DIR}/${id}.gif`;\nif (!fs.existsSync(filePath)) {\n  throw new Error(`GIF not found: ${id}`);\n}\n\nconst buf = fs.readFileSync(filePath);\n\nreturn [{\n  json: { id, sizeBytes: buf.length },\n  binary: {\n    data: {\n      data: buf.toString('base64'),\n      mimeType: 'image/gif',\n      fileName: `feature-${id}.gif`,\n    },\n  },\n}];\n"
+      },
+      "id": "node-read",
+      "name": "Read GIF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ],
+      "notes": "Reads /tmp/gmd-gifs/<id>.gif and stages it as a binary item under the 'data' key. Requires NODE_FUNCTION_ALLOW_BUILTIN=fs in n8n env."
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "image/gif"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "public, max-age=86400, immutable"
+              }
+            ]
+          }
+        }
+      },
+      "id": "node-respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        700,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read GIF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read GIF": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "getmodedeals"
+    },
+    {
+      "name": "webhook"
+    }
+  ]
+}
