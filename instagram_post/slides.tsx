@@ -1338,7 +1338,7 @@ export function Slide7({ daily = DEFAULT_DAILY }: { daily?: DailyContent } = {})
               marginBottom: 6,
             }}
           >
-            fundory.io
+            fundory.ai
           </span>
           <span
             className="font-display font-black uppercase"
@@ -1349,7 +1349,7 @@ export function Slide7({ daily = DEFAULT_DAILY }: { daily?: DailyContent } = {})
               lineHeight: 1,
             }}
           >
-            @fundory
+            @fundoryai
           </span>
         </div>
       </div>
