@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import { writeFileSync } from "fs";
 import { z } from "zod";
 
 // What the renderer needs to vary the cover + CTA for the day's post, plus the
@@ -121,7 +122,9 @@ Brand pillars you can lean on (pick one per post — vary which day-to-day):
 - Funder-rubric-aligned proposal writing
 - Specific personas: small non-profits, grant writers, multi-org agencies
 
-The cover (slide 1) and CTA (slide 7) MUST feel like the same conversation — same angle, same voice. Vary phrasing, sentence structure, and chosen angle across days — repetition is the enemy of an editorial voice.`;
+The cover (slide 1) and CTA (slide 7) MUST feel like the same conversation — same angle, same voice. Vary phrasing, sentence structure, and chosen angle across days — repetition is the enemy of an editorial voice.
+
+OUTPUT: Return ONLY the structured output matching the provided JSON schema. Do not write any preamble, commentary, markdown, or code fences. Do not narrate what you are doing.`;
 
 type CallOptions = {
   date: Date;
@@ -148,9 +151,38 @@ export async function generateDailyContent(
         ? "- There's a closing CTA slide. Use slide7 fields as a proper CTA — keep them in dialogue with the cover."
         : "- No closing CTA slide today. Keep slide7 fields concise; they'll be unused.");
 
-  const userPrompt = `Write today's Instagram post copy following the slide plan and post type in the system prompt. Pick a fresh angle that hasn't been overdone. Output strictly matches the JSON schema.`;
+  // claude --json-schema is advisory in --print mode; the model often ignores
+  // the schema and invents its own shape. Strategy: inline the exact shape +
+  // an example in the user prompt, ask for raw JSON only, then extract the
+  // first top-level JSON object from the result text and validate with Zod.
+  const exampleJson = {
+    theme: "the cost of guesswork",
+    slide1: {
+      eyebrow: "▌ On the cost of guesswork",
+      headlineTop: "Stop",
+      headlineMid: "chasing",
+      headlineBot: "grants.",
+      subheadline: "Start winning them.",
+      briefing:
+        "Fundory scores every grant against your org's eligibility before you spend three weeks on a proposal that was never a fit.",
+    },
+    slide7: {
+      eyebrow: "▌ Now in early access",
+      headlineTop: "Win the",
+      headlineMid: "grants you",
+      headlineAccent: "already",
+      headlineBot: "deserve.",
+    },
+    caption:
+      "You read the RFP. You assumed you qualified. Three weeks later, a form email…",
+    hashtags: "#grants #nonprofit #grantwriting #fundraising",
+  };
 
-  const jsonSchema = z.toJSONSchema(DailyContentSchema);
+  const userPrompt = `Write today's IG post copy. Return a single JSON object — no prose, no markdown, no code fences. Exact shape:
+
+${JSON.stringify(exampleJson, null, 2)}
+
+All keys are required. Use the same field names. Pick today's angle from the post type in the system prompt.`;
 
   return new Promise((resolve, reject) => {
     const proc = spawn(
@@ -160,8 +192,6 @@ export async function generateDailyContent(
         "--no-session-persistence",
         "--output-format",
         "json",
-        "--json-schema",
-        JSON.stringify(jsonSchema),
         "--system-prompt",
         systemPrompt,
         "--tools",
@@ -179,6 +209,10 @@ export async function generateDailyContent(
       },
     );
 
+    // Close stdin immediately. Without this, claude waits ~3s for piped input
+    // and falls into a different inference path that bypasses --json-schema.
+    proc.stdin.end();
+
     let stdout = "";
     let stderr = "";
     proc.stdout.on("data", (d) => (stdout += d.toString()));
@@ -190,6 +224,14 @@ export async function generateDailyContent(
           new Error(`claude exited ${code}: ${stderr.slice(0, 500)}`),
         );
       }
+      // Debug: dump stdout/stderr to /tmp so we can inspect the last run on
+      // failure without re-triggering. Cheap, helpful, fine to leave on.
+      try {
+        writeFileSync("/tmp/ig-claude-last-stdout.json", stdout);
+        writeFileSync("/tmp/ig-claude-last-stderr.txt", stderr);
+      } catch {
+        // ignore disk write failures
+      }
       let response: {
         is_error?: boolean;
         result?: string;
@@ -200,17 +242,40 @@ export async function generateDailyContent(
       } catch (e) {
         return reject(
           new Error(
-            `Failed to parse claude output: ${(e as Error).message}. stdout head: ${stdout.slice(0, 500)}`,
+            `Failed to parse claude wrapper: ${(e as Error).message}. stdout head: ${stdout.slice(0, 500)}`,
           ),
         );
       }
       if (response.is_error) {
         return reject(new Error(`claude reported error: ${response.result}`));
       }
-      const parsed = DailyContentSchema.safeParse(response.structured_output);
+
+      // Extract the first balanced JSON object from result text. Claude often
+      // wraps the JSON in ```json fences or adds preamble — strip both.
+      const resultText = response.result ?? "";
+      const stripped = resultText
+        .replace(/^[\s\S]*?```json\s*/m, "")
+        .replace(/```[\s\S]*$/m, "")
+        .trim();
+      const candidate = stripped.startsWith("{") ? stripped : resultText.trim();
+
+      let payload: unknown;
+      try {
+        payload = JSON.parse(candidate);
+      } catch (e) {
+        return reject(
+          new Error(
+            `claude result text was not JSON: ${(e as Error).message}. result head: ${resultText.slice(0, 400)}`,
+          ),
+        );
+      }
+
+      const parsed = DailyContentSchema.safeParse(payload);
       if (!parsed.success) {
         return reject(
-          new Error(`claude output failed schema: ${parsed.error.message}`),
+          new Error(
+            `claude output failed schema: ${parsed.error.message}. payload keys: ${Object.keys(payload as object).join(",")}`,
+          ),
         );
       }
       resolve(parsed.data);
