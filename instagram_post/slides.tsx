@@ -3,11 +3,9 @@
 import {
   Search,
   Zap,
-  ShieldCheck,
   ArrowUpRight,
   Building2,
   AlertTriangle,
-  CheckCircle2,
   Plus,
 } from "lucide-react";
 
@@ -37,7 +35,47 @@ const SLIDE: React.CSSProperties = {
   overflow: "hidden",
 };
 const ACCENT = "#FF5A1F";
-const NAVY = "#1E3A5F";
+
+// Daily-generated copy. Slide 1 (cover) + Slide 7 (CTA) read from here when
+// present; otherwise they fall back to the launch-day defaults. Brand pillars
+// (Reality / Stats / Aggregate / Validate / Compose) intentionally stay
+// constant — they're the unchanging product story.
+export type DailyContent = {
+  slide1: {
+    eyebrow: string;
+    headlineTop: string;
+    headlineMid: string;
+    headlineBot: string;
+    subheadline: string;
+    briefing: string;
+  };
+  slide7: {
+    eyebrow: string;
+    headlineTop: string;
+    headlineMid: string;
+    headlineAccent: string;
+    headlineBot: string;
+  };
+};
+
+const DEFAULT_DAILY: DailyContent = {
+  slide1: {
+    eyebrow: "▌ Launching · Q2 2026",
+    headlineTop: "Stop",
+    headlineMid: "chasing",
+    headlineBot: "grants.",
+    subheadline: "Start winning them.",
+    briefing:
+      "The grant intelligence platform built for organizations that can’t afford to leave funding on the table.",
+  },
+  slide7: {
+    eyebrow: "▌ Now in early access",
+    headlineTop: "Win the",
+    headlineMid: "grants you",
+    headlineAccent: "already",
+    headlineBot: "deserve.",
+  },
+};
 
 /* ────────── shared decorative atoms ────────── */
 
@@ -384,7 +422,23 @@ function DimensionScale({
 /* ════════════════════════════════════════════════════════════
    SLIDE 1 — COVER
    ════════════════════════════════════════════════════════════ */
-export function Slide1() {
+export function Slide1({ daily = DEFAULT_DAILY }: { daily?: DailyContent } = {}) {
+  const s = daily.slide1;
+  // Render the subheadline so any word can be the accent (orange). The first
+  // word becomes the accent unless the string is wrapped in {{ }} markers like
+  // "Start {{winning}} them."
+  const parsedSub = (() => {
+    const m = s.subheadline.match(/^(.*?)\{\{(.+?)\}\}(.*)$/);
+    if (m) return { before: m[1], accent: m[2], after: m[3] };
+    const words = s.subheadline.split(" ");
+    if (words.length >= 3)
+      return {
+        before: words[0] + " ",
+        accent: words[1],
+        after: " " + words.slice(2).join(" "),
+      };
+    return { before: "", accent: s.subheadline, after: "" };
+  })();
   return (
     <SlideFrame suppressPoweredBy>
       <CropMarks />
@@ -413,17 +467,17 @@ export function Slide1() {
           className="font-mono uppercase block"
           style={{ fontSize: 12, letterSpacing: "0.32em", color: ACCENT, marginBottom: 18 }}
         >
-          ▌ Launching · Q2 2026
+          {s.eyebrow}
         </span>
 
         <h1
           className="font-display font-black uppercase text-[#0A0A0A]"
           style={{ fontSize: 158, lineHeight: 0.84, letterSpacing: "-0.03em" }}
         >
-          Stop
+          {s.headlineTop}
           <br />
           <span style={{ display: "inline-flex", alignItems: "center", gap: 28 }}>
-            chasing
+            {s.headlineMid}
             <span
               style={{
                 display: "inline-block",
@@ -436,7 +490,7 @@ export function Slide1() {
           </span>
           <br />
           <span style={{ color: "transparent", WebkitTextStroke: "2px #0A0A0A" }}>
-            grants.
+            {s.headlineBot}
           </span>
         </h1>
 
@@ -450,7 +504,9 @@ export function Slide1() {
             color: "#0A0A0A",
           }}
         >
-          Start <span style={{ color: ACCENT }}>winning</span> them.
+          {parsedSub.before}
+          <span style={{ color: ACCENT }}>{parsedSub.accent}</span>
+          {parsedSub.after}
         </h2>
       </div>
 
@@ -470,8 +526,7 @@ export function Slide1() {
             </span>
           </div>
           <p className="text-[#0A0A0A]" style={{ fontSize: 19, lineHeight: 1.45 }}>
-            The grant intelligence platform built for organizations that
-            can&apos;t afford to leave funding on the table.
+            {s.briefing}
           </p>
         </div>
         <div className="flex flex-col items-end gap-3">
@@ -1162,7 +1217,8 @@ export function Slide6() {
 /* ════════════════════════════════════════════════════════════
    SLIDE 7 — CTA / CLOSE
    ════════════════════════════════════════════════════════════ */
-export function Slide7() {
+export function Slide7({ daily = DEFAULT_DAILY }: { daily?: DailyContent } = {}) {
+  const s = daily.slide7;
   return (
     <SlideFrame bg="#0A0A0A" borderColor="#F5F5F0" hasBottomTicker>
       <CropMarks color="#F5F5F0" />
@@ -1190,7 +1246,7 @@ export function Slide7() {
           className="font-mono uppercase"
           style={{ fontSize: 12, letterSpacing: "0.3em", color: ACCENT }}
         >
-          ▌ Now in early access
+          {s.eyebrow}
         </span>
 
         <h2
@@ -1203,16 +1259,16 @@ export function Slide7() {
             marginTop: 26,
           }}
         >
-          Win the
+          {s.headlineTop}
           <br />
-          grants you
+          {s.headlineMid}
           <br />
-          <span style={{ color: ACCENT }}>already</span>
+          <span style={{ color: ACCENT }}>{s.headlineAccent}</span>
           <br />
           <span
             style={{ color: "transparent", WebkitTextStroke: "2px #F5F5F0" }}
           >
-            deserve.
+            {s.headlineBot}
           </span>
         </h2>
       </div>
@@ -1285,11 +1341,26 @@ export function Slide7() {
 /* ════════════════════════════════════════════════════════════
    CAROUSEL — preview wrapper
    ════════════════════════════════════════════════════════════ */
-export function FundoryCarousel({ scale = 0.5 }: { scale?: number }) {
-  const slides = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7];
+export function FundoryCarousel({
+  scale = 0.5,
+  daily = DEFAULT_DAILY,
+}: {
+  scale?: number;
+  daily?: DailyContent;
+}) {
+  // Only Slide1 + Slide7 need the daily prop. The middle five are brand pillars.
+  const slides: Array<React.ReactNode> = [
+    <Slide1 key="1" daily={daily} />,
+    <Slide2 key="2" />,
+    <Slide3 key="3" />,
+    <Slide4 key="4" />,
+    <Slide5 key="5" />,
+    <Slide6 key="6" />,
+    <Slide7 key="7" daily={daily} />,
+  ];
   return (
     <div className="flex flex-col items-center gap-10 bg-neutral-200 py-12">
-      {slides.map((Slide, i) => (
+      {slides.map((slide, i) => (
         <div key={i} className="flex flex-col items-center gap-3">
           <span
             className="font-mono uppercase"
@@ -1305,7 +1376,7 @@ export function FundoryCarousel({ scale = 0.5 }: { scale?: number }) {
             }}
           >
             <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
-              <Slide />
+              {slide}
             </div>
           </div>
         </div>

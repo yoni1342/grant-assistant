@@ -20,6 +20,7 @@ import {
   Menu,
   ShieldCheck,
   Sparkles,
+  Instagram,
   X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -67,6 +68,12 @@ const navGroups: Array<{
     ],
   },
   {
+    label: "Marketing",
+    items: [
+      { href: "/admin/ig-posts", label: "IG Posts", icon: Instagram },
+    ],
+  },
+  {
     label: "System",
     items: [
       { href: "/admin/system-errors", label: "System Errors", icon: AlertTriangle },
@@ -87,9 +94,29 @@ function FundoryMark({ className }: { className?: string }) {
   );
 }
 
-export function AdminSidebar({ user }: { user: User }) {
+export function AdminSidebar({
+  user,
+  latestIgPostAt,
+}: {
+  user: User;
+  latestIgPostAt?: string | null;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // Show a red dot on the IG Posts link until the admin has opened the gallery
+  // since the latest generated post landed. The gallery page writes the latest
+  // created_at into localStorage on mount, so the dot disappears on next paint.
+  const [igUnseen, setIgUnseen] = useState(false);
+  useEffect(() => {
+    // Cross-tab comparison: latest server-known post vs. this browser's
+    // localStorage marker. setState here is the whole point — we can't read
+    // localStorage on the server, so we have to reconcile after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!latestIgPostAt) return setIgUnseen(false);
+    const lastSeen = localStorage.getItem("ig-posts:last-seen");
+     
+    setIgUnseen(!lastSeen || new Date(latestIgPostAt) > new Date(lastSeen));
+  }, [latestIgPostAt, pathname]);
   // When the admin clicks an org from inside an agency detail page, the org
   // detail URL carries ?from=agency. Treat that case as "still browsing
   // agencies" so the sidebar highlight stays on Agencies instead of jumping
@@ -197,22 +224,32 @@ export function AdminSidebar({ user }: { user: User }) {
                   : pathname === item.href ||
                     pathname.startsWith(item.href + "/");
               }
+              const showUnseenDot =
+                item.href === "/admin/ig-posts" && igUnseen && !isActive;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2.5 md:py-2 text-sm transition-colors",
+                    "relative flex items-center gap-3 rounded-md px-3 py-2.5 md:py-2 text-sm transition-colors",
                     isActive
                       ? "bg-foreground/[0.06] font-medium text-foreground"
                       : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
                   )}
                 >
-                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="relative shrink-0">
+                    <item.icon className="h-4 w-4" />
+                    {showUnseenDot && collapsed && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-card" />
+                    )}
+                  </span>
                   {!collapsed && (
-                    <span className="font-mono text-xs tracking-wide uppercase">
+                    <span className="font-mono text-xs tracking-wide uppercase flex-1">
                       {item.label}
                     </span>
+                  )}
+                  {!collapsed && showUnseenDot && (
+                    <span className="h-2 w-2 rounded-full bg-red-500" aria-label="New post" />
                   )}
                 </Link>
               );
