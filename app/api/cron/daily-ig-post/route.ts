@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
-import { generateDailyContent } from "@/lib/ig-posts/openai";
+import { generateDailyContent } from "@/lib/ig-posts/ai";
 import { renderSlides } from "@/lib/ig-posts/render";
 
 // Daily Instagram-post generator.
