@@ -819,11 +819,99 @@ function Footer() {
 }
 
 /* ═══════════════════════════════════════════
+   FAQ
+   ═══════════════════════════════════════════ */
+// Single source of truth — drives both the visible FAQ and the FAQPage JSON-LD.
+const faqs = [
+  {
+    question: "What is Fundory?",
+    answer:
+      "Fundory is a grant intelligence platform that manages your entire grant lifecycle — discovery, application, submission, and reporting — in one centralized system. It replaces fragmented spreadsheets and manual workflows with a single source of truth for finding, winning, and managing funding.",
+  },
+  {
+    question: "How does Fundory compare to alternatives?",
+    answer:
+      "Unlike spreadsheets, generic project tools, or single-purpose grant databases, Fundory unifies grant discovery, application drafting, submission, and compliance reporting in one platform. Instead of stitching together disconnected tools, teams track every opportunity and deadline in one place — purpose-built for nonprofits and organizations that can't afford to miss funding.",
+  },
+];
+
+function FAQSection() {
+  return (
+    <section id="faq" className="faq bg-[#F5F5F0] border-b-2 border-[#0A0A0A]">
+      <div className="px-6 md:px-12 lg:px-16 py-24 md:py-32">
+        <div className="mb-16">
+          <span className="font-mono text-[10px] tracking-[0.3em] text-[#888] uppercase block mb-4">
+            Answers
+          </span>
+          <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-black tracking-tight text-[#0A0A0A] leading-[0.85] uppercase">
+            Frequently asked<br />questions.
+          </h2>
+        </div>
+
+        <div className="max-w-[760px] divide-y divide-[#0A0A0A]/10 border-t border-[#0A0A0A]/10">
+          {faqs.map((faq) => (
+            <div key={faq.question} className="py-8">
+              <h3 className="font-display text-2xl md:text-3xl font-black tracking-tight text-[#0A0A0A] uppercase leading-tight">
+                {faq.question}
+              </h3>
+              <p className="mt-4 text-lg md:text-xl text-[#0A0A0A]/70 leading-relaxed">
+                {faq.answer}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   STRUCTURED DATA (JSON-LD)
+   ═══════════════════════════════════════════ */
+function StructuredData() {
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Fundory",
+    url: "https://fundory.ai",
+    logo: "https://fundory.ai/logo.png",
+    sameAs: [],
+  };
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════
    PAGE
    ═══════════════════════════════════════════ */
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-[#F5F5F0] text-[#0A0A0A]">
+      <StructuredData />
       <HeroSection />
       <StatsBar />
       <ProblemSection />
@@ -831,6 +919,7 @@ export default function LandingPage() {
       <ArchitectureSection />
       <SectorsSection />
       <PricingSection />
+      <FAQSection />
       <FinalCTA />
       <Footer />
     </main>
