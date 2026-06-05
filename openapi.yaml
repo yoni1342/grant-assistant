@@ -1,0 +1,60 @@
+openapi: 3.0.0
+info:
+  title: Fundory API
+  description: API for AI agents to interact with Fundory
+  version: 1.0.0
+paths:
+  /agent-actions:
+    post:
+      summary: Perform an action
+      description: AI agents can use this endpoint to perform actions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  description: The action to perform
+              required:
+              - action
+      responses:
+        '200':
+          description: Action performed successfully
+        '400':
+          description: Invalid request
+  /ai-plugin:
+    get:
+      summary: Get AI plugin manifest
+      description: AI agents can use this endpoint to retrieve the AI plugin manifest
+      responses:
+        '200':
+          description: AI plugin manifest retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: The name of the AI plugin
+                  version:
+                    type: string
+                    description: The version of the AI plugin
+              required:
+              - name
+              - version
+        '404':
+          description: AI plugin manifest not found
+components:
+  schemas:
+    Action:
+      type: object
+      properties:
+        action:
+          type: string
+          description: The action to perform
+      required:
+      - action
