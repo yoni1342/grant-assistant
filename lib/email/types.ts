@@ -168,4 +168,31 @@ export interface SendEmailParams {
   htmlBody: string
   textBody: string
   replyTo?: string
+  /** Override the From address (defaults to the noreply sender). */
+  from?: string
+}
+
+/**
+ * Per-admin notification that a customer support thread has new activity.
+ * Sent to each platform admin's real inbox. `fullName` is the admin's name.
+ */
+export interface AdminSupportNotificationEmailParams extends BaseEmailParams {
+  ticketRef: string
+  subject: string
+  preview: string
+  submitterName: string
+  submitterEmail: string
+  organizationName?: string | null
+  kind: 'new_request' | 'customer_reply'
+  adminUrl: string
+}
+
+/**
+ * Outbound reply from an admin to a customer, sent from support@fundory.ai.
+ * `fullName`/`toEmail` are the customer's.
+ */
+export interface SupportReplyEmailParams extends BaseEmailParams {
+  ticketRef: string
+  subject: string
+  replyText: string
 }

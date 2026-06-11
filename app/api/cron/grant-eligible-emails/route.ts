@@ -155,18 +155,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Check org profile completeness once per digest (used only for 1-grant email).
-    const { data: narrativeDocs } = await supabase
+    // NOTE: with `head: true` the count is in `count`, not `data` (which is null);
+    // reading `data.length` always saw 0 and falsely flagged everyone as missing.
+    const { count: narrativeCount } = await supabase
       .from('documents')
       .select('id', { count: 'exact', head: true })
       .eq('org_id', orgId)
       .eq('category', 'narrative')
-    const { data: budgetDocs } = await supabase
+    const { count: budgetCount } = await supabase
       .from('documents')
       .select('id', { count: 'exact', head: true })
       .eq('org_id', orgId)
       .eq('category', 'budget')
-    const missingNarratives = (narrativeDocs?.length ?? 0) === 0
-    const missingBudget = (budgetDocs?.length ?? 0) === 0
+    const missingNarratives = (narrativeCount ?? 0) === 0
+    const missingBudget = (budgetCount ?? 0) === 0
 
     // Keep only entries whose grant is still in an eligible stage.
     const items = entries

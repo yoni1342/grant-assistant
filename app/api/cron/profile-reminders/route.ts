@@ -51,21 +51,23 @@ export async function GET(request: NextRequest) {
       continue
     }
 
-    // Check what data is missing
-    const { data: narrativeDocs } = await supabase
+    // Check what data is missing. NOTE: with `head: true` Supabase returns the
+    // row count in `count` and `data` is null — so we must read `count`, not
+    // `data.length` (the old bug, which always saw 0 and emailed everyone).
+    const { count: narrativeCount } = await supabase
       .from('documents')
       .select('id', { count: 'exact', head: true })
       .eq('org_id', org.id)
       .eq('category', 'narrative')
 
-    const { data: budgetDocs } = await supabase
+    const { count: budgetCount } = await supabase
       .from('documents')
       .select('id', { count: 'exact', head: true })
       .eq('org_id', org.id)
       .eq('category', 'budget')
 
-    const hasNarratives = (narrativeDocs?.length ?? 0) > 0
-    const hasBudget = (budgetDocs?.length ?? 0) > 0
+    const hasNarratives = (narrativeCount ?? 0) > 0
+    const hasBudget = (budgetCount ?? 0) > 0
 
     // If they have both, skip
     if (hasNarratives && hasBudget) {
