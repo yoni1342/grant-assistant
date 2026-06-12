@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
     AWS_SES_FROM_NAME: process.env.AWS_SES_FROM_NAME,
     AWS_SES_REPLY_TO_EMAIL: process.env.AWS_SES_REPLY_TO_EMAIL,
     CRON_SECRET: process.env.CRON_SECRET,
+    API_KEY_PEPPER: process.env.API_KEY_PEPPER,
   },
 
   images: {

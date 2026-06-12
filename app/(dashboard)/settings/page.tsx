@@ -53,6 +53,18 @@ export default async function SettingsPage() {
     fetchSchedule = data ?? null
   }
 
+  // External API keys for this org. Select only non-secret columns (never the
+  // token hash) — RLS also restricts this to the user's own org.
+  let apiKeys: SettingsData['apiKeys'] = []
+  if (profile.org_id) {
+    const { data } = await supabase
+      .from("api_keys")
+      .select("id, name, token_prefix, scopes, created_at, last_used_at, expires_at, revoked_at")
+      .eq("org_id", profile.org_id)
+      .order("created_at", { ascending: false })
+    apiKeys = (data as SettingsData['apiKeys']) ?? []
+  }
+
   return (
     <SettingsClient
       data={{
@@ -61,6 +73,7 @@ export default async function SettingsPage() {
         members: members as unknown as SettingsData['members'],
         workflows,
         fetchSchedule,
+        apiKeys,
       }}
     />
   )

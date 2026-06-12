@@ -5,6 +5,7 @@ import { User } from "@supabase/supabase-js"
 import { ProfileTab } from "./profile-tab"
 import { OrganizationTab } from "./organization-tab"
 import { IntegrationsTab } from "./integrations-tab"
+import { ApiKeysTab, type ApiKeyRow } from "./api-keys-tab"
 import { AppearanceTab } from "./appearance-tab"
 import type { Tables } from "@/lib/supabase/database.types"
 
@@ -25,10 +26,13 @@ export interface SettingsData {
   members: Profile[]
   workflows: WorkflowExecution[]
   fetchSchedule: OrgFetchSchedule | null
+  apiKeys: ApiKeyRow[]
 }
 
 export function SettingsClient({ data }: { data: SettingsData }) {
   const isAdmin = data.profile.role === "admin"
+  // API keys are sensitive enough to gate to org owners/admins.
+  const canManageApi = data.profile.role === "owner" || data.profile.role === "admin"
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -44,6 +48,7 @@ export function SettingsClient({ data }: { data: SettingsData }) {
           <TabsTrigger value="profile" className="text-xs sm:text-sm px-2 sm:px-3">Profile</TabsTrigger>
           <TabsTrigger value="organization" className="text-xs sm:text-sm px-2 sm:px-3">Organization</TabsTrigger>
           {isAdmin && <TabsTrigger value="integrations" className="text-xs sm:text-sm px-2 sm:px-3">Integrations</TabsTrigger>}
+          {canManageApi && <TabsTrigger value="api" className="text-xs sm:text-sm px-2 sm:px-3">API</TabsTrigger>}
           <TabsTrigger value="appearance" className="text-xs sm:text-sm px-2 sm:px-3">Appearance</TabsTrigger>
         </TabsList>
 
@@ -63,6 +68,12 @@ export function SettingsClient({ data }: { data: SettingsData }) {
         {isAdmin && (
           <TabsContent value="integrations">
             <IntegrationsTab workflows={data.workflows} />
+          </TabsContent>
+        )}
+
+        {canManageApi && (
+          <TabsContent value="api">
+            <ApiKeysTab apiKeys={data.apiKeys} />
           </TabsContent>
         )}
 
