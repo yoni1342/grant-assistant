@@ -5,6 +5,8 @@ import { createClient as createServiceRoleClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { sanitizeError } from '@/lib/errors'
 import { sendInviteMemberEmail } from '@/lib/email/service'
+import { generateApiKey } from '@/lib/api/keys'
+import { ALL_SCOPE_VALUES, WILDCARD_SCOPE } from '@/lib/api/scopes'
 
 // ─── Profile ────────────────────────────────────────────────────────────────
 
@@ -308,6 +310,99 @@ export async function updatePreferences(prefs: {
     .eq('id', user.id)
 
   if (error) return { error: sanitizeError(error, 'Unable to save your preferences. Please try again.') }
+
+  revalidatePath('/settings')
+  return { success: true }
+}
+
+// ─── External API keys ────────────────────────────────────────────────────────
+
+/**
+ * Mint a new external API key for the caller's org. Only owners/admins can do
+ * this — that's the "proof you're the valid org" step: the secret is returned
+ * exactly once here and never stored in plaintext.
+ */
+export async function createApiKey(name: string, scopes: string[]) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id, role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.org_id) return { error: 'No organization found' }
+  if (profile.role !== 'owner' && profile.role !== 'admin') {
+    return { error: 'Insufficient permissions' }
+  }
+
+  const cleanName = (name || '').trim()
+  if (!cleanName) return { error: 'Please give the key a name.' }
+  if (cleanName.length > 100) return { error: 'Name is too long (max 100 characters).' }
+
+  const allowed = new Set<string>([...ALL_SCOPE_VALUES, WILDCARD_SCOPE])
+  const validScopes = Array.from(new Set((scopes || []).filter((s) => allowed.has(s))))
+  if (validScopes.length === 0) return { error: 'Select at least one scope.' }
+
+  const { token, tokenHash, tokenPrefix } = generateApiKey()
+
+  const serviceClient = createServiceRoleClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  const { error } = await serviceClient.from('api_keys').insert({
+    org_id: profile.org_id,
+    name: cleanName,
+    token_hash: tokenHash,
+    token_prefix: tokenPrefix,
+    scopes: validScopes,
+    created_by: user.id,
+  })
+
+  if (error) return { error: sanitizeError(error, 'Unable to create the API key. Please try again.') }
+
+  revalidatePath('/settings')
+  // The plaintext token is returned only here — the client shows it once.
+  return { success: true, token }
+}
+
+/** Revoke an API key. Takes effect immediately on the next request. */
+export async function revokeApiKey(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id, role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.org_id) return { error: 'No organization found' }
+  if (profile.role !== 'owner' && profile.role !== 'admin') {
+    return { error: 'Insufficient permissions' }
+  }
+
+  const serviceClient = createServiceRoleClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  const { data: updated, error } = await serviceClient
+    .from('api_keys')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('org_id', profile.org_id)
+    .is('revoked_at', null)
+    .select('id')
+
+  if (error) return { error: sanitizeError(error, 'Unable to revoke the API key. Please try again.') }
+  if (!updated || updated.length === 0) {
+    return { error: 'Key not found or already revoked.' }
+  }
 
   revalidatePath('/settings')
   return { success: true }
