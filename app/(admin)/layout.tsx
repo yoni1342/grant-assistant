@@ -33,11 +33,19 @@ export default async function AdminLayout({
     .limit(1)
     .maybeSingle();
 
+  // Unread support notifications for this admin → red count on the Support link.
+  const { count: supportUnread } = await supabase
+    .from("admin_notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("admin_id", user.id)
+    .eq("is_read", false);
+
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-background">
       <AdminSidebar
         user={user}
         latestIgPostAt={latestIgPost?.created_at ?? null}
+        supportUnread={supportUnread ?? 0}
       />
       <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">{children}</main>
     </div>

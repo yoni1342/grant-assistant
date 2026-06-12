@@ -1,8 +1,7 @@
 import { createClient, createAdminClient, getUserOrgId } from "@/lib/supabase/server";
-import {
-  sendSupportRequestReceivedEmail,
-  sendSupportRequestInternalEmail,
-} from "@/lib/email/service";
+import { sendSupportRequestReceivedEmail } from "@/lib/email/service";
+import { notifyAdminsOfSupportActivity } from "@/lib/support/notify-admins";
+import { shortTicketRef } from "@/lib/support/ticket";
 
 const ALLOWED_CATEGORIES = new Set([
   "general",
@@ -15,10 +14,6 @@ const ALLOWED_CATEGORIES = new Set([
 
 const SUBJECT_MAX = 200;
 const MESSAGE_MAX = 5000;
-
-function shortTicketRef(uuid: string): string {
-  return "FND-" + uuid.replace(/-/g, "").slice(0, 8).toUpperCase();
-}
 
 function appOrigin(req: Request): string {
   return (
@@ -144,19 +139,22 @@ export async function POST(req: Request) {
     );
   }
 
+  // Notify every platform admin (in-app feed + email to their real inbox).
+  // Replaces the old internal email to support@fundory.ai, which bounced
+  // because the domain had no inbound mailbox.
   tasks.push(
-    sendSupportRequestInternalEmail({
-      ticketRef,
-      category,
+    notifyAdminsOfSupportActivity({
+      admin,
+      requestId: inserted.id,
+      kind: "new_request",
       subject,
-      message,
+      preview: message,
       submitterName,
       submitterEmail,
       organizationName,
-      organizationPlan,
-      adminUrl,
+      appOrigin: appOrigin(req),
     }).catch((e) =>
-      console.error("[support-requests] internal email failed:", e),
+      console.error("[support-requests] admin notify failed:", e),
     ),
   );
 

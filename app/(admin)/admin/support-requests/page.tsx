@@ -1,5 +1,9 @@
-import { createAdminClient } from "@/lib/supabase/server";
-import { SupportRequestsClient, type SupportRequestRow } from "./support-requests-client";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
+import {
+  SupportRequestsClient,
+  type SupportRequestRow,
+  type SupportMessage,
+} from "./support-requests-client";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +77,38 @@ export default async function AdminSupportRequestsPage({
     resolved_at: (r.resolved_at as string | null) ?? null,
   }));
 
+  // Load the conversation thread for the open request (if any).
+  let selectedMessages: SupportMessage[] = [];
+  if (selectedId) {
+    // Opening a request clears this admin's unread notifications for it.
+    const userClient = await createClient();
+    const {
+      data: { user },
+    } = await userClient.auth.getUser();
+    if (user) {
+      await admin
+        .from("admin_notifications")
+        .update({ is_read: true })
+        .eq("admin_id", user.id)
+        .eq("request_id", selectedId)
+        .eq("is_read", false);
+    }
+
+    const { data: msgs } = await admin
+      .from("support_messages")
+      .select("id, direction, from_name, from_email, body_text, created_at")
+      .eq("request_id", selectedId)
+      .order("created_at", { ascending: true });
+    selectedMessages = (msgs ?? []).map((m) => ({
+      id: m.id as string,
+      direction: (m.direction as "inbound" | "outbound") ?? "inbound",
+      from_name: (m.from_name as string | null) ?? null,
+      from_email: (m.from_email as string | null) ?? null,
+      body_text: (m.body_text as string | null) ?? "",
+      created_at: m.created_at as string,
+    }));
+  }
+
   // Counts by status (unfiltered) for the summary cards.
   const { data: statusBreakdown } = await admin
     .from("support_requests")
@@ -91,6 +127,7 @@ export default async function AdminSupportRequestsPage({
         counts={counts}
         filters={{ status, category, q }}
         selectedId={selectedId}
+        selectedMessages={selectedMessages}
         errorMessage={error?.message ?? null}
       />
     </div>

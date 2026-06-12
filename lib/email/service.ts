@@ -14,6 +14,8 @@ import type {
   InviteMemberEmailParams,
   SupportRequestReceivedEmailParams,
   SupportRequestInternalEmailParams,
+  AdminSupportNotificationEmailParams,
+  SupportReplyEmailParams,
   SignupOtpEmailParams,
 } from './types'
 import WelcomeEmail from './templates/welcome'
@@ -28,6 +30,8 @@ import ProposalReadyEmail from './templates/proposal-ready'
 import InviteMemberEmail from './templates/invite-member'
 import SupportRequestReceivedEmail from './templates/support-request-received'
 import SupportRequestInternalEmail from './templates/support-request-internal'
+import AdminSupportNotificationEmail from './templates/admin-support-notification'
+import SupportReplyEmail from './templates/support-reply'
 
 const FROM_EMAIL = process.env.AWS_SES_FROM_EMAIL || 'noreply@fundory.ai'
 const FROM_NAME = process.env.AWS_SES_FROM_NAME || 'Fundory'
@@ -36,14 +40,15 @@ const REPLY_TO_EMAIL = process.env.AWS_SES_REPLY_TO_EMAIL || 'support@fundory.ai
 /**
  * Send email via AWS SES
  */
-export async function sendEmail({ to, subject, htmlBody, textBody, replyTo }: SendEmailParams): Promise<void> {
+export async function sendEmail({ to, subject, htmlBody, textBody, replyTo, from }: SendEmailParams): Promise<void> {
   const replyToAddress = replyTo || REPLY_TO_EMAIL
-  console.log('[sendEmail] Preparing to send:', { to, subject, from: `${FROM_NAME} <${FROM_EMAIL}>`, replyTo: replyToAddress })
+  const source = from || `${FROM_NAME} <${FROM_EMAIL}>`
+  console.log('[sendEmail] Preparing to send:', { to, subject, from: source, replyTo: replyToAddress })
 
   const sesClient = getSESClient()
 
   const command = new SendEmailCommand({
-    Source: `${FROM_NAME} <${FROM_EMAIL}>`,
+    Source: source,
     Destination: {
       ToAddresses: [to],
     },
@@ -349,5 +354,50 @@ export async function sendSupportRequestInternalEmail(
     htmlBody,
     textBody,
     replyTo: params.submitterEmail,
+  })
+}
+
+/**
+ * Notify a single platform admin (at their real inbox) that a support thread
+ * has new activity. Reply-to is the support inbox so admins land in the panel.
+ */
+export async function sendAdminSupportNotificationEmail(
+  params: AdminSupportNotificationEmailParams
+): Promise<void> {
+  const prefix = params.kind === 'customer_reply' ? 'Customer reply' : 'New support request'
+  const subject = `[${params.ticketRef}] ${prefix}: ${params.subject}`
+
+  const htmlBody = await render(AdminSupportNotificationEmail(params), { pretty: true })
+  const textBody = await render(AdminSupportNotificationEmail(params), { plainText: true })
+
+  await sendEmail({
+    to: params.toEmail,
+    subject,
+    htmlBody,
+    textBody,
+    replyTo: REPLY_TO_EMAIL,
+  })
+}
+
+/**
+ * Send an admin's reply to a customer. From/Reply-To are both support@fundory.ai
+ * and the ticket ref is in the subject, so the customer's reply threads back in
+ * through the SES inbound pipeline.
+ */
+export async function sendSupportReplyEmail(
+  params: SupportReplyEmailParams
+): Promise<void> {
+  const subject = `Re: [${params.ticketRef}] ${params.subject}`
+
+  const htmlBody = await render(SupportReplyEmail(params), { pretty: true })
+  const textBody = await render(SupportReplyEmail(params), { plainText: true })
+
+  await sendEmail({
+    to: params.toEmail,
+    subject,
+    htmlBody,
+    textBody,
+    from: `Fundory Support <${REPLY_TO_EMAIL}>`,
+    replyTo: REPLY_TO_EMAIL,
   })
 }

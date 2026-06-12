@@ -35,9 +35,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LifeBuoy, Mail, ExternalLink } from "lucide-react";
+import { LifeBuoy, ExternalLink, Send } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { formatTimeAgo } from "@/lib/utils/format";
-import { updateSupportRequestStatus } from "./actions";
+import { updateSupportRequestStatus, replyToSupportRequest } from "./actions";
 
 export interface SupportRequestRow {
   id: string;
@@ -55,11 +56,21 @@ export interface SupportRequestRow {
   resolved_at: string | null;
 }
 
+export interface SupportMessage {
+  id: string;
+  direction: "inbound" | "outbound";
+  from_name: string | null;
+  from_email: string | null;
+  body_text: string;
+  created_at: string;
+}
+
 interface Props {
   rows: SupportRequestRow[];
   counts: { open: number; in_progress: number; resolved: number; closed: number; total: number };
   filters: { status: string; category: string; q: string };
   selectedId: string;
+  selectedMessages: SupportMessage[];
   errorMessage: string | null;
 }
 
@@ -109,6 +120,7 @@ export function SupportRequestsClient({
   counts,
   filters,
   selectedId,
+  selectedMessages,
   errorMessage,
 }: Props) {
   const router = useRouter();
@@ -150,7 +162,7 @@ export function SupportRequestsClient({
           Support Requests
         </h1>
         <p className="font-mono text-xs text-muted-foreground tracking-wide uppercase mt-1">
-          User-submitted help & support tickets — replies happen via email
+          User-submitted & emailed-in tickets — reply right here, threaded by email
         </p>
       </div>
 
@@ -305,7 +317,43 @@ export function SupportRequestsClient({
         </Card>
       )}
 
-      <SupportRequestDialog row={selectedRow} onClose={closeDialog} />
+      <SupportRequestDialog
+        row={selectedRow}
+        messages={selectedMessages}
+        onClose={closeDialog}
+      />
+    </div>
+  );
+}
+
+function MessageBubble({
+  direction,
+  who,
+  when,
+  text,
+}: {
+  direction: "inbound" | "outbound";
+  who: string;
+  when: string;
+  text: string;
+}) {
+  const outbound = direction === "outbound";
+  return (
+    <div className={`flex ${outbound ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+          outbound
+            ? "bg-primary/10 border border-primary/20"
+            : "bg-muted/40 border"
+        }`}
+      >
+        <div className="mb-1 flex items-center gap-2 text-[10px] font-mono uppercase tracking-wide text-muted-foreground">
+          <span className="font-semibold text-foreground/80">{who}</span>
+          <span aria-hidden>·</span>
+          <span>{formatTimeAgo(when)}</span>
+        </div>
+        <div className="whitespace-pre-wrap leading-relaxed">{text}</div>
+      </div>
     </div>
   );
 }
@@ -341,9 +389,11 @@ function SummaryCard({
 
 function SupportRequestDialog({
   row,
+  messages,
   onClose,
 }: {
   row: SupportRequestRow | null;
+  messages: SupportMessage[];
   onClose: () => void;
 }) {
   if (!row) {
@@ -353,19 +403,30 @@ function SupportRequestDialog({
       </Dialog>
     );
   }
-  return <SupportRequestDialogBody key={row.id} row={row} onClose={onClose} />;
+  return (
+    <SupportRequestDialogBody
+      key={row.id}
+      row={row}
+      messages={messages}
+      onClose={onClose}
+    />
+  );
 }
 
 function SupportRequestDialogBody({
   row,
+  messages,
   onClose,
 }: {
   row: SupportRequestRow;
+  messages: SupportMessage[];
   onClose: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [statusValue, setStatusValue] = useOptimistic(row.status);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
 
   const handleStatusChange = (next: string) => {
     if (next === row.status) return;
@@ -381,11 +442,22 @@ function SupportRequestDialogBody({
     });
   };
 
-  const mailtoSubject = `Re: [${ticketRef(row.id)}] ${row.subject}`;
-  const mailtoBody = `\n\n---\nOriginal request from ${row.submitter_name || row.submitter_email}:\n\n${row.message}\n`;
-  const mailto = row.submitter_email
-    ? `mailto:${row.submitter_email}?subject=${encodeURIComponent(mailtoSubject)}&body=${encodeURIComponent(mailtoBody)}`
-    : null;
+  const handleSendReply = () => {
+    const text = replyText.trim();
+    if (!text) return;
+    setSending(true);
+    startTransition(async () => {
+      const res = await replyToSupportRequest(row.id, text);
+      setSending(false);
+      if ("error" in res && res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success(`Reply sent to ${row.submitter_email}`);
+        setReplyText("");
+        router.refresh();
+      }
+    });
+  };
 
   return (
     <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
@@ -437,10 +509,58 @@ function SupportRequestDialogBody({
 
         <div className="mt-4">
           <div className="mb-2 text-[10px] font-mono uppercase tracking-wide text-muted-foreground">
-            Message
+            Conversation
           </div>
-          <div className="whitespace-pre-wrap rounded-md border bg-muted/20 px-4 py-3 text-sm leading-relaxed max-h-72 overflow-y-auto">
-            {row.message}
+          <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+            {/* Opening message (the original request). */}
+            <MessageBubble
+              direction="inbound"
+              who={row.submitter_name || row.submitter_email || "Customer"}
+              when={row.created_at}
+              text={row.message}
+            />
+            {messages.map((m) => (
+              <MessageBubble
+                key={m.id}
+                direction={m.direction}
+                who={
+                  m.direction === "outbound"
+                    ? "Fundory Support"
+                    : m.from_name || m.from_email || "Customer"
+                }
+                when={m.created_at}
+                text={m.body_text}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Reply composer — sends from support@fundory.ai and threads back. */}
+        <div className="mt-4">
+          <div className="mb-2 text-[10px] font-mono uppercase tracking-wide text-muted-foreground">
+            Reply to {row.submitter_email || "customer"}
+          </div>
+          <Textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            placeholder={
+              row.submitter_email
+                ? "Type your reply… it'll be emailed from support@fundory.ai and logged here."
+                : "No email on file for this request — can't reply."
+            }
+            disabled={!row.submitter_email || sending}
+            rows={4}
+            className="text-sm"
+          />
+          <div className="mt-2 flex justify-end">
+            <Button
+              size="sm"
+              onClick={handleSendReply}
+              disabled={!row.submitter_email || sending || !replyText.trim()}
+            >
+              <Send className="mr-1.5 h-3.5 w-3.5" />
+              {sending ? "Sending…" : "Send reply"}
+            </Button>
           </div>
         </div>
 
@@ -469,14 +589,6 @@ function SupportRequestDialogBody({
           </div>
 
           <div className="flex items-center gap-2">
-            {mailto && (
-              <Button asChild variant="default" size="sm">
-                <a href={mailto}>
-                  <Mail className="mr-1.5 h-3.5 w-3.5" />
-                  Reply by email
-                </a>
-              </Button>
-            )}
             {row.org_id && (
               <Button asChild variant="outline" size="sm">
                 <Link href={`/admin/organizations/${row.org_id}`}>

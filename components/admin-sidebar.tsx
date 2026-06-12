@@ -97,9 +97,11 @@ function FundoryMark({ className }: { className?: string }) {
 export function AdminSidebar({
   user,
   latestIgPostAt,
+  supportUnread = 0,
 }: {
   user: User;
   latestIgPostAt?: string | null;
+  supportUnread?: number;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -226,6 +228,8 @@ export function AdminSidebar({
               }
               const showUnseenDot =
                 item.href === "/admin/ig-posts" && igUnseen && !isActive;
+              const supportCount =
+                item.href === "/admin/support-requests" ? supportUnread : 0;
               return (
                 <Link
                   key={item.href}
@@ -242,6 +246,11 @@ export function AdminSidebar({
                     {showUnseenDot && collapsed && (
                       <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-card" />
                     )}
+                    {supportCount > 0 && collapsed && (
+                      <span className="absolute -top-1 -right-1.5 min-w-3.5 h-3.5 px-1 rounded-full bg-red-500 text-[9px] font-bold leading-3.5 text-white text-center ring-2 ring-card">
+                        {supportCount > 9 ? "9+" : supportCount}
+                      </span>
+                    )}
                   </span>
                   {!collapsed && (
                     <span className="font-mono text-xs tracking-wide uppercase flex-1">
@@ -250,6 +259,11 @@ export function AdminSidebar({
                   )}
                   {!collapsed && showUnseenDot && (
                     <span className="h-2 w-2 rounded-full bg-red-500" aria-label="New post" />
+                  )}
+                  {!collapsed && supportCount > 0 && (
+                    <span className="min-w-4 h-4 px-1 rounded-full bg-red-500 text-[10px] font-bold leading-4 text-white text-center" aria-label={`${supportCount} unread support`}>
+                      {supportCount > 9 ? "9+" : supportCount}
+                    </span>
                   )}
                 </Link>
               );
